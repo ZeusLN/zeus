@@ -117,6 +117,77 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         });
     }
 
+    componentDidUpdate(_prevProps: LSPS1Props) {
+        const {
+            lspBalanceSat,
+            clientBalanceSat,
+            channelExpiryBlocks,
+            requiredChannelConfirmations,
+            confirmsWithinBlocks
+        } = this.state;
+        const { getInfoData } = this.props.LSPStore;
+        const info =
+            getInfoData?.result?.options ||
+            getInfoData?.options ||
+            getInfoData?.result ||
+            getInfoData;
+
+        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat) {
+            this.setState({
+                lspBalanceSat: parseInt(info.min_initial_lsp_balance_sat)
+            });
+        }
+        if (
+            clientBalanceSat === 0 &&
+            info?.min_initial_client_balance_sat > 0
+        ) {
+            this.setState({
+                clientBalanceSat: parseInt(info.min_initial_client_balance_sat)
+            });
+        }
+
+        if (channelExpiryBlocks === 'N/A' && info?.max_channel_expiry_blocks) {
+            const channelExpiryBlocks = parseInt(
+                info.max_channel_expiry_blocks
+            );
+            let expirationIndex = 5;
+            if (channelExpiryBlocks === 4380) {
+                expirationIndex = 0;
+            } else if (channelExpiryBlocks === 13140) {
+                expirationIndex = 1;
+            } else if (channelExpiryBlocks === 26280) {
+                expirationIndex = 2;
+            } else if (channelExpiryBlocks === 52560) {
+                expirationIndex = 3;
+            }
+
+            this.setState({
+                channelExpiryBlocks,
+                expirationIndex
+            });
+        }
+
+        if (
+            requiredChannelConfirmations === '' &&
+            info?.min_required_channel_confirmations
+        ) {
+            this.setState({
+                requiredChannelConfirmations:
+                    info?.min_required_channel_confirmations.toString()
+            });
+        }
+
+        if (
+            confirmsWithinBlocks === '' &&
+            info?.min_funding_confirms_within_blocks
+        ) {
+            this.setState({
+                confirmsWithinBlocks:
+                    (info?.min_funding_confirms_within_blocks).toString()
+            });
+        }
+    }
+
     subscribeToCustomMessages() {
         if (
             this.props.SettingsStore.implementation === 'lightning-node-connect'
@@ -289,8 +360,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             lspBalanceSat,
             clientBalanceSat,
             channelExpiryBlocks,
-            requiredChannelConfirmations,
-            confirmsWithinBlocks,
             expirationIndex
         } = this.state;
         const { getInfoData, createOrderResponse } = LSPStore;
@@ -332,61 +401,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                 />
             </TouchableOpacity>
         );
-
-        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat) {
-            this.setState({
-                lspBalanceSat: parseInt(info.min_initial_lsp_balance_sat)
-            });
-        }
-        if (
-            clientBalanceSat === 0 &&
-            info?.min_initial_client_balance_sat > 0
-        ) {
-            this.setState({
-                clientBalanceSat: parseInt(info.min_initial_client_balance_sat)
-            });
-        }
-
-        if (channelExpiryBlocks === 'N/A' && info?.max_channel_expiry_blocks) {
-            const channelExpiryBlocks = parseInt(
-                info.max_channel_expiry_blocks
-            );
-            let expirationIndex = 5;
-            if (channelExpiryBlocks === 4380) {
-                expirationIndex = 0;
-            } else if (channelExpiryBlocks === 13140) {
-                expirationIndex = 1;
-            } else if (channelExpiryBlocks === 26280) {
-                expirationIndex = 2;
-            } else if (channelExpiryBlocks === 52560) {
-                expirationIndex = 3;
-            }
-
-            this.setState({
-                channelExpiryBlocks,
-                expirationIndex
-            });
-        }
-
-        if (
-            requiredChannelConfirmations === '' &&
-            info?.min_required_channel_confirmations
-        ) {
-            this.setState({
-                requiredChannelConfirmations:
-                    info?.min_required_channel_confirmations.toString()
-            });
-        }
-
-        if (
-            confirmsWithinBlocks === '' &&
-            info?.min_funding_confirms_within_blocks
-        ) {
-            this.setState({
-                confirmsWithinBlocks:
-                    (info?.min_funding_confirms_within_blocks).toString()
-            });
-        }
 
         const oneMoButton = () => (
             <Text
@@ -1173,11 +1187,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.LSPS1.token'
+                                                    'general.discountCode'
                                                 )}
                                             </Text>
                                             <TextInput
-                                                placeholder="Token"
+                                                placeholder={localeString(
+                                                    'general.discountCode'
+                                                )}
                                                 value={this.state.token}
                                                 onChangeText={(text: string) =>
                                                     this.setState({

@@ -27,6 +27,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 interface LightningSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
     lightning?: string;
+    offer?: string;
     locked?: boolean;
 }
 
@@ -192,8 +193,15 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private fetchLnInvoice = () => {
-        const { lightning } = this.props;
-        if (lightning?.toLowerCase().startsWith('lnurl')) {
+        const { lightning, offer } = this.props;
+        if (offer) {
+            this.props.navigation.navigate('Send', {
+                destination: offer,
+                bolt12: offer,
+                transactionType: 'BOLT 12',
+                isValid: true
+            });
+        } else if (lightning?.toLowerCase().startsWith('lnurl')) {
             return getlnurlParams(lightning)
                 .then((params: any) => {
                     if (
@@ -243,8 +251,8 @@ export default class LightningSwipeableRow extends Component<
     };
 
     render() {
-        const { children, lightning, locked } = this.props;
-        if (locked && lightning) {
+        const { children, lightning, offer, locked } = this.props;
+        if (locked && (lightning || offer)) {
             return (
                 <TouchableOpacity
                     onPress={() => this.fetchLnInvoice()}
@@ -266,7 +274,7 @@ export default class LightningSwipeableRow extends Component<
             >
                 <TouchableOpacity
                     onPress={() =>
-                        lightning ? this.fetchLnInvoice() : this.open()
+                        lightning || offer ? this.fetchLnInvoice() : this.open()
                     }
                     activeOpacity={1}
                 >

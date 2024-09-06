@@ -26,7 +26,7 @@ import SettingsStore, {
     DEFAULT_LSPS1_REST_TESTNET
 } from '../../../stores/SettingsStore';
 
-import OlympusAnimated from '../../../assets/images/SVG/OlympusAnimated.svg';
+import Olympus from '../../../assets/images/SVG/Olympus.svg';
 
 interface LSPS1SettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -245,7 +245,7 @@ export default class LSPS1Settings extends React.Component<
                                 marginTop: 12
                             }}
                         >
-                            {localeString('views.LSPS1.token')}
+                            {localeString('general.discountCode')}
                         </Text>
                         <TextInput
                             value={lsps1Token}
@@ -298,11 +298,7 @@ export default class LSPS1Settings extends React.Component<
                     <View style={{ marginBottom: 10 }}>
                         {isOlympus && (
                             <View style={{ alignSelf: 'center' }}>
-                                <OlympusAnimated
-                                    width="70"
-                                    height="70"
-                                    fill={themeColor('text')}
-                                />
+                                <Olympus fill={themeColor('text')} />
                             </View>
                         )}
                     </View>

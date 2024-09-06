@@ -548,9 +548,9 @@ public class LndMobileService extends Service {
   @Override
   public boolean onUnbind(Intent intent) {
     if (mClients.isEmpty()) {
-      if (checkLndProcessExists()) {
-        stopLnd(null, -1);
-      }
+      // HyperLog.i(TAG, "Last client unbound. Stopping lnd.");
+      stopLnd(null, -1);
+      stopSelf();
     }
 
     return false;

@@ -59,18 +59,24 @@ export default class PaymentView extends React.Component<PaymentProps> {
         if (lnurlpaytx) {
             this.setState({ lnurlpaytx });
         }
+        this.getNote();
         navigation.addListener('focus', () => {
-            const noteKey = payment.noteKey;
-
-            EncryptedStorage.getItem('note-' + noteKey)
-                .then((storedNotes) => {
-                    this.setState({ storedNotes });
-                })
-                .catch((error) => {
-                    console.error('Error retrieving notes:', error);
-                });
+            this.getNote();
         });
     }
+
+    getNote = () => {
+        const { route } = this.props;
+        const payment = route.params?.payment;
+        const noteKey = payment.noteKey;
+        EncryptedStorage.getItem('note-' + noteKey)
+            .then((storedNotes) => {
+                this.setState({ storedNotes });
+            })
+            .catch((error) => {
+                console.error('Error retrieving notes:', error);
+            });
+    };
 
     render() {
         const { navigation, SettingsStore, NodeInfoStore, route } = this.props;

@@ -85,7 +85,6 @@ open class Lnd {
     "DisconnectPeer": { bytes, cb in LndmobileDisconnectPeer (bytes, cb) },
     "SendPaymentSync": { bytes, cb in LndmobileSendPaymentSync(bytes, cb) },
     "GetRecoveryInfo": { bytes, cb in LndmobileGetRecoveryInfo(bytes, cb) },
-    "WalletKitListUnspent": { bytes, cb in LndmobileWalletKitListUnspent(bytes, cb) },
     "RouterResetMissionControl": { bytes, cb in LndmobileRouterResetMissionControl(bytes, cb) },
     "QueryRoutes": { bytes, cb in LndmobileQueryRoutes(bytes, cb) },
     "ListPayments": { bytes, cb in LndmobileListPayments(bytes, cb) },
@@ -113,23 +112,26 @@ open class Lnd {
     "SendCoins": { bytes, cb in LndmobileSendCoins(bytes, cb) },
     "WalletBalance": { bytes, cb in LndmobileWalletBalance(bytes, cb) },
 
-    // wallet
+    // init wallet
     "GenSeed": { bytes, cb in LndmobileGenSeed(bytes, cb) },
     "InitWallet": { bytes, cb in LndmobileInitWallet(bytes, cb) },
     "UnlockWallet": { bytes, cb in LndmobileUnlockWallet(bytes, cb) },
+
+    // wallet
+    "WalletKitFundPsbt": { bytes, cb in LndmobileWalletKitFundPsbt(bytes, cb) },
+    "WalletKitSignPsbt": { bytes, cb in LndmobileWalletKitSignPsbt(bytes, cb) },
+    "WalletKitFinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
+    "WalletKitPublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },
+    "WalletKitListAccounts": { bytes, cb in LndmobileWalletKitListAccounts(bytes, cb) },
+    "WalletKitImportAccount": { bytes, cb in LndmobileWalletKitImportAccount(bytes, cb) },
+    "WalletKitBumpFee": { bytes, cb in LndmobileWalletKitBumpFee(bytes, cb) },
+    "WalletKitListUnspent": { bytes, cb in LndmobileWalletKitListUnspent(bytes, cb) },
     "WalletKitDeriveKey": { bytes, cb in LndmobileWalletKitDeriveKey(bytes, cb) },
-    "FundPsbt": { bytes, cb in LndmobileWalletKitFundPsbt(bytes, cb) },
-    "SignPsbt": { bytes, cb in LndmobileWalletKitSignPsbt(bytes, cb) },
-    "FinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
-    "PublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },
-    "ListAccounts": { bytes, cb in LndmobileWalletKitListAccounts(bytes, cb) },
-    "ImportAccount": { bytes, cb in LndmobileWalletKitImportAccount(bytes, cb) },
   
-    //    derivePrivateKey
+    // derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
     "SignMessage": { bytes, cb in LndmobileSignMessage(bytes, cb) },
     "SignerSignMessage": { bytes, cb in LndmobileSignerSignMessage(bytes, cb) },
-    "BumpFee": { bytes, cb in LndmobileWalletKitBumpFee(bytes, cb) },
 
     // autopilot
     "AutopilotStatus": { bytes, cb in LndmobileAutopilotStatus(bytes, cb) },

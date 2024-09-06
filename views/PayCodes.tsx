@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { cloneDeep } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 import Header from '../components/Header';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -174,7 +174,7 @@ export default class PayCodes extends React.Component<PayCodesProps, {}> {
                                 textAlign: 'center'
                             }}
                         >
-                            No pay codes created yet
+                            {localeString('views.PayCodes.noPayCodes')}
                         </Text>
                     )}
                 </ScrollView>

@@ -55,8 +55,8 @@ and
 - [x] [Various language support](https://app.transifex.com/ZeusLN/zeus/)
 - [x] Multi-theme
 - [x] On-chain coin control 
-- [ ] External signer support
-- [ ] Watch-only accounts
+- [x] External signer support
+- [x] Watch-only accounts
 - [x] Contact list for easier payments
 - [x] Nostr contact import
 - [x] Point of Sale (Standalone and Square integration)
@@ -64,8 +64,8 @@ and
 - [x] Taproot support 
 - [ ] Connect a watchtower
 - [ ] Advanced security center
-- [ ] Batch on-chain transactions
-- [ ] Batch channel opens
+- [x] Batch on-chain transactions
+- [x] Batch channel opens
 - [ ] PayJoin
 - [x] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
 - [x] [Self-custodial lightning address (ZEUS Pay)](https://docs.zeusln.app/lightning-address/intro)

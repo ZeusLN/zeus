@@ -13,6 +13,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import { inject, observer } from 'mobx-react';
 import Amount from '../Amount';
+import Button from '../Button';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
@@ -43,6 +44,7 @@ interface LayerBalancesProps {
     value?: string;
     amount?: string;
     lightning?: string;
+    offer?: string;
     locked?: boolean;
     consolidated?: boolean;
     editMode?: boolean;
@@ -160,6 +162,7 @@ const SwipeableRow = ({
     value,
     amount,
     lightning,
+    offer,
     locked,
     editMode
 }: {
@@ -170,6 +173,7 @@ const SwipeableRow = ({
     value?: string;
     amount?: string;
     lightning?: string;
+    offer?: string;
     locked?: boolean;
     editMode?: boolean;
 }) => {
@@ -178,6 +182,7 @@ const SwipeableRow = ({
             <LightningSwipeableRow
                 navigation={navigation}
                 lightning={lightning}
+                offer={offer}
                 locked={locked}
             >
                 <Row item={item} />
@@ -259,6 +264,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             value,
             amount,
             lightning,
+            offer,
             onRefresh,
             locked,
             consolidated,
@@ -326,6 +332,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         return (
             <View style={{ flex: 1 }}>
+                {lightningBalance === 0 && totalBlockchainBalance !== 0 && (
+                    <Button
+                        title={localeString(
+                            'components.LayerBalances.moveFundsToLn'
+                        )}
+                        onPress={() => navigation.navigate('OpenChannel')}
+                        secondary
+                    />
+                )}
                 <FlatList
                     data={DATA}
                     ItemSeparatorComponent={() => (
@@ -340,6 +355,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                             value={value}
                             amount={amount}
                             lightning={lightning}
+                            offer={offer}
                             locked={locked || editMode}
                             editMode={editMode}
                         />

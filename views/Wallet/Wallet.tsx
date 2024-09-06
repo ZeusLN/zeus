@@ -69,6 +69,7 @@ import SettingsStore, {
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
+import ContactStore from '../../stores/ContactStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -90,6 +91,7 @@ interface WalletProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     UTXOsStore: UTXOsStore;
+    ContactStore: ContactStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
     LSPStore: LSPStore;
@@ -113,6 +115,7 @@ interface WalletState {
     'FiatStore',
     'PosStore',
     'UTXOsStore',
+    'ContactStore',
     'ModalStore',
     'SyncStore',
     'LSPStore',
@@ -237,8 +240,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
-        const { posStatus, setPosStatus, initialStart, setInitialStart } =
-            SettingsStore;
+        const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
@@ -273,7 +275,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.nodes.length > 0
             ) {
                 if (settings.selectNodeOnStartup && initialStart) {
-                    setInitialStart(false);
                     navigation.navigate('Nodes');
                 }
                 if (!this.state.unlocked) {
@@ -294,6 +295,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BalanceStore,
             ChannelsStore,
             UTXOsStore,
+            ContactStore,
             SettingsStore,
             PosStore,
             FiatStore,
@@ -343,6 +345,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
+            ContactStore.loadContacts();
         }
 
         LnurlPayStore.reset();
@@ -507,7 +510,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         // only navigate to initial url after connection and main calls are made
-        if (this.state.initialLoad) {
+        if (
+            this.state.initialLoad &&
+            !(
+                SettingsStore.settings.selectNodeOnStartup &&
+                SettingsStore.initialStart
+            )
+        ) {
             this.setState({
                 initialLoad: false
             });

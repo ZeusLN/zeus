@@ -58,6 +58,7 @@ interface ImportAccountState {
     extended_public_key: string;
     master_key_fingerprint: string;
     address_type: number;
+    understood: boolean;
 }
 
 @inject('UTXOsStore')
@@ -72,7 +73,8 @@ export default class ImportAccount extends React.Component<
             name: '',
             extended_public_key: '',
             master_key_fingerprint: '',
-            address_type: walletrpc.AddressType.WITNESS_PUBKEY_HASH
+            address_type: walletrpc.AddressType.WITNESS_PUBKEY_HASH,
+            understood: false
         };
     }
 
@@ -114,7 +116,8 @@ export default class ImportAccount extends React.Component<
             name,
             extended_public_key,
             master_key_fingerprint,
-            address_type
+            address_type,
+            understood
         } = this.state;
         const { errorMsg } = UTXOsStore;
 
@@ -131,6 +134,75 @@ export default class ImportAccount extends React.Component<
                 />
             </TouchableOpacity>
         );
+
+        if (!understood) {
+            return (
+                <>
+                    <View style={{ marginLeft: 10, marginRight: 10 }}>
+                        <ErrorMessage
+                            message={localeString(
+                                'general.warning'
+                            ).toUpperCase()}
+                        />
+                    </View>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            margin: 10,
+                            fontSize: 20
+                        }}
+                    >
+                        {localeString('views.ImportAccount.Warning.text1')}
+                    </Text>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            margin: 10,
+                            fontSize: 20
+                        }}
+                    >
+                        {localeString('views.ImportAccount.Warning.text2')}
+                    </Text>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            margin: 10,
+                            fontSize: 20
+                        }}
+                    >
+                        {localeString(
+                            'views.ImportAccount.Warning.text3'
+                        ).replace('Zeus', 'ZEUS')}
+                    </Text>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            margin: 10,
+                            fontSize: 20
+                        }}
+                    >
+                        {localeString('views.ImportAccount.note')}
+                    </Text>
+                    <View
+                        style={{
+                            alignSelf: 'center',
+                            position: 'absolute',
+                            bottom: 10,
+                            width: '100%'
+                        }}
+                    >
+                        <Button
+                            onPress={() => this.setState({ understood: true })}
+                            title={localeString('general.iUnderstand')}
+                        />
+                    </View>
+                </>
+            );
+        }
 
         return (
             <Screen>
@@ -223,22 +295,14 @@ export default class ImportAccount extends React.Component<
                     </ScrollView>
                 </View>
                 <View style={{ bottom: 10 }}>
-                    <Text
-                        style={{
-                            ...styles.label,
-                            color: themeColor('text'),
-                            padding: 15
-                        }}
-                    >
-                        {localeString('views.ImportAccount.note')}
-                    </Text>
                     <Button
                         title={localeString(
                             'views.ImportAccount.importAccount'
                         )}
                         onPress={() =>
                             this.props.UTXOsStore.importAccount({
-                                ...this.state,
+                                name,
+                                extended_public_key,
                                 address_type: address_type
                                     ? Number(address_type)
                                     : undefined,
