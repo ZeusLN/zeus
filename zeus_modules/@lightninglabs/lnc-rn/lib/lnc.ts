@@ -37,7 +37,7 @@ export default class LNC {
         if (config.credentialStore) {
             this.credentials = config.credentialStore;
         } else {
-            this.credentials = new LncCredentialStore(config.pairingPhrase);
+            this.credentials = new LncCredentialStore(config.credentialStore);
             // don't overwrite an existing serverHost if we're already paired
             if (!this.credentials.isPaired)
                 this.credentials.serverHost = config.serverHost;

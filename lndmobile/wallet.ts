@@ -439,7 +439,7 @@ export const subscribeInvoices = async (): Promise<string> => {
         );
         return response;
     } catch (e) {
-        throw e.message;
+        throw (e as Error).message;
     }
 };
 
