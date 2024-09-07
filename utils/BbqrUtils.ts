@@ -356,7 +356,7 @@ export function encodeData(raw: Uint8Array, encoding?: Encoding) {
     return {
         encoding,
         // base32 without padding
-        encoded: base32.encode(raw).replace(/=*$/, ''),
+        encoded: base32.encode(raw).replace(/=*$/, '').toUpperCase(),
         splitMod: 8
     };
 }
@@ -468,10 +468,12 @@ export function splitQRs(
         n++, offset += perEach
     ) {
         parts.push(
-            `B$${actualEncoding}${fileType}` +
+            (
+                `B$${actualEncoding}${fileType}` +
                 intToBase36(count) +
                 intToBase36(n) +
                 encoded.slice(offset, offset + perEach)
+            ).toUpperCase()
         );
     }
 
@@ -506,14 +508,14 @@ export function decodeData(parts: string[], encoding: Encoding) {
     // decode the parts back into a Uint8Array
 
     if (encoding === 'H') {
-        return joinByteParts(parts.map((p) => hexToBytes(p)));
+        return joinByteParts(parts.map((p) => hexToBytes(p.toUpperCase())));
     }
 
     const bytes = joinByteParts(
         parts.map((p) => {
             const padding = (8 - (p.length % 8)) % 8;
 
-            return base32.decode(p + '='.repeat(padding));
+            return base32.decode(p.toUpperCase() + '='.repeat(padding));
         })
     );
 
