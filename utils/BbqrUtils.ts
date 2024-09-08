@@ -258,7 +258,8 @@ export const QR_DATA_CAPACITY = {
 export const ENCODING_NAMES = {
     H: 'HEX',
     Z: 'Zlib compressed',
-    '2': 'Base32'
+    '2': 'Base32',
+    B: 'BC-UR'
 } as const;
 
 export type FileType = keyof typeof FILETYPE_NAMES;
@@ -351,6 +352,14 @@ export function encodeData(raw: Uint8Array, encoding?: Encoding) {
             encoding = 'Z';
             raw = compressed;
         }
+    }
+    if (encoding === 'B') {
+        return {
+            encoding,
+            encoded:
+                'BCUR-' + base32.encode(raw).replace(/=*$/, '').toUpperCase(),
+            splitMod: 8
+        };
     }
 
     return {
@@ -521,6 +530,9 @@ export function decodeData(parts: string[], encoding: Encoding) {
 
     if (encoding === 'Z') {
         return pako.inflate(bytes, { windowBits: -10 });
+    }
+    if (encoding === 'B') {
+        return base32.decode(parts.join(''));
     }
 
     return bytes;
