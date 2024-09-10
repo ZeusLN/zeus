@@ -941,9 +941,9 @@ export const DEFAULT_VIEW_KEYS_POS = [
         value: 'Products'
     },
     {
-        key: 'Keypad',
-        translateKey: 'views.Settings.Display.DefaultView.keypad',
-        value: 'Keypad'
+        key: 'POS Keypad',
+        translateKey: 'views.Settings.POS.Keypad',
+        value: 'POS Keypad'
     }
 ];
 
