@@ -234,7 +234,6 @@ export default class Activity extends React.PureComponent<
             // Use the getNoteKey from the model
             const noteKey = item.getNoteKey;
 
-            // for (let matchKey of noteKeys) {
             if (noteKey && notes[noteKey]) {
                 return notes[noteKey];
             }

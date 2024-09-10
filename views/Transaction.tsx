@@ -59,7 +59,7 @@ export default class TransactionView extends React.Component<
         const transaction = route.params?.transaction;
         navigation.addListener('focus', () => {
             this.props.TransactionsStore.resetBroadcast();
-            EncryptedStorage.getItem('note-' + transaction.tx)
+            EncryptedStorage.getItem(transaction.getNoteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })
@@ -87,7 +87,8 @@ export default class TransactionView extends React.Component<
             getFeePercentage,
             status,
             getOutpoint,
-            raw_tx_hex
+            raw_tx_hex,
+            getNoteKey
         } = transaction;
         const amount = transaction.getAmount;
         const date = time_stamp && new Date(Number(time_stamp) * 1000);
@@ -134,7 +135,9 @@ export default class TransactionView extends React.Component<
         );
         const EditNotesButton = () => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('AddNotes', { txid: tx })}
+                onPress={() =>
+                    navigation.navigate('AddNotes', { txid: getNoteKey })
+                }
             >
                 <EditNotes
                     style={{ alignSelf: 'center' }}
@@ -365,7 +368,9 @@ export default class TransactionView extends React.Component<
                     {storedNotes && (
                         <TouchableOpacity
                             onPress={() =>
-                                navigation.navigate('AddNotes', { txid: tx })
+                                navigation.navigate('AddNotes', {
+                                    txid: getNoteKey
+                                })
                             }
                         >
                             <KeyValue
@@ -390,7 +395,7 @@ export default class TransactionView extends React.Component<
                         />
                     )}
 
-                    {tx && (
+                    {getNoteKey && (
                         <Button
                             title={
                                 storedNotes
@@ -402,7 +407,9 @@ export default class TransactionView extends React.Component<
                                       )
                             }
                             onPress={() =>
-                                navigation.navigate('AddNotes', { txid: tx })
+                                navigation.navigate('AddNotes', {
+                                    txid: getNoteKey
+                                })
                             }
                             containerStyle={{ marginTop: 20 }}
                             noUppercase
