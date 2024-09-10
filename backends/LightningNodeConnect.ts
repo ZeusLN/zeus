@@ -137,6 +137,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .getInfo({})
             .then((data: lnrpc.GetInfoResponse) => snakeize(data));
+    getNetworkInfo = async () =>
+        await this.lnc.lnd.lightning
+            .getNetworkInfo({})
+            .then((data: lnrpc.NetworkInfo) => snakeize(data));
     getInvoices = async () =>
         await this.lnc.lnd.lightning
             .listInvoices({ reversed: true, num_max_invoices: 100 })
@@ -173,7 +177,7 @@ export default class LightningNodeConnect {
         let request: lnrpc.OpenChannelRequest = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount,
+            local_funding_amount: data.local_funding_amount || 0,
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
@@ -182,6 +186,7 @@ export default class LightningNodeConnect {
 
         if (data.fundMax) {
             request.fund_max = true;
+            delete request.local_funding_amount;
         }
 
         if (data.simpleTaprootChannel) {
@@ -480,7 +485,7 @@ export default class LightningNodeConnect {
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsLSPs = () => false;
-    supportsNetworkInfo = () => false;
+    supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;

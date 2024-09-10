@@ -13,7 +13,8 @@ import { lnrpc } from '../proto/lightning';
 export default class Payment extends BaseModel {
     private payment_hash: string | { data: number[]; type: string }; // object if lndhub
     creation_date?: string;
-    value?: string | number;
+    value?: string | number; // lnd deprecated
+    value_sat?: string | number;
     fee_sat?: string;
     fee_msat?: string;
     payment_preimage: string;
@@ -21,7 +22,7 @@ export default class Payment extends BaseModel {
     bolt: string;
     status: string;
     payment_request: string;
-    failure_reason?: string;
+    failure_reason?: string | number;
     // c-lightning
     id?: string;
     destination?: string;
@@ -134,6 +135,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get isFailed(): boolean {
+        if (!this.isIncomplete) return false;
         let isFailed = false;
         if (this.htlcs) {
             for (const htlc of this.htlcs) {
@@ -146,7 +148,13 @@ export default class Payment extends BaseModel {
                 }
             }
         }
-        if (this.failure_reason) isFailed = true;
+        if (
+            this.failure_reason &&
+            this.failure_reason !== 'FAILURE_REASON_NONE' &&
+            this.failure_reason !==
+                lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
+        )
+            isFailed = true;
         return isFailed;
     }
 
@@ -169,7 +177,10 @@ export default class Payment extends BaseModel {
     @computed public get getAmount(): number | string {
         return this.amount_msat
             ? Number(this.amount_msat.toString().replace('msat', '')) / 1000
-            : this.value || Number(this.msatoshi_sent) / 1000 || 0;
+            : this.value_sat ||
+                  this.value ||
+                  Number(this.msatoshi_sent) / 1000 ||
+                  0;
     }
 
     @computed public get getFee(): string {
@@ -299,7 +310,7 @@ export default class Payment extends BaseModel {
             .replace(/ (\d+)/g, ' $1');
     }
 
-    @computed public get noteKey(): string {
-        return this.paymentHash || this.getPreimage;
+    @computed public get getNoteKey(): string {
+        return `note-${this.paymentHash || this.getPreimage}`;
     }
 }

@@ -129,4 +129,8 @@ export default class Transaction extends BaseModel {
         });
         return outpoint;
     }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.tx}`;
+    }
 }

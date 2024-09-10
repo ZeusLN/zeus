@@ -887,6 +887,47 @@ export default class Receive extends React.Component<
             }
         }
 
+        if (implementation === 'cln-rest') {
+            if (rHash) {
+                this.lnInterval = setInterval(() => {
+                    // only fetch the last 10 invoices
+                    BackendUtils.getInvoices({ limit: 10 }).then(
+                        (response: any) => {
+                            const invoices = response.invoices;
+                            for (let i = 0; i < invoices.length; i++) {
+                                const result = invoices[i];
+                                if (
+                                    result.payment_hash
+                                        .replace(/\+/g, '-')
+                                        .replace(/\//g, '_') === rHash &&
+                                    Number(
+                                        result.amount_received_msat / 1000
+                                    ) >= Number(value) &&
+                                    Number(result.amount_received_msat) !== 0
+                                ) {
+                                    setWatchedInvoicePaid(
+                                        result.amount_received_msat / 1000
+                                    );
+                                    if (orderId)
+                                        PosStore.recordPayment({
+                                            orderId,
+                                            orderTotal,
+                                            orderTip,
+                                            exchangeRate,
+                                            rate,
+                                            type: 'ln',
+                                            tx: result.bolt11
+                                        });
+                                    this.clearIntervals();
+                                    break;
+                                }
+                            }
+                        }
+                    );
+                }, 5000);
+            }
+        }
+
         if (implementation === 'lndhub') {
             if (rHash) {
                 this.lnInterval = setInterval(() => {
