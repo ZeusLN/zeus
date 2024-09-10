@@ -697,7 +697,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     initialRouteName={
                                         posEnabled !== PosEnabled.Disabled &&
                                         posStatus === 'active'
-                                            ? 'POS'
+                                            ? (settings.pos &&
+                                                  settings.pos.defaultView) ||
+                                              'Products'
                                             : isSyncing
                                             ? 'Balance'
                                             : (settings.display &&
@@ -720,7 +722,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             if (route.name === 'Balance') {
                                                 return <Temple fill={color} />;
                                             }
-                                            if (route.name === 'POS') {
+                                            if (route.name === 'Products') {
                                                 return <POS stroke={color} />;
                                             }
                                             if (route.name === 'POS Keypad') {
