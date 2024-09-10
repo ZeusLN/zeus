@@ -53,11 +53,10 @@ export default class AddNotes extends React.Component<
         };
     }
     async componentDidMount() {
-        const key: string =
-            'note-' +
-            (this.state.txid ||
-                this.state.payment_hash ||
-                this.state.getRPreimage);
+        const key: any =
+            this.state.txid ||
+            this.state.payment_hash ||
+            this.state.getRPreimage;
         const storedNotes = await EncryptedStorage.getItem(key);
         if (storedNotes) {
             this.setState({ notes: storedNotes, isNoteStored: true });
@@ -71,8 +70,7 @@ export default class AddNotes extends React.Component<
         const { notes } = this.state;
 
         const saveNote = async () => {
-            const key: string =
-                'note-' + (payment_hash || txid || getRPreimage);
+            const key: any = payment_hash || txid || getRPreimage;
             EncryptedStorage.setItem(key, notes);
             await storeNoteKeys(key, notes);
             navigation.goBack();
@@ -119,9 +117,8 @@ export default class AddNotes extends React.Component<
                         onChangeText={(text: string) => {
                             this.setState({ notes: text });
                             if (!text) {
-                                const key: string =
-                                    'note-' +
-                                    (payment_hash || txid || getRPreimage);
+                                const key: any =
+                                    payment_hash || txid || getRPreimage;
                                 removeNoteKeys(key);
                             }
                         }}
