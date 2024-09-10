@@ -147,6 +147,8 @@ export interface Settings {
     embeddedTor: boolean;
     feeEstimator: string;
     customFeeEstimator: string;
+    speedloader: string;
+    customSpeedloader: string;
     // LSP
     enableLSP: boolean;
     lspMainnet: string;
@@ -217,6 +219,24 @@ export const FEE_ESTIMATOR_KEYS = [
     {
         key: 'strike.me',
         value: 'https://bitcoinchainfees.strike.me/v1/fee-estimates'
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom'
+    }
+];
+
+export const DEFAULT_SPEEDLOADER = 'https://egs.lnze.us/';
+
+export const SPEEDLOADER_KEYS = [
+    {
+        key: 'ZEUS',
+        value: 'https://egs.lnze.us/'
+    },
+    {
+        key: 'Blixt',
+        value: 'https://primer.blixtwallet.com/'
     },
     {
         key: 'Custom',
@@ -1104,12 +1124,14 @@ export default class SettingsStore {
         embeddedTor: false,
         feeEstimator: DEFAULT_FEE_ESTIMATOR,
         customFeeEstimator: '',
+        speedloader: DEFAULT_SPEEDLOADER,
+        customSpeedloader: '',
         // LSP
         enableLSP: true,
         lspMainnet: DEFAULT_LSP_MAINNET,
         lspTestnet: DEFAULT_LSP_TESTNET,
         lspAccessKey: '',
-        requestSimpleTaproot: false,
+        requestSimpleTaproot: true,
         //lsps1
         lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
         lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
@@ -1364,25 +1386,10 @@ export default class SettingsStore {
                         localeMigrationMapping[newSettings.locale];
                 }
 
-                // TODO PEGASUS
-                // temporarily toggle all beta users settings for now
-                const MOD_KEY = 'beta5-mod';
+                const MOD_KEY = 'lsp-taproot-mod';
                 const mod = await EncryptedStorage.getItem(MOD_KEY);
                 if (!mod) {
-                    newSettings.expressGraphSync = true;
-                    if (newSettings.payments) {
-                        newSettings.payments.defaultFeePercentage = '5.0';
-                        newSettings.payments.defaultFeeFixed = '1000';
-                    } else {
-                        newSettings.payments = {
-                            defaultFeeMethod: 'fixed', // deprecated
-                            defaultFeePercentage: '5.0',
-                            defaultFeeFixed: '1000',
-                            timeoutSeconds: '60',
-                            preferredMempoolRate: 'fastestFee'
-                        };
-                    }
-                    newSettings.automaticDisasterRecoveryBackup = true;
+                    newSettings.requestSimpleTaproot = true;
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY, 'true');
                 }
@@ -1476,6 +1483,18 @@ export default class SettingsStore {
 
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY5, 'true');
+                }
+
+                const MOD_KEY6 = 'egs-host';
+                const mod6 = await EncryptedStorage.getItem(MOD_KEY6);
+                if (!mod6) {
+                    if (!newSettings?.speedloader) {
+                        newSettings.speedloader = DEFAULT_SPEEDLOADER;
+                        newSettings.customSpeedloader = '';
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY6, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled

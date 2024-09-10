@@ -229,28 +229,16 @@ export default class Activity extends React.PureComponent<
 
         const getMatchingNote = (item: any) => {
             const { NotesStore } = this.props;
-            const strippedNoteKeys = NotesStore.noteKeys.map((key) =>
-                key.replace(/^note-/, '')
-            );
+            const notes = NotesStore.notes;
 
-            let valuesToCompare: string[] = [];
-            if (item.model === 'Invoice') {
-                valuesToCompare = [item.getRPreimage, item.payment_hash];
-            } else if (item.model === 'Payment') {
-                valuesToCompare = [item.paymentHash, item.getPreimage];
-            } else if (item.model === 'Transaction') {
-                valuesToCompare = [item.tx];
+            // Use the getNoteKey from the model
+            const noteKey = item.getNoteKey;
+
+            // for (let matchKey of noteKeys) {
+            if (noteKey && notes[noteKey]) {
+                return notes[noteKey];
             }
 
-            for (let value of valuesToCompare) {
-                const matchKey = `note-${value}`;
-                if (
-                    strippedNoteKeys.includes(value) &&
-                    NotesStore.notes[matchKey]
-                ) {
-                    return NotesStore.notes[matchKey];
-                }
-            }
             return null;
         };
 

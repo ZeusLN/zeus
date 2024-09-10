@@ -69,6 +69,7 @@ import SettingsStore, {
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
+import ContactStore from '../../stores/ContactStore';
 import NotesStore from '../../stores/NotesStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -91,6 +92,7 @@ interface WalletProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     UTXOsStore: UTXOsStore;
+    ContactStore: ContactStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
     LSPStore: LSPStore;
@@ -115,6 +117,7 @@ interface WalletState {
     'FiatStore',
     'PosStore',
     'UTXOsStore',
+    'ContactStore',
     'ModalStore',
     'SyncStore',
     'LSPStore',
@@ -295,6 +298,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             BalanceStore,
             ChannelsStore,
             UTXOsStore,
+            ContactStore,
             SettingsStore,
             PosStore,
             FiatStore,
@@ -345,6 +349,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
+            ContactStore.loadContacts();
         }
 
         LnurlPayStore.reset();

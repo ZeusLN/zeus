@@ -210,12 +210,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getFormattedRhash(): string {
-        return this.r_hash
-            ? typeof this.r_hash === 'string'
-                ? this.r_hash.replace(/\+/g, '-').replace(/\//g, '_')
-                : this.r_hash.data
-                ? Base64Utils.bytesToHex(this.r_hash.data)
-                : Base64Utils.bytesToHex(this.r_hash)
+        const rHash = this.r_hash || this.payment_hash;
+        return rHash
+            ? typeof rHash === 'string'
+                ? rHash.replace(/\+/g, '-').replace(/\//g, '_')
+                : rHash.data
+                ? Base64Utils.bytesToHex(rHash.data)
+                : Base64Utils.bytesToHex(rHash)
             : '';
     }
 
@@ -378,5 +379,9 @@ export default class Invoice extends BaseModel {
                 .replace(/(\d) ([^,])/g, '$1 $2') // LTR
                 .replace(/([^,]) (\d)/g, '$2 $1') // RTL
         );
+    }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.payment_hash || this.getRPreimage}`;
     }
 }

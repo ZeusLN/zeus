@@ -1,6 +1,6 @@
 {
   "name": "zeus",
-  "version": "0.9.0-beta1",
+  "version": "0.9.1-alpha",
   "private": true,
   "jest": {
     "preset": "react-native",
@@ -69,7 +69,7 @@
     "dateformat": "5.0.3",
     "dns.js": "1.0.1",
     "domain-browser": "1.2.0",
-    "elliptic": "6.5.4",
+    "elliptic": "6.5.7",
     "events": "1.1.1",
     "fast-sha256": "1.3.0",
     "hash.js": "1.1.7",
