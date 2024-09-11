@@ -204,7 +204,7 @@ export default class SendingOnChain extends React.Component<
                                         }
                                         onPress={() =>
                                             navigation.navigate('AddNotes', {
-                                                txid
+                                                noteKey: txid
                                             })
                                         }
                                         secondary
