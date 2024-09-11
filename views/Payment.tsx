@@ -109,7 +109,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('AddNotes', {
-                        payment_hash: getNoteKey
+                        noteKey: getNoteKey
                     })
                 }
                 style={{ marginRight: 15 }}
@@ -313,7 +313,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 sensitive
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
-                                        payment_hash: getNoteKey
+                                        noteKey: getNoteKey
                                     })
                                 }
                             />
@@ -334,7 +334,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                             }
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
-                                    payment_hash: getNoteKey
+                                    noteKey: getNoteKey
                                 })
                             }
                             containerStyle={{ marginTop: 15 }}

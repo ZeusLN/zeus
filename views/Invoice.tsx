@@ -92,7 +92,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('AddNotes', {
-                        getRPreimage: getNoteKey
+                        noteKey: getNoteKey
                     })
                 }
                 style={{ marginRight: 15 }}
@@ -297,7 +297,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 sensitive
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
-                                        getRPreimage: getNoteKey
+                                        noteKey: getNoteKey
                                     })
                                 }
                             />
@@ -318,7 +318,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             }
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
-                                    getRPreimage: getNoteKey
+                                    noteKey: getNoteKey
                                 })
                             }
                             containerStyle={{ marginTop: 15 }}

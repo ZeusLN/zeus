@@ -136,7 +136,7 @@ export default class TransactionView extends React.Component<
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddNotes', { txid: getNoteKey })
+                    navigation.navigate('AddNotes', { noteKey: getNoteKey })
                 }
             >
                 <EditNotes
@@ -369,7 +369,7 @@ export default class TransactionView extends React.Component<
                         <TouchableOpacity
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
-                                    txid: getNoteKey
+                                    noteKey: getNoteKey
                                 })
                             }
                         >
@@ -408,7 +408,7 @@ export default class TransactionView extends React.Component<
                             }
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
-                                    txid: getNoteKey
+                                    noteKey: getNoteKey
                                 })
                             }
                             containerStyle={{ marginTop: 20 }}
