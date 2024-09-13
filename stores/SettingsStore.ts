@@ -22,6 +22,7 @@ export interface Node {
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
+    dismissCustodialWarning: boolean;
     photo?: string;
     // LNC
     pairingPhrase?: string;
@@ -1180,6 +1181,7 @@ export default class SettingsStore {
     @observable username: string;
     @observable password: string;
     @observable lndhubUrl: string;
+    @observable dismissCustodialWarning: boolean = false;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
@@ -1529,6 +1531,7 @@ export default class SettingsStore {
                     this.macaroonHex = node.macaroonHex;
                     this.rune = node.rune;
                     this.accessKey = node.accessKey;
+                    this.dismissCustodialWarning = node.dismissCustodialWarning;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
