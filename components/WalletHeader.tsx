@@ -339,7 +339,8 @@ export default class WalletHeader extends React.Component<
         };
 
         const CustodialBadge = () => {
-            return implementation === 'lndhub' ? (
+            return implementation === 'lndhub' &&
+                !selectedNode.dismissCustodialWarning ? (
                 <Badge
                     onPress={() =>
                         navigation.navigate('CustodialWalletWarning')

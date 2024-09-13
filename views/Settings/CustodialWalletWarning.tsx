@@ -58,6 +58,41 @@ export default class CustodialWalletWarning extends React.Component<
         });
     };
 
+    updateNode = () => {
+        const { SettingsStore } = this.props;
+        const { settings, updateSettings } = SettingsStore;
+        const { nodes, selectedNode } = settings;
+
+        if (nodes && nodes.length > 0) {
+            const currentNodeIndex = selectedNode || 0;
+            const currentNode = nodes[currentNodeIndex];
+
+            // Update the dismissCustodialWarning property
+            const updatedNode = {
+                ...currentNode,
+                dismissCustodialWarning: true
+            };
+
+            // Replace the current node with the updated node
+            const updatedNodes = [...nodes];
+            updatedNodes[currentNodeIndex] = updatedNode;
+
+            // Save the updated nodes array back to the settings
+            updateSettings({ nodes: updatedNodes })
+                .then(() => {
+                    console.log('Node configuration updated successfully.');
+                })
+                .catch((error) => {
+                    console.error(
+                        'Failed to update node configuration:',
+                        error
+                    );
+                });
+        } else {
+            console.error('No nodes available to update.');
+        }
+    };
+
     render() {
         const { SettingsStore, navigation } = this.props;
         const { showModal } = this.state;
@@ -226,7 +261,9 @@ export default class CustodialWalletWarning extends React.Component<
                                     )}
                                     disabled={!this.areAllChecked()}
                                     onPress={() => {
+                                        this.updateNode();
                                         this.toggleModal();
+                                        navigation.popTo('Wallet');
                                     }}
                                     containerStyle={{ paddingBottom: 20 }}
                                 />
