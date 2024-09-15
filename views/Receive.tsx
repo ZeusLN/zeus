@@ -450,21 +450,18 @@ export default class Receive extends React.Component<
         const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
-        createUnifiedInvoice(
-            lspIsActive ? '' : memo || '',
-            amount || '0',
-            expirySeconds || '3600',
-            undefined,
-            lspIsActive ? false : ampInvoice || false,
-            lspIsActive ? false : blindedPaths || false,
-            lspIsActive ? false : routeHints || false,
-            undefined,
-            BackendUtils.supportsAddressTypeSelection()
+        createUnifiedInvoice({
+            memo: lspIsActive ? '' : memo || '',
+            value: amount || '0',
+            expiry: expirySeconds || '3600',
+            ampInvoice: lspIsActive ? false : ampInvoice || false,
+            blindedPaths: lspIsActive ? false : blindedPaths || false,
+            routeHints: lspIsActive ? false : routeHints || false,
+            addressType: BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined,
-            undefined,
-            !lspIsActive
-        ).then(
+            noLsp: !lspIsActive
+        }).then(
             ({
                 rHash,
                 onChainAddress
@@ -568,19 +565,13 @@ export default class Receive extends React.Component<
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
-                        createUnifiedInvoice(
-                            lspIsActive ? '' : memo,
-                            amount.toString(),
-                            '3600',
-                            lnurlParams,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            !lspIsActive
-                        )
+                        createUnifiedInvoice({
+                            memo: lspIsActive ? '' : memo,
+                            value: amount.toString(),
+                            expiry: '3600',
+                            lnurl: lnurlParams,
+                            noLsp: !lspIsActive
+                        })
                             .then(
                                 ({
                                     rHash,
@@ -2671,34 +2662,41 @@ export default class Receive extends React.Component<
                                                         : '')
                                                 }
                                                 onPress={() => {
-                                                    createUnifiedInvoice(
-                                                        lspIsActive ? '' : memo,
-                                                        satAmount.toString() ||
+                                                    createUnifiedInvoice({
+                                                        memo: lspIsActive
+                                                            ? ''
+                                                            : memo,
+                                                        value:
+                                                            satAmount.toString() ||
                                                             '0',
-                                                        expirySeconds,
+                                                        expiry: expirySeconds,
                                                         lnurl,
-                                                        lspIsActive
+                                                        ampInvoice: lspIsActive
                                                             ? false
                                                             : ampInvoice ||
-                                                                  false,
-                                                        lspIsActive
-                                                            ? false
-                                                            : blindedPaths ||
+                                                              false,
+                                                        blindedPaths:
+                                                            lspIsActive
+                                                                ? false
+                                                                : blindedPaths ||
                                                                   false,
                                                         routeHints,
-                                                        routeHintMode ===
+                                                        routeHintChannels:
+                                                            routeHintMode ===
                                                             RouteHintMode.Custom
-                                                            ? selectedRouteHintChannels
-                                                            : undefined,
-                                                        BackendUtils.supportsAddressTypeSelection()
-                                                            ? addressType
-                                                            : undefined,
-                                                        BackendUtils.supportsCustomPreimages() &&
+                                                                ? selectedRouteHintChannels
+                                                                : undefined,
+                                                        addressType:
+                                                            BackendUtils.supportsAddressTypeSelection()
+                                                                ? addressType
+                                                                : undefined,
+                                                        customPreimage:
+                                                            BackendUtils.supportsCustomPreimages() &&
                                                             showCustomPreimageField
-                                                            ? customPreimage
-                                                            : undefined,
-                                                        !lspIsActive
-                                                    ).then(
+                                                                ? customPreimage
+                                                                : undefined,
+                                                        noLsp: !lspIsActive
+                                                    }).then(
                                                         ({
                                                             rHash,
                                                             onChainAddress
