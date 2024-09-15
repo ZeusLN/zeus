@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Weryfikacja certyfikatu",
     "views.Settings.AddEditNode.createLndhub": "Utwórz konto LNDHub",
     "views.Settings.AddEditNode.saveNode": "Zapisz konfigurację węzła",
-    "views.Settings.AddEditNode.nodeSaved": "Konfiguracja węzła zapisana",
     "views.Settings.AddEditNode.setNodeActive": "Ustaw konfigurację węzła jako aktywną",
     "views.Settings.AddEditNode.nodeActive": "Węzeł aktywny",
     "views.Settings.AddEditNode.scanLndconnect": "Skanuj konfigurację lndconnect",
