@@ -382,6 +382,7 @@ export default class Spark {
     supportsChannelBatching = () => true;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsBolt11BlindedRoutes = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
 }

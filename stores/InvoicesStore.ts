@@ -126,6 +126,7 @@ export default class InvoicesStore {
         expiry = '3600',
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
+        blindedPaths?: boolean,
         routeHints?: boolean,
         routeHintChannels?: Channel[],
         addressType?: string,
@@ -139,6 +140,7 @@ export default class InvoicesStore {
             expiry,
             lnurl,
             ampInvoice,
+            blindedPaths,
             routeHints,
             routeHintChannels,
             true,
@@ -185,6 +187,7 @@ export default class InvoicesStore {
         expiry = '3600',
         lnurl?: LNURLWithdrawParams,
         ampInvoice?: boolean,
+        blindedPaths?: boolean,
         routeHints?: boolean,
         routeHintChannels?: Channel[],
         unified?: boolean,
@@ -205,6 +208,7 @@ export default class InvoicesStore {
         };
 
         if (ampInvoice) req.is_amp = true;
+        if (blindedPaths) req.is_blinded = true;
         if (routeHints) {
             if (routeHintChannels?.length) {
                 const routeHints = [];

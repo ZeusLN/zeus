@@ -416,6 +416,7 @@ export default class CLNRest {
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsBolt11BlindedRoutes = () => false;
     supportsOffers = async () => {
         const { configs } = await this.postRequest('/v1/listconfigs');
 

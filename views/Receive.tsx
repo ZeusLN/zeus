@@ -134,6 +134,7 @@ interface ReceiveState {
     ampInvoice: boolean;
     routeHints: boolean;
     account: string;
+    blindedPaths: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -188,6 +189,7 @@ export default class Receive extends React.Component<
         ampInvoice: false,
         routeHints: false,
         account: 'default',
+        blindedPaths: false,
         // POS
         orderId: '',
         orderTip: '',
@@ -286,8 +288,13 @@ export default class Receive extends React.Component<
             });
         }
 
-        const { expirySeconds, routeHints, ampInvoice, addressType } =
-            this.state;
+        const {
+            expirySeconds,
+            routeHints,
+            ampInvoice,
+            blindedPaths,
+            addressType
+        } = this.state;
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -354,6 +361,7 @@ export default class Receive extends React.Component<
                 expirySeconds,
                 routeHints,
                 ampInvoice,
+                blindedPaths,
                 addressType
             );
         }
@@ -435,6 +443,7 @@ export default class Receive extends React.Component<
         expirySeconds?: string,
         routeHints?: boolean,
         ampInvoice?: boolean,
+        blindedPaths?: boolean,
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
@@ -447,6 +456,7 @@ export default class Receive extends React.Component<
             expirySeconds || '3600',
             undefined,
             lspIsActive ? false : ampInvoice || false,
+            lspIsActive ? false : blindedPaths || false,
             lspIsActive ? false : routeHints || false,
             undefined,
             BackendUtils.supportsAddressTypeSelection()
@@ -563,6 +573,7 @@ export default class Receive extends React.Component<
                             amount.toString(),
                             '3600',
                             lnurlParams,
+                            undefined,
                             undefined,
                             undefined,
                             undefined,
@@ -1041,7 +1052,8 @@ export default class Receive extends React.Component<
             lspIsActive,
             lspNotConfigured,
             routeHintMode,
-            selectedRouteHintChannels
+            selectedRouteHintChannels,
+            blindedPaths
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -2609,6 +2621,43 @@ export default class Receive extends React.Component<
                                                 </>
                                             )}
 
+                                        {BackendUtils.supportsBolt11BlindedRoutes() &&
+                                            !lspIsActive && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoText={[
+                                                            localeString(
+                                                                'views.Receive.blindedPathsExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.blindedPathsExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.blindedPaths'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={blindedPaths}
+                                                        onValueChange={() =>
+                                                            this.setState({
+                                                                blindedPaths:
+                                                                    !blindedPaths
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
+
                                         <View style={styles.button}>
                                             <Button
                                                 title={
@@ -2631,6 +2680,10 @@ export default class Receive extends React.Component<
                                                         lspIsActive
                                                             ? false
                                                             : ampInvoice ||
+                                                                  false,
+                                                        lspIsActive
+                                                            ? false
+                                                            : blindedPaths ||
                                                                   false,
                                                         routeHints,
                                                         routeHintMode ===
