@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Verificare Certificat",
     "views.Settings.AddEditNode.createLndhub": "Creează cont LNDHub",
     "views.Settings.AddEditNode.saveNode": "Salvează Configurația Nodului",
-    "views.Settings.AddEditNode.nodeSaved": "S-a salvat configurația nodului",
     "views.Settings.AddEditNode.setNodeActive": "Activează configurația nodului",
     "views.Settings.AddEditNode.nodeActive": "Nod Activ",
     "views.Settings.AddEditNode.scanLndconnect": "Scanează configurația lndconnect",
