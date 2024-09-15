@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "การยืนยันใบรับรอง",
     "views.Settings.AddEditNode.createLndhub": "สร้างบัญชี LNDHub",
     "views.Settings.AddEditNode.saveNode": "บันทึกการตั้งค่าโหนด",
-    "views.Settings.AddEditNode.nodeSaved": "บันทึกการตั้งค่าโหนดเรียบร้อย",
     "views.Settings.AddEditNode.setNodeActive": "ใช้งานการตั้งค่าโหนดนี้",
     "views.Settings.AddEditNode.nodeActive": "โหนดกำลังทำงาน",
     "views.Settings.AddEditNode.scanLndconnect": "สแกนการตั้งค่า lndconnect",
