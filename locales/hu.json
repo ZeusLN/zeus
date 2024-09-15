@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Certifikát Hitelesítése",
     "views.Settings.AddEditNode.createLndhub": "LNDHub fiók létrehozása",
     "views.Settings.AddEditNode.saveNode": "Node beállítások elmentése",
-    "views.Settings.AddEditNode.nodeSaved": "Node beállítások mentve",
     "views.Settings.AddEditNode.setNodeActive": "Node beállítás használata",
     "views.Settings.AddEditNode.nodeActive": "Node Aktív",
     "views.Settings.AddEditNode.scanLndconnect": "Lndconnect beállítások szkennelése",
