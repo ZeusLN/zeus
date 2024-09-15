@@ -30,6 +30,7 @@ import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import {
     SuccessMessage,
@@ -1695,6 +1696,17 @@ export default class NodeConfiguration extends React.Component<
                             />
                         )}
 
+                    {active && (
+                        <View style={{ alignItems: 'center' }}>
+                            <Pill
+                                title={localeString(
+                                    'views.Settings.AddEditNode.nodeActive'
+                                )}
+                                backgroundColor="transparent"
+                            />
+                        </View>
+                    )}
+
                     {implementation === 'embedded-lnd' && (
                         <View style={{ ...styles.button, marginTop: 20 }}>
                             {!adminMacaroon && !creatingWallet && (
@@ -1761,18 +1773,13 @@ export default class NodeConfiguration extends React.Component<
                     {!creatingWallet &&
                         !(
                             implementation === 'embedded-lnd' && !adminMacaroon
-                        ) && (
+                        ) &&
+                        !saved && (
                             <View style={{ ...styles.button }}>
                                 <Button
-                                    title={
-                                        saved
-                                            ? localeString(
-                                                  'views.Settings.AddEditNode.nodeSaved'
-                                              )
-                                            : localeString(
-                                                  'views.Settings.AddEditNode.saveNode'
-                                              )
-                                    }
+                                    title={localeString(
+                                        'views.Settings.AddEditNode.saveNode'
+                                    )}
                                     onPress={() => {
                                         if (
                                             !saved &&
@@ -1812,18 +1819,12 @@ export default class NodeConfiguration extends React.Component<
                         <CertInstallInstructions />
                     )}
 
-                    {saved && !newEntry && (
+                    {saved && !active && !newEntry && (
                         <View style={styles.button}>
                             <Button
-                                title={
-                                    active
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.nodeActive'
-                                          )
-                                        : localeString(
-                                              'views.Settings.AddEditNode.setNodeActive'
-                                          )
-                                }
+                                title={localeString(
+                                    'views.Settings.AddEditNode.setNodeActive'
+                                )}
                                 onPress={() =>
                                     this.setNodeConfigurationAsActive()
                                 }
