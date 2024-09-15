@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "証明書の検証",
     "views.Settings.AddEditNode.createLndhub": "LNDhubアカウントの作成",
     "views.Settings.AddEditNode.saveNode": "ノード構成情報を保存",
-    "views.Settings.AddEditNode.nodeSaved": "ノード設定の保存",
     "views.Settings.AddEditNode.setNodeActive": "ノード設定を有効にする",
     "views.Settings.AddEditNode.nodeActive": "Node Active",
     "views.Settings.AddEditNode.scanLndconnect": "lndconnect構成情報の読み取り",
