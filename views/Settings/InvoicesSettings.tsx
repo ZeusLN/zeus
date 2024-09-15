@@ -34,6 +34,7 @@ interface InvoicesSettingsState {
     expirySeconds: string;
     routeHints: boolean;
     ampInvoice: boolean;
+    blindedPaths: boolean;
     showCustomPreimageField: boolean;
 }
 
@@ -51,6 +52,7 @@ export default class InvoicesSettings extends React.Component<
         expirySeconds: '3600',
         routeHints: false,
         ampInvoice: false,
+        blindedPaths: false,
         showCustomPreimageField: false
     };
 
@@ -67,6 +69,7 @@ export default class InvoicesSettings extends React.Component<
             expirySeconds: settings?.invoices?.expirySeconds || '3600',
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
+            blindedPaths: settings?.invoices?.blindedPaths || false,
             showCustomPreimageField:
                 settings?.invoices?.showCustomPreimageField || false
         });
@@ -93,6 +96,7 @@ export default class InvoicesSettings extends React.Component<
             expirySeconds,
             routeHints,
             ampInvoice,
+            blindedPaths,
             showCustomPreimageField
         } = this.state;
         const { implementation, updateSettings }: any = SettingsStore;
@@ -192,6 +196,7 @@ export default class InvoicesSettings extends React.Component<
                                     expirySeconds,
                                     routeHints,
                                     ampInvoice,
+                                    blindedPaths,
                                     showCustomPreimageField
                                 }
                             });
@@ -251,6 +256,7 @@ export default class InvoicesSettings extends React.Component<
                                                 expirySeconds,
                                                 routeHints,
                                                 ampInvoice,
+                                                blindedPaths,
                                                 showCustomPreimageField
                                             }
                                         });
@@ -314,6 +320,7 @@ export default class InvoicesSettings extends React.Component<
                                                     expirySeconds,
                                                     routeHints,
                                                     ampInvoice,
+                                                    blindedPaths,
                                                     showCustomPreimageField
                                                 }
                                             });
@@ -350,6 +357,7 @@ export default class InvoicesSettings extends React.Component<
                                             expirySeconds,
                                             routeHints: !routeHints,
                                             ampInvoice,
+                                            blindedPaths,
                                             showCustomPreimageField
                                         }
                                     });
@@ -384,6 +392,41 @@ export default class InvoicesSettings extends React.Component<
                                             expirySeconds,
                                             routeHints,
                                             ampInvoice: !ampInvoice,
+                                            showCustomPreimageField
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {BackendUtils.supportsBolt11BlindedRoutes() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    top: 20
+                                }}
+                            >
+                                {localeString('views.Receive.blindedPaths')}
+                            </Text>
+                            <Switch
+                                value={blindedPaths}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        blindedPaths: !blindedPaths
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType,
+                                            memo,
+                                            expiry,
+                                            timePeriod,
+                                            expirySeconds,
+                                            routeHints,
+                                            ampInvoice,
+                                            blindedPaths: !blindedPaths,
                                             showCustomPreimageField
                                         }
                                     });

@@ -248,7 +248,14 @@ export default class Receive extends React.Component<
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: newExpirySeconds,
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false,
+            ampInvoice:
+                (settings?.invoices?.ampInvoice &&
+                    BackendUtils.supportsAMP()) ||
+                false,
+            blindedPaths:
+                (settings?.invoices?.blindedPaths &&
+                    BackendUtils.supportsBolt11BlindedRoutes()) ||
+                false,
             enableLSP: settings?.enableLSP,
             lspIsActive:
                 settings?.enableLSP &&
