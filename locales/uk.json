@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Перевірка сертифікату",
     "views.Settings.AddEditNode.createLndhub": "Створити обліковий запис LNDHub",
     "views.Settings.AddEditNode.saveNode": "Зберегти налаштування вузла",
-    "views.Settings.AddEditNode.nodeSaved": "Налаштування вузла збережено",
     "views.Settings.AddEditNode.setNodeActive": "Активувати налаштування вузла",
     "views.Settings.AddEditNode.nodeActive": "Вузол активний",
     "views.Settings.AddEditNode.scanLndconnect": "Сканувати налаштування lndconnect",
