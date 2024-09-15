@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
@@ -11,6 +11,7 @@ import ModalBox from '../../components/ModalBox';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import SettingsStore, { TIME_PERIOD_KEYS } from '../../stores/SettingsStore';
@@ -339,6 +340,14 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
+                                infoText={[
+                                    localeString(
+                                        'views.Receive.routeHintSwitchExplainer1'
+                                    ),
+                                    localeString(
+                                        'views.Receive.routeHintSwitchExplainer2'
+                                    )
+                                ]}
                             >
                                 {localeString('views.Receive.routeHints')}
                             </Text>
@@ -374,6 +383,14 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
+                                infoText={[
+                                    localeString(
+                                        'views.Receive.ampSwitchExplainer1'
+                                    ),
+                                    localeString(
+                                        'views.Receive.ampSwitchExplainer2'
+                                    )
+                                ]}
                             >
                                 {localeString('views.Receive.ampInvoice')}
                             </Text>
@@ -408,6 +425,14 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
+                                infoText={[
+                                    localeString(
+                                        'views.Receive.blindedPathsExplainer1'
+                                    ),
+                                    localeString(
+                                        'views.Receive.blindedPathsExplainer2'
+                                    )
+                                ]}
                             >
                                 {localeString('views.Receive.blindedPaths')}
                             </Text>
