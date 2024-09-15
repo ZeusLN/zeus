@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Sertifikatbekreftelse",
     "views.Settings.AddEditNode.createLndhub": "Lag en LNDHub konto",
     "views.Settings.AddEditNode.saveNode": "Lagre nodekonfigurasjon",
-    "views.Settings.AddEditNode.nodeSaved": "Nodekonfigurasjon lagret",
     "views.Settings.AddEditNode.setNodeActive": "Set nodekonfigurasjon som aktiv",
     "views.Settings.AddEditNode.nodeActive": "Node aktiv",
     "views.Settings.AddEditNode.scanLndconnect": "Skann lndconnect konfigurasjon",
