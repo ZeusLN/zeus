@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "אימות תעודה",
     "views.Settings.AddEditNode.createLndhub": "יצירת חשבון LNDHub",
     "views.Settings.AddEditNode.saveNode": "שמירת הגדרות צומת",
-    "views.Settings.AddEditNode.nodeSaved": "הגדרות צומת נשמרו",
     "views.Settings.AddEditNode.setNodeActive": "קביעת הגדרת צומת כפעיל",
     "views.Settings.AddEditNode.nodeActive": "צומת פעיל",
     "views.Settings.AddEditNode.scanLndconnect": "סריקת הגדרות חיבור של LND",
