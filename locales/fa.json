@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "تأیید گواهینامه",
     "views.Settings.AddEditNode.createLndhub": "ساخت شناسه LNDHub",
     "views.Settings.AddEditNode.saveNode": "ذخیره تنظیمات نود",
-    "views.Settings.AddEditNode.nodeSaved": "تنظیمات نود ذخیره شد",
     "views.Settings.AddEditNode.setNodeActive": "فعال کردن تنظیمات نود",
     "views.Settings.AddEditNode.nodeActive": "نود فعال",
     "views.Settings.AddEditNode.scanLndconnect": "اسکن پیکربندی lndconnect",
