@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Uthibitisho wa Cheti",
     "views.Settings.AddEditNode.createLndhub": "Unda akaunti ya LNDHub",
     "views.Settings.AddEditNode.saveNode": "Hifadhi Usanidi wa Nodi",
-    "views.Settings.AddEditNode.nodeSaved": "Usanidi wa Nodi Umehifadhiwa",
     "views.Settings.AddEditNode.setNodeActive": "Weka Usanidi wa Nodi kama Aktivu",
     "views.Settings.AddEditNode.nodeActive": "Nodi Aktivu",
     "views.Settings.AddEditNode.scanLndconnect": "Skani konfiga ya lndconnect",
