@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "인증서 확인",
     "views.Settings.AddEditNode.createLndhub": "LNDHub 계정 만들기",
     "views.Settings.AddEditNode.saveNode": "노드 설정 저장",
-    "views.Settings.AddEditNode.nodeSaved": "노드 설정 저장됨",
     "views.Settings.AddEditNode.setNodeActive": "노드 구성 활성화",
     "views.Settings.AddEditNode.nodeActive": "노드 활성화",
     "views.Settings.AddEditNode.scanLndconnect": "lndconnect 설정 검사",
