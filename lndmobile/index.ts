@@ -568,6 +568,7 @@ export const addInvoice = async ({
     memo,
     expiry = 3600,
     is_amp,
+    is_blinded,
     is_private,
     preimage,
     route_hints
@@ -577,6 +578,7 @@ export const addInvoice = async ({
     memo: string;
     expiry: number;
     is_amp?: boolean;
+    is_blinded?: boolean;
     is_private?: boolean;
     preimage?: string;
     route_hints?: lnrpc.IRouteHint[] | null;
@@ -597,6 +599,7 @@ export const addInvoice = async ({
             private: is_private,
             min_hop_hints: is_private ? 6 : 0,
             is_amp,
+            is_blinded,
             r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined,
             route_hints
         }

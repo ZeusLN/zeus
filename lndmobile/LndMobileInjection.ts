@@ -133,6 +133,7 @@ export interface ILndMobileInjections {
             memo,
             expiry,
             is_amp,
+            is_blinded,
             is_private,
             preimage,
             route_hints
@@ -142,6 +143,7 @@ export interface ILndMobileInjections {
             memo: string;
             expiry?: number;
             is_amp?: boolean;
+            is_blinded?: boolean;
             is_private?: boolean;
             preimage?: string;
             route_hints?: lnrpc.IRouteHint[] | null;

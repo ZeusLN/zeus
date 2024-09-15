@@ -85,6 +85,7 @@ export default class EmbeddedLND extends LND {
             memo: data.memo,
             expiry: data.expiry,
             is_amp: data.is_amp,
+            is_blinded: data.is_blinded,
             is_private: data.private,
             preimage: data.preimage,
             route_hints: data.route_hints
@@ -299,5 +300,6 @@ export default class EmbeddedLND extends LND {
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
+    supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     isLNDBased = () => true;
 }

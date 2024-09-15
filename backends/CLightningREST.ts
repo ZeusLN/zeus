@@ -304,6 +304,7 @@ export default class CLightningREST extends LND {
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsBolt11BlindedRoutes = () => false;
     supportsOffers = async () => {
         const res = await this.getRequest('/v1/utility/listConfigs');
         const supportsOffers: boolean = res['experimental-offers'] || false;
