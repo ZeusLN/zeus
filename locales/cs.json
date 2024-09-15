@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Ověření certifikátu",
     "views.Settings.AddEditNode.createLndhub": "Vytvořit účet LNDHub",
     "views.Settings.AddEditNode.saveNode": "Uložit konfiguraci uzlu",
-    "views.Settings.AddEditNode.nodeSaved": "Konfigurace uzlu uložena",
     "views.Settings.AddEditNode.setNodeActive": "Nastavit konfiguraci uzlu jako aktivní",
     "views.Settings.AddEditNode.nodeActive": "Uzel aktivní",
     "views.Settings.AddEditNode.scanLndconnect": "Skenovat konfiguraci lndconnect",
