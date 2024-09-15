@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Επιβεβαίωση πιστοποιητικού",
     "views.Settings.AddEditNode.createLndhub": "Δημιουργία λογαριασμού LNDHub",
     "views.Settings.AddEditNode.saveNode": "Αποθήκευση διαμόρφωσης κόμβου",
-    "views.Settings.AddEditNode.nodeSaved": "Διαμόρφωση κόμβου αποθηκεύτηκε",
     "views.Settings.AddEditNode.setNodeActive": "Επιλογή διαμόρφωσης κόμβου ως ενεργή",
     "views.Settings.AddEditNode.nodeActive": "Ενεργός κόμβος",
     "views.Settings.AddEditNode.scanLndconnect": "Σάρωση διαμόρφωσης Indconnect",
