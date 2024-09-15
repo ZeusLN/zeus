@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Varmenteen todentaminen",
     "views.Settings.AddEditNode.createLndhub": "Luo LNDHub-tili",
     "views.Settings.AddEditNode.saveNode": "Tallenna solmun konfiguraatio",
-    "views.Settings.AddEditNode.nodeSaved": "Solmun konfiguraatio tallennettu",
     "views.Settings.AddEditNode.setNodeActive": "Aseta solmun konfiguraatio aktiiviseksi",
     "views.Settings.AddEditNode.nodeActive": "Solmu aktiivinen",
     "views.Settings.AddEditNode.scanLndconnect": "Skannaa lndconnect-konfiguraatio",
