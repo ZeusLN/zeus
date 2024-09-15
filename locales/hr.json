@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Provjera certifikata",
     "views.Settings.AddEditNode.createLndhub": "Napravi LNDHub račun",
     "views.Settings.AddEditNode.saveNode": "Spremi konfiguraciju noda",
-    "views.Settings.AddEditNode.nodeSaved": "Konfiguracija noda spremljena",
     "views.Settings.AddEditNode.setNodeActive": "Postavite konfiguraciju noda kao aktivnu",
     "views.Settings.AddEditNode.nodeActive": "Nod aktivan",
     "views.Settings.AddEditNode.scanLndconnect": "Skeniraj lndconnect konfiguraciju",
