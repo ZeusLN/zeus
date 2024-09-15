@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Verificación del Certificado",
     "views.Settings.AddEditNode.createLndhub": "Crear cuenta LNDHub",
     "views.Settings.AddEditNode.saveNode": "Guardar configuración del Nodo",
-    "views.Settings.AddEditNode.nodeSaved": "Configuración del Nodo guardada",
     "views.Settings.AddEditNode.setNodeActive": "Establecer configuración del Nodo como activa",
     "views.Settings.AddEditNode.nodeActive": "Nodo Activo",
     "views.Settings.AddEditNode.scanLndconnect": "Escanear configuración lndconnect",
