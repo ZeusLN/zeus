@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Xác thực chứng chỉ",
     "views.Settings.AddEditNode.createLndhub": "Tạo tài khoản LNDHub",
     "views.Settings.AddEditNode.saveNode": "Lưu Thiết lập Nút",
-    "views.Settings.AddEditNode.nodeSaved": "Đã Lưu Thiết lập Nút",
     "views.Settings.AddEditNode.setNodeActive": "Đặt Thiết lập Nút là Đang hoạt động",
     "views.Settings.AddEditNode.nodeActive": "Nút đang hoạt động",
     "views.Settings.AddEditNode.scanLndconnect": "Quét thiết lập Indconnect",
