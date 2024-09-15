@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Проверка сертификата",
     "views.Settings.AddEditNode.createLndhub": "Создать аккаунт LNDHub",
     "views.Settings.AddEditNode.saveNode": "Сохранить конфигурацию узла",
-    "views.Settings.AddEditNode.nodeSaved": "Конфигурация узла сохранена",
     "views.Settings.AddEditNode.setNodeActive": "Активировать конфигурацию узла",
     "views.Settings.AddEditNode.nodeActive": "Узел активирован",
     "views.Settings.AddEditNode.scanLndconnect": "Сканировать конфигурацию lndconnect",
