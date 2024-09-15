@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Sertifika Verifikasyonu",
     "views.Settings.AddEditNode.createLndhub": "LNDHub hesabı oluştur",
     "views.Settings.AddEditNode.saveNode": "Node ayarlarını kaydet",
-    "views.Settings.AddEditNode.nodeSaved": "Node konfigurasyonu kaydedildi",
     "views.Settings.AddEditNode.setNodeActive": "Node konfigurasyonunu aktif olarak ayarla",
     "views.Settings.AddEditNode.nodeActive": "Node aktif",
     "views.Settings.AddEditNode.scanLndconnect": "lndconnect konfigurasyonunu tara",
