@@ -240,7 +240,6 @@
     "views.Settings.AddEditNode.certificateVerification": "Certificaat Verificatie",
     "views.Settings.AddEditNode.createLndhub": "Maak een LNDHub account",
     "views.Settings.AddEditNode.saveNode": "Opslaan Node Configuratie",
-    "views.Settings.AddEditNode.nodeSaved": "Node Configuratie Opgeslagen",
     "views.Settings.AddEditNode.setNodeActive": "Instellen Node Configuratie als Actief",
     "views.Settings.AddEditNode.nodeActive": "Node Actief",
     "views.Settings.AddEditNode.scanLndconnect": "Scan lndconnect configuratie",
