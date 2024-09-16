@@ -64,6 +64,7 @@ interface PosSettings {
     showKeypad?: boolean;
     taxPercentage?: string;
     enablePrinter?: boolean;
+    defaultView?: string;
 }
 
 interface PaymentsSettings {
@@ -933,6 +934,19 @@ export const DEFAULT_VIEW_KEYS = [
     }
 ];
 
+export const DEFAULT_VIEW_KEYS_POS = [
+    {
+        key: 'Products',
+        translateKey: 'views.Settings.POS.Products',
+        value: 'Products'
+    },
+    {
+        key: 'POS Keypad',
+        translateKey: 'views.Settings.POS.Keypad',
+        value: 'POS Keypad'
+    }
+];
+
 export const DEFAULT_THEME = 'kyriaki';
 export const DEFAULT_FIAT = 'USD';
 export const DEFAULT_FIAT_RATES_SOURCE = 'Zeus';
@@ -1076,7 +1090,8 @@ export default class SettingsStore {
             squareDevMode: false,
             showKeypad: true,
             taxPercentage: '0',
-            enablePrinter: false
+            enablePrinter: false,
+            defaultView: 'Products'
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated
