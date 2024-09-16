@@ -498,13 +498,19 @@ export default class LND {
             fee_rate,
             time_lock_delta,
             min_htlc,
-            max_htlc
+            max_htlc,
+            base_fee_msat_inbound,
+            fee_rate_inbound
         } = data;
 
         if (data.global) {
             return this.postRequest('/v1/chanpolicy', {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
+                inboundFee: {
+                    base_fee_msat: base_fee_msat_inbound,
+                    fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+                },
                 global: true,
                 time_lock_delta: Number(time_lock_delta),
                 min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
@@ -515,6 +521,10 @@ export default class LND {
         return this.postRequest('/v1/chanpolicy', {
             base_fee_msat,
             fee_rate: `${Number(fee_rate) / 100}`,
+            inboundFee: {
+                base_fee_msat: base_fee_msat_inbound,
+                fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+            },
             chan_point: {
                 funding_txid_str: chan_point.funding_txid_str,
                 output_index: chan_point.output_index
