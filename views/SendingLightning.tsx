@@ -66,13 +66,8 @@ export default class SendingLightning extends React.Component<
         const { TransactionsStore, navigation } = this.props;
 
         navigation.addListener('focus', () => {
-            const noteKey =
-                typeof TransactionsStore.payment_hash === 'string'
-                    ? TransactionsStore.payment_hash
-                    : typeof TransactionsStore.payment_preimage === 'string'
-                    ? TransactionsStore.payment_preimage
-                    : null;
-            EncryptedStorage.getItem('note-' + noteKey)
+            const noteKey: string = TransactionsStore.noteKey;
+            EncryptedStorage.getItem(noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })
@@ -156,7 +151,8 @@ export default class SendingLightning extends React.Component<
             payment_hash,
             payment_preimage,
             payment_error,
-            isIncomplete
+            isIncomplete,
+            noteKey
         } = TransactionsStore;
         const { storedNotes, currentPayment } = this.state;
 
@@ -168,13 +164,6 @@ export default class SendingLightning extends React.Component<
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
-
-        const noteKey =
-            typeof payment_hash === 'string'
-                ? payment_hash
-                : typeof payment_preimage === 'string'
-                ? payment_preimage
-                : null;
 
         return (
             <Screen>
@@ -435,7 +424,7 @@ export default class SendingLightning extends React.Component<
                                     }
                                     onPress={() =>
                                         navigation.navigate('AddNotes', {
-                                            payment_hash: noteKey
+                                            noteKey
                                         })
                                     }
                                     secondary

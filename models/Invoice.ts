@@ -380,4 +380,8 @@ export default class Invoice extends BaseModel {
                 .replace(/([^,]) (\d)/g, '$2 $1') // RTL
         );
     }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.payment_hash || this.getRPreimage}`;
+    }
 }
