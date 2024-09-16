@@ -88,6 +88,7 @@ interface NodeConfigurationState {
     username: string | undefined; // lndhub
     password: string | undefined; // lndhub, eclair
     existingAccount: boolean; // lndhub
+    dismissCustodialWarning: boolean;
     implementation: Implementations;
     certVerification: boolean;
     saved: boolean;
@@ -133,6 +134,7 @@ export default class NodeConfiguration extends React.Component<
     state: NodeConfigurationState = {
         node: null,
         nickname: '',
+        dismissCustodialWarning: false,
         host: '',
         port: '',
         macaroonHex: '',
@@ -310,6 +312,7 @@ export default class NodeConfiguration extends React.Component<
         if (node) {
             const {
                 nickname,
+                dismissCustodialWarning,
                 host,
                 port,
                 macaroonHex,
@@ -338,6 +341,7 @@ export default class NodeConfiguration extends React.Component<
             this.setState({
                 node,
                 nickname,
+                dismissCustodialWarning,
                 host,
                 port,
                 macaroonHex,
@@ -380,6 +384,7 @@ export default class NodeConfiguration extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
+            dismissCustodialWarning,
             host,
             port,
             url,
@@ -414,6 +419,7 @@ export default class NodeConfiguration extends React.Component<
 
         const node = {
             nickname,
+            dismissCustodialWarning,
             host,
             port,
             url,
