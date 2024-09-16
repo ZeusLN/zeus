@@ -384,4 +384,5 @@ export default class Spark {
     supportsLSPS1rest = () => true;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }

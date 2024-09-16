@@ -426,4 +426,5 @@ export default class CLNRest {
         return supportsOffers;
     };
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }

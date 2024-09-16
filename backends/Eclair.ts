@@ -510,6 +510,7 @@ export default class Eclair {
     supportsLSPS1rest = () => true;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }
 
 const mapInvoice =
