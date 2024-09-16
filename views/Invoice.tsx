@@ -38,8 +38,8 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const { navigation, route } = this.props;
         const invoice = route.params?.invoice;
         navigation.addListener('focus', () => {
-            const noteKey = invoice.getRPreimage || invoice.payment_hash;
-            EncryptedStorage.getItem('note-' + noteKey)
+            const noteKey = invoice.getNoteKey;
+            EncryptedStorage.getItem(noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })
@@ -72,10 +72,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
             getPaymentRequest,
             getKeysendMessage,
             is_amp,
-            value
+            value,
+            getNoteKey
         } = invoice;
         const privateInvoice = invoice.private;
-        const noteKey = getRPreimage || payment_hash;
 
         const QRButton = () => (
             <TouchableOpacity
@@ -91,7 +91,9 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
         const EditNotesButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('AddNotes', { getRPreimage: noteKey })
+                    navigation.navigate('AddNotes', {
+                        noteKey: getNoteKey
+                    })
                 }
                 style={{ marginRight: 15 }}
             >
@@ -295,7 +297,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                                 sensitive
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
-                                        getRPreimage: noteKey
+                                        noteKey: getNoteKey
                                     })
                                 }
                             />
@@ -303,7 +305,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     </View>
                 </ScrollView>
                 <View style={{ bottom: 15 }}>
-                    {noteKey && (
+                    {getNoteKey && (
                         <Button
                             title={
                                 storedNotes
@@ -316,7 +318,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             }
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
-                                    getRPreimage: noteKey
+                                    noteKey: getNoteKey
                                 })
                             }
                             containerStyle={{ marginTop: 15 }}

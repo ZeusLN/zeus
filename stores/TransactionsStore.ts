@@ -55,6 +55,8 @@ export default class TransactionsStore {
     @observable onchain_address: string;
     @observable txid: string | null;
     @observable status: string | number | null;
+    @observable noteKey: string;
+
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
     @observable broadcast_txid: string;
@@ -487,6 +489,7 @@ export default class TransactionsStore {
         this.payment_route = result.payment_route;
 
         const payment = new Payment(result);
+        this.noteKey = payment.getNoteKey;
         this.payment_preimage = payment.getPreimage;
         this.payment_hash = payment.paymentHash;
         this.isIncomplete = payment.isIncomplete;

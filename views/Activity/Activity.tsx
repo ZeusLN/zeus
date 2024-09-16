@@ -27,6 +27,7 @@ import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NotesStore from '../../stores/NotesStore';
 import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
@@ -38,6 +39,7 @@ interface ActivityProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
+    NotesStore: NotesStore;
     route: Route<'Activity', { order: any }>;
 }
 
@@ -45,7 +47,7 @@ interface ActivityState {
     selectedPaymentForOrder: any;
 }
 
-@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore')
+@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
 @observer
 export default class Activity extends React.PureComponent<
     ActivityProps,
@@ -225,6 +227,20 @@ export default class Activity extends React.PureComponent<
             </TouchableOpacity>
         );
 
+        const getMatchingNote = (item: any) => {
+            const { NotesStore } = this.props;
+            const notes = NotesStore.notes;
+
+            // Use the getNoteKey from the model
+            const noteKey = item.getNoteKey;
+
+            if (noteKey && notes[noteKey]) {
+                return notes[noteKey];
+            }
+
+            return null;
+        };
+
         return (
             <Screen>
                 <Header
@@ -255,6 +271,8 @@ export default class Activity extends React.PureComponent<
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
+                            const note = getMatchingNote(item);
+
                             let displayName = item.model;
                             let subTitle = item.model;
 
@@ -563,6 +581,50 @@ export default class Activity extends React.PureComponent<
                                                         </ListItem.Subtitle>
                                                     </View>
                                                 )}
+                                            {note && (
+                                                <View style={styles.row}>
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.leftCell,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            flexShrink: 0,
+                                                            flex: 0,
+                                                            width: 'auto',
+                                                            overflow: 'hidden'
+                                                        }}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {localeString(
+                                                            'general.note'
+                                                        )}
+                                                    </ListItem.Subtitle>
+
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.rightCell,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            flexWrap: 'wrap',
+                                                            flexShrink: 1
+                                                        }}
+                                                        ellipsizeMode="tail"
+                                                    >
+                                                        {note.length > 150
+                                                            ? `${note.substring(
+                                                                  0,
+                                                                  150
+                                                              )}...`
+                                                            : note}
+                                                    </ListItem.Subtitle>
+                                                </View>
+                                            )}
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>

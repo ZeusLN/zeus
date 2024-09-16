@@ -70,6 +70,7 @@ import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
+import NotesStore from '../../stores/NotesStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -95,6 +96,7 @@ interface WalletProps {
     ModalStore: ModalStore;
     SyncStore: SyncStore;
     LSPStore: LSPStore;
+    NotesStore: NotesStore;
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
     LnurlPayStore: LnurlPayStore;
@@ -121,7 +123,8 @@ interface WalletState {
     'LSPStore',
     'LnurlPayStore',
     'ChannelBackupStore',
-    'LightningAddressStore'
+    'LightningAddressStore',
+    'NotesStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -303,7 +306,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelBackupStore,
             SyncStore,
             LightningAddressStore,
-            LnurlPayStore
+            LnurlPayStore,
+            NotesStore
         } = this.props;
         const {
             settings,
@@ -349,6 +353,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         LnurlPayStore.reset();
+
+        NotesStore?.loadNoteKeys();
 
         if (
             pos?.posEnabled &&
