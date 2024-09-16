@@ -223,14 +223,23 @@ export default class CustodialWalletWarning extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                Please confirm the following to dismiss the
-                                warning:
+                                {localeString(
+                                    'views.Settings.CustodialWalletWarning.dismissWarningHeader'
+                                )}
                             </Text>
                             {[
-                                "I know that I don't have custody of the funds in this wallet without the 12 or 24 word seed phrase",
-                                'I know that an LNDHub account password is not the same as a seed phrase',
-                                'I either set up this connection myself or I trust the person who set it up',
-                                "I'm not just lying to get this over with"
+                                localeString(
+                                    'views.Settings.CustodialWalletWarning.dismissWarning1'
+                                ),
+                                localeString(
+                                    'views.Settings.CustodialWalletWarning.dismissWarning2'
+                                ),
+                                localeString(
+                                    'views.Settings.CustodialWalletWarning.dismissWarning3'
+                                ),
+                                localeString(
+                                    'views.Settings.CustodialWalletWarning.dismissWarning4'
+                                )
                             ].map((title, index) => (
                                 <CheckBox
                                     key={index}
@@ -268,7 +277,7 @@ export default class CustodialWalletWarning extends React.Component<
                                     containerStyle={{ paddingBottom: 20 }}
                                 />
                                 <Button
-                                    title="CLOSE"
+                                    title={localeString('general.close')}
                                     onPress={() => {
                                         this.toggleModal();
                                     }}
@@ -312,9 +321,5 @@ const styles = StyleSheet.create({
         marginTop: 20,
         width: '100%',
         alignItems: 'center'
-    },
-    closeButton: {
-        marginTop: 10,
-        color: 'blue'
     }
 });
