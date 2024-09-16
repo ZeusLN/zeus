@@ -792,6 +792,7 @@
     "views.Settings.POS.Category.noCategoriesDefined": "No categories defined yet",
     "views.Settings.POS.saveCategory": "Save category",
     "views.Settings.POS.Products": "Products",
+    "views.Settings.POS.Keypad": "POS Keypad",
     "views.Settings.POS.Product": "Product",
     "views.Settings.POS.Product.name": "Product name",
     "views.Settings.POS.Product.noProductsDefined": "No products defined yet",
