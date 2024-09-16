@@ -384,32 +384,36 @@ export default class PointOfSale extends React.Component<
                                     }}
                                     values={POS_CONF_PREF_KEYS}
                                 />
-                                <DropdownSetting
-                                    title={localeString(
-                                        'views.Settings.Display.defaultView'
-                                    )}
-                                    selectedValue={defaultView}
-                                    onValueChange={async (value: string) => {
-                                        this.setState({
-                                            defaultView: value
-                                        });
-                                        await updateSettings({
-                                            pos: {
-                                                posEnabled,
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode,
-                                                showKeypad,
-                                                taxPercentage,
+                                {posEnabled === PosEnabled.Standalone && (
+                                    <DropdownSetting
+                                        title={localeString(
+                                            'views.Settings.Display.defaultView'
+                                        )}
+                                        selectedValue={defaultView}
+                                        onValueChange={async (
+                                            value: string
+                                        ) => {
+                                            this.setState({
                                                 defaultView: value
-                                            }
-                                        });
-                                    }}
-                                    values={DEFAULT_VIEW_KEYS_POS}
-                                />
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    posEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode,
+                                                    showKeypad,
+                                                    taxPercentage,
+                                                    defaultView: value
+                                                }
+                                            });
+                                        }}
+                                        values={DEFAULT_VIEW_KEYS_POS}
+                                    />
+                                )}
 
                                 <ListItem
                                     containerStyle={{
