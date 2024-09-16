@@ -36,6 +36,8 @@ interface SetFeesFormState {
     feesSubmitted: boolean;
     newBaseFee: string;
     newFeeRate: string;
+    baseFeeInbound: string;
+    feeRateInbound: string;
     newTimeLockDelta: string;
     newMinHtlc: string;
     newMaxHtlc: string;
@@ -54,6 +56,8 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted: false,
             newBaseFee: props.baseFee || '',
             newFeeRate: props.feeRate || '',
+            baseFeeInbound: '',
+            feeRateInbound: '',
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
             newMaxHtlc: props.maxHtlc || ''
@@ -65,6 +69,8 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted,
             newBaseFee,
             newFeeRate,
+            baseFeeInbound,
+            feeRateInbound,
             newTimeLockDelta,
             newMinHtlc,
             newMaxHtlc
@@ -144,6 +150,50 @@ export default class SetFeesForm extends React.Component<
                     onChangeText={(text: string) =>
                         this.setState({
                             newFeeRate: text
+                        })
+                    }
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                />
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {`${localeString(
+                        'components.SetFeesForm.baseFee'
+                    )} Inbound (${localeString('general.sats')})`}
+                </Text>
+                <TextInput
+                    keyboardType="numeric"
+                    placeholder={baseFeeInbound || '1'}
+                    value={baseFeeInbound}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            baseFeeInbound: text
+                        })
+                    }
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                />
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {`${localeString(
+                        'components.SetFeesForm.feeRate'
+                    )} Inbound (${localeString('general.percentage')})`}
+                </Text>
+                <TextInput
+                    keyboardType="numeric"
+                    placeholder={feeRateInbound || '1'}
+                    value={feeRateInbound}
+                    onChangeText={(text: string) =>
+                        this.setState({
+                            feeRateInbound: text
                         })
                     }
                     autoCapitalize="none"
@@ -230,6 +280,8 @@ export default class SetFeesForm extends React.Component<
                                 setFees(
                                     newBaseFee,
                                     newFeeRate,
+                                    baseFeeInbound,
+                                    feeRateInbound,
                                     Number(newTimeLockDelta),
                                     channelPoint,
                                     channelId,
