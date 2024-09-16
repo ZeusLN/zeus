@@ -67,6 +67,7 @@ export default class SendingLightning extends React.Component<
 
         navigation.addListener('focus', () => {
             const noteKey: string = TransactionsStore.noteKey;
+            if (!noteKey) return;
             EncryptedStorage.getItem(noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });

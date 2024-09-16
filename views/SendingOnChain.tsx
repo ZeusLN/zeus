@@ -38,6 +38,7 @@ export default class SendingOnChain extends React.Component<
     async componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
         navigation.addListener('focus', () => {
+            if (!TransactionsStore.txid) return;
             EncryptedStorage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
