@@ -170,6 +170,7 @@ class BackendUtils {
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsOffers = () => this.call('supportsOffers');
     isLNDBased = () => this.call('isLNDBased');
+    supportInboundFees = () => this.call('supportInboundFees');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

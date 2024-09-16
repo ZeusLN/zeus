@@ -683,4 +683,5 @@ export default class LND {
     supportsLSPS1rest = () => false;
     supportsOffers = (): Promise<boolean> | boolean => false;
     isLNDBased = () => true;
+    supportInboundFees = () => true;
 }

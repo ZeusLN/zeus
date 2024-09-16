@@ -155,50 +155,54 @@ export default class SetFeesForm extends React.Component<
                     autoCapitalize="none"
                     autoCorrect={false}
                 />
-                <Text
-                    style={{
-                        ...styles.text,
-                        color: themeColor('secondaryText')
-                    }}
-                >
-                    {`${localeString(
-                        'components.SetFeesForm.baseFee'
-                    )} Inbound (${localeString('general.sats')})`}
-                </Text>
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder={baseFeeInbound || '1'}
-                    value={baseFeeInbound}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            baseFeeInbound: text
-                        })
-                    }
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                />
-                <Text
-                    style={{
-                        ...styles.text,
-                        color: themeColor('secondaryText')
-                    }}
-                >
-                    {`${localeString(
-                        'components.SetFeesForm.feeRate'
-                    )} Inbound (${localeString('general.percentage')})`}
-                </Text>
-                <TextInput
-                    keyboardType="numeric"
-                    placeholder={feeRateInbound || '1'}
-                    value={feeRateInbound}
-                    onChangeText={(text: string) =>
-                        this.setState({
-                            feeRateInbound: text
-                        })
-                    }
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                />
+                {BackendUtils.supportInboundFees() && (
+                    <>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'components.SetFeesForm.baseFee'
+                            )} Inbound (${localeString('general.sats')})`}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={baseFeeInbound || '1'}
+                            value={baseFeeInbound}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    baseFeeInbound: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'components.SetFeesForm.feeRate'
+                            )} Inbound (${localeString('general.percentage')})`}
+                        </Text>
+                        <TextInput
+                            keyboardType="numeric"
+                            placeholder={feeRateInbound || '1'}
+                            value={feeRateInbound}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    feeRateInbound: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                    </>
+                )}
 
                 {BackendUtils.isLNDBased() && (
                     <>
