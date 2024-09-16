@@ -150,7 +150,9 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                     )
                     .join('\n');
 
-                return `Transaction Section\n${header}\n${rows}`;
+                return `${localeString(
+                    'general.transaction'
+                )}\n${header}\n${rows}`;
             } else {
                 const invoiceData = filteredData.filter(
                     (item) => item.amt_paid
@@ -160,17 +162,19 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                 );
 
                 const invoiceHeader = [
-                    'Amount Paid',
-                    'Amount Paid (Sat)',
-                    'CLTV Expiry',
-                    'Creation Date',
+                    localeString('views.ActivityToCsv.amountPaid'),
+                    `${localeString(
+                        'views.ActivityToCsv.amountPaid'
+                    )} (${localeString('general.sats')})`,
+                    localeString('views.Invoice.cltvExpiry'),
+                    localeString('views.Payment.creationDate'),
                     '',
                     '',
-                    'Expiry'
+                    localeString('views.PaymentRequest.expiry')
                 ].join(',');
 
                 const invoiceSection = [
-                    'Invoice Section',
+                    localeString('pos.print.invoice'),
                     invoiceHeader,
                     ...invoiceData.map((item) =>
                         invoiceKeysToInclude
@@ -180,7 +184,7 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                 ].join('\n');
 
                 const paymentSection = [
-                    'Payment Section',
+                    localeString('views.Wallet.Wallet.payments'),
                     paymentKeysToInclude.map((field) => field.label).join(','),
                     ...paymentData.map((item) =>
                         paymentKeysToInclude

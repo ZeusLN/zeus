@@ -143,7 +143,10 @@ export default class Activity extends React.PureComponent<
         const { filteredActivity } = ActivityStore;
 
         if (!startDate || !endDate) {
-            Alert.alert('Error', 'Please select Start and End date.');
+            Alert.alert(
+                localeString('general.error'),
+                localeString('views.Activity.CSVDownloadWarning')
+            );
         } else {
             this.setState({
                 isCsvModalVisible: true,
