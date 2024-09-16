@@ -1514,6 +1514,19 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY6, 'true');
                 }
 
+                // switch off bimodal pathfinding while bug exists
+                // https://github.com/lightningnetwork/lnd/issues/9085
+                const MOD_KEY7 = 'bimodal-bug-9085';
+                const mod7 = await EncryptedStorage.getItem(MOD_KEY7);
+                if (!mod7) {
+                    if (newSettings?.bimodalPathfinding) {
+                        newSettings.bimodalPathfinding = false;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY7, 'true');
+                }
+
                 // migrate old POS squareEnabled setting to posEnabled
                 if (newSettings?.pos?.squareEnabled) {
                     newSettings.pos.posEnabled = PosEnabled.Square;
