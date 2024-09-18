@@ -120,31 +120,45 @@ export default class InvoicesStore {
     };
 
     @action
-    public createUnifiedInvoice = (
-        memo: string,
-        value: string,
+    public createUnifiedInvoice = ({
+        memo,
+        value,
         expiry = '3600',
-        lnurl?: LNURLWithdrawParams,
-        ampInvoice?: boolean,
-        routeHints?: boolean,
-        routeHintChannels?: Channel[],
-        addressType?: string,
-        customPreimage?: string,
-        noLsp?: boolean
-    ) => {
+        lnurl,
+        ampInvoice,
+        blindedPaths,
+        routeHints,
+        routeHintChannels,
+        addressType,
+        customPreimage,
+        noLsp
+    }: {
+        memo: string;
+        value: string;
+        expiry: string;
+        lnurl?: LNURLWithdrawParams;
+        ampInvoice?: boolean;
+        blindedPaths?: boolean;
+        routeHints?: boolean;
+        routeHintChannels?: Channel[];
+        addressType?: string;
+        customPreimage?: string;
+        noLsp?: boolean;
+    }) => {
         this.creatingInvoice = true;
-        return this.createInvoice(
+        return this.createInvoice({
             memo,
             value,
             expiry,
             lnurl,
             ampInvoice,
+            blindedPaths,
             routeHints,
             routeHintChannels,
-            true,
+            unified: true,
             customPreimage,
             noLsp
-        ).then(
+        }).then(
             ({
                 rHash,
                 paymentRequest
@@ -179,18 +193,31 @@ export default class InvoicesStore {
     };
 
     @action
-    public createInvoice = async (
-        memo: string,
-        value: string,
+    public createInvoice = async ({
+        memo,
+        value,
         expiry = '3600',
-        lnurl?: LNURLWithdrawParams,
-        ampInvoice?: boolean,
-        routeHints?: boolean,
-        routeHintChannels?: Channel[],
-        unified?: boolean,
-        customPreimage?: string,
-        noLsp?: boolean
-    ) => {
+        lnurl,
+        ampInvoice,
+        blindedPaths,
+        routeHints,
+        routeHintChannels,
+        unified,
+        customPreimage,
+        noLsp
+    }: {
+        memo: string;
+        value: string;
+        expiry: string;
+        lnurl?: LNURLWithdrawParams;
+        ampInvoice?: boolean;
+        blindedPaths?: boolean;
+        routeHints?: boolean;
+        routeHintChannels?: Channel[];
+        unified?: boolean;
+        customPreimage?: string;
+        noLsp?: boolean;
+    }) => {
         this.lspStore?.resetFee();
         this.payment_request = null;
         this.payment_request_amt = null;
@@ -205,6 +232,7 @@ export default class InvoicesStore {
         };
 
         if (ampInvoice) req.is_amp = true;
+        if (blindedPaths) req.is_blinded = true;
         if (routeHints) {
             if (routeHintChannels?.length) {
                 const routeHints = [];

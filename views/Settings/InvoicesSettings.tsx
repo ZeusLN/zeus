@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
@@ -11,6 +11,7 @@ import ModalBox from '../../components/ModalBox';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import SettingsStore, { TIME_PERIOD_KEYS } from '../../stores/SettingsStore';
@@ -34,6 +35,7 @@ interface InvoicesSettingsState {
     expirySeconds: string;
     routeHints: boolean;
     ampInvoice: boolean;
+    blindedPaths: boolean;
     showCustomPreimageField: boolean;
 }
 
@@ -51,6 +53,7 @@ export default class InvoicesSettings extends React.Component<
         expirySeconds: '3600',
         routeHints: false,
         ampInvoice: false,
+        blindedPaths: false,
         showCustomPreimageField: false
     };
 
@@ -67,6 +70,7 @@ export default class InvoicesSettings extends React.Component<
             expirySeconds: settings?.invoices?.expirySeconds || '3600',
             routeHints: settings?.invoices?.routeHints || false,
             ampInvoice: settings?.invoices?.ampInvoice || false,
+            blindedPaths: settings?.invoices?.blindedPaths || false,
             showCustomPreimageField:
                 settings?.invoices?.showCustomPreimageField || false
         });
@@ -93,6 +97,7 @@ export default class InvoicesSettings extends React.Component<
             expirySeconds,
             routeHints,
             ampInvoice,
+            blindedPaths,
             showCustomPreimageField
         } = this.state;
         const { implementation, updateSettings }: any = SettingsStore;
@@ -192,6 +197,7 @@ export default class InvoicesSettings extends React.Component<
                                     expirySeconds,
                                     routeHints,
                                     ampInvoice,
+                                    blindedPaths,
                                     showCustomPreimageField
                                 }
                             });
@@ -251,6 +257,7 @@ export default class InvoicesSettings extends React.Component<
                                                 expirySeconds,
                                                 routeHints,
                                                 ampInvoice,
+                                                blindedPaths,
                                                 showCustomPreimageField
                                             }
                                         });
@@ -314,6 +321,7 @@ export default class InvoicesSettings extends React.Component<
                                                     expirySeconds,
                                                     routeHints,
                                                     ampInvoice,
+                                                    blindedPaths,
                                                     showCustomPreimageField
                                                 }
                                             });
@@ -332,6 +340,14 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
+                                infoText={[
+                                    localeString(
+                                        'views.Receive.routeHintSwitchExplainer1'
+                                    ),
+                                    localeString(
+                                        'views.Receive.routeHintSwitchExplainer2'
+                                    )
+                                ]}
                             >
                                 {localeString('views.Receive.routeHints')}
                             </Text>
@@ -350,6 +366,7 @@ export default class InvoicesSettings extends React.Component<
                                             expirySeconds,
                                             routeHints: !routeHints,
                                             ampInvoice,
+                                            blindedPaths,
                                             showCustomPreimageField
                                         }
                                     });
@@ -366,6 +383,14 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
+                                infoText={[
+                                    localeString(
+                                        'views.Receive.ampSwitchExplainer1'
+                                    ),
+                                    localeString(
+                                        'views.Receive.ampSwitchExplainer2'
+                                    )
+                                ]}
                             >
                                 {localeString('views.Receive.ampInvoice')}
                             </Text>
@@ -384,6 +409,49 @@ export default class InvoicesSettings extends React.Component<
                                             expirySeconds,
                                             routeHints,
                                             ampInvoice: !ampInvoice,
+                                            showCustomPreimageField
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
+
+                    {BackendUtils.supportsBolt11BlindedRoutes() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText'),
+                                    top: 20
+                                }}
+                                infoText={[
+                                    localeString(
+                                        'views.Receive.blindedPathsExplainer1'
+                                    ),
+                                    localeString(
+                                        'views.Receive.blindedPathsExplainer2'
+                                    )
+                                ]}
+                            >
+                                {localeString('views.Receive.blindedPaths')}
+                            </Text>
+                            <Switch
+                                value={blindedPaths}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        blindedPaths: !blindedPaths
+                                    });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType,
+                                            memo,
+                                            expiry,
+                                            timePeriod,
+                                            expirySeconds,
+                                            routeHints,
+                                            ampInvoice,
+                                            blindedPaths: !blindedPaths,
                                             showCustomPreimageField
                                         }
                                     });

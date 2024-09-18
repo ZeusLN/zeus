@@ -169,6 +169,8 @@ class BackendUtils {
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsOffers = () => this.call('supportsOffers');
+    supportsBolt11BlindedRoutes = () =>
+        this.call('supportsBolt11BlindedRoutes');
     isLNDBased = () => this.call('isLNDBased');
 
     // LNC

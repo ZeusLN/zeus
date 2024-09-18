@@ -134,6 +134,7 @@ interface ReceiveState {
     ampInvoice: boolean;
     routeHints: boolean;
     account: string;
+    blindedPaths: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -188,6 +189,7 @@ export default class Receive extends React.Component<
         ampInvoice: false,
         routeHints: false,
         account: 'default',
+        blindedPaths: false,
         // POS
         orderId: '',
         orderTip: '',
@@ -246,7 +248,14 @@ export default class Receive extends React.Component<
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: newExpirySeconds,
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false,
+            ampInvoice:
+                (settings?.invoices?.ampInvoice &&
+                    BackendUtils.supportsAMP()) ||
+                false,
+            blindedPaths:
+                (settings?.invoices?.blindedPaths &&
+                    BackendUtils.supportsBolt11BlindedRoutes()) ||
+                false,
             enableLSP: settings?.enableLSP,
             lspIsActive:
                 settings?.enableLSP &&
@@ -286,8 +295,13 @@ export default class Receive extends React.Component<
             });
         }
 
-        const { expirySeconds, routeHints, ampInvoice, addressType } =
-            this.state;
+        const {
+            expirySeconds,
+            routeHints,
+            ampInvoice,
+            blindedPaths,
+            addressType
+        } = this.state;
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -354,6 +368,7 @@ export default class Receive extends React.Component<
                 expirySeconds,
                 routeHints,
                 ampInvoice,
+                blindedPaths,
                 addressType
             );
         }
@@ -435,26 +450,25 @@ export default class Receive extends React.Component<
         expirySeconds?: string,
         routeHints?: boolean,
         ampInvoice?: boolean,
+        blindedPaths?: boolean,
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
         const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
-        createUnifiedInvoice(
-            lspIsActive ? '' : memo || '',
-            amount || '0',
-            expirySeconds || '3600',
-            undefined,
-            lspIsActive ? false : ampInvoice || false,
-            lspIsActive ? false : routeHints || false,
-            undefined,
-            BackendUtils.supportsAddressTypeSelection()
+        createUnifiedInvoice({
+            memo: lspIsActive ? '' : memo || '',
+            value: amount || '0',
+            expiry: expirySeconds || '3600',
+            ampInvoice: lspIsActive ? false : ampInvoice || false,
+            blindedPaths: lspIsActive ? false : blindedPaths || false,
+            routeHints: lspIsActive ? false : routeHints || false,
+            addressType: BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined,
-            undefined,
-            !lspIsActive
-        ).then(
+            noLsp: !lspIsActive
+        }).then(
             ({
                 rHash,
                 onChainAddress
@@ -558,18 +572,13 @@ export default class Receive extends React.Component<
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
-                        createUnifiedInvoice(
-                            lspIsActive ? '' : memo,
-                            amount.toString(),
-                            '3600',
-                            lnurlParams,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            !lspIsActive
-                        )
+                        createUnifiedInvoice({
+                            memo: lspIsActive ? '' : memo,
+                            value: amount.toString(),
+                            expiry: '3600',
+                            lnurl: lnurlParams,
+                            noLsp: !lspIsActive
+                        })
                             .then(
                                 ({
                                     rHash,
@@ -1041,7 +1050,8 @@ export default class Receive extends React.Component<
             lspIsActive,
             lspNotConfigured,
             routeHintMode,
-            selectedRouteHintChannels
+            selectedRouteHintChannels,
+            blindedPaths
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -2609,6 +2619,43 @@ export default class Receive extends React.Component<
                                                 </>
                                             )}
 
+                                        {BackendUtils.supportsBolt11BlindedRoutes() &&
+                                            !lspIsActive && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoText={[
+                                                            localeString(
+                                                                'views.Receive.blindedPathsExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.blindedPathsExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.blindedPaths'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={blindedPaths}
+                                                        onValueChange={() =>
+                                                            this.setState({
+                                                                blindedPaths:
+                                                                    !blindedPaths
+                                                            })
+                                                        }
+                                                    />
+                                                </>
+                                            )}
+
                                         <View style={styles.button}>
                                             <Button
                                                 title={
@@ -2622,30 +2669,41 @@ export default class Receive extends React.Component<
                                                         : '')
                                                 }
                                                 onPress={() => {
-                                                    createUnifiedInvoice(
-                                                        lspIsActive ? '' : memo,
-                                                        satAmount.toString() ||
+                                                    createUnifiedInvoice({
+                                                        memo: lspIsActive
+                                                            ? ''
+                                                            : memo,
+                                                        value:
+                                                            satAmount.toString() ||
                                                             '0',
-                                                        expirySeconds,
+                                                        expiry: expirySeconds,
                                                         lnurl,
-                                                        lspIsActive
+                                                        ampInvoice: lspIsActive
                                                             ? false
                                                             : ampInvoice ||
+                                                              false,
+                                                        blindedPaths:
+                                                            lspIsActive
+                                                                ? false
+                                                                : blindedPaths ||
                                                                   false,
                                                         routeHints,
-                                                        routeHintMode ===
+                                                        routeHintChannels:
+                                                            routeHintMode ===
                                                             RouteHintMode.Custom
-                                                            ? selectedRouteHintChannels
-                                                            : undefined,
-                                                        BackendUtils.supportsAddressTypeSelection()
-                                                            ? addressType
-                                                            : undefined,
-                                                        BackendUtils.supportsCustomPreimages() &&
+                                                                ? selectedRouteHintChannels
+                                                                : undefined,
+                                                        addressType:
+                                                            BackendUtils.supportsAddressTypeSelection()
+                                                                ? addressType
+                                                                : undefined,
+                                                        customPreimage:
+                                                            BackendUtils.supportsCustomPreimages() &&
                                                             showCustomPreimageField
-                                                            ? customPreimage
-                                                            : undefined,
-                                                        !lspIsActive
-                                                    ).then(
+                                                                ? customPreimage
+                                                                : undefined,
+                                                        noLsp: !lspIsActive
+                                                    }).then(
                                                         ({
                                                             rHash,
                                                             onChainAddress
