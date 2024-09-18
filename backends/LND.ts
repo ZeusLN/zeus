@@ -316,6 +316,7 @@ export default class LND {
             value_msat: data.value_msat || Number(data.value) * 1000,
             expiry: data.expiry,
             is_amp: data.is_amp,
+            is_blinded: data.is_blinded,
             private: data.private,
             r_preimage: data.preimage
                 ? Base64Utils.hexToBase64(data.preimage)
@@ -672,5 +673,6 @@ export default class LND {
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = (): Promise<boolean> | boolean => false;
+    supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     isLNDBased = () => true;
 }

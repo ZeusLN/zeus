@@ -84,6 +84,7 @@ interface InvoicesSettings {
     expirySeconds?: string;
     routeHints?: boolean;
     ampInvoice?: boolean;
+    blindedPaths: boolean;
     showCustomPreimageField?: boolean;
 }
 
@@ -1109,6 +1110,7 @@ export default class SettingsStore {
             expirySeconds: '3600',
             routeHints: false,
             ampInvoice: false,
+            blindedPaths: false,
             showCustomPreimageField: false
         },
         channels: {

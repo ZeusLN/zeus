@@ -52,6 +52,7 @@ export default class Invoice extends BaseModel {
     public cltv_expiry: string;
     public htlcs: Array<HTLC>;
     public is_amp?: boolean;
+    public is_blinded?: boolean;
     // c-lightning, eclair
     public bolt11: string;
     public label: string;
