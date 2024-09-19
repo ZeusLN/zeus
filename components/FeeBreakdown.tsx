@@ -146,6 +146,33 @@ export default class FeeBreakdown extends React.Component<
                             }%`}
                             sensitive
                         />
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.inboundBaseFee'
+                            )}
+                            value={
+                                <Amount
+                                    sats={
+                                        Number(
+                                            localPolicy.inbound_fee_base_msat
+                                        ) / 1000
+                                    }
+                                    toggleable
+                                    sensitive
+                                />
+                            }
+                        />
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.inboundFeeRate'
+                            )}
+                            value={`${
+                                Number(
+                                    localPolicy.inbound_fee_rate_milli_msat
+                                ) / 10000
+                            }%`}
+                            sensitive
+                        />
                     </React.Fragment>
                 )}
                 {isClosed && (

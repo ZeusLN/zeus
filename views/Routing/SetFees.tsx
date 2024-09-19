@@ -102,6 +102,13 @@ export default class SetFees extends React.PureComponent<SetFeesProps, {}> {
                                 feeRate={`${
                                     Number(policy.fee_rate_milli_msat) / 10000
                                 }`}
+                                baseFeeInbound={`${
+                                    Number(policy.inbound_fee_base_msat) / 1000
+                                }`}
+                                feeRateInbound={`${
+                                    Number(policy.inbound_fee_rate_milli_msat) /
+                                    10000
+                                }`}
                                 timeLockDelta={policy.time_lock_delta.toString()}
                                 minHtlc={`${Number(policy.min_htlc) / 1000}`}
                                 maxHtlc={`${

@@ -24,6 +24,8 @@ interface SetFeesFormProps {
     SettingsStore?: SettingsStore;
     baseFee?: string;
     feeRate?: string;
+    baseFeeInbound: string;
+    feeRateInbound: string;
     timeLockDelta?: string;
     channelPoint?: string;
     channelId?: string;
@@ -36,8 +38,8 @@ interface SetFeesFormState {
     feesSubmitted: boolean;
     newBaseFee: string;
     newFeeRate: string;
-    baseFeeInbound: string;
-    feeRateInbound: string;
+    newBaseFeeInbound: string;
+    newFeeRateInbound: string;
     newTimeLockDelta: string;
     newMinHtlc: string;
     newMaxHtlc: string;
@@ -56,8 +58,8 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted: false,
             newBaseFee: props.baseFee || '',
             newFeeRate: props.feeRate || '',
-            baseFeeInbound: '',
-            feeRateInbound: '',
+            newBaseFeeInbound: props.baseFeeInbound || '',
+            newFeeRateInbound: props.feeRateInbound || '',
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
             newMaxHtlc: props.maxHtlc || ''
@@ -69,8 +71,8 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted,
             newBaseFee,
             newFeeRate,
-            baseFeeInbound,
-            feeRateInbound,
+            newBaseFeeInbound,
+            newFeeRateInbound,
             newTimeLockDelta,
             newMinHtlc,
             newMaxHtlc
@@ -81,6 +83,8 @@ export default class SetFeesForm extends React.Component<
             SettingsStore,
             baseFee,
             feeRate,
+            baseFeeInbound,
+            feeRateInbound,
             timeLockDelta,
             channelPoint,
             channelId,
@@ -165,15 +169,17 @@ export default class SetFeesForm extends React.Component<
                         >
                             {`${localeString(
                                 'components.SetFeesForm.baseFee'
-                            )} Inbound (${localeString('general.sats')})`}
+                            )} ${localeString(
+                                'views.Channel.inbound'
+                            )} (${localeString('general.sats')})`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
                             placeholder={baseFeeInbound || '1'}
-                            value={baseFeeInbound}
+                            value={newBaseFeeInbound}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    baseFeeInbound: text
+                                    newBaseFeeInbound: text
                                 })
                             }
                             autoCapitalize="none"
@@ -187,15 +193,17 @@ export default class SetFeesForm extends React.Component<
                         >
                             {`${localeString(
                                 'components.SetFeesForm.feeRate'
-                            )} Inbound (${localeString('general.percentage')})`}
+                            )} ${localeString(
+                                'views.Channel.inbound'
+                            )} (${localeString('general.percentage')})`}
                         </Text>
                         <TextInput
                             keyboardType="numeric"
                             placeholder={feeRateInbound || '1'}
-                            value={feeRateInbound}
+                            value={newFeeRateInbound}
                             onChangeText={(text: string) =>
                                 this.setState({
-                                    feeRateInbound: text
+                                    newFeeRateInbound: text
                                 })
                             }
                             autoCapitalize="none"
@@ -284,8 +292,8 @@ export default class SetFeesForm extends React.Component<
                                 setFees(
                                     newBaseFee,
                                     newFeeRate,
-                                    baseFeeInbound,
-                                    feeRateInbound,
+                                    newBaseFeeInbound,
+                                    newFeeRateInbound,
                                     Number(newTimeLockDelta),
                                     channelPoint,
                                     channelId,
