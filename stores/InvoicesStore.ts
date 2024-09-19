@@ -436,6 +436,11 @@ export default class InvoicesStore {
             this.creatingInvoice = true;
             this.error_msg = null;
         }
+        // ZEUS-2396
+        // https://github.com/ZeusLN/zeus/issues/2396
+        if (params.account && params.account !== 'default') {
+            delete params.type;
+        }
         this.onChainAddress = null;
         return BackendUtils.getNewAddress(params)
             .then((data: any) => {
