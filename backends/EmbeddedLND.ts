@@ -300,5 +300,5 @@ export default class EmbeddedLND extends LND {
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
     isLNDBased = () => true;
-    supportInboundFees = () => true;
+    supportInboundFees = () => this.supports('v0.18.0');
 }
