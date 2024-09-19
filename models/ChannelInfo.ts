@@ -6,6 +6,8 @@ interface RoutingPolicy {
     min_htlc: string;
     fee_base_msat: string;
     fee_rate_milli_msat: string;
+    inbound_fee_base_msat: string;
+    inbound_fee_rate_milli_msat: string;
     disabled: boolean;
     max_htlc_msat: string;
     last_update: number;
