@@ -12,6 +12,7 @@ import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 import { Divider } from 'react-native-elements';
 
@@ -146,33 +147,41 @@ export default class FeeBreakdown extends React.Component<
                             }%`}
                             sensitive
                         />
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.inboundBaseFee'
-                            )}
-                            value={
-                                <Amount
-                                    sats={
-                                        Number(
-                                            localPolicy.inbound_fee_base_msat
-                                        ) / 1000
+                        {BackendUtils.supportInboundFees() && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.inboundBaseFee'
+                                    )}
+                                    value={
+                                        <Amount
+                                            sats={
+                                                localPolicy.inbound_fee_base_msat
+                                                    ? Number(
+                                                          localPolicy.inbound_fee_base_msat
+                                                      ) / 1000
+                                                    : 0
+                                            }
+                                            toggleable
+                                            sensitive
+                                        />
                                     }
-                                    toggleable
+                                />
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.inboundFeeRate'
+                                    )}
+                                    value={`${
+                                        localPolicy.inbound_fee_rate_milli_msat
+                                            ? Number(
+                                                  localPolicy.inbound_fee_rate_milli_msat
+                                              ) / 10000
+                                            : 0
+                                    }%`}
                                     sensitive
                                 />
-                            }
-                        />
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.inboundFeeRate'
-                            )}
-                            value={`${
-                                Number(
-                                    localPolicy.inbound_fee_rate_milli_msat
-                                ) / 10000
-                            }%`}
-                            sensitive
-                        />
+                            </>
+                        )}
                     </React.Fragment>
                 )}
                 {isClosed && (
