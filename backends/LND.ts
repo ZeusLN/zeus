@@ -479,7 +479,7 @@ export default class LND {
             urlParams && urlParams[1]
         }?force=${urlParams && urlParams[2]}`;
 
-        if (urlParams && urlParams[3]) {
+        if (urlParams && !urlParams[2] && urlParams[3]) {
             requestString += `&sat_per_vbyte=${urlParams && urlParams[3]}`;
         }
 

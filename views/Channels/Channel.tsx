@@ -705,25 +705,51 @@ export default class ChannelView extends React.Component<
                             )}
                             {BackendUtils.isLNDBased() && (
                                 <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Channel.closingRate'
-                                        )}
-                                    </Text>
-                                    <OnchainFeeInput
-                                        fee={satPerByte}
-                                        onChangeFee={(text: string) => {
-                                            this.setState({
-                                                satPerByte: text
-                                            });
-                                        }}
-                                        navigation={navigation}
-                                    />
+                                    <View style={{ marginBottom: 10 }}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text'),
+                                                top: 20
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Channel.forceClose'
+                                            )}
+                                        </Text>
+                                        <Switch
+                                            value={forceCloseChannel}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    forceCloseChannel:
+                                                        !forceCloseChannel
+                                                })
+                                            }
+                                        />
+                                    </View>
+                                    {!forceCloseChannel && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.closingRate'
+                                                )}
+                                            </Text>
+                                            <OnchainFeeInput
+                                                fee={satPerByte}
+                                                onChangeFee={(text: string) => {
+                                                    this.setState({
+                                                        satPerByte: text
+                                                    });
+                                                }}
+                                                navigation={navigation}
+                                            />
+                                        </>
+                                    )}
                                     <>
                                         <Text
                                             style={{
@@ -749,28 +775,6 @@ export default class ChannelView extends React.Component<
                                             locked={closingChannel}
                                         />
                                     </>
-                                    <View style={{ marginBottom: 10 }}>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text'),
-                                                top: 20
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Channel.forceClose'
-                                            )}
-                                        </Text>
-                                        <Switch
-                                            value={forceCloseChannel}
-                                            onValueChange={() =>
-                                                this.setState({
-                                                    forceCloseChannel:
-                                                        !forceCloseChannel
-                                                })
-                                            }
-                                        />
-                                    </View>
                                 </>
                             )}
                             <View style={styles.button}>
