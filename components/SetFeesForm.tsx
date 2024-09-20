@@ -103,6 +103,20 @@ export default class SetFeesForm extends React.Component<
 
         return (
             <React.Fragment>
+                {feesSubmitted && setFeesSuccess && (
+                    <SuccessMessage
+                        message={localeString('components.SetFeesForm.success')}
+                    />
+                )}
+                {feesSubmitted && setFeesError && (
+                    <ErrorMessage
+                        message={
+                            setFeesErrorMsg
+                                ? setFeesErrorMsg
+                                : localeString('components.SetFeesForm.error')
+                        }
+                    />
+                )}
                 <Text
                     style={{
                         ...styles.text,
@@ -317,20 +331,6 @@ export default class SetFeesForm extends React.Component<
                             tertiary
                         />
                     </View>
-                )}
-                {feesSubmitted && setFeesSuccess && (
-                    <SuccessMessage
-                        message={localeString('components.SetFeesForm.success')}
-                    />
-                )}
-                {feesSubmitted && setFeesError && (
-                    <ErrorMessage
-                        message={
-                            setFeesErrorMsg
-                                ? setFeesErrorMsg
-                                : localeString('components.SetFeesForm.error')
-                        }
-                    />
                 )}
             </React.Fragment>
         );
