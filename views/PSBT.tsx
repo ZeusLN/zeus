@@ -126,7 +126,9 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                     this.state.frameIndex === length - 1
                         ? 0
                         : this.state.frameIndex + 1,
-                bcurPart: this.state.bcurEncoder?.nextPart() || undefined
+                bcurPart:
+                    this.state.bcurEncoder?.nextPart().toUpperCase() ||
+                    undefined
             });
         }, 1000);
     };
