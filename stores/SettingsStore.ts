@@ -1051,9 +1051,15 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
 ];
 
 export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
-    'node.blixtwallet.com',
-    'bb1.breez.technology',
-    'bb2.breez.technology'
+    // friends
+    ['node.blixtwallet.com', 'bb1.breez.technology', 'bb2.breez.technology'],
+    // Asia, per Expatriotic
+    [
+        '168.159.213.bc.googleusercontent.com',
+        '115.85.88.107',
+        '182.229.145.161',
+        '18.142.108.45'
+    ]
 ];
 
 export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
