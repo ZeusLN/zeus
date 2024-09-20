@@ -172,6 +172,7 @@ class BackendUtils {
     supportsBolt11BlindedRoutes = () =>
         this.call('supportsBolt11BlindedRoutes');
     isLNDBased = () => this.call('isLNDBased');
+    supportInboundFees = () => this.call('supportInboundFees');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

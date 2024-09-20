@@ -511,6 +511,7 @@ export default class Eclair {
     supportsBolt11BlindedRoutes = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }
 
 const mapInvoice =
