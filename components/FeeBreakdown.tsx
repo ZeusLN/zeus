@@ -160,7 +160,7 @@ export default class FeeBreakdown extends React.Component<
                                                     ? Number(
                                                           localPolicy.inbound_fee_base_msat
                                                       ) / 1000
-                                                    : 0
+                                                    : undefined
                                             }
                                             toggleable
                                             sensitive
@@ -176,7 +176,7 @@ export default class FeeBreakdown extends React.Component<
                                             ? Number(
                                                   localPolicy.inbound_fee_rate_milli_msat
                                               ) / 10000
-                                            : 0
+                                            : undefined
                                     }%`}
                                     sensitive
                                 />

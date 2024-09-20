@@ -24,8 +24,8 @@ interface SetFeesFormProps {
     SettingsStore?: SettingsStore;
     baseFee?: string;
     feeRate?: string;
-    baseFeeInbound: string;
-    feeRateInbound: string;
+    baseFeeInbound?: string;
+    feeRateInbound?: string;
     timeLockDelta?: string;
     channelPoint?: string;
     channelId?: string;
