@@ -1046,15 +1046,22 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'btcd2.lnolymp.us',
     'btcd-mainnet.lightning.computer',
     'node.eldamar.icu',
-    'noad.sathoarder.com',
-    'sg.lnolymp.us'
+    'noad.sathoarder.com'
 ];
 
 export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
     // friends
-    ['node.blixtwallet.com', 'bb1.breez.technology', 'bb2.breez.technology'],
-    // Asia, per Expatriotic
     [
+        'uswest.blixtwallet.com',
+        'europe.blixtwallet.com',
+        'bb1.breez.technology',
+        'bb2.breez.technology'
+    ],
+    // Asia
+    [
+        'sg.lnolymp.us',
+        'asia.blixtwallet.com',
+        // per Expatriotic
         '168.159.213.bc.googleusercontent.com',
         '115.85.88.107',
         '182.229.145.161',
