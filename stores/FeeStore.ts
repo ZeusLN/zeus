@@ -116,6 +116,8 @@ export default class FeeStore {
     public setFees = (
         newBaseFee: string,
         newFeeRate: string,
+        baseFeeInbound: string,
+        feeRateInbound: string,
         timeLockDelta = 4,
         channelPoint?: string,
         channelId?: string,
@@ -134,6 +136,8 @@ export default class FeeStore {
         const data: any = {
             base_fee_msat: `${Number(baseFee) * 1000}`,
             fee_rate: feeRate,
+            base_fee_msat_inbound: `${Number(baseFeeInbound) * 1000}`,
+            fee_rate_inbound: feeRateInbound,
             time_lock_delta: timeLockDelta
         };
 
@@ -168,7 +172,7 @@ export default class FeeStore {
                 this.setFeesSuccess = true;
             })
             .catch((err: any) => {
-                this.setFeesErrorMsg = err.toString();
+                this.setFeesErrorMsg = errorToUserFriendly(err);
                 this.loading = false;
                 this.setFeesError = true;
             });

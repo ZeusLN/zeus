@@ -109,6 +109,7 @@ const writeLndConfig = async (
     tlsdisableautofill=1
     maxpendingchannels=1000
     max-commit-fee-rate-anchors=21
+    accept-positive-inbound-fees=true
     payments-expiration-grace-period=168h
     ${rescan ? 'reset-wallet-transactions=true' : ''}
     

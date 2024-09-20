@@ -385,4 +385,5 @@ export default class Spark {
     supportsBolt11BlindedRoutes = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }

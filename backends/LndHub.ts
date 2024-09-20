@@ -160,4 +160,5 @@ export default class LndHub extends LND {
     supportsBolt11BlindedRoutes = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }

@@ -326,6 +326,13 @@ export default class LightningNodeConnect {
             params = {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
+                ...(this.supportInboundFees() && {
+                    inboundFee: {
+                        base_fee_msat: data.base_fee_msat_inbound,
+                        fee_rate_ppm: `${Number(data.fee_rate_inbound) * 10000}`
+                    }
+                }),
+
                 global: true,
                 time_lock_delta: Number(data.time_lock_delta),
                 min_htlc_msat: data.min_htlc
@@ -340,6 +347,12 @@ export default class LightningNodeConnect {
             params = {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
+                ...(this.supportInboundFees() && {
+                    inboundFee: {
+                        base_fee_msat: data.base_fee_msat_inbound,
+                        fee_rate_ppm: `${Number(data.fee_rate_inbound) * 10000}`
+                    }
+                }),
                 chan_point: {
                     funding_txid_str: data.chan_point.funding_txid_str,
                     output_index: data.chan_point.output_index
@@ -497,4 +510,5 @@ export default class LightningNodeConnect {
     supportsOffers = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     isLNDBased = () => true;
+    supportInboundFees = () => this.supports('v0.18.0');
 }
