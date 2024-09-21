@@ -63,7 +63,9 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import Sweep from '../assets/images/SVG/Sweep.svg';
 
 import Contact from '../models/Contact';
-import { AdditionalOutput } from '../models/TransactionRequest';
+import TransactionRequest, {
+    AdditionalOutput
+} from '../models/TransactionRequest';
 
 interface SendProps {
     exitSetup: any;
@@ -114,6 +116,7 @@ interface SendState {
     clearOnBackPress: boolean;
     account: string;
     additionalOutputs: Array<AdditionalOutput>;
+    fundMax: boolean;
 }
 
 @inject(
@@ -171,7 +174,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             contactName,
             clearOnBackPress,
             account: 'default',
-            additionalOutputs: []
+            additionalOutputs: [],
+            fundMax: false
         };
     }
 
@@ -420,17 +424,19 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendCoins = (satAmount: string | number) => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, SettingsStore, navigation } = this.props;
+        const { implementation } = SettingsStore;
         const {
             destination,
             fee,
             utxos,
             confirmationTarget,
             account,
-            additionalOutputs
+            additionalOutputs,
+            fundMax
         } = this.state;
 
-        let request;
+        let request: TransactionRequest;
         if (utxos && utxos.length > 0) {
             request = {
                 addr: destination,
@@ -452,6 +458,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                 additional_outputs: additionalOutputs,
                 account
             };
+        }
+
+        if (fundMax) {
+            if (
+                implementation === 'c-lightning-REST' ||
+                implementation === 'cln-rest'
+            ) {
+                request.amount = 'all';
+            } else {
+                if (request.amount) delete request.amount;
+                request.send_all = true;
+            }
         }
         TransactionsStore.sendCoins(request);
         navigation.navigate('SendingOnChain');
@@ -670,7 +688,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard,
             loading,
             contactName,
-            additionalOutputs
+            additionalOutputs,
+            fundMax
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -973,23 +992,27 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                <AmountInput
-                                    amount={amount}
-                                    title={localeString('views.Send.amount')}
-                                    onAmountChange={(
-                                        amount: string,
-                                        satAmount: string | number
-                                    ) => {
-                                        this.setState({
-                                            amount,
-                                            satAmount
-                                        });
-                                    }}
-                                    hideConversion={amount === 'all'}
-                                />
+                                {!fundMax && (
+                                    <AmountInput
+                                        amount={amount}
+                                        title={localeString(
+                                            'views.Send.amount'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                amount,
+                                                satAmount
+                                            });
+                                        }}
+                                        hideConversion={amount === 'all'}
+                                    />
+                                )}
 
                                 <View style={{ paddingBottom: 15 }}>
-                                    {amount === 'all' && (
+                                    {fundMax && (
                                         <>
                                             <Amount
                                                 sats={
@@ -1010,6 +1033,43 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </>
                                     )}
                                 </View>
+
+                                {BackendUtils.isLNDBased() &&
+                                    additionalOutputs.length === 0 && (
+                                        <View style={{ marginBottom: 18 }}>
+                                            <Text
+                                                style={{
+                                                    marginTop: -20,
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.fundMax'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={fundMax}
+                                                onValueChange={() => {
+                                                    const newValue: boolean =
+                                                        !fundMax;
+                                                    this.setState({
+                                                        fundMax: newValue,
+                                                        amount:
+                                                            newValue &&
+                                                            (implementation ===
+                                                                'c-lightning-REST' ||
+                                                                implementation ===
+                                                                    'cln-rest')
+                                                                ? 'all'
+                                                                : ''
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    )}
 
                                 {additionalOutputs.map((output, index) => {
                                     return (
@@ -1114,7 +1174,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 })}
 
                                 {transactionType === 'On-chain' &&
-                                    BackendUtils.supportsOnchainBatching() && (
+                                    BackendUtils.supportsOnchainBatching() &&
+                                    !fundMax && (
                                         <View
                                             style={{
                                                 marginTop: 0,

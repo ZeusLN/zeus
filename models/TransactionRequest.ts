@@ -6,6 +6,12 @@ export interface AdditionalOutput {
     satAmount: string | number;
 }
 
+export interface OutPoint {
+    txid_bytes?: string;
+    txid_str?: string;
+    output_index: number;
+}
+
 export default interface TransactionRequest {
     target_conf?: number | null; // optional
     addr?: string;
@@ -18,6 +24,7 @@ export default interface TransactionRequest {
     send_all?: boolean;
     account?: string;
     additional_outputs: Array<AdditionalOutput>;
+    outpoints?: Array<OutPoint>;
 }
 
 export type SendPaymentRequest =
