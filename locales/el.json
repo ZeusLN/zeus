@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Βασικά απομακρυσμένα τέλη",
     "views.Channel.inbound": "Εισερχόμενα",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Δείκτης τελών",
     "views.Channel.channelPayments": "Πληρωμές καναλιών",
     "views.Channel.localMin": "Τοπικό ελάχιστο",
