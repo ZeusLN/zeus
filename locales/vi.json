@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Remote Base Fee",
     "views.Channel.inbound": "Inbound",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Tỷ lệ phí",
     "views.Channel.channelPayments": "Channel Payments",
     "views.Channel.localMin": "Local Min",
