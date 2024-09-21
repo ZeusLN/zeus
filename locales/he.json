@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "עמלת בסיס מרוחקת",
     "views.Channel.inbound": "נכנס",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "תעריף עמלות",
     "views.Channel.channelPayments": "תשלומי ערוץ",
     "views.Channel.localMin": "מינ' מקומי",
