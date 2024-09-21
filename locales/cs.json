@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Vzdálený základní poplatek",
     "views.Channel.inbound": "Příchozí",
     "views.Channel.inboundBaseFee": "Příchozí základní poplatek",
-    "views.Channel.inboundFeeRate": "Příchozí poplatek poplatku",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Sazba poplatků",
     "views.Channel.channelPayments": "Platby kanálu",
     "views.Channel.localMin": "Místní min.",
