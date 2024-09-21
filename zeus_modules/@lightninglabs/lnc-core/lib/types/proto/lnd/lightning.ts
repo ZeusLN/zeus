@@ -14,6 +14,19 @@ export enum OutputScriptType {
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
+export enum CoinSelectionStrategy {
+    /**
+     * STRATEGY_USE_GLOBAL_CONFIG - Use the coin selection strategy defined in the global configuration
+     * (lnd.conf).
+     */
+    STRATEGY_USE_GLOBAL_CONFIG = 'STRATEGY_USE_GLOBAL_CONFIG',
+    /** STRATEGY_LARGEST - Select the largest available coins first during coin selection. */
+    STRATEGY_LARGEST = 'STRATEGY_LARGEST',
+    /** STRATEGY_RANDOM - Randomly select the available coins during coin selection. */
+    STRATEGY_RANDOM = 'STRATEGY_RANDOM',
+    UNRECOGNIZED = 'UNRECOGNIZED'
+}
+
 /**
  * `AddressType` has to be one of:
  *
@@ -151,6 +164,8 @@ export enum PaymentFailureReason {
     FAILURE_REASON_INCORRECT_PAYMENT_DETAILS = 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS',
     /** FAILURE_REASON_INSUFFICIENT_BALANCE - Insufficient local balance. */
     FAILURE_REASON_INSUFFICIENT_BALANCE = 'FAILURE_REASON_INSUFFICIENT_BALANCE',
+    /** FAILURE_REASON_CANCELED - The payment was canceled. */
+    FAILURE_REASON_CANCELED = 'FAILURE_REASON_CANCELED',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -178,6 +193,8 @@ export enum FeatureBit {
     ANCHORS_OPT = 'ANCHORS_OPT',
     ANCHORS_ZERO_FEE_HTLC_REQ = 'ANCHORS_ZERO_FEE_HTLC_REQ',
     ANCHORS_ZERO_FEE_HTLC_OPT = 'ANCHORS_ZERO_FEE_HTLC_OPT',
+    ROUTE_BLINDING_REQUIRED = 'ROUTE_BLINDING_REQUIRED',
+    ROUTE_BLINDING_OPTIONAL = 'ROUTE_BLINDING_OPTIONAL',
     AMP_REQ = 'AMP_REQ',
     AMP_OPT = 'AMP_OPT',
     UNRECOGNIZED = 'UNRECOGNIZED'
@@ -420,7 +437,10 @@ export interface SendRequest {
      * fallback.
      */
     destFeatures: FeatureBit[];
-    /** The payment address of the generated invoice. */
+    /**
+     * The payment address of the generated invoice.  This is also called
+     * payment secret in specifications (e.g. BOLT 11).
+     */
     paymentAddr: Uint8Array | string;
 }
 
@@ -620,6 +640,8 @@ export interface EstimateFeeRequest {
     minConfs: number;
     /** Whether unconfirmed outputs should be used as inputs for the transaction. */
     spendUnconfirmed: boolean;
+    /** The strategy to use for selecting coins during fees estimation. */
+    coinSelectionStrategy: CoinSelectionStrategy;
 }
 
 export interface EstimateFeeRequest_AddrToAmountEntry {
@@ -671,6 +693,8 @@ export interface SendManyRequest {
     minConfs: number;
     /** Whether unconfirmed outputs should be used as inputs for the transaction. */
     spendUnconfirmed: boolean;
+    /** The strategy to use for selecting coins during sending many requests. */
+    coinSelectionStrategy: CoinSelectionStrategy;
 }
 
 export interface SendManyRequest_AddrToAmountEntry {
@@ -707,9 +731,8 @@ export interface SendCoinsRequest {
      */
     satPerByte: string;
     /**
-     * If set, then the amount field will be ignored, and lnd will attempt to
-     * send all the coins under control of the internal wallet to the specified
-     * address.
+     * If set, the amount field should be unset. It indicates lnd will send all
+     * wallet coins or all selected coins to the specified address.
      */
     sendAll: boolean;
     /** An optional label for the transaction, limited to 500 characters. */
@@ -721,6 +744,10 @@ export interface SendCoinsRequest {
     minConfs: number;
     /** Whether unconfirmed outputs should be used as inputs for the transaction. */
     spendUnconfirmed: boolean;
+    /** The strategy to use for selecting coins. */
+    coinSelectionStrategy: CoinSelectionStrategy;
+    /** A list of selected outpoints as inputs for the transaction. */
+    outpoints: OutPoint[];
 }
 
 export interface SendCoinsResponse {
@@ -1263,7 +1290,11 @@ export interface GetInfoResponse {
      * @deprecated
      */
     testnet: boolean;
-    /** A list of active chains the node is connected to */
+    /**
+     * A list of active chains the node is connected to. This will only
+     * ever contain a single entry since LND will only ever have a single
+     * chain backend during its lifetime.
+     */
     chains: Chain[];
     /** The URIs of the current node. */
     uris: string[];
@@ -1283,6 +1314,18 @@ export interface GetInfoResponse_FeaturesEntry {
     value: Feature | undefined;
 }
 
+export interface GetDebugInfoRequest {}
+
+export interface GetDebugInfoResponse {
+    config: { [key: string]: string };
+    log: string[];
+}
+
+export interface GetDebugInfoResponse_ConfigEntry {
+    key: string;
+    value: string;
+}
+
 export interface GetRecoveryInfoRequest {}
 
 export interface GetRecoveryInfoResponse {
@@ -1295,7 +1338,12 @@ export interface GetRecoveryInfoResponse {
 }
 
 export interface Chain {
-    /** The blockchain the node is on (eg bitcoin, litecoin) */
+    /**
+     * Deprecated. The chain is now always assumed to be bitcoin.
+     * The blockchain the node is on (must be bitcoin)
+     *
+     * @deprecated
+     */
     chain: string;
     /** The network the node is on (eg regtest, testnet, mainnet) */
     network: string;
@@ -1359,17 +1407,26 @@ export interface CloseChannelRequest {
      * NOTE: This field is only respected if we're the initiator of the channel.
      */
     maxFeePerVbyte: string;
+    /**
+     * If true, then the rpc call will not block while it awaits a closing txid.
+     * Consequently this RPC call will not return a closing txid if this value
+     * is set.
+     */
+    noWait: boolean;
 }
 
 export interface CloseStatusUpdate {
     closePending: PendingUpdate | undefined;
     chanClose: ChannelCloseUpdate | undefined;
+    closeInstant: InstantUpdate | undefined;
 }
 
 export interface PendingUpdate {
     txid: Uint8Array | string;
     outputIndex: number;
 }
+
+export interface InstantUpdate {}
 
 export interface ReadyForPsbtFunding {
     /**
@@ -1416,6 +1473,8 @@ export interface BatchOpenChannelRequest {
     spendUnconfirmed: boolean;
     /** An optional label for the batch transaction, limited to 500 characters. */
     label: string;
+    /** The strategy to use for selecting coins during batch opening channels. */
+    coinSelectionStrategy: CoinSelectionStrategy;
 }
 
 export interface BatchOpenChannel {
@@ -1876,7 +1935,13 @@ export interface PendingHTLC {
     stage: number;
 }
 
-export interface PendingChannelsRequest {}
+export interface PendingChannelsRequest {
+    /**
+     * Indicates whether to include the raw transaction hex for
+     * waiting_close_channels.
+     */
+    includeRawTx: boolean;
+}
 
 export interface PendingChannelsResponse {
     /** The balance in satoshis encumbered in pending channels */
@@ -1976,6 +2041,11 @@ export interface PendingChannelsResponse_WaitingCloseChannel {
     commitments: PendingChannelsResponse_Commitments | undefined;
     /** The transaction id of the closing transaction */
     closingTxid: string;
+    /**
+     * The raw hex encoded bytes of the closing transaction. Included if
+     * include_raw_tx in the request is true.
+     */
+    closingTxHex: string;
 }
 
 export interface PendingChannelsResponse_Commitments {
@@ -2080,6 +2150,12 @@ export interface WalletBalanceRequest {
      * If this is not specified, the balance of the "default" account is shown.
      */
     account: string;
+    /**
+     * The minimum number of confirmations each one of your outputs used for the
+     * funding transaction must satisfy. If this is not specified, the default
+     * value of 1 is used.
+     */
+    minConfs: number;
 }
 
 export interface WalletBalanceResponse {
@@ -2162,6 +2238,9 @@ export interface QueryRoutesRequest {
      * not add any additional block padding on top of final_ctlv_delta. This
      * padding of a few blocks needs to be added manually or otherwise failures may
      * happen when a block comes in while the payment is in flight.
+     *
+     * Note: must not be set if making a payment to a blinded path (delta is
+     * set by the aggregate parameters provided by blinded_payment_paths)
      */
     finalCltvDelta: number;
     /**
@@ -2220,11 +2299,19 @@ export interface QueryRoutesRequest {
     /** Optional route hints to reach the destination through private channels. */
     routeHints: RouteHint[];
     /**
+     * An optional blinded path(s) to reach the destination. Note that the
+     * introduction node must be provided as the first hop in the route.
+     */
+    blindedPaymentPaths: BlindedPaymentPath[];
+    /**
      * Features assumed to be supported by the final node. All transitive feature
      * dependencies must also be set properly. For a given feature bit pair, either
      * optional or remote may be set, but not both. If this field is nil or empty,
      * the router will try to load destination features from the graph as a
      * fallback.
+     *
+     * Note: must not be set if making a payment to a blinded route (features
+     * are provided in blinded_payment_paths).
      */
     destFeatures: FeatureBit[];
     /**
@@ -2330,6 +2417,29 @@ export interface Hop {
     customRecords: { [key: string]: Uint8Array | string };
     /** The payment metadata to send along with the payment to the payee. */
     metadata: Uint8Array | string;
+    /**
+     * Blinding point is an optional blinding point included for introduction
+     * nodes in blinded paths. This field is mandatory for hops that represents
+     * the introduction point in a blinded path.
+     */
+    blindingPoint: Uint8Array | string;
+    /**
+     * Encrypted data is a receiver-produced blob of data that provides hops
+     * in a blinded route with forwarding data. As this data is encrypted by
+     * the recipient, we will not be able to parse it - it is essentially an
+     * arbitrary blob of data from our node's perspective. This field is
+     * mandatory for all hops in a blinded path, including the introduction
+     * node.
+     */
+    encryptedData: Uint8Array | string;
+    /**
+     * The total amount that is sent to the recipient (possibly across multiple
+     * HTLCs), as specified by the sender when making a payment to a blinded path.
+     * This value is only set in the final hop payload of a blinded payment. This
+     * value is analogous to the MPPRecord that is used for regular (non-blinded)
+     * MPP payments.
+     */
+    totalAmtMsat: string;
 }
 
 export interface Hop_CustomRecordsEntry {
@@ -2342,7 +2452,8 @@ export interface MPPRecord {
      * A unique, random identifier used to authenticate the sender as the intended
      * payer of a multi-path payment. The payment_addr must be the same for all
      * subpayments, and match the payment_addr provided in the receiver's invoice.
-     * The same payment_addr must be used on all subpayments.
+     * The same payment_addr must be used on all subpayments. This is also called
+     * payment secret in specifications (e.g. BOLT 11).
      */
     paymentAddr: Uint8Array | string;
     /**
@@ -2466,6 +2577,8 @@ export interface RoutingPolicy {
     lastUpdate: number;
     /** Custom channel update tlv records. */
     customRecords: { [key: string]: Uint8Array | string };
+    inboundFeeBaseMsat: number;
+    inboundFeeRateMilliMsat: number;
 }
 
 export interface RoutingPolicy_CustomRecordsEntry {
@@ -2556,6 +2669,11 @@ export interface ChanInfoRequest {
      * output index for the channel.
      */
     chanId: string;
+    /**
+     * The channel point of the channel in format funding_txid:output_index. If
+     * chan_id is specified, this field is ignored.
+     */
+    chanPoint: string;
 }
 
 export interface NetworkInfoRequest {}
@@ -2668,6 +2786,55 @@ export interface RouteHint {
      * specific destination.
      */
     hopHints: HopHint[];
+}
+
+export interface BlindedPaymentPath {
+    /** The blinded path to send the payment to. */
+    blindedPath: BlindedPath | undefined;
+    /** The base fee for the blinded path provided, expressed in msat. */
+    baseFeeMsat: string;
+    /**
+     * The proportional fee for the blinded path provided, expressed in parts
+     * per million.
+     */
+    proportionalFeeRate: number;
+    /**
+     * The total CLTV delta for the blinded path provided, including the
+     * final CLTV delta for the receiving node.
+     */
+    totalCltvDelta: number;
+    /**
+     * The minimum hltc size that may be sent over the blinded path, expressed
+     * in msat.
+     */
+    htlcMinMsat: string;
+    /**
+     * The maximum htlc size that may be sent over the blinded path, expressed
+     * in msat.
+     */
+    htlcMaxMsat: string;
+    /** The feature bits for the route. */
+    features: FeatureBit[];
+}
+
+export interface BlindedPath {
+    /** The unblinded pubkey of the introduction node for the route. */
+    introductionNode: Uint8Array | string;
+    /** The ephemeral pubkey used by nodes in the blinded route. */
+    blindingPoint: Uint8Array | string;
+    /**
+     * A set of blinded node keys and data blobs for the blinded portion of the
+     * route. Note that the first hop is expected to be the introduction node,
+     * so the route is always expected to have at least one hop.
+     */
+    blindedHops: BlindedHop[];
+}
+
+export interface BlindedHop {
+    /** The blinded public key of the node. */
+    blindedNode: Uint8Array | string;
+    /** An encrypted blob of data provided to the blinded node. */
+    encryptedData: Uint8Array | string;
 }
 
 export interface AMPInvoiceState {
@@ -2828,9 +2995,10 @@ export interface Invoice {
      */
     isKeysend: boolean;
     /**
-     * The payment address of this invoice. This value will be used in MPP
-     * payments, and also for newer invoices that always require the MPP payload
-     * for added end-to-end security.
+     * The payment address of this invoice. This is also called payment secret in
+     * specifications (e.g. BOLT 11). This value will be used in MPP payments, and
+     * also for newer invoices that always require the MPP payload for added
+     * end-to-end security.
      * Note: Output only, don't specify for creating an invoice.
      */
     paymentAddr: Uint8Array | string;
@@ -2846,6 +3014,17 @@ export interface Invoice {
      * Note: Output only, don't specify for creating an invoice.
      */
     ampInvoiceState: { [key: string]: AMPInvoiceState };
+    /**
+     * Signals that the invoice should include blinded paths to hide the true
+     * identity of the recipient.
+     */
+    isBlinded: boolean;
+    /**
+     * Config values to use when creating blinded paths for this invoice. These
+     * can be used to override the defaults config values provided in by the
+     * global config. This field is only used if is_blinded is true.
+     */
+    blindedPathConfig: BlindedPathConfig | undefined;
 }
 
 export enum Invoice_InvoiceState {
@@ -2864,6 +3043,30 @@ export interface Invoice_FeaturesEntry {
 export interface Invoice_AmpInvoiceStateEntry {
     key: string;
     value: AMPInvoiceState | undefined;
+}
+
+export interface BlindedPathConfig {
+    /**
+     * The minimum number of real hops to include in a blinded path. This doesn't
+     * include our node, so if the minimum is 1, then the path will contain at
+     * minimum our node along with an introduction node hop. If it is zero then
+     * the shortest path will use our node as an introduction node.
+     */
+    minNumRealHops?: number | undefined;
+    /**
+     * The number of hops to include in a blinded path. This doesn't include our
+     * node, so if it is 1, then the path will contain our node along with an
+     * introduction node or dummy node hop. If paths shorter than NumHops is
+     * found, then they will be padded using dummy hops.
+     */
+    numHops?: number | undefined;
+    /** The maximum number of blinded paths to select and add to an invoice. */
+    maxNumPaths?: number | undefined;
+    /**
+     * A list of node IDs of nodes that should not be used in any of our generated
+     * blinded paths.
+     */
+    nodeOmissionList: Uint8Array | string[];
 }
 
 /** Details of an HTLC that paid to an invoice */
@@ -2937,9 +3140,9 @@ export interface AddInvoiceResponse {
      */
     addIndex: string;
     /**
-     * The payment address of the generated invoice. This value should be used
-     * in all payments for this invoice as we require it for end to end
-     * security.
+     * The payment address of the generated invoice. This is also called
+     * payment secret in specifications (e.g. BOLT 11). This value should be used
+     * in all payments for this invoice as we require it for end to end security.
      */
     paymentAddr: Uint8Array | string;
 }
@@ -3075,10 +3278,20 @@ export interface Payment {
 }
 
 export enum Payment_PaymentStatus {
+    /**
+     * UNKNOWN - Deprecated. This status will never be returned.
+     *
+     * @deprecated
+     */
     UNKNOWN = 'UNKNOWN',
+    /** IN_FLIGHT - Payment has inflight HTLCs. */
     IN_FLIGHT = 'IN_FLIGHT',
+    /** SUCCEEDED - Payment is settled. */
     SUCCEEDED = 'SUCCEEDED',
+    /** FAILED - Payment is failed. */
     FAILED = 'FAILED',
+    /** INITIATED - Payment is created and has not attempted any HTLCs. */
+    INITIATED = 'INITIATED',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -3141,12 +3354,12 @@ export interface ListPaymentsRequest {
      */
     countTotalPayments: boolean;
     /**
-     * If set, returns all invoices with a creation date greater than or equal
+     * If set, returns all payments with a creation date greater than or equal
      * to it. Measured in seconds since the unix epoch.
      */
     creationDateStart: string;
     /**
-     * If set, returns all invoices with a creation date less than or equal to
+     * If set, returns all payments with a creation date less than or equal to
      * it. Measured in seconds since the unix epoch.
      */
     creationDateEnd: string;
@@ -3186,6 +3399,11 @@ export interface DeleteAllPaymentsRequest {
     failedPaymentsOnly: boolean;
     /** Only delete failed HTLCs from payments, not the payment itself. */
     failedHtlcsOnly: boolean;
+    /**
+     * Delete all payments. NOTE: Using this option requires careful
+     * consideration as it is a destructive operation.
+     */
+    allPayments: boolean;
 }
 
 export interface DeletePaymentResponse {}
@@ -3233,6 +3451,7 @@ export interface PayReq {
     paymentAddr: Uint8Array | string;
     numMsat: string;
     features: { [key: number]: Feature };
+    blindedPaths: BlindedPaymentPath[];
 }
 
 export interface PayReq_FeaturesEntry {
@@ -3265,6 +3484,13 @@ export interface ChannelFeeReport {
      * fee_per_mil value by 1 million.
      */
     feeRate: number;
+    /** The base fee charged regardless of the number of milli-satoshis sent. */
+    inboundBaseFeeMsat: number;
+    /**
+     * The amount charged per milli-satoshis transferred expressed in
+     * millionths of a satoshi.
+     */
+    inboundFeePerMil: number;
 }
 
 export interface FeeReportResponse {
@@ -3288,6 +3514,19 @@ export interface FeeReportResponse {
      * over the past 1 month.
      */
     monthFeeSum: string;
+}
+
+export interface InboundFee {
+    /**
+     * The inbound base fee charged regardless of the number of milli-satoshis
+     * received in the channel. By default, only negative values are accepted.
+     */
+    baseFeeMsat: number;
+    /**
+     * The effective inbound fee rate in micro-satoshis (parts per million).
+     * By default, only negative values are accepted.
+     */
+    feeRatePpm: number;
 }
 
 export interface PolicyUpdateRequest {
@@ -3318,6 +3557,11 @@ export interface PolicyUpdateRequest {
     minHtlcMsat: string;
     /** If true, min_htlc_msat is applied. */
     minHtlcMsatSpecified: boolean;
+    /**
+     * Optional inbound fee. If unset, the previously set value will be
+     * retained [EXPERIMENTAL].
+     */
+    inboundFee: InboundFee | undefined;
 }
 
 export interface FailedUpdate {
@@ -3604,6 +3848,7 @@ export enum Failure_FailureCode {
     EXPIRY_TOO_FAR = 'EXPIRY_TOO_FAR',
     MPP_TIMEOUT = 'MPP_TIMEOUT',
     INVALID_ONION_PAYLOAD = 'INVALID_ONION_PAYLOAD',
+    INVALID_ONION_BLINDING = 'INVALID_ONION_BLINDING',
     /** INTERNAL_FAILURE - An internal error occurred. */
     INTERNAL_FAILURE = 'INTERNAL_FAILURE',
     /** UNKNOWN_FAILURE - The error source is known, but the failure itself couldn't be decoded. */
@@ -4028,6 +4273,15 @@ export interface Lightning {
      */
     getInfo(request?: DeepPartial<GetInfoRequest>): Promise<GetInfoResponse>;
     /**
+     * lncli: 'getdebuginfo'
+     * GetDebugInfo returns debug information concerning the state of the daemon
+     * and its subsystems. This includes the full configuration and the latest log
+     * entries from the log file.
+     */
+    getDebugInfo(
+        request?: DeepPartial<GetDebugInfoRequest>
+    ): Promise<GetDebugInfoResponse>;
+    /**
      * lncli: `getrecoveryinfo`
      * GetRecoveryInfo returns information concerning the recovery mode including
      * whether it's in a recovery mode, whether the recovery is finished, and the
@@ -4238,7 +4492,7 @@ export interface Lightning {
      * optionally specify the add_index and/or the settle_index. If the add_index
      * is specified, then we'll first start by sending add invoice events for all
      * invoices with an add_index greater than the specified value. If the
-     * settle_index is specified, the next, we'll send out all settle events for
+     * settle_index is specified, then next, we'll send out all settle events for
      * invoices with a settle_index greater than the specified value. One or both
      * of these fields can be set. If no fields are set, then we'll only send out
      * the latest add/settle events.
@@ -4263,6 +4517,7 @@ export interface Lightning {
         request?: DeepPartial<ListPaymentsRequest>
     ): Promise<ListPaymentsResponse>;
     /**
+     * lncli: `deletepayments`
      * DeletePayment deletes an outgoing payment from DB. Note that it will not
      * attempt to delete an In-Flight payment, since that would be unsafe.
      */
@@ -4270,6 +4525,7 @@ export interface Lightning {
         request?: DeepPartial<DeletePaymentRequest>
     ): Promise<DeletePaymentResponse>;
     /**
+     * lncli: `deletepayments --all`
      * DeleteAllPayments deletes all outgoing payments from DB. Note that it will
      * not attempt to delete In-Flight payments, since that would be unsafe.
      */
@@ -4419,6 +4675,7 @@ export interface Lightning {
         request?: DeepPartial<ChanBackupExportRequest>
     ): Promise<ChanBackupSnapshot>;
     /**
+     * lncli: `verifychanbackup`
      * VerifyChanBackup allows a caller to verify the integrity of a channel backup
      * snapshot. This method will accept either a packed Single or a packed Multi.
      * Specifying both will result in an error.
