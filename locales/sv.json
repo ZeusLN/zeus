@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Fjärrbasavgift",
     "views.Channel.inbound": "Ingående",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Avgiftgrad",
     "views.Channel.channelPayments": "Kanalbetalningar",
     "views.Channel.localMin": "Lokal min",
