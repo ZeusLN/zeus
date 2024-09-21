@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Remote Grundgebühr",
     "views.Channel.inbound": "Eingehend",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Gebührenrate",
     "views.Channel.channelPayments": "Kanal-Zahlungen",
     "views.Channel.localMin": "Lokales Minimum",
