@@ -416,9 +416,8 @@ export default class TransactionsStore {
         }
 
         // multi-path payments
-        if (max_parts) {
-            data.max_parts = max_parts;
-        }
+        data.max_parts = max_parts ? max_parts : '1';
+
         if (fee_limit_sat) {
             data.fee_limit_sat = Number(fee_limit_sat);
         }
