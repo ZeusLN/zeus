@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "کارمزد پایه دور",
     "views.Channel.inbound": "ورودی",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "نرخ کارمزد",
     "views.Channel.channelPayments": "پرداخت های کانال",
     "views.Channel.localMin": "حداقل مبلغ محلی",
