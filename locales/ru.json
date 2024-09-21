@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Удаленные базовые комиссии",
     "views.Channel.inbound": "Входящая",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Комиссионная ставка",
     "views.Channel.channelPayments": "Платежи канала",
     "views.Channel.localMin": "Локальный мин.",

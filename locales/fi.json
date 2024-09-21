@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Etä perus siirtomaksu",
     "views.Channel.inbound": "Saapuva",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Siirtomaksutaso",
     "views.Channel.channelPayments": "Kanavamaksut",
     "views.Channel.localMin": "Paikallinen minimi",

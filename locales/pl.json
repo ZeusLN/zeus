@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Zdalna opłata bazowa",
     "views.Channel.inbound": "Przychodzące",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Stawka opłaty",
     "views.Channel.channelPayments": "Płatności kanału",
     "views.Channel.localMin": "Lokalne minimum",

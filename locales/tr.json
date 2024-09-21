@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Uzaktan Taban Oranı",
     "views.Channel.inbound": "Gelen",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Ücret kuru",
     "views.Channel.channelPayments": "Kanal Ödemeleri",
     "views.Channel.localMin": "Lokal Min",
