@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Commissione base remota",
     "views.Channel.inbound": "In entrata",
     "views.Channel.inboundBaseFee": "Tariffa base in entrata",
-    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
+    "views.Channel.inboundFeeRate": "Tasso di commissione in entrata",
     "views.Channel.feeRate": "Tasso di Commissione",
     "views.Channel.channelPayments": "Pagamenti del canale",
     "views.Channel.localMin": "Min locale",
