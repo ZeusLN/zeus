@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "Taxa base remota",
     "views.Channel.inbound": "Entrada",
     "views.Channel.inboundBaseFee": "Taxa básica de entrada",
-    "views.Channel.inboundFeeRate": "Taxa de entrada",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "Taxa Proporcional",
     "views.Channel.channelPayments": "Pagamentos do Canal",
     "views.Channel.localMin": "Mínimo local",
