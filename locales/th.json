@@ -353,7 +353,7 @@
     "views.Channel.remoteBaseFee": "ฐานค่าธรรมเนียมภายนอก",
     "views.Channel.inbound": "ขาเข้า",
     "views.Channel.inboundBaseFee": "Inbound Base Fee",
-    "views.Channel.inboundFeeRate": "Inbound Fee Fee",
+    "views.Channel.inboundFeeRate": "Inbound Fee Rate",
     "views.Channel.feeRate": "อัตราค่าธรรมเนียม",
     "views.Channel.channelPayments": "เพย์เมนต์แชนแนล",
     "views.Channel.localMin": "ขั้นต่ำภายใน",
