@@ -249,7 +249,8 @@ export default class LND {
             sat_per_vbyte: data.sat_per_vbyte,
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed,
-            send_all: data.send_all
+            send_all: data.send_all,
+            outpoints: data.outpoints
         });
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {

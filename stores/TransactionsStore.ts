@@ -339,7 +339,23 @@ export default class TransactionsStore {
         this.crafting = true;
         this.loading = true;
 
+        if (transactionRequest.send_all) {
+            delete transactionRequest.amount;
+        }
+
         if (
+            BackendUtils.isLNDBased() &&
+            transactionRequest.utxos &&
+            transactionRequest.utxos.length > 0 &&
+            transactionRequest.account === 'default'
+        ) {
+            transactionRequest.utxos.forEach((input) => {
+                const [txid_str, output_index] = input.split(':');
+                const inputs = [];
+                inputs.push({ txid_str, output_index: Number(output_index) });
+                transactionRequest.outpoints = inputs;
+            });
+        } else if (
             (BackendUtils.isLNDBased() &&
                 transactionRequest.utxos &&
                 transactionRequest.utxos.length > 0) ||
