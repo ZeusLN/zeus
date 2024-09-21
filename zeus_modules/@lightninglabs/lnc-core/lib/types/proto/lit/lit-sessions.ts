@@ -139,6 +139,11 @@ export interface Session {
      * a JSON-serialized configuration.
      */
     featureConfigs: { [key: string]: string };
+    /**
+     * Privacy flags used for the session that determine how the privacy mapper
+     * operates.
+     */
+    privacyFlags: string;
 }
 
 export interface Session_AutopilotFeatureInfoEntry {
@@ -197,6 +202,7 @@ export interface RuleValue {
     sendToSelf: SendToSelf | undefined;
     channelRestrict: ChannelRestrict | undefined;
     peerRestrict: PeerRestrict | undefined;
+    channelConstraint: ChannelConstraint | undefined;
 }
 
 export interface RateLimit {
@@ -272,6 +278,19 @@ export interface ChannelRestrict {
 export interface PeerRestrict {
     /** A list of peer IDs that the Autopilot should _not_ perform any actions on. */
     peerIds: string[];
+}
+
+export interface ChannelConstraint {
+    /** The minimum channel size autopilot has to set for a channel. */
+    minCapacitySat: string;
+    /** The maximum channel size autopilot can set for a channel. */
+    maxCapacitySat: string;
+    /** The maximum push amount for a channel. */
+    maxPushSat: string;
+    /** Indicates whether opening of private channels is allowed. */
+    privateAllowed: boolean;
+    /** Indicates whether opening of public channels is allowed. */
+    publicAllowed: boolean;
 }
 
 /**
