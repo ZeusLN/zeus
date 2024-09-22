@@ -39,6 +39,7 @@ import {
 } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
+import { Row } from '../../components/layout/Row';
 
 import SettingsStore, {
     INTERFACE_KEYS,
@@ -775,20 +776,25 @@ export default class NodeConfiguration extends React.Component<
                     }}
                     rightComponent={
                         implementation === 'eclair' ? undefined : (
-                            <ScanBadge
-                                onPress={() =>
-                                    implementation === 'spark'
-                                        ? navigation.navigate(
-                                              'SparkQRScanner',
-                                              {
-                                                  index
-                                              }
-                                          )
-                                        : navigation.navigate(
-                                              'HandleAnythingQRScanner'
-                                          )
-                                }
-                            />
+                            <Row>
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={35} />
+                                </View>
+                                <ScanBadge
+                                    onPress={() =>
+                                        implementation === 'spark'
+                                            ? navigation.navigate(
+                                                  'SparkQRScanner',
+                                                  {
+                                                      index
+                                                  }
+                                              )
+                                            : navigation.navigate(
+                                                  'HandleAnythingQRScanner'
+                                              )
+                                    }
+                                />
+                            </Row>
                         )
                     }
                     navigation={navigation}
@@ -839,8 +845,6 @@ export default class NodeConfiguration extends React.Component<
                         </View>
                     </View>
                 )}
-
-                {loading && <LoadingIndicator />}
 
                 <Modal
                     animationType="slide"
@@ -1682,6 +1686,7 @@ export default class NodeConfiguration extends React.Component<
                                         });
                                     }
                                 }}
+                                disabled={loading}
                             />
                         </View>
                     )}
@@ -1737,6 +1742,7 @@ export default class NodeConfiguration extends React.Component<
                                                 );
                                             }}
                                             tertiary
+                                            disabled={loading}
                                         />
                                     </View>
                                     <View style={styles.button}>
@@ -1760,6 +1766,7 @@ export default class NodeConfiguration extends React.Component<
                                                 )
                                             }
                                             secondary
+                                            disabled={loading}
                                         />
                                     </View>
                                 </>
@@ -1771,6 +1778,7 @@ export default class NodeConfiguration extends React.Component<
                                     )}
                                     onPress={() => navigation.navigate('Seed')}
                                     secondary
+                                    disabled={loading}
                                 />
                             )}
                         </View>
@@ -1804,8 +1812,9 @@ export default class NodeConfiguration extends React.Component<
                                     }}
                                     // disable save button if no creds passed
                                     disabled={
-                                        implementation === 'lndhub' &&
-                                        !(username && password)
+                                        loading ||
+                                        (implementation === 'lndhub' &&
+                                            !(username && password))
                                     }
                                 />
                             </View>
@@ -1834,6 +1843,7 @@ export default class NodeConfiguration extends React.Component<
                                 onPress={() =>
                                     this.setNodeConfigurationAsActive()
                                 }
+                                disabled={loading}
                             />
                         </View>
                     )}
@@ -1858,6 +1868,7 @@ export default class NodeConfiguration extends React.Component<
                                     this.copyNodeConfig();
                                 }}
                                 secondary
+                                disabled={loading}
                             />
                         </View>
                     )}
@@ -1884,6 +1895,7 @@ export default class NodeConfiguration extends React.Component<
                                     }
                                 }}
                                 warning
+                                disabled={loading}
                             />
                         </View>
                     )}
