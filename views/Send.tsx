@@ -1035,6 +1035,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
 
                                 {BackendUtils.isLNDBased() &&
+                                    BackendUtils.supportsOnchainSendMax() &&
                                     additionalOutputs.length === 0 && (
                                         <View style={{ marginBottom: 18 }}>
                                             <Text
