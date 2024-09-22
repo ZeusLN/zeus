@@ -777,9 +777,11 @@ export default class NodeConfiguration extends React.Component<
                     rightComponent={
                         implementation === 'eclair' ? undefined : (
                             <Row>
-                                <View style={{ paddingRight: 15 }}>
-                                    <LoadingIndicator size={35} />
-                                </View>
+                                {loading && (
+                                    <View style={{ paddingRight: 15 }}>
+                                        <LoadingIndicator size={35} />
+                                    </View>
+                                )}
                                 <ScanBadge
                                     onPress={() =>
                                         implementation === 'spark'
