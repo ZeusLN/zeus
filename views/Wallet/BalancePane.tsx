@@ -1,28 +1,32 @@
 import * as React from 'react';
-import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+    ImageBackground,
+    Text,
+    View,
+    StyleSheet,
+    TouchableOpacity
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { LinearProgress } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../components/Button';
 import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Conversion from '../../components/Conversion';
 
 import { localeString } from './../../utils/LocaleUtils';
-import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 
-import { version } from '../../package.json';
-
 import LockIcon from '../../assets/images/SVG/Lock.svg';
+
+const ErrorZeus = require('../../assets/images/errorZeus.png');
 
 interface BalancePaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -157,11 +161,6 @@ export default class BalancePane extends React.PureComponent<
 
         let balancePane;
         const error = NodeInfoStore.error || SettingsStore.error;
-
-        const implementationDisplayValue = {};
-        INTERFACE_KEYS.forEach((item) => {
-            implementationDisplayValue[item.value] = item.key;
-        });
 
         if (!error) {
             balancePane = (
@@ -445,50 +444,29 @@ export default class BalancePane extends React.PureComponent<
                         flex: 1
                     }}
                 >
-                    <Text
+                    <ImageBackground
+                        source={ErrorZeus}
+                        resizeMode="cover"
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 20,
-                            marginTop: 20,
-                            marginBottom: 25
+                            flex: 1
                         }}
                     >
-                        {SettingsStore.errorMsg
-                            ? SettingsStore.errorMsg
-                            : NodeInfoStore.errorMsg
-                            ? NodeInfoStore.errorMsg
-                            : localeString('views.Wallet.MainPane.error')}
-                    </Text>
-                    <Button
-                        icon={{
-                            name: 'settings',
-                            size: 25,
-                            color: '#fff'
-                        }}
-                        title={localeString(
-                            'views.Wallet.MainPane.goToSettings'
-                        )}
-                        buttonStyle={{
-                            backgroundColor: 'gray'
-                        }}
-                        containerStyle={{
-                            alignItems: 'center'
-                        }}
-                        onPress={() => protectedNavigation(navigation, 'Menu')}
-                        adaptiveWidth
-                    />
-                    <Text
-                        style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: '#fff',
-                            fontSize: 12,
-                            marginTop: 20,
-                            marginBottom: -40
-                        }}
-                    >
-                        {`v${version} | ${implementationDisplayValue[implementation]}`}
-                    </Text>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: '#fff',
+                                fontSize: 20,
+                                marginTop: 20,
+                                marginBottom: 25
+                            }}
+                        >
+                            {SettingsStore.errorMsg
+                                ? SettingsStore.errorMsg
+                                : NodeInfoStore.errorMsg
+                                ? NodeInfoStore.errorMsg
+                                : localeString('views.Wallet.MainPane.error')}
+                        </Text>
+                    </ImageBackground>
                 </View>
             );
         }

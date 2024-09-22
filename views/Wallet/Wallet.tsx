@@ -64,7 +64,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
-    Settings
+    Settings,
+    INTERFACE_KEYS
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -78,6 +79,8 @@ import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
+
+import { version } from '../../package.json';
 
 interface WalletProps {
     enterSetup: any;
@@ -566,6 +569,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
+        const implementationDisplayValue = {};
+        INTERFACE_KEYS.forEach((item) => {
+            implementationDisplayValue[item.value] = item.key;
+        });
+
         const BalanceScreen = () => {
             return (
                 <Screen>
@@ -579,6 +587,34 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                     {error && (
                         <View style={{ backgroundColor: themeColor('error') }}>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    marginBottom: 15,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {`v${version} | ${implementationDisplayValue[implementation]}`}
+                            </Text>
+                            <Button
+                                icon={{
+                                    name: 'settings',
+                                    size: 25,
+                                    color: '#fff'
+                                }}
+                                title={localeString(
+                                    'views.Wallet.MainPane.goToSettings'
+                                )}
+                                buttonStyle={{
+                                    backgroundColor: 'gray',
+                                    marginBottom: 20
+                                }}
+                                onPress={() =>
+                                    protectedNavigation(navigation, 'Menu')
+                                }
+                            />
                             <Button
                                 title={localeString('views.Wallet.restart')}
                                 icon={{
