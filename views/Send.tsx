@@ -330,7 +330,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                 implementation === 'cln-rest'
                     ? 'all'
                     : prevState.amount,
-            account
+            account,
+            fundMax: account === 'default' ? prevState.fundMax : false
         }));
     };
 
@@ -689,7 +690,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             loading,
             contactName,
             additionalOutputs,
-            fundMax
+            fundMax,
+            account
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -1036,7 +1038,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
                                 {BackendUtils.isLNDBased() &&
                                     BackendUtils.supportsOnchainSendMax() &&
-                                    additionalOutputs.length === 0 && (
+                                    additionalOutputs.length === 0 &&
+                                    account === 'default' && (
                                         <View style={{ marginBottom: 18 }}>
                                             <Text
                                                 style={{
