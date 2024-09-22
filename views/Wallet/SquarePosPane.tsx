@@ -289,8 +289,7 @@ export default class SquarePosPane extends React.PureComponent<
                             'views.Wallet.MainPane.goToSettings'
                         )}
                         buttonStyle={{
-                            backgroundColor: 'gray',
-                            borderRadius: 30
+                            backgroundColor: 'gray'
                         }}
                         containerStyle={{
                             alignItems: 'center'
