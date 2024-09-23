@@ -19,6 +19,7 @@ import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -244,23 +245,27 @@ export default class Activity extends React.PureComponent<
                 }
                 accessibilityLabel={localeString('views.ActivityFilter.title')}
             >
-                <Filter fill={themeColor('text')} />
+                <Filter fill={themeColor('text')} size={35} />
             </TouchableOpacity>
         );
 
         const DownloadButton = () => (
-            <TouchableOpacity
-                onPress={this.handleDownloadPress}
-                accessibilityLabel={localeString('views.ActivityToCsv.title')}
-            >
-                <Icon
-                    name="download"
-                    type="feather"
-                    color={themeColor('text')}
-                    underlayColor="transparent"
-                    size={33}
-                />
-            </TouchableOpacity>
+            <View style={{ marginRight: 15 }}>
+                <TouchableOpacity
+                    onPress={this.handleDownloadPress}
+                    accessibilityLabel={localeString(
+                        'views.ActivityToCsv.title'
+                    )}
+                >
+                    <Icon
+                        name="download"
+                        type="feather"
+                        color={themeColor('text')}
+                        underlayColor="transparent"
+                        size={35}
+                    />
+                </TouchableOpacity>
+            </View>
         );
 
         const getMatchingNote = (item: any) => {
@@ -289,7 +294,8 @@ export default class Activity extends React.PureComponent<
                         }
                     }}
                     rightComponent={
-                        <View style={{ flexDirection: 'row' }}>
+                        <Row>
+                            <DownloadButton />
                             {order ? (
                                 selectedPaymentForOrder ? (
                                     <MarkPaymentButton />
@@ -297,8 +303,7 @@ export default class Activity extends React.PureComponent<
                             ) : (
                                 <FilterButton />
                             )}
-                            <DownloadButton />
-                        </View>
+                        </Row>
                     }
                     navigation={navigation}
                 />
