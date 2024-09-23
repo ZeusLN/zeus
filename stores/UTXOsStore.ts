@@ -23,6 +23,9 @@ export default class UTXOsStore {
     @observable public accounts: any = [];
     @observable public accountToImport: any | null;
     @observable public start_height?: number;
+    // rescan
+    @observable public attemptingRescan = false;
+    @observable public rescanErrorMsg: string;
     //
     settingsStore: SettingsStore;
 
@@ -184,14 +187,20 @@ export default class UTXOsStore {
         this.errorMsg = '';
         this.success = false;
         this.importingAccount = true;
+        if (data.dry_run) {
+            this.start_height = undefined;
+        }
 
-        if (data.start_height) {
-            this.start_height = data.start_height;
-            delete data.start_height;
+        if (data.birthday_height) {
+            this.start_height = data.birthday_height;
+        }
+
+        if (this.start_height && !data.birthday_height) {
+            data.birthday_height = this.start_height;
         }
 
         return BackendUtils.importAccount(data)
-            .then((response: any) => {
+            .then(async (response: any) => {
                 this.importingAccount = false;
                 this.error = false;
                 if (!data.dry_run) {
@@ -199,7 +208,7 @@ export default class UTXOsStore {
                     if (this.start_height) {
                         // generate 50 addresses from account
                         for (let i = 0; i <= 50; i++) {
-                            BackendUtils.getNewAddress({
+                            await BackendUtils.getNewAddress({
                                 account: this.accountToImport.account.name,
                                 type: walletrpc.AddressType[
                                     this.accountToImport.account.address_type
@@ -241,6 +250,27 @@ export default class UTXOsStore {
                 this.importingAccount = false;
                 this.start_height = undefined;
                 this.getUtxosError();
+            });
+    };
+
+    @action
+    public rescan = (blockHeight: number) => {
+        this.rescanErrorMsg = '';
+        this.attemptingRescan = true;
+
+        return BackendUtils.rescan({
+            start_height: blockHeight
+        })
+            .then((response: any) => {
+                console.log('rescan resp', response);
+                this.attemptingRescan = false;
+                return;
+            })
+            .catch((err: Error) => {
+                console.log('rescan err', err);
+                this.attemptingRescan = false;
+                this.rescanErrorMsg = err.toString();
+                return;
             });
     };
 }
