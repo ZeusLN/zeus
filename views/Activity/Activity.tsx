@@ -48,6 +48,7 @@ interface ActivityProps {
 
 interface ActivityState {
     selectedPaymentForOrder: any;
+    isCsvModalVisible: boolean;
 }
 
 @inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
@@ -141,7 +142,6 @@ export default class Activity extends React.PureComponent<
     handleDownloadPress = () => {
         const { ActivityStore } = this.props;
         const { startDate, endDate } = ActivityStore.filters;
-        const { filteredActivity } = ActivityStore;
 
         if (!startDate || !endDate) {
             Alert.alert(
@@ -150,8 +150,7 @@ export default class Activity extends React.PureComponent<
             );
         } else {
             this.setState({
-                isCsvModalVisible: true,
-                filteredData: filteredActivity
+                isCsvModalVisible: true
             });
         }
     };
