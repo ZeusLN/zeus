@@ -78,6 +78,17 @@ message AddAutopilotSessionRequest {
     Set to the ID of the group to link this session to, if any.
     */
     bytes linked_group_id = 8;
+
+    /*
+    The privacy flags used by this session. If set, then privacy_flags_set must
+    be set.
+    */
+    uint64 privacy_flags = 9;
+
+    /*
+    Indicates whether privacy flags are set.
+    */
+    bool privacy_flags_set = 10;
 }
 
 message FeatureConfig {
@@ -166,6 +177,12 @@ message Feature {
     The JSON-marshaled representation of a feature's default configuration.
     */
     string default_config = 6;
+
+    /*
+    This feature may require relaxed privacy obfuscation that can be enabled
+    with these flags.
+    */
+    uint64 privacy_flags = 7;
 }
 
 message RuleValues {

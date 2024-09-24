@@ -1,16 +1,16 @@
 {
   "name": "@lightninglabs/lnc-core",
-  "version": "0.3.1-alpha",
+  "version": "0.3.2-alpha",
   "description": "Type definitions and utilities for Lightning Node Connect",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "config": {
-    "lnd_release_tag": "v0.17.4-beta",
-    "loop_release_tag": "v0.27.0-beta",
-    "pool_release_tag": "v0.6.4-beta",
-    "faraday_release_tag": "v0.2.11-alpha",
-    "tapd_release_tag": "v0.3.3",
-    "lit_release_tag": "v0.12.3-alpha",
+    "lnd_release_tag": "v0.18.3-beta",
+    "loop_release_tag": "v0.28.5-beta",
+    "pool_release_tag": "v0.6.5-beta",
+    "faraday_release_tag": "v0.2.13-alpha",
+    "tapd_release_tag": "v0-3-3-lnd-18",
+    "lit_release_tag": "v0.13.2-alpha",
     "protoc_version": "21.9"
   },
   "scripts": {

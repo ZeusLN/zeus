@@ -1,6 +1,6 @@
 {
   "name": "@lightninglabs/lnc-rn",
-  "version": "0.3.1-alpha",
+  "version": "0.3.2-alpha",
   "description": "Lightning Node Connect npm module for React Native",
   "main": "dist/commonjs/index.js",
   "types": "dist/typescript/index.d.ts",

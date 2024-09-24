@@ -763,7 +763,8 @@ export default class OpenChannel extends React.Component<
 
                                 {BackendUtils.supportsChannelBatching() &&
                                     node_pubkey_string &&
-                                    host && (
+                                    host &&
+                                    !fundMax && (
                                         <View
                                             style={{
                                                 ...styles.button,
