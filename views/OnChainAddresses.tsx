@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useState } from 'react';
 import {
     FlatList,
     TouchableHighlight,
@@ -19,12 +19,98 @@ import LoadingIndicator from './../components/LoadingIndicator';
 import Screen from './../components/Screen';
 import { Body } from '../components/text/Body';
 import DropdownSetting from '../components/DropdownSetting';
+import { Row } from '../components/layout/Row';
 
 import { localeString } from './../utils/LocaleUtils';
 import BackendUtils from './../utils/BackendUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 import Add from '../assets/images/SVG/Add.svg';
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
+
+const AddressGroup = (props: any) => {
+    const addressGroup = props.addressGroup;
+    const [isCollapsed, setCollapsed] = useState(false);
+    return (
+        <React.Fragment>
+            <ListItem
+                containerStyle={{
+                    borderTopWidth: 2,
+                    borderBottomWidth: 1,
+                    borderColor: themeColor('secondaryText'),
+                    backgroundColor: 'transparent'
+                }}
+                onPress={() => setCollapsed(!isCollapsed)}
+            >
+                <ListItem.Content>
+                    <Row>
+                        {!isCollapsed ? (
+                            <CaretDown
+                                fill={themeColor('text')}
+                                width="30"
+                                height="30"
+                                style={{ marginRight: 10 }}
+                            />
+                        ) : (
+                            <CaretRight
+                                fill={themeColor('text')}
+                                width="30"
+                                height="30"
+                                style={{ marginRight: 10 }}
+                            />
+                        )}
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('text'),
+                                fontSize: 14
+                            }}
+                        >
+                            {localeString('general.accountName')}:{' '}
+                            {addressGroup.accountName + '\n'}
+                            {localeString('general.addressType')}:{' '}
+                            {addressGroup.addressType}
+                            {' \n'}
+                            {localeString('general.count')}:{' '}
+                            {addressGroup.addresses.length}
+                            {addressGroup.changeAddresses &&
+                                '\n' +
+                                    localeString(
+                                        'views.OnChainAddresses.changeAddresses'
+                                    )}
+                        </ListItem.Title>
+                    </Row>
+                </ListItem.Content>
+            </ListItem>
+            {!isCollapsed &&
+                addressGroup.addresses.map((address) => (
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                        onPress={() => {
+                            Clipboard.setString(address.address);
+                            Vibration.vibrate(50);
+                        }}
+                    >
+                        <ListItem.Content>
+                            <Amount sats={address.balance} sensitive />
+                            <ListItem.Subtitle
+                                right
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 14
+                                }}
+                            >
+                                {address.address}
+                            </ListItem.Subtitle>
+                        </ListItem.Content>
+                    </ListItem>
+                ))}
+        </React.Fragment>
+    );
+};
 
 interface OnChainAddressesProps {
     navigation: StackNavigationProp<any, any>;
@@ -306,81 +392,7 @@ export default class OnChainAddresses extends React.Component<
                             data={addressGroups}
                             renderItem={({ item: addressGroup }) => {
                                 return (
-                                    <React.Fragment>
-                                        <ListItem
-                                            containerStyle={{
-                                                borderTopWidth: 2,
-                                                borderBottomWidth: 1,
-                                                borderColor:
-                                                    themeColor('secondaryText'),
-                                                backgroundColor: 'transparent'
-                                            }}
-                                        >
-                                            <ListItem.Content>
-                                                <ListItem.Title
-                                                    style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontSize: 14
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'general.accountName'
-                                                    )}
-                                                    :{' '}
-                                                    {addressGroup.accountName +
-                                                        '\n'}
-                                                    {localeString(
-                                                        'general.addressType'
-                                                    )}
-                                                    : {addressGroup.addressType}{' '}
-                                                    {addressGroup.changeAddresses &&
-                                                        '\n' +
-                                                            localeString(
-                                                                'views.OnChainAddresses.changeAddresses'
-                                                            )}
-                                                </ListItem.Title>
-                                            </ListItem.Content>
-                                        </ListItem>
-                                        {addressGroup.addresses.map(
-                                            (address) => (
-                                                <ListItem
-                                                    containerStyle={{
-                                                        borderBottomWidth: 0,
-                                                        backgroundColor:
-                                                            'transparent'
-                                                    }}
-                                                    onPress={() => {
-                                                        Clipboard.setString(
-                                                            address.address
-                                                        );
-                                                        Vibration.vibrate(50);
-                                                    }}
-                                                >
-                                                    <ListItem.Content>
-                                                        <Amount
-                                                            sats={
-                                                                address.balance
-                                                            }
-                                                            sensitive
-                                                        />
-                                                        <ListItem.Subtitle
-                                                            right
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 14
-                                                            }}
-                                                        >
-                                                            {address.address}
-                                                        </ListItem.Subtitle>
-                                                    </ListItem.Content>
-                                                </ListItem>
-                                            )
-                                        )}
-                                    </React.Fragment>
+                                    <AddressGroup addressGroup={addressGroup} />
                                 );
                             }}
                             keyExtractor={(_, index) => `address-${index}`}
