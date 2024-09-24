@@ -16,7 +16,7 @@ export interface GetInfoResponse {
  */
 export interface Watchtower {
     /**
-     * lncli: tower info
+     * lncli: `tower info`
      * GetInfo returns general information concerning the companion watchtower
      * including its public key and URIs where the server is currently
      * listening for clients.

@@ -504,6 +504,7 @@ export default class Eclair {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
+    supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;

@@ -378,6 +378,7 @@ export default class Spark {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
+    supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
     supportsLSPS1customMessage = () => false;

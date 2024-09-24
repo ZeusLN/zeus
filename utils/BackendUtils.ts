@@ -166,6 +166,7 @@ class BackendUtils {
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
+    supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsOffers = () => this.call('supportsOffers');

@@ -120,7 +120,8 @@ export default class LightningNodeConnect {
                 sat_per_vbyte: data.sat_per_vbyte,
                 amount: data.amount,
                 spend_unconfirmed: data.spend_unconfirmed,
-                send_all: data.send_all
+                send_all: data.send_all,
+                outpoints: data.outpoints
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     sendCustomMessage = async (data: any) =>
@@ -503,6 +504,7 @@ export default class LightningNodeConnect {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsLSPS1customMessage = () => true;

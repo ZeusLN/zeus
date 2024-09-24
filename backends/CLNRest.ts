@@ -412,6 +412,7 @@ export default class CLNRest {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
