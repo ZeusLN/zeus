@@ -66,6 +66,7 @@ import {
 import {
     getTransactions,
     newAddress,
+    newChangeAddress,
     sendCoins,
     sendCoinsAll,
     walletBalance,
@@ -88,7 +89,8 @@ import {
     finalizePsbt,
     publishTransaction,
     listAccounts,
-    importAccount
+    importAccount,
+    rescan
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
@@ -327,6 +329,10 @@ export interface ILndMobileInjections {
             type: lnrpc.AddressType,
             account?: string
         ) => Promise<lnrpc.NewAddressResponse>;
+        newChangeAddress: (
+            type: walletrpc.AddressType,
+            account?: string
+        ) => Promise<walletrpc.AddrResponse>;
         sendCoins: (
             address: string,
             sat: number,
@@ -433,6 +439,11 @@ export interface ILndMobileInjections {
             address_type?: number;
             dry_run: boolean;
         }) => Promise<walletrpc.ImportAccountResponse>;
+        rescan: ({
+            start_height
+        }: {
+            start_height: number;
+        }) => Promise<walletrpc.RescanResponse>;
     };
     autopilot: {
         status: () => Promise<autopilotrpc.StatusResponse>;
@@ -514,6 +525,7 @@ export default {
     onchain: {
         getTransactions,
         newAddress,
+        newChangeAddress,
         sendCoins,
         sendCoinsAll,
         walletBalance,
@@ -536,7 +548,8 @@ export default {
         finalizePsbt,
         publishTransaction,
         listAccounts,
-        importAccount
+        importAccount,
+        rescan
     },
     autopilot: {
         status,

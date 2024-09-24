@@ -48,10 +48,16 @@ const {
     finalizePsbt,
     publishTransaction,
     listAccounts,
-    importAccount
+    importAccount,
+    rescan
 } = lndMobile.wallet;
-const { walletBalance, newAddress, getTransactions, sendCoins } =
-    lndMobile.onchain;
+const {
+    walletBalance,
+    newAddress,
+    newChangeAddress,
+    getTransactions,
+    sendCoins
+} = lndMobile.onchain;
 
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
@@ -94,6 +100,8 @@ export default class EmbeddedLND extends LND {
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) =>
         await newAddress(data.type, data.account);
+    getNewChangeAddress = async (data: any) =>
+        await newChangeAddress(data.type, data.account);
     openChannelSync = async (data: OpenChannelRequest) =>
         await openChannelSync(
             data.node_pubkey_string,
@@ -265,6 +273,7 @@ export default class EmbeddedLND extends LND {
 
     listAccounts = async () => await listAccounts();
     importAccount = async (data: any) => await importAccount(data);
+    rescan = async (data: any) => await rescan(data);
 
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
