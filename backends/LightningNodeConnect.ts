@@ -297,7 +297,7 @@ export default class LightningNodeConnect {
             force: urlParams && urlParams[2]
         };
 
-        if (urlParams && urlParams[3]) {
+        if (urlParams && urlParams[3] && !urlParams[2]) {
             params.sat_per_vbyte = Number(urlParams[3]);
         }
 

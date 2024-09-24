@@ -190,7 +190,9 @@ export default class EmbeddedLND extends LND {
             urlParams && urlParams[1] ? Number(urlParams[1]) : 0;
         const force = urlParams && urlParams[2] ? true : false;
         const sat_per_vbyte =
-            urlParams && urlParams[3] ? Number(urlParams[3]) : undefined;
+            urlParams && urlParams[3] && !urlParams[2]
+                ? Number(urlParams[3])
+                : undefined;
         const delivery_address =
             urlParams && urlParams[4] ? urlParams[4] : undefined;
 
