@@ -85,6 +85,8 @@ class BackendUtils {
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
+    getNewChangeAddress = (...args: any[]) =>
+        this.call('getNewChangeAddress', args);
     openChannelSync = (...args: any[]) => this.call('openChannelSync', args);
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
@@ -124,6 +126,7 @@ class BackendUtils {
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
+    rescan = (...args: any[]) => this.call('rescan', args);
 
     // BOLT 12 / Offers
     listOffers = (...args: any[]) => this.call('listOffers', args);

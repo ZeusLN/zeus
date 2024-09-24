@@ -1,10 +1,10 @@
-VERSION=v0.18.3-beta-zeus.1
+VERSION=v0.18.3-beta-zeus.previous-events
 
 ANDROID_FILE=Lndmobile.aar
 IOS_FILE=Lndmobile.xcframework
 
-ANDROID_SHA256='2d6b6062b8f143af4addeff009b1f53f8362da108886a3b2d1b203840576e3ca'
-IOS_SHA256='c2066b449714803872cf93c66338e51bb7fc8c83ecf8c6f2af740bcfe8ab862c'
+ANDROID_SHA256='a48b39675d1442611546cb22b07c8440f44d7917a77962f1f50fe558a679c220'
+IOS_SHA256='de9831c586b31008bfca1d48d9b4e11bbae2adcd2127b614530d8e7259f1bcf4'
 
 FILE_PATH=https://github.com/ZeusLN/lnd/releases/download/$VERSION/
 

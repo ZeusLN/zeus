@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -14,10 +15,12 @@ import Button from '../../components/Button';
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import UTXOsStore from '../../stores/UTXOsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import Base64Utils from '../../utils/Base64Utils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -42,6 +45,7 @@ interface ImportAccountProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
+    SettingsStore: SettingsStore;
     route: Route<
         'ImportAccount',
         {
@@ -58,10 +62,12 @@ interface ImportAccountState {
     extended_public_key: string;
     master_key_fingerprint: string;
     address_type: number;
+    existing_account: boolean;
+    block_height: number;
     understood: boolean;
 }
 
-@inject('UTXOsStore')
+@inject('UTXOsStore', 'SettingsStore')
 @observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
@@ -74,6 +80,8 @@ export default class ImportAccount extends React.Component<
             extended_public_key: '',
             master_key_fingerprint: '',
             address_type: walletrpc.AddressType.WITNESS_PUBKEY_HASH,
+            existing_account: false,
+            block_height: 481824,
             understood: false
         };
     }
@@ -111,15 +119,18 @@ export default class ImportAccount extends React.Component<
     };
 
     render() {
-        const { navigation, UTXOsStore } = this.props;
+        const { navigation, UTXOsStore, SettingsStore } = this.props;
         const {
             name,
             extended_public_key,
             master_key_fingerprint,
             address_type,
+            existing_account,
+            block_height,
             understood
         } = this.state;
         const { errorMsg } = UTXOsStore;
+        const { implementation } = SettingsStore;
 
         const ScanBadge = () => (
             <TouchableOpacity
@@ -177,16 +188,20 @@ export default class ImportAccount extends React.Component<
                             'views.ImportAccount.Warning.text3'
                         ).replace('Zeus', 'ZEUS')}
                     </Text>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book',
-                            margin: 10,
-                            fontSize: 20
-                        }}
-                    >
-                        {localeString('views.ImportAccount.note')}
-                    </Text>
+                    {implementation !== 'embedded-lnd' && (
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                margin: 10,
+                                fontSize: 20
+                            }}
+                        >
+                            {localeString(
+                                'views.ImportAccount.Warning.note'
+                            ).replace('Zeus', 'ZEUS')}
+                        </Text>
+                    )}
                     <View
                         style={{
                             alignSelf: 'center',
@@ -292,6 +307,78 @@ export default class ImportAccount extends React.Component<
                             }}
                             values={AddressTypes}
                         />
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: 'transparent'
+                            }}
+                        >
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    left: -10
+                                }}
+                            >
+                                {localeString(
+                                    'views.ImportAccount.existingAccount'
+                                )}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={existing_account}
+                                    onValueChange={(value: boolean) => {
+                                        this.setState({
+                                            existing_account: value
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                        {existing_account && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginBottom: 10
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.ImportAccount.existingAccountNote'
+                                    )}
+                                </Text>
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.NodeInfo.blockHeight'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={block_height.toString()}
+                                        onChangeText={(text: string) => {
+                                            const block_height = Number(text);
+                                            if (isNaN(block_height)) return;
+                                            this.setState({
+                                                block_height
+                                            });
+                                        }}
+                                        keyboardType="numeric"
+                                    />
+                                </>
+                            </>
+                        )}
                     </ScrollView>
                 </View>
                 <View style={{ bottom: 10 }}>
@@ -313,7 +400,10 @@ export default class ImportAccount extends React.Component<
                                           )
                                       )
                                     : undefined,
-                                dry_run: true
+                                dry_run: true,
+                                birthday_height: existing_account
+                                    ? block_height
+                                    : undefined
                             }).then((response) => {
                                 if (response)
                                     navigation.navigate('ImportingAccount');
