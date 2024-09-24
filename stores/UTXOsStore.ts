@@ -26,6 +26,10 @@ export default class UTXOsStore {
     // rescan
     @observable public attemptingRescan = false;
     @observable public rescanErrorMsg: string;
+    // addresses
+    @observable public loadingAddresses: boolean = false;
+    @observable public accountsWithAddresses = [];
+    @observable public loadingAddressesError: string = '';
     //
     settingsStore: SettingsStore;
 
@@ -44,6 +48,10 @@ export default class UTXOsStore {
         this.accounts = [];
         this.accountToImport = null;
         this.utxos = [];
+        // addresses
+        this.loadingAddresses = false;
+        this.accountsWithAddresses = [];
+        this.loadingAddressesError = '';
     };
 
     getUtxosError = () => {
@@ -284,6 +292,25 @@ export default class UTXOsStore {
                 console.log('rescan err', err);
                 this.attemptingRescan = false;
                 this.rescanErrorMsg = err.toString();
+                return;
+            });
+    };
+
+    @action
+    public listAddresses = () => {
+        this.loadingAddresses = true;
+        this.accountsWithAddresses = [];
+        this.loadingAddressesError = '';
+
+        return BackendUtils.listAddresses()
+            .then((response: any) => {
+                this.accountsWithAddresses = response.account_with_addresses;
+                this.loadingAddresses = false;
+                return;
+            })
+            .catch((err: Error) => {
+                this.loadingAddressesError = err.toString();
+                this.loadingAddresses = false;
                 return;
             });
     };
