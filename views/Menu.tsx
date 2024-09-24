@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AddIcon from '../assets/images/SVG/Add.svg';
 import BlockIcon from '../assets/images/SVG/Block.svg';
 import Bolt12Icon from '../assets/images/SVG/AtSign.svg';
+import CoinsIcon from '../assets/images/SVG/Coins.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import GearIcon from '../assets/images/SVG/Gear.svg';
@@ -28,7 +29,6 @@ import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
-import OnChainAddressesIcon from '../assets/images/SVG/on-chain_addresses.svg';
 
 import Header from '../components/Header';
 import NodeIdenticon, { NodeTitle } from '../components/NodeIdenticon';
@@ -487,12 +487,10 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             >
                                 <View style={styles.columnField}>
                                     <View style={styles.icon}>
-                                        <OnChainAddressesIcon
+                                        <CoinsIcon
                                             fill={themeColor('text')}
-                                            stroke={themeColor('text')}
-                                            color={themeColor('text')}
-                                            height={22}
-                                            width={22}
+                                            height={30}
+                                            width={30}
                                         />
                                     </View>
                                     <Text
