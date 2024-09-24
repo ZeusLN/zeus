@@ -7,23 +7,25 @@ import {
     View
 } from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
-import { observer } from 'mobx-react';
+import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 import _ from 'lodash';
 
-import Amount from './../components/Amount';
+import Amount from '../components/Amount';
 import Header from '../components/Header';
-import LoadingIndicator from './../components/LoadingIndicator';
-import Screen from './../components/Screen';
+import LoadingIndicator from '../components/LoadingIndicator';
+import Screen from '../components/Screen';
 import { Body } from '../components/text/Body';
 import DropdownSetting from '../components/DropdownSetting';
 import { Row } from '../components/layout/Row';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 
-import { localeString } from './../utils/LocaleUtils';
-import BackendUtils from './../utils/BackendUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+
+import UTXOsStore from '../stores/UTXOsStore';
 
 import Add from '../assets/images/SVG/Add.svg';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
@@ -115,6 +117,7 @@ const AddressGroup = (props: any) => {
 interface OnChainAddressesProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'OnChainAddresses', { account: string }>;
+    UTXOsStore: UTXOsStore;
 }
 
 interface OnChainAddressesState {
@@ -154,23 +157,15 @@ interface AddressGroup {
     addresses: Address[];
 }
 
+@inject('UTXOsStore')
 @observer
 export default class OnChainAddresses extends React.Component<
     OnChainAddressesProps,
     OnChainAddressesState
 > {
     componentDidMount(): void {
-        this.loadAddresses();
+        this.props.UTXOsStore.listAddresses();
     }
-
-    private loadAddresses = async () => {
-        this.setState({ loading: true });
-        const listAddressesResponse = await BackendUtils.listAddresses();
-        this.setState({
-            accounts: listAddressesResponse.account_with_addresses,
-            loading: false
-        });
-    };
 
     renderSeparator = () => (
         <View
@@ -182,44 +177,51 @@ export default class OnChainAddresses extends React.Component<
     );
 
     render() {
-        const { navigation } = this.props;
-        const { loading, accounts, hideZeroBalance, hideChangeAddresses } =
-            this.state ?? {};
+        const { UTXOsStore, navigation } = this.props;
+        const { hideZeroBalance, hideChangeAddresses } = this.state ?? {};
+        const {
+            loadingAddresses,
+            accountsWithAddresses,
+            loadingAddressesError
+        } = UTXOsStore;
         const sortBy = this.state?.sortBy ?? SortBy.creationTimeDescending;
 
-        if (sortBy === SortBy.creationTimeAscending) {
-            accounts?.forEach((account) =>
-                account.addresses.sort(
-                    (a, b) =>
-                        Number(a.derivation_path.split('/').at(-1)) -
-                        Number(b.derivation_path.split('/').at(-1))
-                )
-            );
-        } else if (sortBy === SortBy.creationTimeDescending) {
-            accounts?.forEach((account) =>
-                account.addresses.sort(
-                    (a, b) =>
-                        Number(b.derivation_path.split('/').at(-1)) -
-                        Number(a.derivation_path.split('/').at(-1))
-                )
-            );
-        } else if (sortBy === SortBy.balanceAscending) {
-            accounts?.forEach((account) =>
-                account.addresses.sort(
-                    (a, b) => Number(a.balance) - Number(b.balance)
-                )
-            );
-        } else if (sortBy === SortBy.balanceDescending) {
-            accounts?.forEach((account) =>
-                account.addresses.sort(
-                    (a, b) => Number(b.balance) - Number(a.balance)
-                )
-            );
-        }
+        const accounts = accountsWithAddresses;
+        const loading = loadingAddresses;
 
         let addressGroups: AddressGroup[] | undefined;
 
-        if (accounts) {
+        if (accounts.length > 0 && !loading && !loadingAddressesError) {
+            if (sortBy === SortBy.creationTimeAscending) {
+                accounts?.forEach((account) =>
+                    account.addresses.sort(
+                        (a, b) =>
+                            Number(a.derivation_path.split('/').at(-1)) -
+                            Number(b.derivation_path.split('/').at(-1))
+                    )
+                );
+            } else if (sortBy === SortBy.creationTimeDescending) {
+                accounts?.forEach((account) =>
+                    account.addresses.sort(
+                        (a, b) =>
+                            Number(b.derivation_path.split('/').at(-1)) -
+                            Number(a.derivation_path.split('/').at(-1))
+                    )
+                );
+            } else if (sortBy === SortBy.balanceAscending) {
+                accounts?.forEach((account) =>
+                    account.addresses.sort(
+                        (a, b) => Number(a.balance) - Number(b.balance)
+                    )
+                );
+            } else if (sortBy === SortBy.balanceDescending) {
+                accounts?.forEach((account) =>
+                    account.addresses.sort(
+                        (a, b) => Number(b.balance) - Number(a.balance)
+                    )
+                );
+            }
+
             addressGroups = _.chain(
                 JSON.parse(JSON.stringify(accounts)) as Account[]
             )
@@ -402,6 +404,8 @@ export default class OnChainAddresses extends React.Component<
                             onRefresh={() => this.loadAddresses()}
                         />
                     </>
+                ) : loadingAddressesError ? (
+                    <ErrorMessage message={loadingAddressesError} />
                 ) : (
                     <Button
                         title={localeString(
