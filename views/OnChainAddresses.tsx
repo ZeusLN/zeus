@@ -121,8 +121,6 @@ interface OnChainAddressesProps {
 }
 
 interface OnChainAddressesState {
-    loading: boolean;
-    accounts: Account[];
     hideZeroBalance: boolean;
     hideChangeAddresses: boolean;
     sortBy: SortBy;
@@ -164,7 +162,9 @@ export default class OnChainAddresses extends React.Component<
     OnChainAddressesState
 > {
     componentDidMount(): void {
-        this.props.UTXOsStore.listAddresses();
+        this.props.navigation.addListener('focus', () => {
+            this.props.UTXOsStore.listAddresses();
+        });
     }
 
     renderSeparator = () => (
@@ -187,11 +187,14 @@ export default class OnChainAddresses extends React.Component<
         const sortBy = this.state?.sortBy ?? SortBy.creationTimeDescending;
 
         const accounts = accountsWithAddresses;
-        const loading = loadingAddresses;
 
         let addressGroups: AddressGroup[] | undefined;
 
-        if (accounts.length > 0 && !loading && !loadingAddressesError) {
+        if (
+            accounts.length > 0 &&
+            !loadingAddresses &&
+            !loadingAddressesError
+        ) {
             if (sortBy === SortBy.creationTimeAscending) {
                 accounts?.forEach((account) =>
                     account.addresses.sort(
@@ -383,7 +386,7 @@ export default class OnChainAddresses extends React.Component<
                     }
                     navigation={navigation}
                 />
-                {loading ? (
+                {loadingAddresses ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
                     </View>
@@ -400,7 +403,7 @@ export default class OnChainAddresses extends React.Component<
                             keyExtractor={(_, index) => `address-${index}`}
                             ItemSeparatorComponent={this.renderSeparator}
                             onEndReachedThreshold={50}
-                            refreshing={loading}
+                            refreshing={loadingAddresses}
                             onRefresh={() => this.loadAddresses()}
                         />
                     </>
