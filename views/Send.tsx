@@ -320,16 +320,9 @@ export default class Send extends React.Component<SendProps, SendState> {
         utxoBalance: number,
         account: string
     ) => {
-        const { SettingsStore } = this.props;
-        const { implementation } = SettingsStore;
         this.setState((prevState) => ({
             utxos,
             utxoBalance,
-            amount:
-                implementation === 'c-lightning-REST' ||
-                implementation === 'cln-rest'
-                    ? 'all'
-                    : prevState.amount,
             account,
             fundMax: account === 'default' ? prevState.fundMax : false
         }));
@@ -1036,8 +1029,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     )}
                                 </View>
 
-                                {BackendUtils.isLNDBased() &&
-                                    BackendUtils.supportsOnchainSendMax() &&
+                                {BackendUtils.supportsOnchainSendMax() &&
                                     additionalOutputs.length === 0 &&
                                     account === 'default' && (
                                         <View style={{ marginBottom: 18 }}>
