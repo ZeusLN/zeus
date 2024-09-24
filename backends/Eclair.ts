@@ -510,6 +510,7 @@ export default class Eclair {
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
     supportInboundFees = () => false;
