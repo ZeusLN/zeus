@@ -181,7 +181,9 @@ export default class OnChainAddresses extends React.Component<
                     <DropdownSetting
                         title={localeString('general.sorting')}
                         values={Object.keys(SortBy).map((s) => ({
-                            key: s,
+                            key: localeString(
+                                `views.OnChainAddresses.sortBy.${s}`
+                            ),
                             translateKey: `views.OnChainAddresses.sortBy.${s}`,
                             value: s
                         }))}
