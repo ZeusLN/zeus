@@ -6,8 +6,7 @@ import {
     Text,
     TouchableOpacity,
     View,
-    StyleSheet,
-    Alert
+    StyleSheet
 } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -139,22 +138,6 @@ export default class Activity extends React.PureComponent<
         return 'secondaryText';
     };
 
-    handleDownloadPress = () => {
-        const { ActivityStore } = this.props;
-        const { startDate, endDate } = ActivityStore.filters;
-
-        if (!startDate || !endDate) {
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.Activity.CSVDownloadWarning')
-            );
-        } else {
-            this.setState({
-                isCsvModalVisible: true
-            });
-        }
-    };
-
     render() {
         const {
             navigation,
@@ -251,7 +234,11 @@ export default class Activity extends React.PureComponent<
         const DownloadButton = () => (
             <View style={{ marginRight: 15 }}>
                 <TouchableOpacity
-                    onPress={this.handleDownloadPress}
+                    onPress={() =>
+                        this.setState({
+                            isCsvModalVisible: true
+                        })
+                    }
                     accessibilityLabel={localeString(
                         'views.ActivityToCsv.title'
                     )}
