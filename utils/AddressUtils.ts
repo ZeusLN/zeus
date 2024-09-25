@@ -61,6 +61,8 @@ const wpkhDescriptor =
 const nestedWpkhDescriptor =
     /^sh\(wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)\)#([a-zA-Z0-9]+)$/;
 
+const snakeCase = /^[a-zA-Z]+(?:_[a-zA-Z]+)*$/;
+
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',
     'https://lndhub.herokuapp.com',
@@ -307,6 +309,17 @@ class AddressUtils {
                 ExtPubKey: ''
             };
         }
+    };
+
+    snakeToHumanReadable = (input: string) => {
+        let output = input;
+        if (snakeCase.test(input)) {
+            // remove capital demarcation with spaces, move all to lowercase
+            output = output.split('_').join(' ').toLowerCase();
+            // capitalize first letter
+            output = output.charAt(0).toUpperCase() + output.slice(1);
+        }
+        return output;
     };
 }
 
