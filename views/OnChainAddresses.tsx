@@ -11,7 +11,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
-import _ from 'lodash';
+import { chain, cloneDeep } from 'lodash';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';
@@ -121,6 +121,7 @@ interface OnChainAddressesProps {
 }
 
 interface OnChainAddressesState {
+    accounts: any;
     hideZeroBalance: boolean;
     hideChangeAddresses: boolean;
     sortBy: SortBy;
@@ -161,9 +162,19 @@ export default class OnChainAddresses extends React.Component<
     OnChainAddressesProps,
     OnChainAddressesState
 > {
-    componentDidMount(): void {
-        this.props.navigation.addListener('focus', () => {
-            this.props.UTXOsStore.listAddresses();
+    state = {
+        accounts: [],
+        hideZeroBalance: false,
+        hideChangeAddresses: false,
+        sortBy: SortBy.balanceDescending
+    };
+
+    async componentDidMount() {
+        this.props.navigation.addListener('focus', async () => {
+            const accounts = await this.props.UTXOsStore.listAddresses();
+            this.setState({
+                accounts: cloneDeep(accounts)
+            });
         });
     }
 
@@ -178,15 +189,10 @@ export default class OnChainAddresses extends React.Component<
 
     render() {
         const { UTXOsStore, navigation } = this.props;
-        const { hideZeroBalance, hideChangeAddresses } = this.state ?? {};
-        const {
-            loadingAddresses,
-            accountsWithAddresses,
-            loadingAddressesError
-        } = UTXOsStore;
+        const { accounts, hideZeroBalance, hideChangeAddresses } =
+            this.state ?? {};
+        const { loadingAddresses, loadingAddressesError } = UTXOsStore;
         const sortBy = this.state?.sortBy ?? SortBy.creationTimeDescending;
-
-        const accounts = accountsWithAddresses;
 
         let addressGroups: AddressGroup[] | undefined;
 
@@ -225,7 +231,7 @@ export default class OnChainAddresses extends React.Component<
                 );
             }
 
-            addressGroups = _.chain(
+            addressGroups = chain(
                 JSON.parse(JSON.stringify(accounts)) as Account[]
             )
                 .flatMap((account) =>
