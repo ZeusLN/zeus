@@ -20,6 +20,7 @@ import DropdownSetting from '../components/DropdownSetting';
 import { Row } from '../components/layout/Row';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
+import AddressUtils from '../utils/AddressUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -78,7 +79,9 @@ const AddressGroup = (props: any) => {
                                     {localeString('general.accountName')}:{' '}
                                     {addressGroup.accountName + '\n'}
                                     {localeString('general.addressType')}:{' '}
-                                    {addressGroup.addressType}
+                                    {AddressUtils.snakeToHumanReadable(
+                                        addressGroup.addressType
+                                    )}
                                     {' \n'}
                                     {localeString('general.count')}:{' '}
                                     {addressGroup.addresses.length}
