@@ -22,6 +22,15 @@ const ADDRESS_TYPES = [
     'UNUSED_TAPROOT_PUBKEY'
 ];
 
+const NEXT_ADDR_MAP: any = {
+    WITNESS_PUBKEY_HASH: 0,
+    NESTED_PUBKEY_HASH: 1,
+    UNUSED_WITNESS_PUBKEY_HASH: 2,
+    UNUSED_NESTED_PUBKEY_HASH: 3,
+    TAPROOT_PUBKEY: 4,
+    UNUSED_TAPROOT_PUBKEY: 5
+};
+
 export default class LightningNodeConnect {
     lnc: any;
     listener: any;
@@ -170,11 +179,18 @@ export default class LightningNodeConnect {
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
-                type: ADDRESS_TYPES[data.type],
+                type: ADDRESS_TYPES[data.type] || data.type,
                 account: data.account || 'default'
             })
-            .then((data: lnrpc.NewAddressResponse) => snakeize(data));
-
+            .then((data: walletrpc.AddrRequest) => snakeize(data));
+    getNewChangeAddress = async (data: any) =>
+        await this.lnc.lnd.walletKit
+            .nextAddr({
+                type: NEXT_ADDR_MAP[data.type],
+                account: data.account || 'default',
+                change: true
+            })
+            .then((data: walletrpc.AddrResponse) => snakeize(data));
     openChannelSync = async (data: OpenChannelRequest) => {
         let request: lnrpc.OpenChannelRequest = {
             private: data.privateChannel,
@@ -435,6 +451,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .listAccounts({})
             .then((data: walletrpc.ListAccountsResponse) => snakeize(data));
+    listAddresses = async () =>
+        await this.lnc.lnd.walletKit
+            .listAddresses({})
+            .then((data: walletrpc.ListAddressesResponse) => snakeize(data));
     importAccount = async (req: walletrpc.ImportAccountRequest) =>
         await this.lnc.lnd.walletKit
             .importAccount(req)

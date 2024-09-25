@@ -43,44 +43,76 @@ const AddressGroup = (props: any) => {
                     borderColor: themeColor('secondaryText'),
                     backgroundColor: 'transparent'
                 }}
-                onPress={() => setCollapsed(!isCollapsed)}
             >
                 <ListItem.Content>
                     <Row>
-                        {!isCollapsed ? (
-                            <CaretDown
-                                fill={themeColor('text')}
-                                width="30"
-                                height="30"
-                                style={{ marginRight: 10 }}
-                            />
-                        ) : (
-                            <CaretRight
-                                fill={themeColor('text')}
-                                width="30"
-                                height="30"
-                                style={{ marginRight: 10 }}
-                            />
-                        )}
-                        <ListItem.Title
+                        <TouchableOpacity
                             style={{
-                                color: themeColor('text'),
-                                fontSize: 14
+                                flex: 1,
+                                flexDirection: 'row'
                             }}
+                            onPress={() => setCollapsed(!isCollapsed)}
                         >
-                            {localeString('general.accountName')}:{' '}
-                            {addressGroup.accountName + '\n'}
-                            {localeString('general.addressType')}:{' '}
-                            {addressGroup.addressType}
-                            {' \n'}
-                            {localeString('general.count')}:{' '}
-                            {addressGroup.addresses.length}
-                            {addressGroup.changeAddresses &&
-                                '\n' +
-                                    localeString(
-                                        'views.OnChainAddresses.changeAddresses'
-                                    )}
-                        </ListItem.Title>
+                            <Row>
+                                {!isCollapsed ? (
+                                    <CaretDown
+                                        fill={themeColor('text')}
+                                        width="30"
+                                        height="30"
+                                        style={{ marginRight: 10 }}
+                                    />
+                                ) : (
+                                    <CaretRight
+                                        fill={themeColor('text')}
+                                        width="30"
+                                        height="30"
+                                        style={{ marginRight: 10 }}
+                                    />
+                                )}
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 14
+                                    }}
+                                >
+                                    {localeString('general.accountName')}:{' '}
+                                    {addressGroup.accountName + '\n'}
+                                    {localeString('general.addressType')}:{' '}
+                                    {addressGroup.addressType}
+                                    {' \n'}
+                                    {localeString('general.count')}:{' '}
+                                    {addressGroup.addresses.length}
+                                    {addressGroup.changeAddresses &&
+                                        '\n' +
+                                            localeString(
+                                                'views.OnChainAddresses.changeAddresses'
+                                            )}
+                                </ListItem.Title>
+                            </Row>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() =>
+                                NavigationService.navigate('Receive', {
+                                    account: addressGroup.accountName,
+                                    addressType: addressGroup.addressType,
+                                    selectedIndex: 2,
+                                    autoGenerateOnChain: true,
+                                    autoGenerateChange:
+                                        !!addressGroup.changeAddresses,
+                                    hideRightHeaderComponent: true
+                                })
+                            }
+                            accessibilityLabel={localeString(
+                                'views.OnChainAddresses.createAddress'
+                            )}
+                        >
+                            <Add
+                                fill={themeColor('text')}
+                                width="30"
+                                height="30"
+                                style={{ alignSelf: 'center' }}
+                            />
+                        </TouchableOpacity>
                     </Row>
                 </ListItem.Content>
             </ListItem>
@@ -370,28 +402,6 @@ export default class OnChainAddresses extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={
-                        <TouchableOpacity
-                            onPress={() =>
-                                navigation.navigate('Receive', {
-                                    account: 'default',
-                                    selectedIndex: 2,
-                                    autoGenerateOnChain: true,
-                                    hideRightHeaderComponent: true
-                                })
-                            }
-                            accessibilityLabel={localeString(
-                                'views.OnChainAddresses.createAddress'
-                            )}
-                        >
-                            <Add
-                                fill={themeColor('text')}
-                                width="30"
-                                height="30"
-                                style={{ alignSelf: 'center' }}
-                            />
-                        </TouchableOpacity>
-                    }
                     navigation={navigation}
                 />
                 {loadingAddresses ? (

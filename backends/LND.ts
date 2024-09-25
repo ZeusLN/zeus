@@ -326,6 +326,8 @@ export default class LND {
         });
     getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
+    getNewChangeAddress = (data: any) =>
+        this.postRequest('/v2/wallet/address/next', data);
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any = {
             private: data.privateChannel,

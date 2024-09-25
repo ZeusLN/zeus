@@ -48,6 +48,7 @@ const {
     finalizePsbt,
     publishTransaction,
     listAccounts,
+    listAddresses,
     importAccount,
     rescan
 } = lndMobile.wallet;
@@ -272,6 +273,7 @@ export default class EmbeddedLND extends LND {
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
     listAccounts = async () => await listAccounts();
+    listAddresses = async () => await listAddresses();
     importAccount = async (data: any) => await importAccount(data);
     rescan = async (data: any) => await rescan(data);
 
