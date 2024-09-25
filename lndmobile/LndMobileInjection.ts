@@ -89,6 +89,7 @@ import {
     finalizePsbt,
     publishTransaction,
     listAccounts,
+    listAddresses,
     importAccount,
     rescan
 } from './wallet';
@@ -426,6 +427,7 @@ export interface ILndMobileInjections {
             tx_hex: Uint8Array;
         }) => Promise<walletrpc.PublishResponse>;
         listAccounts: () => Promise<walletrpc.ListAccountsResponse>;
+        listAddresses: () => Promise<walletrpc.ListAddressesResponse>;
         importAccount: ({
             name,
             extended_public_key,
@@ -548,6 +550,7 @@ export default {
         finalizePsbt,
         publishTransaction,
         listAccounts,
+        listAddresses,
         importAccount,
         rescan
     },
