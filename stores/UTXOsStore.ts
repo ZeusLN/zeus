@@ -297,21 +297,24 @@ export default class UTXOsStore {
     };
 
     @action
-    public listAddresses = () => {
+    public listAddresses = async () => {
         this.loadingAddresses = true;
         this.accountsWithAddresses = [];
         this.loadingAddressesError = '';
 
-        return BackendUtils.listAddresses()
-            .then((response: any) => {
-                this.accountsWithAddresses = response.account_with_addresses;
-                this.loadingAddresses = false;
-                return;
-            })
-            .catch((err: Error) => {
-                this.loadingAddressesError = err.toString();
-                this.loadingAddresses = false;
-                return;
-            });
+        return await new Promise((resolve, reject) => {
+            BackendUtils.listAddresses()
+                .then((response: any) => {
+                    this.accountsWithAddresses =
+                        response.account_with_addresses;
+                    this.loadingAddresses = false;
+                    resolve(this.accountsWithAddresses);
+                })
+                .catch((err: Error) => {
+                    this.loadingAddressesError = err.toString();
+                    this.loadingAddresses = false;
+                    reject();
+                });
+        });
     };
 }
