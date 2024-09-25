@@ -36,7 +36,9 @@ const AddressGroup = (props: any) => {
     const addressGroup = props.addressGroup;
     const [isCollapsed, setCollapsed] = useState(false);
     return (
-        <React.Fragment>
+        <React.Fragment
+            key={`${addressGroup.accountName}-${addressGroup.addressType}`}
+        >
             <ListItem
                 containerStyle={{
                     borderTopWidth: 2,
@@ -122,6 +124,7 @@ const AddressGroup = (props: any) => {
             {!isCollapsed &&
                 addressGroup.addresses.map((address) => (
                     <ListItem
+                        key={`address-${address.address}`}
                         containerStyle={{
                             borderBottomWidth: 0,
                             backgroundColor: 'transparent'
