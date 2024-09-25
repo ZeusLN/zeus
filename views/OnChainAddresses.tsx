@@ -3,14 +3,12 @@ import {
     FlatList,
     TouchableHighlight,
     TouchableOpacity,
-    Vibration,
     View
 } from 'react-native';
 import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import Clipboard from '@react-native-clipboard/clipboard';
 import { chain, cloneDeep } from 'lodash';
 
 import Amount from '../components/Amount';
@@ -26,6 +24,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import UTXOsStore from '../stores/UTXOsStore';
+
+import NavigationService from '../NavigationService';
 
 import Add from '../assets/images/SVG/Add.svg';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
@@ -92,8 +92,10 @@ const AddressGroup = (props: any) => {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => {
-                            Clipboard.setString(address.address);
-                            Vibration.vibrate(50);
+                            NavigationService.navigate('QR', {
+                                value: `BITCOIN:${address.address.toUpperCase()}`,
+                                copyValue: address.address
+                            });
                         }}
                     >
                         <ListItem.Content>
