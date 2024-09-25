@@ -34,7 +34,7 @@ import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
-import JsonToCsv from './ActivityToCsv';
+import ActivityToCsv from './ActivityToCsv';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -307,7 +307,7 @@ export default class Activity extends React.PureComponent<
                     navigation={navigation}
                 />
 
-                <JsonToCsv
+                <ActivityToCsv
                     filteredActivity={filteredActivity}
                     closeModal={() =>
                         this.setState({ isCsvModalVisible: false })

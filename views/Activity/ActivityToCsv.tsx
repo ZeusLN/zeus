@@ -10,7 +10,7 @@ import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
+const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const [customFileName, setCustomFileName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -99,7 +99,7 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         });
     };
 
-    const convertJsonToCsv = async (data, type) => {
+    const convertActivityToCsv = async (data, type) => {
         if (!data || data.length === 0) {
             return '';
         }
@@ -204,13 +204,13 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const downloadCsv = async () => {
         setIsLoading(true);
         setTimeout(async () => {
-            const invoicePaymentCsv = await convertJsonToCsv(
+            const invoicePaymentCsv = await convertActivityToCsv(
                 filteredActivity.filter(
                     (item) => !(item instanceof Transaction)
                 ),
                 'invoice_payment'
             );
-            const transactionCsv = await convertJsonToCsv(
+            const transactionCsv = await convertActivityToCsv(
                 filteredActivity.filter((item) => item instanceof Transaction),
                 'transaction'
             );
@@ -237,6 +237,10 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         : `${RNFS.DocumentDirectoryPath}/${transactionFileName}`;
 
                 if (invoicePaymentCsv) {
+                    console.log(
+                        'invoicePaymentFilePath',
+                        invoicePaymentFilePath
+                    );
                     await RNFS.writeFile(
                         invoicePaymentFilePath,
                         invoicePaymentCsv,
@@ -245,6 +249,7 @@ const JsonToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                 }
 
                 if (transactionCsv) {
+                    console.log('transactionFilePath', transactionFilePath);
                     await RNFS.writeFile(
                         transactionFilePath,
                         transactionCsv,
@@ -334,4 +339,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default JsonToCsv;
+export default ActivityToCsv;
