@@ -211,12 +211,16 @@ export default class OnChainAddresses extends React.Component<
 
     async componentDidMount() {
         this.props.navigation.addListener('focus', async () => {
-            const accounts = await this.props.UTXOsStore.listAddresses();
-            this.setState({
-                accounts: cloneDeep(accounts)
-            });
+            this.loadAddresses();
         });
     }
+
+    loadAddresses = async () => {
+        const accounts = await this.props.UTXOsStore.listAddresses();
+        this.setState({
+            accounts: cloneDeep(accounts)
+        });
+    };
 
     renderSeparator = () => (
         <View
