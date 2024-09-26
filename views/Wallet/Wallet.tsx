@@ -353,11 +353,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelBackupStore.reset();
             UTXOsStore.reset();
             ContactStore.loadContacts();
+            NotesStore.loadNoteKeys();
         }
 
         LnurlPayStore.reset();
-
-        NotesStore?.loadNoteKeys();
 
         if (
             pos?.posEnabled &&
