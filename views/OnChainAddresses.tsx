@@ -297,11 +297,8 @@ export default class OnChainAddresses extends React.Component<
                 addressGroups.forEach(
                     (acc) =>
                         (acc.addresses = acc.addresses.filter(
-                            (addr) => addr.balance !== '0'
+                            (addr) => addr.balance && addr.balance !== '0'
                         ))
-                );
-                addressGroups = addressGroups.filter(
-                    (a) => a.addresses.length > 0
                 );
             }
 
