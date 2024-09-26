@@ -311,8 +311,7 @@ export default class LnurlAuth extends React.Component<
                                 authenticating
                             }
                             buttonStyle={{
-                                backgroundColor: 'orange',
-                                borderRadius: 30
+                                backgroundColor: themeColor('highlight')
                             }}
                         />
                     </View>
