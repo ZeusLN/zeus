@@ -64,6 +64,7 @@ interface ImportAccountState {
     address_type: number;
     existing_account: boolean;
     block_height: number;
+    addresses_to_generate: number;
     understood: boolean;
 }
 
@@ -82,6 +83,7 @@ export default class ImportAccount extends React.Component<
             address_type: walletrpc.AddressType.WITNESS_PUBKEY_HASH,
             existing_account: false,
             block_height: 481824,
+            addresses_to_generate: 50,
             understood: false
         };
     }
@@ -127,6 +129,7 @@ export default class ImportAccount extends React.Component<
             address_type,
             existing_account,
             block_height,
+            addresses_to_generate,
             understood
         } = this.state;
         const { errorMsg } = UTXOsStore;
@@ -377,6 +380,31 @@ export default class ImportAccount extends React.Component<
                                         keyboardType="numeric"
                                     />
                                 </>
+                                <>
+                                    <Text
+                                        style={{
+                                            ...styles.label,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.ImportAccount.addressesToGenerate'
+                                        )}
+                                    </Text>
+                                    <TextInput
+                                        value={addresses_to_generate.toString()}
+                                        onChangeText={(text: string) => {
+                                            const addresses_to_generate =
+                                                Number(text);
+                                            if (isNaN(addresses_to_generate))
+                                                return;
+                                            this.setState({
+                                                addresses_to_generate
+                                            });
+                                        }}
+                                        keyboardType="numeric"
+                                    />
+                                </>
                             </>
                         )}
                     </ScrollView>
@@ -403,6 +431,9 @@ export default class ImportAccount extends React.Component<
                                 dry_run: true,
                                 birthday_height: existing_account
                                     ? block_height
+                                    : undefined,
+                                addresses_to_generate: existing_account
+                                    ? addresses_to_generate
                                     : undefined
                             }).then((response) => {
                                 if (response)
