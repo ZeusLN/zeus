@@ -1254,11 +1254,11 @@
     "views.OnChainAddresses.title": "Direcciones en cadena",
     "views.OnChainAddresses.noAddressesAvailable": "No hay direcciones disponibles",
     "views.OnChainAddresses.hideZeroBalanance": "Ocultar saldo 0",
-    "views.OnChainAddresses.hideChangeAddresses": "Ocultar cambios de dirección",
+    "views.OnChainAddresses.hideChangeAddresses": "Ocultar direcciónes de cambio",
     "views.OnChainAddresses.sortBy.creationTimeAscending": "Tiempo de creación (ascendente)",
     "views.OnChainAddresses.sortBy.creationTimeDescending": "Hora de creación (descendente)",
     "views.OnChainAddresses.sortBy.balanceAscending": "Equilibrio (ascendente)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Equilibrio (descendente)",
     "views.OnChainAddresses.createAddress": "Crear dirección",
-    "views.OnChainAddresses.changeAddresses": "Cambiar direcciones"
+    "views.OnChainAddresses.changeAddresses": "Direcciónes de cambio"
 }
