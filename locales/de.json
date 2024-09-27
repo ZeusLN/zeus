@@ -286,7 +286,7 @@
     "views.ImportAccount.addressType": "Adress-Typ",
     "views.ImportAccount.existingAccount": "Existing account (has funds already)",
     "views.ImportAccount.existingAccountNote": "If importing an existing account, ZEUS will initiate a rescan from the block height specified below. Please leave the app open for up to 10 minutes for balances to be reflected accurately",
-    "views.ImportAccount.addressesToGenerate": "Number of address to generate",
+    "views.ImportAccount.addressesToGenerate": "Number of addresses to generate",
     "views.ImportAccount.importAccount": "Account importieren",
     "views.ImportAccount.note": "HINWEIS: Ereignisse (Ein-/Auszahlungen) für Schlüssel, die von einem Account abgeleitet wurden, werden von LND nur erkannt, wenn sie nach dem Import passieren. Ein nachträgliches Scannen zur Erkennung älterer Ereignisse wird erst in zukünftigen ZEUS-Versionen unterstützt.",
     "views.ImportAccount.derivationPath": "Ableitungspfad",
