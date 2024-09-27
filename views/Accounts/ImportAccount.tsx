@@ -200,9 +200,10 @@ export default class ImportAccount extends React.Component<
                                 fontSize: 20
                             }}
                         >
-                            {localeString(
-                                'views.ImportAccount.Warning.note'
-                            ).replace('Zeus', 'ZEUS')}
+                            {localeString('views.ImportAccount.note').replace(
+                                'Zeus',
+                                'ZEUS'
+                            )}
                         </Text>
                     )}
                     <View
