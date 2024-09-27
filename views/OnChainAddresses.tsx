@@ -409,6 +409,32 @@ export default class OnChainAddresses extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        !loadingAddresses &&
+                        !loadingAddressesError &&
+                        !addressGroups && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('Receive', {
+                                        account: 'default',
+                                        selectedIndex: 2,
+                                        autoGenerateOnChain: true,
+                                        hideRightHeaderComponent: true
+                                    })
+                                }
+                                accessibilityLabel={localeString(
+                                    'views.OnChainAddresses.createAddress'
+                                )}
+                            >
+                                <Add
+                                    fill={themeColor('text')}
+                                    width="30"
+                                    height="30"
+                                    style={{ alignSelf: 'center' }}
+                                />
+                            </TouchableOpacity>
+                        )
+                    }
                     navigation={navigation}
                 />
                 {loadingAddresses ? (
