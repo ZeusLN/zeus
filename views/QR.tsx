@@ -16,6 +16,7 @@ interface QRProps {
         'QR',
         {
             value: string;
+            copyValue: string;
             label: string;
             hideText: boolean;
             jumboLabel: boolean;
@@ -26,6 +27,7 @@ interface QRProps {
 
 interface QRState {
     value: string;
+    copyValue: string;
     label: string;
     hideText: boolean;
     jumboLabel: boolean;
@@ -37,11 +39,13 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
         super(props);
 
         const value = props.route.params?.value ?? '';
+        const copyValue = props.route.params?.copyValue ?? '';
         const label = props.route.params?.label ?? '';
         const { hideText, jumboLabel, logo } = props.route.params ?? {};
 
         this.state = {
             value,
+            copyValue,
             label,
             hideText,
             jumboLabel,
@@ -51,7 +55,8 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
 
     render() {
         const { navigation } = this.props;
-        const { value, label, hideText, jumboLabel, logo } = this.state;
+        const { value, copyValue, label, hideText, jumboLabel, logo } =
+            this.state;
 
         const { fontScale } = Dimensions.get('window');
 
@@ -85,6 +90,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                     )}
                     <CollapsedQR
                         value={value}
+                        copyValue={copyValue || value}
                         expanded
                         textBottom
                         hideText={hideText}

@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AddIcon from '../assets/images/SVG/Add.svg';
 import BlockIcon from '../assets/images/SVG/Block.svg';
 import Bolt12Icon from '../assets/images/SVG/AtSign.svg';
+import CoinsIcon from '../assets/images/SVG/Coins.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import GearIcon from '../assets/images/SVG/Gear.svg';
@@ -468,6 +469,49 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 </TouchableOpacity>
                             </View>
                         )}
+
+                    {BackendUtils.supportsAddressesWithDerivationPaths() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('OnChainAddresses')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <CoinsIcon
+                                            fill={themeColor('text')}
+                                            height={30}
+                                            width={30}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OnChainAddresses.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode && BackendUtils.supportsOffers() && (
                         <View

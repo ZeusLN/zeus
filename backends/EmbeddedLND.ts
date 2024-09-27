@@ -48,6 +48,7 @@ const {
     finalizePsbt,
     publishTransaction,
     listAccounts,
+    listAddresses,
     importAccount,
     rescan
 } = lndMobile.wallet;
@@ -272,6 +273,7 @@ export default class EmbeddedLND extends LND {
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
     listAccounts = async () => await listAccounts();
+    listAddresses = async () => await listAddresses();
     importAccount = async (data: any) => await importAccount(data);
     rescan = async (data: any) => await rescan(data);
 
@@ -314,6 +316,7 @@ export default class EmbeddedLND extends LND {
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
 }
