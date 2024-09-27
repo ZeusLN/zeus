@@ -108,7 +108,9 @@ interface ReceiveProps {
             amount: string;
             autoGenerate: boolean;
             autoGenerateOnChain: boolean;
+            autoGenerateChange?: boolean;
             account: string;
+            addressType?: string;
             selectedIndex: number;
             memo: string;
             orderId: string;
@@ -116,6 +118,7 @@ interface ReceiveProps {
             orderTip: string;
             exchangeRate: string;
             rate: number;
+            hideRightHeaderComponent: boolean;
         }
     >;
 }
@@ -148,6 +151,7 @@ interface ReceiveState {
     lspNotConfigured: boolean;
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
+    hideRightHeaderComponent?: boolean;
 }
 
 enum RouteHintMode {
@@ -279,29 +283,28 @@ export default class Receive extends React.Component<
             amount,
             autoGenerate,
             autoGenerateOnChain,
+            autoGenerateChange,
             account,
-            selectedIndex
+            selectedIndex,
+            hideRightHeaderComponent
         } = route.params ?? {};
 
+        if (hideRightHeaderComponent) {
+            this.setState({ hideRightHeaderComponent });
+        }
+
         if (account) {
-            this.setState({
-                account
-            });
+            this.setState({ account });
         }
 
         if (selectedIndex) {
-            this.setState({
-                selectedIndex
-            });
+            this.setState({ selectedIndex });
         }
 
-        const {
-            expirySeconds,
-            routeHints,
-            ampInvoice,
-            blindedPaths,
-            addressType
-        } = this.state;
+        const { expirySeconds, routeHints, ampInvoice, blindedPaths } =
+            this.state;
+
+        const addressType = route.params?.addressType || this.state.addressType;
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -373,8 +376,10 @@ export default class Receive extends React.Component<
             );
         }
 
-        if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress(account);
+        if (autoGenerateChange) {
+            this.autoGenerateChange(account, addressType);
+        } else if (autoGenerateOnChain) {
+            this.autoGenerateOnChainAddress(account, addressType);
         }
     }
 
@@ -481,13 +486,12 @@ export default class Receive extends React.Component<
         );
     };
 
-    autoGenerateOnChainAddress = (account?: string) => {
+    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
         const { InvoicesStore } = this.props;
-        const { addressType } = this.state;
         const { getNewAddress } = InvoicesStore;
 
         let request: any = {
-            type: addressType
+            type: address_type || this.state.addressType
         };
 
         if (account) {
@@ -495,6 +499,23 @@ export default class Receive extends React.Component<
         }
 
         getNewAddress(request).then((onChainAddress: string) => {
+            this.subscribeInvoice(undefined, onChainAddress);
+        });
+    };
+
+    autoGenerateChange = (account?: string, address_type?: string) => {
+        const { InvoicesStore } = this.props;
+        const { getNewChangeAddress } = InvoicesStore;
+
+        let request: any = {
+            type: address_type || this.state.addressType
+        };
+
+        if (account) {
+            request.account = account;
+        }
+
+        getNewChangeAddress(request).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -1051,7 +1072,8 @@ export default class Receive extends React.Component<
             lspNotConfigured,
             routeHintMode,
             selectedRouteHintChannels,
-            blindedPaths
+            blindedPaths,
+            hideRightHeaderComponent
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1439,7 +1461,8 @@ export default class Receive extends React.Component<
                     rightComponent={
                         loading ||
                         watchedInvoicePaid ||
-                        posStatus === 'active' ? null : haveInvoice ? (
+                        posStatus === 'active' ||
+                        hideRightHeaderComponent ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
                             BackendUtils.supportsAddressTypeSelection() &&

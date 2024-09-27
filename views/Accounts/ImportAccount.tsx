@@ -245,7 +245,7 @@ export default class ImportAccount extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {localeString('views.ImportAccount.name')}
+                            {localeString('general.accountName')}
                         </Text>
                         <TextInput
                             placeholder={'My airgapped hardware wallet'}
@@ -300,9 +300,7 @@ export default class ImportAccount extends React.Component<
                             />
                         </>
                         <DropdownSetting
-                            title={localeString(
-                                'views.ImportAccount.addressType'
-                            )}
+                            title={localeString('general.addressType')}
                             selectedValue={walletrpc.AddressType[address_type]}
                             onValueChange={async (value: string) => {
                                 this.setState({

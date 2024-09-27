@@ -122,6 +122,7 @@ open class Lnd {
     "WalletKitSignPsbt": { bytes, cb in LndmobileWalletKitSignPsbt(bytes, cb) },
     "WalletKitFinalizePsbt": { bytes, cb in LndmobileWalletKitFinalizePsbt(bytes, cb) },
     "WalletKitPublishTransaction": { bytes, cb in LndmobileWalletKitPublishTransaction(bytes, cb) },
+    "WalletKitListAddresses": { bytes, cb in LndmobileWalletKitListAddresses(bytes, cb) },
     "WalletKitListAccounts": { bytes, cb in LndmobileWalletKitListAccounts(bytes, cb) },
     "WalletKitImportAccount": { bytes, cb in LndmobileWalletKitImportAccount(bytes, cb) },
     "WalletKitBumpFee": { bytes, cb in LndmobileWalletKitBumpFee(bytes, cb) },

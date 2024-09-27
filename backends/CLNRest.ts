@@ -418,6 +418,7 @@ export default class CLNRest {
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = async () => {
         const { configs } = await this.postRequest('/v1/listconfigs');
 

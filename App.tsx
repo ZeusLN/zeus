@@ -34,6 +34,7 @@ import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 import Sweep from './views/Sweep';
+import OnChainAddresses from './views/OnChainAddresses';
 
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
@@ -875,6 +876,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="PendingHTLCs"
                                                         component={PendingHTLCs}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="OnChainAddresses"
+                                                        component={
+                                                            OnChainAddresses
+                                                        }
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

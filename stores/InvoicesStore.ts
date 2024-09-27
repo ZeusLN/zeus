@@ -460,6 +460,32 @@ export default class InvoicesStore {
     };
 
     @action
+    public getNewChangeAddress = (params: any) => {
+        if (!params.unified) {
+            this.creatingInvoice = true;
+            this.error_msg = null;
+        }
+
+        params.change = true;
+
+        this.onChainAddress = null;
+        return BackendUtils.getNewChangeAddress(params)
+            .then((data: any) => {
+                const address = data.addr;
+                if (!params.unified) this.onChainAddress = address;
+                if (!params.unified) this.creatingInvoice = false;
+                return address;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorGeneratingAddress');
+                this.creatingInvoice = false;
+            });
+    };
+
+    @action
     public clearAddress = () => (this.onChainAddress = null);
 
     @action
