@@ -23,6 +23,7 @@ export default class UTXOsStore {
     @observable public accounts: any = [];
     @observable public accountToImport: any | null;
     @observable public start_height?: number;
+    @observable public addresses_to_generate: number = 50;
     // rescan
     @observable public attemptingRescan = false;
     @observable public rescanErrorMsg: string;
@@ -189,10 +190,15 @@ export default class UTXOsStore {
         this.importingAccount = true;
         if (data.dry_run) {
             this.start_height = undefined;
+            this.addresses_to_generate = 50;
         }
 
         if (data.birthday_height) {
             this.start_height = data.birthday_height;
+        }
+
+        if (data.addresses_to_generate) {
+            this.addresses_to_generate = data.addresses_to_generate || 50;
         }
 
         if (this.start_height && !data.birthday_height) {
@@ -208,8 +214,8 @@ export default class UTXOsStore {
                 if (!data.dry_run) {
                     this.success = true;
                     if (this.start_height) {
-                        // generate 50 addresses from account
-                        for (let i = 0; i <= 50; i++) {
+                        // generate N addresses from account
+                        for (let i = 0; i < this.addresses_to_generate; i++) {
                             await BackendUtils.getNewAddress({
                                 account: this.accountToImport.account.name,
                                 type: walletrpc.AddressType[
@@ -217,7 +223,7 @@ export default class UTXOsStore {
                                 ]
                             }).then((response: any) => {
                                 console.log(
-                                    'generated address',
+                                    `generated address ${i}`,
                                     response.address
                                 );
                             });
@@ -229,7 +235,7 @@ export default class UTXOsStore {
                                 change: true
                             }).then((response: any) => {
                                 console.log(
-                                    'generated change address',
+                                    `generated change address ${i}`,
                                     response.addr
                                 );
                             });
