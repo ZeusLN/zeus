@@ -59,13 +59,14 @@ const getSatAmount = (amount: string | number) => {
                 .toNumber();
             break;
         case 'fiat':
-            satAmount = rate
-                ? new BigNumber(value.toString().replace(/,/g, '.'))
-                      .dividedBy(rate)
-                      .multipliedBy(SATS_PER_BTC)
-                      .toNumber()
-                      .toFixed(0)
-                : 0;
+            satAmount =
+                rate && value
+                    ? new BigNumber(value.toString().replace(/,/g, '.'))
+                          .dividedBy(rate)
+                          .multipliedBy(SATS_PER_BTC)
+                          .toNumber()
+                          .toFixed(0)
+                    : 0;
             break;
     }
 
