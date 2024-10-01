@@ -414,15 +414,19 @@ export default class Lockscreen extends React.Component<
                     attemptAdminLogin) && (
                     <Header
                         leftComponent="Back"
-                        centerComponent={{
-                            text: localeString(
-                                'views.Lockscreen.enterPassphrase'
-                            ),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }
-                        }}
+                        centerComponent={
+                            passphrase
+                                ? {
+                                      text: localeString(
+                                          'views.Lockscreen.enterPassphrase'
+                                      ),
+                                      style: {
+                                          color: themeColor('text'),
+                                          fontFamily: 'PPNeueMontreal-Book'
+                                      }
+                                  }
+                                : undefined
+                        }
                         navigation={navigation}
                     />
                 )}
