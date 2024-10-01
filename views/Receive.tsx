@@ -2672,22 +2672,14 @@ export default class Receive extends React.Component<
                                                     <Switch
                                                         value={blindedPaths}
                                                         onValueChange={() =>
-                                                            this.setState(
-                                                                (
-                                                                    prevState
-                                                                ) => ({
-                                                                    blindedPaths:
-                                                                        !blindedPaths,
-                                                                    ampInvoice:
-                                                                        !blindedPaths
-                                                                            ? false
-                                                                            : prevState.ampInvoice,
-                                                                    routeHints:
-                                                                        !blindedPaths
-                                                                            ? false
-                                                                            : prevState.routeHints
-                                                                })
-                                                            )
+                                                            this.setState({
+                                                                blindedPaths:
+                                                                    !blindedPaths,
+                                                                ampInvoice:
+                                                                    false,
+                                                                routeHints:
+                                                                    false
+                                                            })
                                                         }
                                                     />
                                                 </>
