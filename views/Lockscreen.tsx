@@ -391,7 +391,7 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
         const { settings } = SettingsStore;
         const {
             passphrase,
@@ -404,9 +404,14 @@ export default class Lockscreen extends React.Component<
             deleteDuressPin
         } = this.state;
 
+        const { attemptAdminLogin } = route.params ?? {};
+
         return (
             <Screen>
-                {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
+                {(!!modifySecurityScreen ||
+                    deletePin ||
+                    deleteDuressPin ||
+                    attemptAdminLogin) && (
                     <Header
                         leftComponent="Back"
                         centerComponent={{
