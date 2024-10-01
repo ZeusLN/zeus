@@ -2504,6 +2504,7 @@ export default class Receive extends React.Component<
                                                                     !routeHints
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2638,6 +2639,7 @@ export default class Receive extends React.Component<
                                                                     !ampInvoice
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2670,10 +2672,22 @@ export default class Receive extends React.Component<
                                                     <Switch
                                                         value={blindedPaths}
                                                         onValueChange={() =>
-                                                            this.setState({
-                                                                blindedPaths:
-                                                                    !blindedPaths
-                                                            })
+                                                            this.setState(
+                                                                (
+                                                                    prevState
+                                                                ) => ({
+                                                                    blindedPaths:
+                                                                        !blindedPaths,
+                                                                    ampInvoice:
+                                                                        !blindedPaths
+                                                                            ? false
+                                                                            : prevState.ampInvoice,
+                                                                    routeHints:
+                                                                        !blindedPaths
+                                                                            ? false
+                                                                            : prevState.routeHints
+                                                                })
+                                                            )
                                                         }
                                                     />
                                                 </>
