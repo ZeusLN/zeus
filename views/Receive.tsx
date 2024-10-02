@@ -2504,6 +2504,7 @@ export default class Receive extends React.Component<
                                                                     !routeHints
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2638,6 +2639,7 @@ export default class Receive extends React.Component<
                                                                     !ampInvoice
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2672,7 +2674,11 @@ export default class Receive extends React.Component<
                                                         onValueChange={() =>
                                                             this.setState({
                                                                 blindedPaths:
-                                                                    !blindedPaths
+                                                                    !blindedPaths,
+                                                                ampInvoice:
+                                                                    false,
+                                                                routeHints:
+                                                                    false
                                                             })
                                                         }
                                                     />
