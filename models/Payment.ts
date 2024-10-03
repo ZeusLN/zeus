@@ -10,6 +10,11 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 
+interface preimageBuffer {
+    data: Array<number>;
+    type: string;
+}
+
 export default class Payment extends BaseModel {
     private payment_hash: string | { data: number[]; type: string }; // object if lndhub
     creation_date?: string;
@@ -32,7 +37,7 @@ export default class Payment extends BaseModel {
     msatoshi?: string;
     created_at?: string;
     timestamp?: string;
-    preimage: string;
+    preimage: any | preimageBuffer;
     bolt11?: string;
     htlcs?: Array<any>;
     nodes?: any;
@@ -93,19 +98,13 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getPreimage(): string {
-        if (this.preimage) {
-            if (this.preimage?.type === 'Buffer') {
-                this.preimage = Base64Utils.bytesToHex(this.preimage.data);
+        const preimage = this.preimage || this.payment_preimage;
+        if (preimage) {
+            if (typeof preimage !== 'string' && preimage.data) {
+                return Base64Utils.bytesToHex(preimage.data);
+            } else if (typeof preimage === 'string') {
+                return preimage;
             }
-            return this.preimage;
-        }
-        if (this.payment_preimage) {
-            if (this.payment_preimage?.type === 'Buffer') {
-                this.payment_preimage = Base64Utils.bytesToHex(
-                    this.payment_preimage.data
-                );
-            }
-            return this.payment_preimage;
         }
         return '';
     }
