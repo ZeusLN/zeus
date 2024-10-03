@@ -41,7 +41,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
             );
         });
 
-        const ref = createRef();
+        const ref = createRef<ModalBox>();
 
         return (
             <ModalBox
