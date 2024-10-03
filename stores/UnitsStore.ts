@@ -20,6 +20,7 @@ interface ValueDisplayProps {
     plural?: boolean;
     rtl?: boolean;
     space?: boolean;
+    error?: boolean;
 }
 
 export default class UnitsStore {

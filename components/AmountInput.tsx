@@ -48,7 +48,7 @@ const getSatAmount = (amount: string | number) => {
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
-    let satAmount: string | number;
+    let satAmount: string | number = 0;
     switch (units) {
         case 'sats':
             satAmount = value;
@@ -67,6 +67,9 @@ const getSatAmount = (amount: string | number) => {
                           .toNumber()
                           .toFixed(0)
                     : 0;
+            break;
+        default:
+            satAmount = 0;
             break;
     }
 

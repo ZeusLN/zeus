@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -41,35 +41,37 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
         extrapolate: 'clamp'
     });
 
+    const [offset, setOffset] = useState(0);
+
     const panResponder = useRef(
         PanResponder.create({
             onStartShouldSetPanResponder: () => true,
             onPanResponderGrant: () => {
-                pan.setOffset(pan._value);
+                pan.setOffset(offset);
                 pan.setValue(0);
             },
-            onPanResponderMove: (e, gesture) => {
+            onPanResponderMove: (_e, gesture) => {
                 const newValue = gesture.dx;
                 if (newValue >= 0 && newValue <= maxTranslation) {
                     pan.setValue(newValue);
                 }
             },
             onPanResponderRelease: (
-                e: GestureResponderEvent,
+                _e: GestureResponderEvent,
                 gesture: PanResponderGestureState
             ) => {
-                if (gesture.dx > maxTranslation * 0.95) {
+                const finalValue =
+                    gesture.dx > maxTranslation * 0.95 ? maxTranslation : 0;
+                if (finalValue === maxTranslation) {
                     onSwipeSuccess();
-                    Animated.spring(pan, {
-                        toValue: maxTranslation,
-                        useNativeDriver: false
-                    }).start();
-                } else {
-                    Animated.spring(pan, {
-                        toValue: 0,
-                        useNativeDriver: false
-                    }).start();
                 }
+
+                Animated.spring(pan, {
+                    toValue: finalValue,
+                    useNativeDriver: false
+                }).start(() => {
+                    setOffset(finalValue);
+                });
             }
         })
     ).current;
