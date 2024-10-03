@@ -108,9 +108,9 @@ export default class Transaction extends BaseModel {
             : new BigNumber(amount).plus(this.getFee).toString();
     }
 
-    @computed public get getBlockHeight(): string | boolean {
+    @computed public get getBlockHeight(): string {
         const block_height = this.blockheight || this.block_height;
-        return block_height ? block_height.toString() : false;
+        return block_height ? block_height.toString() : '';
     }
 
     @computed public get tx(): string {
