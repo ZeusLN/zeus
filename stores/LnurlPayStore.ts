@@ -9,6 +9,7 @@ import {
     finishEvent,
     generatePrivateKey,
     getPublicKey,
+    // @ts-ignore:next-line
     relayInit
 } from 'nostr-tools';
 
