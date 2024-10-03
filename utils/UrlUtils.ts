@@ -9,9 +9,10 @@ const goToBlockExplorer = (
     const { settings } = stores.settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
-    const host = custom
-        ? privacy.customBlockExplorer
-        : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
+    const host =
+        custom && privacy.customBlockExplorer
+            ? privacy.customBlockExplorer
+            : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
     const network =
         stores.nodeInfoStore.nodeInfo.isTestNet || testnet ? 'testnet/' : '';
 

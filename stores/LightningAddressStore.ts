@@ -10,6 +10,7 @@ import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
+// @ts-ignore:next-line
 import { getPublicKey, relayInit } from 'nostr-tools';
 
 const bip39 = require('bip39');
