@@ -761,7 +761,7 @@ export default class LightningAddressStore {
                         }
                     ]);
 
-                    events.map((event) => {
+                    events.map((event: any) => {
                         attestationEvents[event.id] = event;
                     });
 
@@ -937,6 +937,7 @@ export default class LightningAddressStore {
                 const title = 'ZEUS Pay payment received!';
                 const body = `Payment of ${value_commas} sats automatically accepted`;
                 if (Platform.OS === 'android') {
+                    // @ts-ignore:next-line
                     Notifications.postLocalNotification({
                         title,
                         body
@@ -944,6 +945,7 @@ export default class LightningAddressStore {
                 }
 
                 if (Platform.OS === 'ios') {
+                    // @ts-ignore:next-line
                     Notifications.postLocalNotification({
                         title,
                         body,

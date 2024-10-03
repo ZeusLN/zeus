@@ -20,7 +20,7 @@ interface ValueDisplayProps {
     plural?: boolean;
     rtl?: boolean;
     space?: boolean;
-    error?: boolean;
+    error?: string;
 }
 
 export default class UnitsStore {
@@ -118,6 +118,8 @@ export default class UnitsStore {
 
                 if (!fiatEntry?.rate) {
                     return {
+                        amount: 'Disabled',
+                        unit: 'fiat',
                         error: 'Rate for selected currency not available'
                     };
                 }
@@ -142,7 +144,11 @@ export default class UnitsStore {
                     space
                 };
             } else {
-                return { error: 'Error fetching fiat rates' };
+                return {
+                    amount: 'Disabled',
+                    unit: 'fiat',
+                    error: 'Error fetching fiat rates'
+                };
             }
         }
     };

@@ -6,8 +6,11 @@ import { hexToBytes } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
 import {
     nip19,
+    // @ts-ignore:next-line
     finishEvent,
+    // @ts-ignore:next-line
     generatePrivateKey,
+    // @ts-ignore:next-line
     getPublicKey,
     // @ts-ignore:next-line
     relayInit
