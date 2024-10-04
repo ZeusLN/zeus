@@ -997,10 +997,18 @@ export const DEFAULT_LSPS1_PUBKEY_TESTNET =
 export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
-export const DEFAULT_NOSTR_RELAYS = [
+export const DEFAULT_NOSTR_RELAYS_2023 = [
     'wss://nostr.mutinywallet.com',
     'wss://relay.damus.io',
     'wss://nostr.lnproxy.org'
+];
+
+export const DEFAULT_NOSTR_RELAYS = [
+    'wss://relay.damus.io',
+    'wss://nostr.land',
+    'wss://nostr.wine',
+    'wss://nos.lol',
+    'wss://relay.snort.social'
 ];
 
 export const NOTIFICATIONS_PREF_KEYS = [
@@ -1540,6 +1548,22 @@ export default class SettingsStore {
 
                     this.setSettings(JSON.stringify(newSettings));
                     await EncryptedStorage.setItem(MOD_KEY7, 'true');
+                }
+
+                const MOD_KEY8 = 'nostr-relays-2024';
+                const mod8 = await EncryptedStorage.getItem(MOD_KEY8);
+                if (!mod8) {
+                    if (
+                        JSON.stringify(
+                            newSettings?.lightningAddress?.nostrRelays
+                        ) === JSON.stringify(DEFAULT_NOSTR_RELAYS_2023)
+                    ) {
+                        newSettings.lightningAddress.nostrRelays =
+                            DEFAULT_NOSTR_RELAYS;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY8, 'true');
                 }
 
                 // migrate old POS squareEnabled setting to posEnabled
