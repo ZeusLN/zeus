@@ -123,6 +123,7 @@
     "general.addressType": "Osoitetyyppi",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "Vaatii uudelleenkäynnistyksen",
     "restart.msg": "Uusien määritysten käyttöönotto vaatii sovelluksen uudelleen käynnistyksen.",
     "restart.msg1": "Haluatko tehdä uudelleenkäynnistyksen nyt?",
