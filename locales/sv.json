@@ -123,6 +123,7 @@
     "general.addressType": "Address type",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "Omstart krävs",
     "restart.msg": "ZEUS måste startas om innan den nya konfigurationen börjar gälla",
     "restart.msg1": "Vill du starta om nu?",
