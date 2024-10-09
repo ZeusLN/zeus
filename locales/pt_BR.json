@@ -123,6 +123,7 @@
     "general.addressType": "Tipo de endereço",
     "general.sorting": "Classificação",
     "general.count": "Contar",
+    "general.experimental": "Experimental",
     "restart.title": "É necessário reiniciar",
     "restart.msg": "ZEUS deve ser reiniciado antes que a nova configuração seja aplicada.",
     "restart.msg1": "Gostaria de reiniciar agora?",
