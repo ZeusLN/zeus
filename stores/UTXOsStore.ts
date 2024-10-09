@@ -24,6 +24,7 @@ export default class UTXOsStore {
     @observable public accountToImport: any | null;
     @observable public start_height?: number;
     @observable public addresses_to_generate: number = 50;
+    @observable public addresses_to_generate_progress: number = 1;
     // rescan
     @observable public attemptingRescan = false;
     @observable public rescanErrorMsg: string;
@@ -206,6 +207,7 @@ export default class UTXOsStore {
         }
 
         if (data.addresses_to_generate) {
+            this.addresses_to_generate_progress = 1;
             this.addresses_to_generate = data.addresses_to_generate || 50;
         }
 
@@ -217,13 +219,11 @@ export default class UTXOsStore {
 
         return BackendUtils.importAccount(data)
             .then(async (response: any) => {
-                this.importingAccount = false;
-                this.error = false;
                 if (!data.dry_run) {
-                    this.success = true;
                     if (this.start_height) {
                         // generate N addresses from account
                         for (let i = 0; i < this.addresses_to_generate; i++) {
+                            this.addresses_to_generate_progress = i + 1;
                             await BackendUtils.getNewAddress({
                                 account: this.accountToImport.account.name,
                                 type: walletrpc.AddressType[
@@ -264,8 +264,14 @@ export default class UTXOsStore {
                                 console.log('rescan err', err);
                             });
                     }
+
+                    this.importingAccount = false;
+                    this.error = false;
+                    this.success = true;
                     return;
                 } else {
+                    this.importingAccount = false;
+                    this.error = false;
                     this.accountToImport = response;
                     return this.accountToImport;
                 }
