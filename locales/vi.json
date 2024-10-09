@@ -123,6 +123,7 @@
     "general.addressType": "Loại địa chỉ",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "Cần khởi động lại",
     "restart.msg": "ZEUS cần khởi động lại để áp dụng thiết lập mới",
     "restart.msg1": "Bạn có muốn khởi động lại ngay bây giờ?",

@@ -123,6 +123,7 @@
     "general.addressType": "Τύπος διεύθυνσης",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "Απαιτείται επανεκκίνηση",
     "restart.msg": "Το Zeus πρέπει να κάνει επανεκκίνηση πριν εφαρμοστούν οι καινούριες ρυθμίσεις.",
     "restart.msg1": "Θέλετε να γίνει επανεκκίνηση τώρα;",

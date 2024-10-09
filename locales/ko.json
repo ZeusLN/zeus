@@ -123,6 +123,7 @@
     "general.addressType": "Address type",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "재시작 필요",
     "restart.msg": "새로운 설정을 적용하려면, ZEUS를 재시작해야 합니다.",
     "restart.msg1": "지금 재시작하시겠습니까?",
