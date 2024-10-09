@@ -123,6 +123,7 @@
     "general.addressType": "Typ adresu",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "Wymagany restart",
     "restart.msg": "ZEUS musi zostać zrestartowany aby nowa konfiguracja została zastosowana.",
     "restart.msg1": "Czy chcesz zrestartować teraz?",
