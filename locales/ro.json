@@ -123,6 +123,7 @@
     "general.addressType": "Tip de Adresă",
     "general.sorting": "Triere",
     "general.count": "Numără",
+    "general.experimental": "Experimental",
     "restart.title": "Este necesară repornirea",
     "restart.msg": "ZEUS trebuie repornit înainte ca noua configurație să fie aplicată.",
     "restart.msg1": "Doriți să reporniți acum?",
