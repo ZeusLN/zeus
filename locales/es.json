@@ -123,6 +123,7 @@
     "general.addressType": "Tipo de dirección",
     "general.sorting": "Clasificación",
     "general.count": "Contar",
+    "general.experimental": "Experimental",
     "restart.title": "Reinicio requerido",
     "restart.msg": "Es necesario reiniciar ZEUS antes de aplicar la nueva configuración.",
     "restart.msg1": "¿Quieres reiniciar ahora?",
