@@ -123,6 +123,7 @@
     "general.addressType": "Address type",
     "general.sorting": "Sorting",
     "general.count": "Count",
+    "general.experimental": "Experimental",
     "restart.title": "נדרש אתחול",
     "restart.msg": "יש לאתחל אז זאוס על מנת לעדכן הגדרות",
     "restart.msg1": "האם לאתחל כעת?",
