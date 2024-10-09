@@ -82,7 +82,7 @@ export default class ImportAccount extends React.Component<
             master_key_fingerprint: '',
             address_type: walletrpc.AddressType.WITNESS_PUBKEY_HASH,
             existing_account: false,
-            block_height: 481824,
+            block_height: 800000,
             addresses_to_generate: 50,
             understood: false
         };
@@ -345,6 +345,17 @@ export default class ImportAccount extends React.Component<
                         </ListItem>
                         {existing_account && (
                             <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginBottom: 10
+                                    }}
+                                >
+                                    {localeString(
+                                        'general.experimental'
+                                    ).toUpperCase()}
+                                </Text>
                                 <Text
                                     style={{
                                         color: themeColor('secondaryText'),
