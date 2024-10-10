@@ -465,7 +465,7 @@ export default class SendingLightning extends React.Component<
                                     )}
                                 </Text>
                             )}
-                            {payment_error && (
+                            {(!!payment_error || !!error) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.tryAgain'
