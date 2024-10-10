@@ -858,7 +858,7 @@ export default class PaymentRequest extends React.Component<
                                                                 this.setState({
                                                                     lastHopPubkey:
                                                                         channels[0]
-                                                                            ?.channelId
+                                                                            ?.remotePubkey
                                                                 })
                                                             }
                                                             title={localeString(
