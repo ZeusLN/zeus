@@ -325,7 +325,8 @@ export default class ChannelBackupStore {
         if (time) {
             const ONE_HOUR = 60 * 60 * 1000; /* ms */
             const THREE_DAYS = 36 * ONE_HOUR;
-            const olderThanThreeDays = new Date() - new Date(time) > THREE_DAYS;
+            const olderThanThreeDays =
+                Number(new Date()) - Number(new Date(time)) > THREE_DAYS;
             if (olderThanThreeDays) this.backupChannels();
         }
         if (!time && !status) this.backupChannels();

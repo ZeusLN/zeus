@@ -8,6 +8,8 @@ import DeviceInfo from 'react-native-device-info';
 
 import { generateSecureRandom } from 'react-native-securerandom';
 import NetInfo from '@react-native-community/netinfo';
+
+// @ts-ignore:next-line
 import Ping from 'react-native-ping';
 
 import Log from '../lndmobile/log';
@@ -46,12 +48,14 @@ const NEUTRINO_PERSISTENT_FILTER_THRESHOLD = 400000000;
 export const LndMobileEventEmitter =
     Platform.OS == 'android'
         ? DeviceEventEmitter
-        : new NativeEventEmitter(NativeModules.LndMobile);
+        : // @ts-ignore:next-line
+          new NativeEventEmitter(NativeModules.LndMobile);
 
 export const LndMobileToolsEventEmitter =
     Platform.OS == 'android'
         ? DeviceEventEmitter
-        : new NativeEventEmitter(NativeModules.LndMobileTools);
+        : // @ts-ignore:next-line
+          new NativeEventEmitter(NativeModules.LndMobileTools);
 
 export function checkLndStreamErrorResponse(
     name: string,

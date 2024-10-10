@@ -14,7 +14,7 @@ import { localeString } from './../utils/LocaleUtils';
 
 interface DropdownSettingProps {
     title: string;
-    selectedValue: string | boolean;
+    selectedValue: string | number;
     onValueChange: (value: any) => void;
     values: Array<any>;
     disabled?: boolean;

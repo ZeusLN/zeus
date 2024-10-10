@@ -9,10 +9,7 @@ export default class ClosedChannel extends Channel {
     settled_balance: string;
     time_lock_balance: string;
     close_time: number;
-    open_initiator: any;
-    close_initiator: any;
     resolutions: any;
-    remote_node_pub: string;
     close_type: string;
     closing_txid: string;
 

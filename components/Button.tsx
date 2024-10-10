@@ -90,12 +90,12 @@ function Button(props: ButtonProps) {
                     : warning
                     ? themeColor('delete')
                     : themeColor('text'),
-                ...buttonStyle
+                ...(buttonStyle as object)
             }}
             titleStyle={
                 titleStyle
                     ? {
-                          ...titleStyle,
+                          ...(titleStyle as object),
                           textTransform: noUppercase ? 'none' : 'uppercase',
                           fontFamily: 'PPNeueMontreal-Book'
                       }

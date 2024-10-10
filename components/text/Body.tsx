@@ -25,7 +25,14 @@ export function Body({
     // These should only be keys available on the theme
     // TODO: enforce this with some global ThemeKey enum?
     colorOverride?: string;
-    color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    color?:
+        | 'text'
+        | 'success'
+        | 'warning'
+        | 'highlight'
+        | 'secondaryText'
+        | 'outbound'
+        | 'inbound';
     children: React.ReactNode;
     accessible?: boolean;
     accessibilityLabel?: string;

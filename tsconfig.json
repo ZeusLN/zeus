@@ -21,6 +21,6 @@
       "*" : ["typings/*"]
     }
   },
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules", "zeus_modules"],
   "include": ["**/*.ts", "**/*.tsx"]
 }

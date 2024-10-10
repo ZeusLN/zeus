@@ -212,7 +212,7 @@ export default class ActivityStore {
     }
 
     @action
-    public setFilters = async (filters: Filter, locale: string | undefined) => {
+    public setFilters = async (filters: Filter, locale?: string) => {
         this.loading = true;
         this.filters = filters;
         this.filteredActivity = ActivityFilterUtils.filterActivities(

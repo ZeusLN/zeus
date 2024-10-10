@@ -102,20 +102,21 @@ const getChannelsSortKeys = (closed?: boolean) => {
 };
 
 interface ChannelsFilterProps {
-    width?: string | number;
+    width?: number;
 }
 
 const ChannelsFilter = (props: ChannelsFilterProps) => {
     const { channelsStore } = stores;
     const { search, setSort, channelsType } = channelsStore;
     const windowWidth = Dimensions.get('window').width;
+
     return (
         <View>
             <Row>
                 <SearchBar
                     placeholder={localeString('general.search')}
-                    onChangeText={(value: string) =>
-                        channelsStore!.setSearch(value)
+                    onChangeText={(value?: string) =>
+                        channelsStore!.setSearch(value ?? '')
                     }
                     value={search}
                     inputStyle={{
@@ -124,7 +125,7 @@ const ChannelsFilter = (props: ChannelsFilterProps) => {
                     }}
                     placeholderTextColor={themeColor('secondaryText')}
                     containerStyle={{
-                        backgroundColor: null,
+                        backgroundColor: 'transparent',
                         borderTopWidth: 0,
                         borderBottomWidth: 0,
                         width: props.width || windowWidth - 55
@@ -134,6 +135,22 @@ const ChannelsFilter = (props: ChannelsFilterProps) => {
                         backgroundColor: themeColor('secondary')
                     }}
                     autoCapitalize="none"
+                    platform="default"
+                    showLoading={false}
+                    round={false}
+                    lightTheme={false}
+                    loadingProps={{}}
+                    onClear={() => channelsStore!.setSearch('')}
+                    onFocus={() => {}}
+                    onBlur={() => {}}
+                    onCancel={() => {
+                        channelsStore!.setSearch('');
+                    }}
+                    cancelButtonTitle="Cancel"
+                    cancelButtonProps={{}}
+                    searchIcon={{ name: 'search', type: 'font-awesome' }}
+                    clearIcon={{ name: 'close', type: 'font-awesome' }}
+                    showCancel={true}
                 />
                 <SortButton
                     onValueChange={(value: any) => {

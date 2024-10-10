@@ -26,6 +26,7 @@ interface OnchainSwipeableRowProps {
     locked?: boolean;
     account?: string;
     hidden?: boolean;
+    children?: React.ReactNode;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -35,7 +36,7 @@ export default class OnchainSwipeableRow extends Component<
     private renderAction = (
         text: string,
         x: number,
-        progress: Animated.AnimatedInterpolation
+        progress: Animated.AnimatedInterpolation<number>
     ) => {
         const { account, navigation } = this.props;
         const transTranslateX = progress.interpolate({
@@ -120,7 +121,9 @@ export default class OnchainSwipeableRow extends Component<
         );
     };
 
-    private renderActions = (progress: Animated.AnimatedInterpolation) => (
+    private renderActions = (
+        progress: Animated.AnimatedInterpolation<number>
+    ) => (
         <View
             style={{
                 marginLeft: 15,
@@ -150,11 +153,11 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     private close = () => {
-        this.swipeableRow.close();
+        if (this.swipeableRow) this.swipeableRow.close();
     };
 
     private open = () => {
-        this.swipeableRow.openLeft();
+        if (this.swipeableRow) this.swipeableRow.openLeft();
     };
 
     private sendToAddress = () => {

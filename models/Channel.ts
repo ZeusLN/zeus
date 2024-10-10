@@ -121,7 +121,7 @@ export default class Channel extends BaseModel {
 
     @computed
     public get remotePubkey(): string {
-        return this.remote_pubkey || this.remote_node_pub;
+        return this.remote_pubkey || this.remote_node_pub || '';
     }
 
     @computed

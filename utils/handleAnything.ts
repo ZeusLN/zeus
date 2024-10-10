@@ -12,6 +12,7 @@ import BackendUtils from './BackendUtils';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
+// @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import ContactUtils from './ContactUtils';
 
