@@ -62,7 +62,7 @@ export default class LnurlAuth extends React.Component<
 
         try {
             this.state = this.stateFromProps(props);
-        } catch (err) {
+        } catch (err: any) {
             this.state = {
                 domain: '',
                 action: '',
@@ -309,7 +309,6 @@ export default class LnurlAuth extends React.Component<
                                 onPress={() => {
                                     navigation.navigate('Wallet');
                                 }}
-                                style={styles.button}
                             />
                         </View>
                     )}
@@ -333,7 +332,6 @@ export default class LnurlAuth extends React.Component<
                                         this.sendValues();
                                     }
                                 }}
-                                style={styles.button}
                                 disabled={
                                     (!signatureSuccess && !chooseAuthMode) ||
                                     authenticating

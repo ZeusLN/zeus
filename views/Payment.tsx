@@ -81,7 +81,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
     render() {
         const { navigation, SettingsStore, NodeInfoStore, route } = this.props;
         const { storedNotes, lnurlpaytx } = this.state;
-        const { testnet } = NodeInfoStore;
+        const { testnet } = NodeInfoStore!;
 
         const payment = route.params?.payment;
         const formattedOriginalTimeUntilExpiry =
@@ -203,7 +203,6 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                         )}
                                     </Row>
                                 }
-                                toggleable
                             />
                         )}
 

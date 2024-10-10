@@ -300,9 +300,13 @@ export default class ImportAccount extends React.Component<
                             />
                         </>
                         <DropdownSetting
-                            title={localeString('general.addressType')}
+                            title={localeString(
+                                'views.ImportAccount.addressType'
+                            )}
                             selectedValue={walletrpc.AddressType[address_type]}
-                            onValueChange={async (value: string) => {
+                            onValueChange={async (
+                                value: keyof typeof walletrpc.AddressType
+                            ) => {
                                 this.setState({
                                     address_type: walletrpc.AddressType[value]
                                 });
@@ -445,7 +449,7 @@ export default class ImportAccount extends React.Component<
                                 addresses_to_generate: existing_account
                                     ? addresses_to_generate
                                     : undefined
-                            }).then((response) => {
+                            }).then((response: any) => {
                                 if (response)
                                     navigation.navigate('ImportingAccount');
                             })

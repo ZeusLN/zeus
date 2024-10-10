@@ -178,12 +178,22 @@ export default class Activity extends React.PureComponent<
                         .multipliedBy(SATS_PER_BTC)
                         .toFixed(3);
 
-                    const fiatEntry = FiatStore.fiatRates.filter(
-                        (entry: any) => entry.code === fiat
-                    )[0];
+                    const { fiatRates } = FiatStore;
 
-                    const { symbol, space, rtl, separatorSwap } =
-                        FiatStore.symbolLookup(fiatEntry && fiatEntry.code);
+                    const fiatEntry =
+                        fiatRates &&
+                        fiatRates.filter(
+                            (entry: any) => entry.code === fiat
+                        )[0];
+
+                    const { symbol, space, rtl, separatorSwap } = fiatEntry
+                        ? FiatStore.symbolLookup(fiatEntry.code)
+                        : {
+                              symbol: 'N/A',
+                              space: true,
+                              rtl: false,
+                              separatorSwap: false
+                          };
 
                     const formattedRate = separatorSwap
                         ? FiatStore.numberWithDecimals(rate)
@@ -256,7 +266,7 @@ export default class Activity extends React.PureComponent<
                         order ? (
                             selectedPaymentForOrder ? (
                                 <MarkPaymentButton />
-                            ) : null
+                            ) : undefined
                         ) : (
                             <FilterButton />
                         )
