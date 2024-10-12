@@ -644,6 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Offer konnte nicht abgerufen werden",
     "views.Send.payBolt12.invoiceFetchFailure": "Rechnung konnte nicht abgerufen werden",
     "views.Send.payBolt12.specifyAmount": "Es muss ein Betrag eingegeben werden",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
     "views.SendingLightning.sending": "Zahlung wird gesendet",
     "views.SendingLightning.success": "Zahlung erfolgreich gesendet",
     "views.SendingLightning.paymentHash": "Zahlungs-Hash",
