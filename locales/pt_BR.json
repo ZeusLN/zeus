@@ -644,6 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Não foi possível buscar a oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "Não foi possível buscar a fatura",
     "views.Send.payBolt12.specifyAmount": "O valor deve ser especificado",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
     "views.SendingLightning.sending": "Enviando Pagamento",
     "views.SendingLightning.success": "Pagamento enviado com sucesso",
     "views.SendingLightning.paymentHash": "Hash do Pagamento",
