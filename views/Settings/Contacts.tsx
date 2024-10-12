@@ -56,6 +56,12 @@ export default class Contacts extends React.Component<
         };
     }
 
+    componentDidMount() {
+        this.props.navigation.addListener('focus', () => {
+            this.props.ContactStore?.loadContacts();
+        });
+    }
+
     displayAddress = (item: Contact) => {
         const contact = new Contact(item);
         const {
@@ -460,6 +466,7 @@ export default class Contacts extends React.Component<
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }}
+                                onPress={() => ContactStore?.loadContacts()}
                             />
                         )
                     )}
