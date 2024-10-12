@@ -644,6 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Couldn't fetch offer",
     "views.Send.payBolt12.invoiceFetchFailure": "Couldn't fetch invoice",
     "views.Send.payBolt12.specifyAmount": "Amount must be specified",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
     "views.SendingLightning.sending": "שליחת תשלום",
     "views.SendingLightning.success": "תשלום נשלח בהצלחה",
     "views.SendingLightning.paymentHash": "גיבוב תשלום",
