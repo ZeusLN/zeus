@@ -644,6 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Δεν μπόρεσε να πάρει προσφορά",
     "views.Send.payBolt12.invoiceFetchFailure": "Δεν ήταν δυνατή η λήψη τιμολογίου",
     "views.Send.payBolt12.specifyAmount": "Πρέπει να προσδιοριστεί το ποσό",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
     "views.SendingLightning.sending": "Sending Payment",
     "views.SendingLightning.success": "Payment successfully sent",
     "views.SendingLightning.paymentHash": "Κατακερματισμός πληρωμής",
