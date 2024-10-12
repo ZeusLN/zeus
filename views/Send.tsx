@@ -1283,6 +1283,20 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 />
                             </React.Fragment>
                         )}
+                    {transactionType === 'BOLT 12' &&
+                        !BackendUtils.supportsOffers() && (
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    marginTop: 10,
+                                    color: themeColor('error')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Send.payBolt12.offersNotSupported'
+                                )}
+                            </Text>
+                        )}
                     {transactionType === 'Keysend' &&
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
@@ -1513,6 +1527,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}
+                                disabled={!BackendUtils.supportsOffers()}
                             />
                         </View>
                     )}
