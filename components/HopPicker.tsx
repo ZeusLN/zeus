@@ -226,7 +226,7 @@ export default class ChannelPicker extends React.Component<
                                       )}
                             </Text>
 
-                            <ChannelsFilter width="86%" />
+                            <ChannelsFilter />
 
                             <FlatList
                                 data={channels}

@@ -58,7 +58,7 @@ type DataRow = {
     subtitle?: string;
     balance: string | number;
     // TODO check if exists
-    count: number;
+    count?: number;
     watchOnly?: boolean;
     hidden?: boolean;
 };
@@ -147,7 +147,7 @@ const Row = ({ item }: { item: DataRow }) => {
                             color: themeColor('buttonText')
                         }}
                     >
-                        {`+${item.count - 1}`}
+                        {item.count && `+${item.count - 1}`}
                     </Text>
                 )}
             </LinearGradient>
@@ -169,7 +169,7 @@ const SwipeableRow = ({
     item: DataRow;
     index: number;
     navigation: StackNavigationProp<any, any>;
-    selectMode: boolean;
+    // selectMode: boolean; // not used for now
     value?: string;
     amount?: string;
     lightning?: string;
@@ -326,7 +326,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         if (Object.keys(otherAccounts).length > 1 && consolidated) {
             DATA.push({
                 layer: localeString('components.LayerBalances.moreAccounts'),
-                count: Object.keys(otherAccounts).length
+                count: Object.keys(otherAccounts).length,
+                balance: 0
             });
         }
 

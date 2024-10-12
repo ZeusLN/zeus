@@ -51,6 +51,7 @@ export default function NodeIdenticon({
                 ? `${title}-${selectedNode.username}`
                 : title
         ),
+        // @ts-ignore:next-line
         {
             background: [255, 255, 255, 255],
             size: width,

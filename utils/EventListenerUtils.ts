@@ -8,9 +8,11 @@ import {
 export const LndMobileEventEmitter =
     Platform.OS == 'android'
         ? DeviceEventEmitter
-        : new NativeEventEmitter(NativeModules.LndMobile);
+        : // @ts-ignore:next-line
+          new NativeEventEmitter(NativeModules.LndMobile);
 
 export const LndMobileToolsEventEmitter =
     Platform.OS == 'android'
         ? DeviceEventEmitter
-        : new NativeEventEmitter(NativeModules.LndMobileTools);
+        : // @ts-ignore:next-line
+          new NativeEventEmitter(NativeModules.LndMobileTools);

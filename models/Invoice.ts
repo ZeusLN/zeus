@@ -77,6 +77,8 @@ export default class Invoice extends BaseModel {
     public millisatoshis?: string;
     public pay_req?: string;
 
+    public amount_received_msat?: string | number;
+
     public formattedOriginalTimeUntilExpiry: string;
     public formattedTimeUntilExpiry: string;
 
@@ -143,7 +145,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getPaymentRequest(): string {
-        return this.bolt11 || this.payment_request || this.pay_req;
+        return this.bolt11 || this.payment_request || this.pay_req || '';
     }
 
     // return amount in satoshis
