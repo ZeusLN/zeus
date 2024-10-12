@@ -5,9 +5,9 @@ class NFCUtils {
         let str = '';
 
         for (let index = 0; index < count; ) {
-            const ch = data[index++];
+            let ch = data[index++];
             if (ch & 0x80) {
-                const extra = extraByteMap[(ch >> 3) & 0x07];
+                let extra = extraByteMap[(ch >> 3) & 0x07];
                 if (!(ch & 0x40) || !extra || index + extra > count) {
                     return null;
                 }

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    KeyboardTypeOptions,
     StyleProp,
     StyleSheet,
     Text,
@@ -20,8 +21,8 @@ interface TextInputProps {
     textInputStyle?: StyleProp<TextStyle>;
     placeholderTextColor?: string;
     locked?: boolean;
-    keyboardType?: string;
-    autoCapitalize?: string;
+    keyboardType?: KeyboardTypeOptions;
+    autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
     autoCorrect?: boolean;
     multiline?: boolean;
     autoFocus?: boolean;
@@ -36,152 +37,154 @@ interface TextInputProps {
     error?: boolean;
 }
 
-const TextInput: React.FC<TextInputProps> = (
-    {
-        placeholder,
-        value,
-        onChangeText,
-        numberOfLines,
-        style,
-        textInputStyle,
-        placeholderTextColor,
-        locked,
-        keyboardType,
-        autoCapitalize,
-        autoCorrect,
-        multiline,
-        autoFocus,
-        secureTextEntry,
-        prefix,
-        prefixStyle,
-        suffix,
-        toggleUnits,
-        onPressIn,
-        right,
-        error
-    },
-    ref
-) => {
-    const defaultStyle = numberOfLines
-        ? {
-              paddingTop: 10
-          }
-        : multiline
-        ? {}
-        : {
-              height: 60
-          };
+const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
+    (
+        {
+            placeholder,
+            value,
+            onChangeText,
+            numberOfLines,
+            style,
+            textInputStyle,
+            placeholderTextColor,
+            locked,
+            keyboardType,
+            autoCapitalize,
+            autoCorrect,
+            multiline,
+            autoFocus,
+            secureTextEntry,
+            prefix,
+            prefixStyle,
+            suffix,
+            toggleUnits,
+            onPressIn,
+            right,
+            error
+        },
+        ref
+    ) => {
+        const defaultStyle = numberOfLines
+            ? {
+                  paddingTop: 10
+              }
+            : multiline
+            ? {}
+            : {
+                  height: 60
+              };
 
-    const Prefix = () => (
-        <Text
-            style={
-                toggleUnits
-                    ? {
-                          ...styles.unit,
-                          paddingLeft: 5,
-                          paddingRight: 5,
-                          marginRight: 5,
-                          color: themeColor('text'),
-                          backgroundColor: themeColor('background'),
-                          ...prefixStyle
-                      }
-                    : {
-                          ...styles.unit,
-                          marginRight: 5,
-                          color: themeColor('text'),
-                          ...prefixStyle
-                      }
-            }
-        >
-            {prefix}
-        </Text>
-    );
-
-    const Suffix = () => (
-        <Text
-            style={
-                toggleUnits
-                    ? {
-                          ...styles.unit,
-                          paddingLeft: 5,
-                          paddingRight: 5,
-                          right: right || 45,
-                          color: themeColor('text'),
-                          backgroundColor: themeColor('background')
-                      }
-                    : {
-                          ...styles.unit,
-                          right: right || 45,
-                          color: themeColor('text')
-                      }
-            }
-        >
-            {suffix}
-        </Text>
-    );
-
-    return (
-        <View
-            style={{
-                backgroundColor: themeColor('secondary'),
-                opacity: locked ? 0.8 : 1,
-                ...defaultStyle,
-                ...styles.wrapper,
-                ...style,
-                borderWidth: error ? 1.0 : 0,
-                borderColor: error ? themeColor('error') : undefined
-            }}
-        >
-            {prefix ? (
-                toggleUnits ? (
-                    <TouchableOpacity
-                        onPress={() => toggleUnits && toggleUnits()}
-                    >
-                        <Prefix />
-                    </TouchableOpacity>
-                ) : (
-                    <Prefix />
-                )
-            ) : null}
-            <TextInputRN
-                placeholder={placeholder}
-                value={value}
-                onChangeText={onChangeText}
-                numberOfLines={numberOfLines || 1}
-                style={{
-                    ...textInputStyle,
-                    ...styles.input,
-                    color: locked
-                        ? themeColor('secondaryText')
-                        : themeColor('text')
-                }}
-                placeholderTextColor={
-                    placeholderTextColor || themeColor('secondaryText')
+        const Prefix = () => (
+            <Text
+                style={
+                    toggleUnits
+                        ? {
+                              ...styles.unit,
+                              paddingLeft: 5,
+                              paddingRight: 5,
+                              marginRight: 5,
+                              color: themeColor('text'),
+                              backgroundColor: themeColor('background'),
+                              ...prefixStyle
+                          }
+                        : {
+                              ...styles.unit,
+                              marginRight: 5,
+                              color: themeColor('text'),
+                              ...prefixStyle
+                          }
                 }
-                editable={!locked}
-                keyboardType={keyboardType}
-                autoCapitalize={autoCapitalize}
-                autoCorrect={autoCorrect}
-                multiline={multiline}
-                autoFocus={autoFocus}
-                secureTextEntry={secureTextEntry}
-                onPressIn={onPressIn}
-                ref={ref}
-            />
-            {suffix ? (
-                toggleUnits ? (
-                    <TouchableOpacity
-                        onPress={() => toggleUnits && toggleUnits()}
-                    >
+            >
+                {prefix}
+            </Text>
+        );
+
+        const Suffix = () => (
+            <Text
+                style={
+                    toggleUnits
+                        ? {
+                              ...styles.unit,
+                              paddingLeft: 5,
+                              paddingRight: 5,
+                              right: right || 45,
+                              color: themeColor('text'),
+                              backgroundColor: themeColor('background')
+                          }
+                        : {
+                              ...styles.unit,
+                              right: right || 45,
+                              color: themeColor('text')
+                          }
+                }
+            >
+                {suffix}
+            </Text>
+        );
+
+        return (
+            <View
+                style={{
+                    backgroundColor: themeColor('secondary'),
+                    opacity: locked ? 0.8 : 1,
+                    ...defaultStyle,
+                    ...styles.wrapper,
+                    ...style,
+                    borderWidth: error ? 1.0 : 0,
+                    borderColor: error ? themeColor('error') : undefined
+                }}
+            >
+                {prefix ? (
+                    toggleUnits ? (
+                        <TouchableOpacity
+                            onPress={() => toggleUnits && toggleUnits()}
+                        >
+                            <Prefix />
+                        </TouchableOpacity>
+                    ) : (
+                        <Prefix />
+                    )
+                ) : null}
+                <TextInputRN
+                    placeholder={placeholder}
+                    value={value}
+                    onChangeText={onChangeText}
+                    numberOfLines={numberOfLines || 1}
+                    style={{
+                        ...StyleSheet.flatten(textInputStyle),
+                        ...styles.input,
+                        color: locked
+                            ? themeColor('secondaryText')
+                            : themeColor('text')
+                    }}
+                    placeholderTextColor={
+                        placeholderTextColor || themeColor('secondaryText')
+                    }
+                    editable={!locked}
+                    keyboardType={keyboardType}
+                    autoCapitalize={autoCapitalize}
+                    autoCorrect={autoCorrect}
+                    multiline={multiline}
+                    autoFocus={autoFocus}
+                    secureTextEntry={secureTextEntry}
+                    onPressIn={onPressIn}
+                    ref={ref}
+                />
+                {suffix ? (
+                    toggleUnits ? (
+                        <TouchableOpacity
+                            onPress={() => toggleUnits && toggleUnits()}
+                        >
+                            <Suffix />
+                        </TouchableOpacity>
+                    ) : (
                         <Suffix />
-                    </TouchableOpacity>
-                ) : (
-                    <Suffix />
-                )
-            ) : null}
-        </View>
-    );
-};
+                    )
+                ) : null}
+            </View>
+        );
+    }
+);
 
 const styles = StyleSheet.create({
     wrapper: {
@@ -205,4 +208,4 @@ const styles = StyleSheet.create({
     }
 });
 
-export default React.forwardRef(TextInput);
+export default TextInput;

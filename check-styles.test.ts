@@ -11,13 +11,14 @@ describe('static style sheets', () => {
         const tsxFiles = dirs.flatMap((dir) =>
             fs
                 .readdirSync(dir, { recursive: dir !== '.' })
+                // @ts-ignore:next-line
                 .filter(
-                    (file) =>
+                    (file: any) =>
                         typeof file === 'string' &&
                         !file.startsWith('node_modules/') &&
                         file.toLowerCase().endsWith('.tsx')
                 )
-                .map((file) => path.join(dir, file as string))
+                .map((file: any) => path.join(dir, file as string))
         );
         const regExp = new RegExp(
             /\n[^\s][^\n]+StyleSheet\.create\(\{.*themeColor\(/,

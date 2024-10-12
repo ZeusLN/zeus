@@ -104,15 +104,15 @@ describe('ErrorUtils', () => {
         });
 
         it('Return string if error is sent as a string', () => {
-            expect(errorToUserFriendly('Payment timed out', false)).toEqual(
-                'Payment timed out'
-            );
+            expect(
+                errorToUserFriendly(new Error('Payment timed out'), false)
+            ).toEqual('Payment timed out');
         });
 
         it('Handles PascalCased LSP error messages', () => {
             expect(
                 errorToUserFriendly(
-                    'ChannelExpiryBlocksTooHighInCreateOrderRequest',
+                    new Error('ChannelExpiryBlocksTooHighInCreateOrderRequest'),
                     false
                 )
             ).toEqual('Channel expiry blocks too high in create order request');

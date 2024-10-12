@@ -29,6 +29,7 @@ interface LightningSwipeableRowProps {
     lightning?: string;
     offer?: string;
     locked?: boolean;
+    children: React.ReactNode;
 }
 
 export default class LightningSwipeableRow extends Component<
@@ -38,7 +39,7 @@ export default class LightningSwipeableRow extends Component<
     private renderAction = (
         text: string,
         x: number,
-        progress: Animated.AnimatedInterpolation
+        progress: Animated.AnimatedInterpolation<number>
     ) => {
         const transTranslateX = progress.interpolate({
             inputRange: [0.25, 1],
@@ -130,7 +131,9 @@ export default class LightningSwipeableRow extends Component<
         );
     };
 
-    private renderActions = (progress: Animated.AnimatedInterpolation) => {
+    private renderActions = (
+        progress: Animated.AnimatedInterpolation<number>
+    ) => {
         const width =
             BackendUtils.supportsRouting() &&
             BackendUtils.supportsLightningSends() &&
@@ -185,11 +188,15 @@ export default class LightningSwipeableRow extends Component<
     };
 
     private close = () => {
-        this.swipeableRow.close();
+        if (this.swipeableRow) {
+            this.swipeableRow.close();
+        }
     };
 
     private open = () => {
-        this.swipeableRow.openLeft();
+        if (this.swipeableRow) {
+            this.swipeableRow.openLeft();
+        }
     };
 
     private fetchLnInvoice = () => {
@@ -245,7 +252,7 @@ export default class LightningSwipeableRow extends Component<
                     );
                 });
         } else {
-            invoicesStore.getPayReq(this.props.lightning);
+            invoicesStore.getPayReq(lightning ?? '');
             this.props.navigation.navigate('PaymentRequest', {});
         }
     };

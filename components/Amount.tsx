@@ -36,6 +36,10 @@ interface AmountDisplayProps {
     accessibilityLabel?: string;
 }
 
+interface FiatSymbolProps {
+    accessible?: boolean;
+}
+
 function AmountDisplay({
     amount,
     unit,
@@ -75,7 +79,7 @@ function AmountDisplay({
         </View>
     );
 
-    const FiatSymbol = () => (
+    const FiatSymbol: React.FC<FiatSymbolProps> = ({ accessible }) => (
         <Body
             secondary
             jumbo={jumboText}
@@ -245,7 +249,7 @@ interface AmountProps {
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
-    sats: number | string;
+    sats?: number | string;
     fixedUnits?: string;
     sensitive?: boolean;
     sensitiveLength?: number;
