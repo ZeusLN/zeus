@@ -840,11 +840,6 @@ export const THEME_KEYS = [
     },
     { key: 'BPM', translateKey: 'views.Settings.Theme.bpm', value: 'bpm' },
     {
-        key: 'Orange',
-        translateKey: 'views.Settings.Theme.orange',
-        value: 'orange'
-    },
-    {
         key: 'Blacked Out',
         translateKey: 'views.Settings.Theme.blacked-out',
         value: 'blacked-out'
@@ -920,6 +915,11 @@ export const THEME_KEYS = [
         key: 'Radioactive',
         translateKey: 'views.Settings.Theme.radioactive',
         value: 'radioactive'
+    },
+    {
+        key: 'Spooky',
+        translateKey: 'views.Settings.Theme.spooky',
+        value: 'orange'
     }
 ];
 
