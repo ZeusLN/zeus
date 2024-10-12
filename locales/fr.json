@@ -644,6 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Impossible de récupérer l'offre",
     "views.Send.payBolt12.invoiceFetchFailure": "Impossible de récupérer la facture",
     "views.Send.payBolt12.specifyAmount": "Le montant doit être précisé",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
     "views.SendingLightning.sending": "Envoi du paiement",
     "views.SendingLightning.success": "Paiement envoyé avec succès",
     "views.SendingLightning.paymentHash": "Hash de paiement",
