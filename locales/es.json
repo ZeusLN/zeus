@@ -644,7 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "No se pudo recuperar la oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "No se pudo recuperar la factura",
     "views.Send.payBolt12.specifyAmount": "Se debe especificar la cantidad",
-    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support BOLT 12",
     "views.SendingLightning.sending": "Envío de pago",
     "views.SendingLightning.success": "Pago enviado exitosamente",
     "views.SendingLightning.paymentHash": "Hash de Pago",
