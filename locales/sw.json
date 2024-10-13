@@ -644,7 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Couldn't fetch offer",
     "views.Send.payBolt12.invoiceFetchFailure": "Couldn't fetch invoice",
     "views.Send.payBolt12.specifyAmount": "Amount must be specified",
-    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support BOLT 12",
     "views.SendingLightning.sending": "Sending Payment",
     "views.SendingLightning.success": "Payment successfully sent",
     "views.SendingLightning.paymentHash": "Hash ya Malipo",
