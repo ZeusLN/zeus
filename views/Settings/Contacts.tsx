@@ -124,43 +124,43 @@ export default class Contacts extends React.Component<
 
     renderContactItem = ({ item }: { item: Contact }) => {
         const contact = new Contact(item);
+        const { hasMultiplePayableAddresses } = contact;
         return (
             <TouchableOpacity
                 onPress={() => {
-                    (contact.isSingleLnAddress &&
-                        this.state.SendScreen &&
-                        this.props.navigation.navigate('Send', {
-                            destination: item.lnAddress[0],
-                            contactName: item.name
-                        })) ||
-                        (contact.isSingleBolt12Address &&
-                            this.state.SendScreen &&
+                    if (this.state.SendScreen && !hasMultiplePayableAddresses) {
+                        if (contact.isSingleLnAddress) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.lnAddress[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleBolt12Address) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.bolt12Address[0],
                                 contactName: item.name
-                            })) ||
-                        (contact.isSingleBolt12Offer &&
-                            this.state.SendScreen &&
+                            });
+                        } else if (contact.isSingleBolt12Offer) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.bolt12Offer[0],
                                 contactName: item.name
-                            })) ||
-                        (contact.isSingleOnchainAddress &&
-                            this.state.SendScreen &&
+                            });
+                        } else if (contact.isSingleOnchainAddress) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.onchainAddress[0],
                                 contactName: item.name
-                            })) ||
-                        (contact.isSinglePubkey &&
-                            this.state.SendScreen &&
+                            });
+                        } else if (contact.isSinglePubkey) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.pubkey[0],
                                 contactName: item.name
-                            })) ||
+                            });
+                        }
+                    } else {
                         this.props.navigation.navigate('ContactDetails', {
                             contactId: item.contactId || item.id,
                             isNostrContact: false
                         });
+                    }
                 }}
             >
                 <View
