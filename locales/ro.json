@@ -644,7 +644,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Nu am putut prelua oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "Nu s-a putut prelua factura",
     "views.Send.payBolt12.specifyAmount": "Suma trebuie specificată",
-    "views.Send.payBolt12.offersNotSupported": "Backend does not support offers",
+    "views.Send.payBolt12.offersNotSupported": "Backend does not support BOLT 12",
     "views.SendingLightning.sending": "Trimiterea plății",
     "views.SendingLightning.success": "Plata trimisă cu succes",
     "views.SendingLightning.paymentHash": "Hash-ul Plății",
