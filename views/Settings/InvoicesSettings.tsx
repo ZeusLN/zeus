@@ -272,6 +272,7 @@ export default class InvoicesSettings extends React.Component<
                                 >
                                     <DropdownSetting
                                         selectedValue={timePeriod}
+                                        title="test lol"
                                         values={TIME_PERIOD_KEYS}
                                         onValueChange={async (
                                             value: string
@@ -309,7 +310,9 @@ export default class InvoicesSettings extends React.Component<
 
                                             this.setState({
                                                 timePeriod: value,
-                                                expirySeconds
+                                                expirySeconds: expirySeconds
+                                                    ? expirySeconds
+                                                    : ''
                                             });
 
                                             await updateSettings({

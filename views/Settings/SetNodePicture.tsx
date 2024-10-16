@@ -6,7 +6,8 @@ import {
     Image,
     StyleSheet,
     FlatList,
-    Dimensions
+    Dimensions,
+    ImageSourcePropType
 } from 'react-native';
 import { Avatar } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -60,7 +61,7 @@ export default class SetNodePicture extends React.Component<
         ];
 
         // Map implementations to corresponding images
-        const implementationImagesMap = {
+        const implementationImagesMap: { [key: string]: any[] } = {
             lndhub: [require('../../assets/images/Alby.jpg')],
             spark: [require('../../assets/images/CLN.jpg')],
             'c-lightning-REST': [
@@ -131,7 +132,7 @@ export default class SetNodePicture extends React.Component<
         );
     };
 
-    handleImageTap = async (item) => {
+    handleImageTap = async (item: any) => {
         let presetImageUri = Image.resolveAssetSource(item).uri;
         presetImageUri = presetImageUri
             .replace('.png', '')
@@ -232,13 +233,17 @@ export default class SetNodePicture extends React.Component<
                                     size={
                                         Dimensions.get('window').width / 3 - 20
                                     }
-                                    source={item}
+                                    source={
+                                        typeof item === 'string'
+                                            ? { uri: item } // If item is a URL, use { uri: item }
+                                            : (item as ImageSourcePropType) // If it's an image object, cast it
+                                    }
                                 />
                             </View>
                         </TouchableOpacity>
                     )}
                     numColumns={3}
-                    keyExtractor={(item, index) => index.toString()}
+                    keyExtractor={(_item, index) => index.toString()}
                     contentContainerStyle={{
                         justifyContent: 'center',
                         alignItems: 'center'

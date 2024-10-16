@@ -36,9 +36,9 @@ import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
 
 interface LayerBalancesProps {
-    BalanceStore: BalanceStore;
-    UTXOsStore: UTXOsStore;
-    UnitsStore: UnitsStore;
+    BalanceStore?: BalanceStore;
+    UTXOsStore?: UTXOsStore;
+    UnitsStore?: UnitsStore;
     navigation: StackNavigationProp<any, any>;
     onRefresh?: any;
     value?: string;
@@ -271,11 +271,11 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             editMode
         } = this.props;
 
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore;
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
 
         const otherAccounts = editMode
-            ? this.props.UTXOsStore.accounts
-            : this.props.UTXOsStore.accounts.filter(
+            ? this.props.UTXOsStore?.accounts
+            : this.props.UTXOsStore?.accounts.filter(
                   (item: any) => !item.hidden
               );
 

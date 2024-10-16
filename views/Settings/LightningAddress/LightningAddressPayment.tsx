@@ -15,7 +15,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 
 import Receive from '../../../assets/images/SVG/Receive.svg';
 
-export default function LightningAddressPayment(props) {
+export default function LightningAddressPayment(props: any) {
     const { item, index, navigation, isReady } = props;
     const { lightningAddressStore } = stores;
     const { lookupPreimageAndRedeem } = lightningAddressStore;

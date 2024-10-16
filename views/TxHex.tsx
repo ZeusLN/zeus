@@ -180,6 +180,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         );
 
         const infoButtons = [{ element: qrButton }, { element: infoButton }];
+        const infoButtonElements = infoButtons.map((btn) => btn.element());
 
         const singleButton = () => (
             <Text
@@ -226,6 +227,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             { element: bcurButton },
             { element: bbqrButton }
         ];
+
+        const qrButtonElements = qrButtons.map((btn) => btn.element());
 
         return (
             <Screen>
@@ -316,7 +319,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     this.setState({ infoIndex });
                                 }}
                                 selectedIndex={infoIndex}
-                                buttons={infoButtons}
+                                buttons={infoButtonElements}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12
@@ -338,7 +341,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                             this.setState({ selectedIndex });
                                         }}
                                         selectedIndex={selectedIndex}
-                                        buttons={qrButtons}
+                                        buttons={qrButtonElements}
                                         selectedButtonStyle={{
                                             backgroundColor:
                                                 themeColor('highlight'),
@@ -500,9 +503,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                     )
                                                                                 }}
                                                                             >
-                                                                                {PrivacyUtils.sensitiveValue(
+                                                                                {`${PrivacyUtils.sensitiveValue(
                                                                                     outpoint
-                                                                                )}
+                                                                                )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }
@@ -574,9 +577,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                     )
                                                                                 }}
                                                                             >
-                                                                                {PrivacyUtils.sensitiveValue(
+                                                                                {`${PrivacyUtils.sensitiveValue(
                                                                                     address
-                                                                                )}
+                                                                                )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }

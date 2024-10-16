@@ -84,7 +84,7 @@ export default class Olympians extends React.Component<OlympiansProps, {}> {
                                 </ListItem>
                             )}
                             numColumns={3}
-                            keyExtractor={(item, index) => index}
+                            keyExtractor={(_, index) => index.toString()}
                             style={{ alignSelf: 'center' }}
                         />
                         <Button

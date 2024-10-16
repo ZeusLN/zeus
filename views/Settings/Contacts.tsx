@@ -249,10 +249,10 @@ export default class Contacts extends React.Component<
         );
 
         const favoriteContacts = filteredContacts.filter(
-            (contact) => contact.isFavourite
+            (contact: Contact) => contact.isFavourite
         );
         const nonFavoriteContacts = filteredContacts.filter(
-            (contact) => !contact.isFavourite
+            (contact: Contact) => !contact.isFavourite
         );
 
         return (

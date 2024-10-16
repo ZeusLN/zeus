@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
 });
 
 interface ModalBoxProps {
-    isOpen: boolean;
+    isOpen?: boolean;
     isDisabled?: boolean;
     startOpen: boolean;
     backdropPressToClose?: boolean;

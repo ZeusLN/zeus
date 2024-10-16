@@ -36,7 +36,7 @@ export default class CoinControl extends React.Component<
     constructor(props: CoinControlProps) {
         super(props);
 
-        const accountParam = props.route.account;
+        const accountParam = props.route.params.account;
         const account =
             accountParam && accountParam === 'On-chain'
                 ? 'default'

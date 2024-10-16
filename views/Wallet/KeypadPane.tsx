@@ -24,11 +24,11 @@ import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
-    ChannelsStore: ChannelsStore;
-    FiatStore: FiatStore;
-    NodeInfoStore: NodeInfoStore;
-    SettingsStore: SettingsStore;
-    UnitsStore: UnitsStore;
+    ChannelsStore?: ChannelsStore;
+    FiatStore?: FiatStore;
+    NodeInfoStore?: NodeInfoStore;
+    SettingsStore?: SettingsStore;
+    UnitsStore?: UnitsStore;
 }
 
 interface KeypadPaneState {

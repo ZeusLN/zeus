@@ -33,8 +33,8 @@ interface ChannelPickerProps {
     onCancel?: () => void;
     ChannelsStore: ChannelsStore;
     UnitsStore: UnitsStore;
-    containerStyle: ViewStyle;
-    clearOnTap: boolean;
+    containerStyle?: ViewStyle;
+    clearOnTap?: boolean;
     selectionMode?: 'single' | 'multiple';
     selectedChannels?: Channel[];
 }

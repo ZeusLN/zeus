@@ -18,7 +18,7 @@ function TotalRow({
 }: {
     kind: string;
     amount: number;
-    color: string;
+    color?: string;
 }) {
     return (
         <Row justify="space-between">
@@ -39,7 +39,7 @@ function TotalRow({
     );
 }
 
-export function RoutingHeader(props) {
+export function RoutingHeader(props: any) {
     const {
         dayEarned,
         weekEarned,

@@ -43,6 +43,8 @@ import SettingsStore from '../../../stores/SettingsStore';
 import FiatStore from '../../../stores/FiatStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
 
+import { LSPS1OrderResponse as Order } from './OrdersPane';
+
 interface LSPS1Props {
     LSPStore: LSPStore;
     InvoicesStore: InvoicesStore;
@@ -462,6 +464,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             { element: twelveMoButton }
         ];
 
+        const buttonElements = expirationButtons.map((btn) => btn.element());
+
         const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
 
         const flowServiceAvailable =
@@ -525,6 +529,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     <LSPS1OrderResponse
                                         orderResponse={result}
                                         orderView={false}
+                                        navigation={navigation}
                                     />
                                 )}
 
@@ -950,7 +955,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     this.updateExpirationIndex
                                                 }
                                                 selectedIndex={expirationIndex}
-                                                buttons={expirationButtons}
+                                                buttons={buttonElements}
                                                 selectedButtonStyle={{
                                                     backgroundColor:
                                                         themeColor('highlight'),
@@ -1319,7 +1324,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 // Check if the order_id already exists in the stored responses
                                                 const existingResponseIndex =
                                                     responseArray.findIndex(
-                                                        (response) => {
+                                                        (response: any) => {
                                                             const currentOrderId =
                                                                 JSON.parse(
                                                                     response
@@ -1339,7 +1344,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 if (
                                                     existingResponseIndex === -1
                                                 ) {
-                                                    const orderData = {
+                                                    const orderData:
+                                                        | Order
+                                                        | any = {
                                                         order: createOrderResponse
                                                     };
 
@@ -1409,7 +1416,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             {}
                                                         );
                                                     })
-                                                    .catch((error) =>
+                                                    .catch((error: any) =>
                                                         console.error(
                                                             'Error fetching payment request:',
                                                             error

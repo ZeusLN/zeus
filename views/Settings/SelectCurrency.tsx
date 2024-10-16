@@ -173,16 +173,17 @@ export default class SelectCurrency extends React.Component<
                                     (!selectedCurrency &&
                                         item.value === DEFAULT_FIAT)) &&
                                     !currencyConverter && (
-                                        <View style={{ textAlign: 'right' }}>
+                                        <View>
                                             <Icon
                                                 name="check"
                                                 color={themeColor('highlight')}
+                                                style={{ textAlign: 'right' }}
                                             />
                                         </View>
                                     )}
                             </ListItem>
                         )}
-                        keyExtractor={(item, index) => `${item.host}-${index}`}
+                        keyExtractor={(_, index) => index.toString()}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>

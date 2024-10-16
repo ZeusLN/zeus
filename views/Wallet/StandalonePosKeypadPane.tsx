@@ -241,7 +241,7 @@ export default class PosKeypadPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
-                        {FiatStore.numberWithCommas(amount)}
+                        {FiatStore?.numberWithCommas(amount)}
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {getDecimalPlaceholder(amount, units).string}
                         </Text>

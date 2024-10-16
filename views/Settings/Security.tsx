@@ -188,7 +188,7 @@ export default class Security extends React.Component<
         }
     };
 
-    renderItem = ({ item }) => {
+    renderItem = (item: any) => {
         return (
             <ListItem
                 containerStyle={{
@@ -244,7 +244,7 @@ export default class Security extends React.Component<
                     <FlatList
                         data={displaySecurityItems}
                         renderItem={this.renderItem}
-                        keyExtractor={(item, index) =>
+                        keyExtractor={(item: any, index) =>
                             `${item.translateKey}-${index}`
                         }
                         ItemSeparatorComponent={this.renderSeparator}

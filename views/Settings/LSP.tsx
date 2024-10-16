@@ -406,14 +406,14 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                             keyExtractor={(item, index) =>
                                 `${item.label}-${index}`
                             }
-                            ItemSeparatorComponent={
+                            ItemSeparatorComponent={() => (
                                 <View
                                     style={{
                                         height: 1,
                                         backgroundColor: themeColor('separator')
                                     }}
                                 />
-                            }
+                            )}
                         />
                     </View>
                 )}
