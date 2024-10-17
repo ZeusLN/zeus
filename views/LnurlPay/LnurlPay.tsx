@@ -17,7 +17,6 @@ import { Row } from '../..//components/layout/Row';
 
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
-import UnitsStore from '../../stores/UnitsStore';
 
 import LnurlPayMetadata from './Metadata';
 
@@ -29,7 +28,6 @@ interface LnurlPayProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
-    UnitsStore: UnitsStore;
     route: Route<'LnurlPay', { lnurlParams: any; amount: any }>;
 }
 
@@ -40,7 +38,7 @@ interface LnurlPayState {
     comment: string;
 }
 
-@inject('InvoicesStore', 'LnurlPayStore', 'UnitsStore')
+@inject('InvoicesStore', 'LnurlPayStore')
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -69,10 +67,8 @@ export default class LnurlPay extends React.Component<
     }
 
     stateFromProps(props: LnurlPayProps) {
-        const { UnitsStore, route } = props;
+        const { route } = props;
         const { lnurlParams: lnurl, amount } = route.params ?? {};
-
-        UnitsStore.resetUnits();
 
         return {
             amount:
