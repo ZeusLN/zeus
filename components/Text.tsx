@@ -10,7 +10,7 @@ import ModalStore from '../stores/ModalStore';
 interface TextProps {
     ModalStore?: ModalStore;
     style?: TextStyle;
-    children: string;
+    children?: string;
     infoText?: string | Array<string>;
     infoLink?: string;
     infoNav?: string;

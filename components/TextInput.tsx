@@ -27,7 +27,7 @@ interface TextInputProps {
     multiline?: boolean;
     autoFocus?: boolean;
     secureTextEntry?: boolean;
-    prefix?: string;
+    prefix?: string | number;
     prefixStyle?: any;
     suffix?: string;
     toggleUnits?: any;

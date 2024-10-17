@@ -29,8 +29,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
-import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
+const EyeClosed = require('../../assets/images/SVG/eye_closed.svg');
+const EyeOpened = require('../../assets/images/SVG/eye_opened.svg');
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
@@ -48,6 +48,7 @@ interface LayerBalancesProps {
     locked?: boolean;
     consolidated?: boolean;
     editMode?: boolean;
+    refreshing?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -169,7 +170,7 @@ const SwipeableRow = ({
     item: DataRow;
     index: number;
     navigation: StackNavigationProp<any, any>;
-    // selectMode: boolean; // not used for now
+    // selectMode: boolean; // not used for no
     value?: string;
     amount?: string;
     lightning?: string;
@@ -268,7 +269,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             onRefresh,
             locked,
             consolidated,
-            editMode
+            editMode,
+            refreshing
         } = this.props;
 
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
@@ -364,7 +366,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     keyExtractor={(_item, index) => `message ${index}`}
                     style={{ marginTop: 20 }}
                     onRefresh={() => onRefresh()}
-                    refreshing={false}
+                    refreshing={refreshing}
                 />
             </View>
         );

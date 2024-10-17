@@ -51,13 +51,13 @@ interface TxHexState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    txDecoded: any;
+    txDecoded: any | null;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
 @observer
 export default class TxHex extends React.Component<TxHexProps, TxHexState> {
-    state = {
+    state: TxHexState = {
         infoIndex: 0,
         selectedIndex: 0,
         txHex: '',
@@ -180,6 +180,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         );
 
         const infoButtons = [{ element: qrButton }, { element: infoButton }];
+
         const infoButtonElements = infoButtons.map((btn) => btn.element());
 
         const singleButton = () => (

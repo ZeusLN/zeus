@@ -191,8 +191,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
         const { settings } = SettingsStore!;
 
-        const lurkerMode: boolean = settings?.privacy?.lurkerMode || false;
-
         let headerString;
         let channelsData: Channel[];
         switch (channelsType) {
@@ -232,7 +230,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
-                    lurkerMode={lurkerMode}
                 />
                 {settings?.lsps1ShowPurchaseButton &&
                     (BackendUtils.supportsLSPS1customMessage() ||
