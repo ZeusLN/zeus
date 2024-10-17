@@ -44,6 +44,11 @@ interface AddContactProps {
     ContactStore: ContactStore;
 }
 
+interface StarButtonProps {
+    isFavourite: boolean;
+    onPress: () => void;
+}
+
 interface Contact {
     lnAddress: string[];
     bolt12Address: string[];
@@ -81,6 +86,7 @@ interface AddContactState {
     isValidNIP05: boolean;
     isValidNpub: boolean;
     isValidPubkey: boolean;
+    [key: string]: string[] | any;
 }
 
 @inject('ContactStore')
@@ -122,7 +128,7 @@ export default class AddContact extends React.Component<
         }));
     };
 
-    removeExtraField = (field, index) => {
+    removeExtraField = (field: string, index: any) => {
         const updatedAddresses = [...this.state[field]];
         updatedAddresses.splice(index + 1, 1); // Remove the element at index
         this.setState({ [field]: updatedAddresses });
@@ -337,7 +343,10 @@ export default class AddContact extends React.Component<
             />
         );
 
-        const StarButton = ({ isFavourite, onPress }) => (
+        const StarButton: React.FC<StarButtonProps> = ({
+            isFavourite,
+            onPress
+        }) => (
             <TouchableOpacity onPress={onPress}>
                 <Star
                     fill={isFavourite ? themeColor('text') : 'none'}

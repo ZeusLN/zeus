@@ -19,6 +19,7 @@ interface CustodialWalletWarningState {
     checkbox3: boolean;
     checkbox4: boolean;
     showModal: boolean;
+    [key: string]: boolean | undefined;
 }
 
 interface CustodialWalletWarningProps {

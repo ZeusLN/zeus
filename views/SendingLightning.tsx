@@ -40,7 +40,7 @@ interface SendingLightningProps {
 }
 
 interface SendingLightningState {
-    storedNotes: '';
+    storedNotes: string | null;
     wasSuccessful: boolean;
     currentPayment: any;
 }

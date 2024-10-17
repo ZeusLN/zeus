@@ -205,7 +205,6 @@ export default class ProductCategoryDetails extends React.Component<
                                 ),
                                 style: { color: themeColor('text') }
                             }}
-                            backgroundColor="none"
                             containerStyle={{
                                 borderBottomWidth: 0
                             }}
@@ -241,7 +240,6 @@ export default class ProductCategoryDetails extends React.Component<
                                     rightComponent={
                                         isExisting ? <Delete /> : undefined
                                     }
-                                    backgroundColor="transparent"
                                     containerStyle={{
                                         borderBottomWidth: 0
                                     }}

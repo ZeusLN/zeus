@@ -95,13 +95,18 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
         const { implementation, settings, seedPhrase } = SettingsStore;
         const { paid } = LightningAddressStore;
 
+        // Define the type for implementationDisplayValue
+        interface ImplementationDisplayValue {
+            [key: string]: string;
+        }
+
         const selectedNode: any =
             (settings &&
                 settings.nodes?.length &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const implementationDisplayValue = {};
+        const implementationDisplayValue: ImplementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
@@ -136,7 +141,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             <Screen>
                 <Header
                     leftComponent="Close"
-                    rightComponent={OlympusButton}
+                    rightComponent={<OlympusButton />}
                     navigation={navigation}
                 />
                 <ScrollView

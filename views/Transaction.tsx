@@ -124,7 +124,10 @@ export default class TransactionView extends React.Component<
                                     color: themeColor('highlight')
                                 }}
                             >
-                                {PrivacyUtils.sensitiveValue(address)}
+                                {`${
+                                    typeof address === 'string' &&
+                                    PrivacyUtils.sensitiveValue(address)
+                                }`}
                             </Text>
                         </TouchableOpacity>
                     }
@@ -157,7 +160,7 @@ export default class TransactionView extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={EditNotesButton}
+                    rightComponent={<EditNotesButton />}
                     navigation={navigation}
                 />
                 <View style={styles.center}>
@@ -220,7 +223,10 @@ export default class TransactionView extends React.Component<
                                         color: themeColor('highlight')
                                     }}
                                 >
-                                    {PrivacyUtils.sensitiveValue(tx)}
+                                    {`${
+                                        typeof tx === 'string' &&
+                                        PrivacyUtils.sensitiveValue(tx)
+                                    }`}
                                 </Text>
                             </TouchableOpacity>
                         }
@@ -246,9 +252,12 @@ export default class TransactionView extends React.Component<
                                             color: themeColor('highlight')
                                         }}
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            block_hash
-                                        )}
+                                        {`${
+                                            typeof block_hash === 'string' &&
+                                            PrivacyUtils.sensitiveValue(
+                                                block_hash
+                                            )
+                                        }`}
                                     </Text>
                                 </TouchableOpacity>
                             }
@@ -275,11 +284,15 @@ export default class TransactionView extends React.Component<
                                             color: themeColor('highlight')
                                         }}
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            getBlockHeight.toString(),
-                                            5,
-                                            true
-                                        )}
+                                        {`${
+                                            typeof getBlockHeight ===
+                                                'string' &&
+                                            PrivacyUtils.sensitiveValue(
+                                                getBlockHeight.toString(),
+                                                5,
+                                                true
+                                            )
+                                        }`}
                                     </Text>
                                 </TouchableOpacity>
                             }

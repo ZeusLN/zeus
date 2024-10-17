@@ -280,7 +280,9 @@ export default class ActivityFilter extends React.Component<
                         }
                     }}
                     rightComponent={
-                        isEqual(filters, DEFAULT_FILTERS) ? null : (
+                        isEqual(filters, DEFAULT_FILTERS) ? (
+                            <></>
+                        ) : (
                             <ClearButton />
                         )
                     }
@@ -289,7 +291,7 @@ export default class ActivityFilter extends React.Component<
                 <FlatList
                     data={FILTERS}
                     renderItem={({ item }) => {
-                        if (!item.condition) return;
+                        if (!item.condition) return null;
                         return (
                             <>
                                 <ListItem
@@ -323,7 +325,8 @@ export default class ActivityFilter extends React.Component<
                                                     newFilters[index] =
                                                         !filters[index];
                                                     await setFilters(
-                                                        newFilters
+                                                        newFilters,
+                                                        locale
                                                     );
                                                 }}
                                             />

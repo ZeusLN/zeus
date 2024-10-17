@@ -330,7 +330,7 @@ export default class ContactDetails extends React.Component<
                         <Header
                             leftComponent="Back"
                             centerComponent={
-                                !isNostrContact && <EditContactButton />
+                                isNostrContact ? <></> : <EditContactButton />
                             }
                             rightComponent={
                                 <Row>
@@ -338,10 +338,6 @@ export default class ContactDetails extends React.Component<
                                     <QRButton />
                                 </Row>
                             }
-                            centerContainerStyle={{
-                                paddingRight: 6,
-                                marginTop: -3
-                            }}
                             placement="right"
                             containerStyle={{
                                 borderBottomWidth: 0

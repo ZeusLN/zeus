@@ -84,7 +84,7 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                 </ListItem>
                             )}
                             numColumns={4}
-                            keyExtractor={(item, index) => index}
+                            keyExtractor={(_item, index) => `message ${index}`}
                             style={{ alignSelf: 'center' }}
                         />
                         <Button

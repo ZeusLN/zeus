@@ -30,7 +30,7 @@ interface RoutingState {
     selectedIndex: number;
 }
 
-const HOURS = {
+const HOURS: { [key: number]: number } = {
     0: 24,
     1: 24 * 7,
     2: 24 * 30,
@@ -57,7 +57,7 @@ export default class Routing extends React.PureComponent<
         }
     }
 
-    renderItem = ({ item }) => {
+    renderItem = (item: any) => {
         const { navigation } = this.props;
         return (
             <TouchableOpacity
@@ -198,6 +198,8 @@ export default class Routing extends React.PureComponent<
             { element: oneYButton }
         ];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         return (
             <Screen>
                 <Header
@@ -225,7 +227,7 @@ export default class Routing extends React.PureComponent<
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
-                            buttons={buttons}
+                            buttons={buttonElements}
                             selectedButtonStyle={{
                                 backgroundColor: themeColor('highlight'),
                                 borderRadius: 12

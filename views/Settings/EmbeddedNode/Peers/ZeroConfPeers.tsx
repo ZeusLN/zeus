@@ -36,7 +36,7 @@ export default class ZeroConfPeers extends React.Component<
         addPeer: ''
     };
 
-    remove = (arrOriginal, elementToRemove) => {
+    remove = (arrOriginal: Array<string>, elementToRemove: any) => {
         return arrOriginal.filter(function (el) {
             return el !== elementToRemove;
         });

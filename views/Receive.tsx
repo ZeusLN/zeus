@@ -1275,6 +1275,8 @@ export default class Receive extends React.Component<
                       { element: onChainButton }
                   ];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         const haveUnifiedInvoice = !!payment_request && !!address;
         const haveInvoice = !!payment_request || !!address;
 
@@ -1392,6 +1394,10 @@ export default class Receive extends React.Component<
             { element: oneWButton }
         ];
 
+        const expirationButtonsElement = expirationButtons.map((btn) =>
+            btn.element()
+        );
+
         const routeHintModeButtons = [
             {
                 element: () => (
@@ -1424,6 +1430,10 @@ export default class Receive extends React.Component<
                 )
             }
         ];
+
+        const routeHintModeButtonsElement = routeHintModeButtons.map((btn) =>
+            btn.element()
+        );
 
         const setRouteHintMode = (mode: RouteHintMode) => {
             if (this.state.routeHintMode === mode) {
@@ -2417,7 +2427,9 @@ export default class Receive extends React.Component<
                                                     selectedIndex={
                                                         expirationIndex
                                                     }
-                                                    buttons={expirationButtons}
+                                                    buttons={
+                                                        expirationButtonsElement
+                                                    }
                                                     selectedButtonStyle={{
                                                         backgroundColor:
                                                             themeColor(
@@ -2532,7 +2544,7 @@ export default class Receive extends React.Component<
                                                             routeHintMode
                                                         }
                                                         buttons={
-                                                            routeHintModeButtons
+                                                            routeHintModeButtonsElement
                                                         }
                                                         selectedButtonStyle={{
                                                             backgroundColor:
@@ -2763,7 +2775,7 @@ export default class Receive extends React.Component<
                             <ButtonGroup
                                 onPress={this.updateIndex}
                                 selectedIndex={selectedIndex}
-                                buttons={buttons}
+                                buttons={buttonElements}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12

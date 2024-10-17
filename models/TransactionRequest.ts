@@ -23,7 +23,7 @@ export default interface TransactionRequest {
     spend_unconfirmed?: boolean;
     send_all?: boolean;
     account?: string;
-    additional_outputs: Array<AdditionalOutput>;
+    additional_outputs?: Array<AdditionalOutput>;
     outpoints?: Array<OutPoint>;
 }
 

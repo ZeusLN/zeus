@@ -2,6 +2,7 @@ import * as React from 'react';
 import { FlatList, ScrollView, TouchableOpacity, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+// @ts-ignore:next-line
 import Ping from 'react-native-ping';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -66,7 +67,7 @@ export default class NeutrinoPeers extends React.Component<
         loading: false
     };
 
-    remove = (arrOriginal, elementToRemove) => {
+    remove = (arrOriginal: Array<string>, elementToRemove: any) => {
         return arrOriginal.filter(function (el) {
             return el !== elementToRemove;
         });
