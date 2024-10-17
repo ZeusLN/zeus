@@ -66,7 +66,7 @@ export default class Conversion extends React.Component<
         if (sats) {
             satAmount = sats;
         } else {
-            satAmount = getSatAmount(amount);
+            satAmount = Number.isNaN(Number(amount)) ? 0 : getSatAmount(amount);
         }
 
         if (!fiatEnabled || (!amount && !sats)) return;
