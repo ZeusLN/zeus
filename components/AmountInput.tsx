@@ -22,6 +22,7 @@ interface AmountInputProps {
     locked?: boolean;
     title: string;
     hideConversion?: boolean;
+    hideUnitChangeButton?: boolean;
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
@@ -128,6 +129,7 @@ export default class AmountInput extends React.Component<
             title,
             locked,
             hideConversion,
+            hideUnitChangeButton,
             FiatStore,
             UnitsStore,
             SettingsStore
@@ -182,24 +184,26 @@ export default class AmountInput extends React.Component<
                             flexDirection: 'row'
                         }}
                     />
-                    <TouchableOpacity
-                        onPress={() => !locked && this.onChangeUnits()}
-                        style={{ marginTop: 22, marginLeft: 15 }}
-                    >
-                        {UnitsStore!.getNextUnit() === 'fiat' ? (
-                            <ExchangeFiatSVG
-                                fill={themeColor('text')}
-                                width="35"
-                                height="35"
-                            />
-                        ) : (
-                            <ExchangeBitcoinSVG
-                                fill={themeColor('text')}
-                                width="35"
-                                height="35"
-                            />
-                        )}
-                    </TouchableOpacity>
+                    {!hideUnitChangeButton && (
+                        <TouchableOpacity
+                            onPress={() => !locked && this.onChangeUnits()}
+                            style={{ marginTop: 22, marginLeft: 15 }}
+                        >
+                            {UnitsStore!.getNextUnit() === 'fiat' ? (
+                                <ExchangeFiatSVG
+                                    fill={themeColor('text')}
+                                    width="35"
+                                    height="35"
+                                />
+                            ) : (
+                                <ExchangeBitcoinSVG
+                                    fill={themeColor('text')}
+                                    width="35"
+                                    height="35"
+                                />
+                            )}
+                        </TouchableOpacity>
+                    )}
                 </View>
                 {!hideConversion && (
                     <View style={{ marginBottom: 10 }}>

@@ -83,6 +83,7 @@ interface InvoiceState {
     settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
+    slideToPayThreshold: number;
 }
 
 @inject(
@@ -117,7 +118,8 @@ export default class PaymentRequest extends React.Component<
         lastHopPubkey: null,
         settingsToggle: false,
         zaplockerToggle: false,
-        lightningReadyToSend: false
+        lightningReadyToSend: false,
+        slideToPayThreshold: 10000
     };
 
     async UNSAFE_componentWillMount() {
@@ -140,7 +142,8 @@ export default class PaymentRequest extends React.Component<
             feeOption,
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
-            timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
+            timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
+            slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
 
         if (implementation === 'embedded-lnd') {
@@ -348,7 +351,8 @@ export default class PaymentRequest extends React.Component<
             zaplockerToggle,
             settingsToggle,
             timeoutSeconds,
-            lightningReadyToSend
+            lightningReadyToSend,
+            slideToPayThreshold
         } = this.state;
         const {
             pay_req,
@@ -1098,7 +1102,7 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
-                            {requestAmount >= 10000 ? (
+                            {requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
                                     onSwipeSuccess={this.triggerPayment}
                                     instructionText={localeString(

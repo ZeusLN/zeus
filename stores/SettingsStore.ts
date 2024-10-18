@@ -74,6 +74,7 @@ interface PaymentsSettings {
     defaultFeeFixed?: string;
     timeoutSeconds?: string;
     preferredMempoolRate?: string;
+    slideToPayThreshold: number;
 }
 
 interface InvoicesSettings {
@@ -1085,6 +1086,8 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
 
 const STORAGE_KEY = 'zeus-settings';
 
+const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
+
 export default class SettingsStore {
     @observable settings: Settings = {
         privacy: {
@@ -1121,7 +1124,8 @@ export default class SettingsStore {
             defaultFeePercentage: '5.0',
             defaultFeeFixed: '1000',
             timeoutSeconds: '60',
-            preferredMempoolRate: 'fastestFee'
+            preferredMempoolRate: 'fastestFee',
+            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
         },
         invoices: {
             addressType: '0',
@@ -1378,7 +1382,7 @@ export default class SettingsStore {
             // Retrieve the settings
             const settings = await EncryptedStorage.getItem(STORAGE_KEY);
             if (settings) {
-                const newSettings = JSON.parse(settings);
+                const newSettings = JSON.parse(settings) as Settings;
                 if (!newSettings.fiatRatesSource) {
                     newSettings.fiatRatesSource = DEFAULT_FIAT_RATES_SOURCE;
                 }
@@ -1579,6 +1583,15 @@ export default class SettingsStore {
                 if (!newSettings.neutrinoPeersTestnet) {
                     newSettings.neutrinoPeersTestnet =
                         DEFAULT_NEUTRINO_PEERS_TESTNET;
+                }
+
+                if (newSettings.payments == null) {
+                    newSettings.payments = {
+                        slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
+                    };
+                } else if (newSettings.payments.slideToPayThreshold == null) {
+                    newSettings.payments.slideToPayThreshold =
+                        DEFAULT_SLIDE_TO_PAY_THRESHOLD;
                 }
 
                 if (!isEqual(this.settings, newSettings)) {
