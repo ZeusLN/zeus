@@ -25,15 +25,15 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import handleAnything from '../utils/handleAnything';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
-import ZIcon from '../assets/images/icon-black.png';
-import LightningIcon from '../assets/images/lightning-black.png';
-import OnChainIcon from '../assets/images/onchain-black.png';
-import ZPayIcon from '../assets/images/pay-z-black.png';
+const ZIcon = require('../assets/images/icon-black.png');
+const LightningIcon = require('../assets/images/lightning-black.png');
+const OnChainIcon = require('../assets/images/onchain-black.png');
+const ZPayIcon = require('../assets/images/pay-z-black.png');
 
-import ZIconWhite from '../assets/images/icon-white.png';
-import LightningIconWhite from '../assets/images/lightning-white.png';
-import OnChainIconWhite from '../assets/images/onchain-white.png';
-import ZPayIconWhite from '../assets/images/pay-z-white.png';
+const ZIconWhite = require('../assets/images/icon-white.png');
+const LightningIconWhite = require('../assets/images/lightning-white.png');
+const OnChainIconWhite = require('../assets/images/onchain-white.png');
+const ZPayIconWhite = require('../assets/images/pay-z-white.png');
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
@@ -366,7 +366,7 @@ export default class Receive extends React.Component<
 
         if (autoGenerate) {
             this.autoGenerateInvoice(
-                getSatAmount(amount),
+                getSatAmount(amount).toString(),
                 memo,
                 expirySeconds,
                 routeHints,
@@ -667,6 +667,7 @@ export default class Receive extends React.Component<
 
                             if (
                                 invoice.settled &&
+                                // @ts-ignore:next-line
                                 Base64Utils.bytesToHex(invoice.r_hash) === rHash
                             ) {
                                 setWatchedInvoicePaid(
@@ -682,6 +683,7 @@ export default class Receive extends React.Component<
                                     type: 'ln',
                                     tx: invoice.payment_request,
                                     preimage: Base64Utils.bytesToHex(
+                                        // @ts-ignore:next-line
                                         invoice.r_preimage
                                     )
                                 });
@@ -1520,7 +1522,8 @@ export default class Receive extends React.Component<
                                                   'views.Receive.youReceived'
                                               )} ${getAmountFromSats(
                                                   watchedInvoicePaidAmt ||
-                                                      payment_request_amt
+                                                      payment_request_amt ||
+                                                      ''
                                               )}`}
                                     </Text>
                                 </>
@@ -1655,6 +1658,7 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
+                                    zeroConfFee &&
                                     zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
@@ -1788,7 +1792,7 @@ export default class Receive extends React.Component<
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
-                                                    value={unifiedInvoice}
+                                                    value={unifiedInvoice || ''}
                                                     copyText={localeString(
                                                         'views.Receive.copyInvoice'
                                                     )}
@@ -1808,7 +1812,7 @@ export default class Receive extends React.Component<
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
-                                                    value={lnInvoice}
+                                                    value={lnInvoice || ''}
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
@@ -1931,7 +1935,7 @@ export default class Receive extends React.Component<
                                             (belowDustLimit ||
                                                 !haveUnifiedInvoice) && (
                                                 <CollapsedQR
-                                                    value={lnInvoice}
+                                                    value={lnInvoice || ''}
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
