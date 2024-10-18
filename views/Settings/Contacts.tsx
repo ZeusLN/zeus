@@ -214,7 +214,7 @@ export default class Contacts extends React.Component<
         const filteredContacts = contacts.filter((contact: any) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
-                    ? contact[field].some((input) =>
+                    ? contact[field].some((input: string) =>
                           input.toLowerCase().includes(search.toLowerCase())
                       )
                     : contact[field]
