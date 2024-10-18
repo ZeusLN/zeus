@@ -293,6 +293,7 @@ export default class Contacts extends React.Component<
                                     placeholder={localeString(
                                         'views.Settings.Contacts.searchBar1'
                                     )}
+                                    // @ts-ignore:next-line
                                     onChangeText={this.updateSearch}
                                     value={this.state.search}
                                     inputStyle={{
@@ -309,6 +310,7 @@ export default class Contacts extends React.Component<
                                     inputContainerStyle={{
                                         backgroundColor: 'none'
                                     }}
+                                    // @ts-ignore:next-line
                                     searchIcon={
                                         <Text
                                             style={{
@@ -336,6 +338,7 @@ export default class Contacts extends React.Component<
                                 placeholder={localeString(
                                     'views.Settings.Contacts.searchBar2'
                                 )}
+                                // @ts-ignore:next-line
                                 onChangeText={this.updateSearch}
                                 value={this.state.search}
                                 inputStyle={{
@@ -376,7 +379,7 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={favoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(_item, index) => index.toString()}
                         scrollEnabled={false}
                     />
 

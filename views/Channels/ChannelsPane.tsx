@@ -44,7 +44,7 @@ interface ChannelsProps {
     SettingsStore?: SettingsStore;
 }
 
-const ColorChangingButton = ({ onPress }) => {
+const ColorChangingButton = (onPress: any) => {
     const [forward, setForward] = useState(true);
     const animation = useRef(new Animated.Value(0)).current;
 

@@ -681,6 +681,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             selectedIndex !== 0)) && (
                         <SearchBar
                             placeholder={localeString('general.search')}
+                            // @ts-ignore:next-line
                             onChangeText={(value: string) => {
                                 if (selectedIndex === 0) {
                                     this.updateProductSearch(value);

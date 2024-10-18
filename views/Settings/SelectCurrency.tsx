@@ -106,6 +106,7 @@ export default class SelectCurrency extends React.Component<
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
                         value={search}
                         inputStyle={{
@@ -122,6 +123,7 @@ export default class SelectCurrency extends React.Component<
                             borderRadius: 15,
                             backgroundColor: themeColor('secondary')
                         }}
+                        // @ts-ignore:next-line
                         searchIcon={{
                             importantForAccessibility: 'no-hide-descendants',
                             accessibilityElementsHidden: true

@@ -160,13 +160,21 @@ export default class Accounts extends React.Component<
                             await Promise.all(
                                 BackendUtils.supportsAccounts()
                                     ? [
-                                          BalanceStore.getBlockchainBalance(),
-                                          BalanceStore.getLightningBalance(),
+                                          BalanceStore.getBlockchainBalance(
+                                              true,
+                                              false
+                                          ),
+                                          BalanceStore.getLightningBalance(
+                                              true
+                                          ),
                                           UTXOsStore.listAccounts()
                                       ]
                                     : [
-                                          BalanceStore.getBlockchainBalance(),
-                                          BalanceStore.getLightningBalance()
+                                          BalanceStore.getBlockchainBalance(
+                                              true,
+                                              false
+                                          ),
+                                          BalanceStore.getLightningBalance(true)
                                       ]
                             )
                         }

@@ -92,7 +92,7 @@ export default class ChannelView extends React.Component<
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
-        return contacts.find((contact) => contact.pubkey.includes(pubkey));
+        return contacts.find((contact: any) => contact.pubkey.includes(pubkey));
     };
 
     renderContactLink = (remotePubkey: string) => {

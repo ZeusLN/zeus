@@ -65,7 +65,7 @@ export default class ImportingAccount extends React.Component<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={
-                        importingAccount && (
+                        importingAccount ? (
                             <View
                                 style={{
                                     alignItems: 'center'
@@ -73,6 +73,8 @@ export default class ImportingAccount extends React.Component<
                             >
                                 <LoadingIndicator size={35} />
                             </View>
+                        ) : (
+                            <></>
                         )
                     }
                     navigation={navigation}

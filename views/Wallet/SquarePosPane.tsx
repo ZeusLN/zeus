@@ -392,6 +392,7 @@ export default class SquarePosPane extends React.PureComponent<
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={(value: string) => {
                             updateSearch(value);
                             this.setState({
