@@ -149,7 +149,7 @@ export default class CoinControl extends React.Component<
                                 </React.Fragment>
                             );
                         }}
-                        keyExtractor={(item, index) => `utxo-${index}`}
+                        keyExtractor={(_, index) => `utxo-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
