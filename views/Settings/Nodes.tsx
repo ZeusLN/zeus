@@ -237,8 +237,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 selectedNode: index
                                             }).then(() => {
                                                 if (
+                                                    currentImplementation &&
                                                     currentImplementation ===
-                                                    'lightning-node-connect'
+                                                        'lightning-node-connect'
                                                 ) {
                                                     BackendUtils.disconnect();
                                                 }
