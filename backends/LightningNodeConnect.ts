@@ -85,7 +85,7 @@ export default class LightningNodeConnect {
         );
     };
     isConnected = async () => await this.lnc.isConnected();
-    disconnect = () => this.lnc.disconnect();
+    disconnect = () => this.lnc && this.lnc.disconnect();
 
     getTransactions = async () =>
         await this.lnc.lnd.lightning
