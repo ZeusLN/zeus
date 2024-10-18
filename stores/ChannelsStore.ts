@@ -478,11 +478,11 @@ export default class ChannelsStore {
 
     @action
     public closeChannel = async (
-        channelPoint?: CloseChannelRequest | null,
-        channelId?: string | null,
-        satPerVbyte?: string | null,
-        forceClose?: boolean | string | null,
-        deliveryAddress?: string | null
+        channelPoint?: CloseChannelRequest,
+        channelId?: string,
+        satPerVbyte?: string,
+        forceClose?: boolean | string,
+        deliveryAddress?: string
     ) => {
         this.closeChannelErr = null;
         this.closingChannel = true;

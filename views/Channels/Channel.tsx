@@ -152,11 +152,13 @@ export default class ChannelView extends React.Component<
         }
 
         const streamingCall = await ChannelsStore.closeChannel(
-            channelPoint ? { funding_txid_str, output_index } : null,
-            channelId ? channelId : null,
-            satPerVbyte ? satPerVbyte : null,
-            forceClose,
-            deliveryAddress ? deliveryAddress : null
+            funding_txid_str && output_index
+                ? { funding_txid_str, output_index }
+                : undefined,
+            channelId ? channelId : undefined,
+            satPerVbyte ? satPerVbyte : undefined,
+            forceClose || false,
+            deliveryAddress ? deliveryAddress : undefined
         );
 
         if (implementation === 'lightning-node-connect') {
