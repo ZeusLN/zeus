@@ -51,7 +51,7 @@ interface TxHexState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    txDecoded: any | null;
+    txDecoded?: any;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
@@ -65,7 +65,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        txDecoded: null
+        txDecoded: undefined
     };
 
     UNSAFE_componentWillMount(): void {

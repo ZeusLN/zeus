@@ -17,7 +17,7 @@ import ClockIcon from '../assets/images/SVG/Clock.svg';
 
 interface ConversionProps {
     amount?: string | number;
-    sats?: string | number | null;
+    sats?: string | number;
     satsPending?: string | number;
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;

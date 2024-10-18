@@ -144,7 +144,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     pendingTimelock={
                         item.forceClose
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
-                            : null
+                            : undefined
                     }
                 />
             </TouchableHighlight>

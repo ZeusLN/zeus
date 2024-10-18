@@ -371,7 +371,10 @@ export default class PaymentRequest extends React.Component<
 
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
-        const requestAmount = pay_req && pay_req.getRequestAmount;
+        const requestAmount =
+            pay_req && pay_req.getRequestAmount
+                ? pay_req.getRequestAmount
+                : undefined;
         const expiry = pay_req && pay_req.expiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;

@@ -44,7 +44,7 @@ interface Payment {
 
 export interface Order {
     announce_channel: boolean;
-    channel: string | null;
+    channel?: string;
     channel_expiry_blocks: number;
     required_channel_confirmations: number;
     funding_confirms_within_blocks: number;

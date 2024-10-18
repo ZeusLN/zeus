@@ -38,7 +38,7 @@ export function ChannelItem({
     largestTotal?: number;
     status?: Status;
     pendingHTLCs?: boolean;
-    pendingTimelock?: string | null;
+    pendingTimelock?: string;
     noBorder?: boolean;
     hideLabels?: boolean;
     selected?: boolean;

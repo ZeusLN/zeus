@@ -42,7 +42,7 @@ interface TransactionProps {
 }
 
 interface TransactionState {
-    storedNotes: string | null;
+    storedNotes: string;
 }
 
 @inject('NodeInfoStore', 'TransactionsStore')
@@ -61,7 +61,7 @@ export default class TransactionView extends React.Component<
             this.props.TransactionsStore.resetBroadcast();
             EncryptedStorage.getItem(transaction.getNoteKey)
                 .then((storedNotes) => {
-                    this.setState({ storedNotes });
+                    this.setState({ storedNotes: storedNotes || '' });
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);

@@ -47,7 +47,7 @@ interface PSBTState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    psbtDecoded?: PSBTDecoded | null;
+    psbtDecoded?: PSBTDecoded;
 }
 
 @inject('ChannelsStore', 'TransactionsStore')
@@ -61,7 +61,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        psbtDecoded: null
+        psbtDecoded: undefined
     };
 
     UNSAFE_componentWillMount(): void {

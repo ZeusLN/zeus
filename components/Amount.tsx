@@ -249,7 +249,7 @@ interface AmountProps {
     FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
-    sats?: number | string | null;
+    sats?: number | string;
     fixedUnits?: string;
     sensitive?: boolean;
     sensitiveLength?: number;
