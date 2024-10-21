@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Privatsphäre Einstellungen",
     "views.Settings.Payments.title": "Zahlungseinstellungen",
     "views.Settings.Payments.defaultFeeLimit": "Standard-Gebührenlimit",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Zeitüberschreitung (Sekunden)",
     "views.Settings.Payments.preferredMempoolRate": "Bevorzugte Mempool-Rate",
     "views.Settings.Payments.feeLimitMethodExplainer": "Standardmäßig wird für Beträge bis zu 1000 Sats ein fixes Gebührenlimit verwendet und für Beträge über 1000 Sats ein prozentuales. Du kannst jedoch sowohl die Methode als auch die Werte in der Zahlungs-Anforderungs-Ansicht unter 'Einstellungen' beliebig ändern.",
