@@ -97,9 +97,12 @@ const handleAnything = async (
 ): Promise<any> => {
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    const { value, amount, lightning }: any =
-        AddressUtils.processSendAddress(data);
+    const { value, amount, lightning, offer }: any =
+        AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
+    const hasMultiple: boolean =
+        (value && lightning) || (value && offer) || (lightning && offer);
+
     let lnurl;
     // if the value is from clipboard and looks like a url we don't want to decode it
     if (!isClipboardValue || !data.match(/^https?:\/\//i)) {
@@ -108,7 +111,29 @@ const handleAnything = async (
         } catch (e) {}
     }
 
-    if (
+    if (!hasAt && hasMultiple) {
+        if (isClipboardValue) return true;
+        return [
+            'ChoosePaymentMethod',
+            {
+                value,
+                amount,
+                lightning,
+                offer
+            }
+        ];
+    } else if (offer && BackendUtils.supportsOffers()) {
+        if (isClipboardValue) return true;
+        return [
+            'Send',
+            {
+                destination: offer,
+                bolt12: offer,
+                transactionType: 'BOLT 12',
+                isValid: true
+            }
+        ];
+    } else if (
         !hasAt &&
         AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
         lightning
@@ -341,66 +366,71 @@ const handleAnything = async (
         if (isClipboardValue) return true;
 
         // try BOLT 12 address first, if supported
-        if (BackendUtils.supportsOffers()) {
-            const [localPart, domain] = value.split('@');
-            const dnsUrl = 'https://cloudflare-dns.com/dns-query';
+        const [localPart, domain] = value.split('@');
+        const dnsUrl = 'https://cloudflare-dns.com/dns-query';
 
-            const name = `${localPart}.user._bitcoin-payment.${domain}`;
-            const url = `${dnsUrl}?name=${name}&type=TXT`;
-            let bolt12: string;
-            try {
-                const res = await fetch(url, {
-                    headers: {
-                        accept: 'application/dns-json'
-                    }
-                });
-                const json = await res.json();
-                if (!json.Answer && !json.Answer[0]) throw 'Bad';
-                bolt12 = json.Answer[0].data;
-                bolt12 = bolt12.replace(/("|\\)/g, '');
-                bolt12 = bolt12.replace(/bitcoin:b12=/, '');
-
-                const { value, amount, lightning, offer }: any =
-                    AddressUtils.processSendAddress(bolt12);
-
-                if (value) {
-                    return [
-                        'Accounts',
-                        {
-                            value,
-                            amount,
-                            lightning,
-                            offer,
-                            locked: true
-                        }
-                    ];
+        const name = `${localPart}.user._bitcoin-payment.${domain}`;
+        let url = `${dnsUrl}?name=${name}&type=TXT`;
+        let bolt12: string;
+        try {
+            const res = await fetch(url, {
+                headers: {
+                    accept: 'application/dns-json'
                 }
+            });
+            const json = await res.json();
+            if (!json.Answer && !json.Answer[0]) throw 'Bad';
+            bolt12 = json.Answer[0].data;
+            bolt12 = bolt12.replace(/("|\\)/g, '');
+            bolt12 = bolt12.replace(/bitcoin:b12=/, '');
 
+            const { value, amount, lightning, offer }: any =
+                AddressUtils.processBIP21Uri(bolt12);
+
+            const hasMultiple: boolean =
+                (value && lightning) ||
+                (value && offer) ||
+                (lightning && offer);
+
+            if (hasMultiple) {
+                return [
+                    'ChoosePaymentMethod',
+                    {
+                        value,
+                        amount,
+                        lightning,
+                        offer,
+                        locked: true
+                    }
+                ];
+            }
+
+            if (offer && BackendUtils.supportsOffers()) {
                 return [
                     'Send',
                     {
-                        destination: value || offer,
+                        destination: offer,
                         bolt12,
                         transactionType: 'BOLT 12',
                         isValid: true
                     }
                 ];
-            } catch (e: any) {}
-        }
+            }
+        } catch (e: any) {}
 
-        const [username, domain] = value.split('@');
-        let url;
-        if (domain.includes('.onion')) {
-            url = `http://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        // try BOLT 11 address
+        const [username, bolt11Domain] = value.split('@');
+        if (bolt11Domain.includes('.onion')) {
+            url = `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
         } else {
-            url = `https://${domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+            url = `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
         }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
 
         // handle Tor LN addresses
-        if (settingsStore.enableTor && domain.includes('.onion')) {
+        if (settingsStore.enableTor && bolt11Domain.includes('.onion')) {
             await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     if (!response.callback) {

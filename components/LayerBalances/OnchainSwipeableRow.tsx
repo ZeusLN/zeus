@@ -27,6 +27,7 @@ interface OnchainSwipeableRowProps {
     account?: string;
     hidden?: boolean;
     children?: React.ReactNode;
+    disabled?: boolean;
 }
 
 export default class OnchainSwipeableRow extends Component<
@@ -170,11 +171,11 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     render() {
-        const { children, value, locked, hidden } = this.props;
+        const { children, value, locked, hidden, disabled } = this.props;
         if (locked && value) {
             return (
                 <TouchableOpacity
-                    onPress={() => this.sendToAddress()}
+                    onPress={() => (disabled ? null : this.sendToAddress())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
                 >
