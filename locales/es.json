@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Configuración de privacidad",
     "views.Settings.Payments.title": "Configuración de pago",
     "views.Settings.Payments.defaultFeeLimit": "Límite de tarifa por defecto",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Tiempo de espera (segundos)",
     "views.Settings.Payments.preferredMempoolRate": "Tarifa de mempool preferida",
     "views.Settings.Payments.feeLimitMethodExplainer": "El método de límite de tarifas por defecto será fijo para montos de hasta 1000 sats y porcentaje para montos superiores a 1000 sats. Sin embargo, podrá cambiar qué método y valores usar en la sección Configuración de la vista de Solicitud de Pago.",
