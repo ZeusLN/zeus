@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Haluatko kopioida 24 sanan siemenlausekkeen leikepöydällesi?",
     "views.Settings.Seed.dangerousText2": "Tämä on VAARALLISTA. Sinun siemenlausekkeesi voi lukea muut sovellukset, jotka avaat. Jatka varovaisesti.",
     "views.Settings.Seed.dangerousButton": "Vaarallisesti kopioi siemenlausekkeesi leikepöydälle",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Sisäänrakennettu solmu",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Reitinetsintä",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Lisää vertaiskäyttäjä",
