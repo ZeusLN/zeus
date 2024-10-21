@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Voulez-vous copier votre graine de 24 mots dans votre presse-papiers?",
     "views.Settings.Seed.dangerousText2": "C'est dangereux. Votre semence peut être lue par d'autres applications que vous ouvrez. Procéder avec prudence.",
     "views.Settings.Seed.dangerousButton": "Copiez dangereusement les graines dans le presse-papiers",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Nœud intégré",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Trouver son chemin",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Ajouter un pair",
