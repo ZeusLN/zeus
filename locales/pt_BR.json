@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Deseja copiar sua semente de 24 palavras para sua área de transferência?",
     "views.Settings.Seed.dangerousText2": "Isso é perigoso. Sua semente pode ser lida por outros aplicativos que você abre. Prossiga com cuidado.",
     "views.Settings.Seed.dangerousButton": "Copie perigoso a semente para a área de transferência",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Node incorporado",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Encontrando o caminho",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Adicione pares",
