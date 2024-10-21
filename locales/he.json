@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "האם ברצונך להעתיק את גרעין 24 המילים ללוח שלך?",
     "views.Settings.Seed.dangerousText2": "סכנה! הגרעין שלכם יוכל להיקרא על ידי אפליקציות אחרות שתפתחו. המשיכו בזהירות.",
     "views.Settings.Seed.dangerousButton": "העתקת גרעין באופן מסוכן ללוח",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "צומת מוטמע",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Pathfinding",
     "views.Settings.EmbeddedNode.Peers.addPeer": "הוספת עמית",
