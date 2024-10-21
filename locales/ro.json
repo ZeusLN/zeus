@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Doriți să copiați cheile dvs. de 24 de cuvinte in clipboard?",
     "views.Settings.Seed.dangerousText2": "Asta e periculos. Cheia dvs. poate fi citită de alte aplicații pe care le deschideți. Continuați cu precauție.",
     "views.Settings.Seed.dangerousButton": "Copiați periculos cheia in clipboard",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Nod încorporat",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Găsirea rutei",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Adăugați partener",
