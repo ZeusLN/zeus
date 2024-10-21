@@ -13,7 +13,7 @@ import CaretDown from './../assets/images/SVG/Caret Down.svg';
 import { localeString } from './../utils/LocaleUtils';
 
 interface DropdownSettingProps {
-    title: string;
+    title?: string;
     selectedValue: string | number;
     onValueChange: (value: any) => void;
     values: Array<any>;

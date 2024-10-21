@@ -568,7 +568,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
-        const implementationDisplayValue = {};
+        // Define the type for implementationDisplayValue
+        interface ImplementationDisplayValue {
+            [key: string]: string;
+        }
+
+        const implementationDisplayValue: ImplementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
@@ -705,7 +710,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
-        const CameraScreen = () => {};
+        const CameraScreen: any = () => {};
 
         const ChannelsScreen = () => {
             return (

@@ -51,13 +51,13 @@ interface TxHexState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    txDecoded: any;
+    txDecoded?: any;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
 @observer
 export default class TxHex extends React.Component<TxHexProps, TxHexState> {
-    state = {
+    state: TxHexState = {
         infoIndex: 0,
         selectedIndex: 0,
         txHex: '',
@@ -65,7 +65,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        txDecoded: null
+        txDecoded: undefined
     };
 
     UNSAFE_componentWillMount(): void {
@@ -181,6 +181,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
 
         const infoButtons = [{ element: qrButton }, { element: infoButton }];
 
+        const infoButtonElements = infoButtons.map((btn) => btn.element());
+
         const singleButton = () => (
             <Text
                 style={{
@@ -226,6 +228,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             { element: bcurButton },
             { element: bbqrButton }
         ];
+
+        const qrButtonElements = qrButtons.map((btn) => btn.element());
 
         return (
             <Screen>
@@ -316,7 +320,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     this.setState({ infoIndex });
                                 }}
                                 selectedIndex={infoIndex}
-                                buttons={infoButtons}
+                                buttons={infoButtonElements}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12
@@ -338,7 +342,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                             this.setState({ selectedIndex });
                                         }}
                                         selectedIndex={selectedIndex}
-                                        buttons={qrButtons}
+                                        buttons={qrButtonElements}
                                         selectedButtonStyle={{
                                             backgroundColor:
                                                 themeColor('highlight'),
@@ -500,9 +504,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                     )
                                                                                 }}
                                                                             >
-                                                                                {PrivacyUtils.sensitiveValue(
+                                                                                {`${PrivacyUtils.sensitiveValue(
                                                                                     outpoint
-                                                                                )}
+                                                                                )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }
@@ -574,9 +578,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                     )
                                                                                 }}
                                                                             >
-                                                                                {PrivacyUtils.sensitiveValue(
+                                                                                {`${PrivacyUtils.sensitiveValue(
                                                                                     address
-                                                                                )}
+                                                                                )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }

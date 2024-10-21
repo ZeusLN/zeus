@@ -88,15 +88,19 @@ export default class SquarePosPane extends React.PureComponent<
         ).start();
     }
 
-    renderItem = ({ item, index }, onClickPaid, onClickHide) => {
+    renderItem = (
+        { item, index }: { item: { [key: string]: any }; index: number },
+        onClickPaid: any,
+        onClickHide: any
+    ) => {
         const { navigation, FiatStore } = this.props;
         const { getRate, getSymbol } = FiatStore!;
         const isPaid: boolean = item && item.payment;
 
         let row: Array<any> = [];
-        let prevOpenedRow;
+        let prevOpenedRow: any;
 
-        const closeRow = (index) => {
+        const closeRow = (index: any) => {
             if (prevOpenedRow && prevOpenedRow !== row[index]) {
                 prevOpenedRow.close();
             }
@@ -104,10 +108,10 @@ export default class SquarePosPane extends React.PureComponent<
         };
 
         const renderRightActions = (
-            progress,
-            dragX,
-            onClickPaid,
-            onClickHide
+            _progress: any,
+            _dragX: any,
+            onClickPaid: any,
+            onClickHide: any
         ) => {
             return (
                 <View
@@ -254,6 +258,8 @@ export default class SquarePosPane extends React.PureComponent<
             { element: paidOrdersButton }
         ];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         if (error) {
             return (
                 <View
@@ -361,7 +367,7 @@ export default class SquarePosPane extends React.PureComponent<
                             this.setState({ selectedIndex });
                         }}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={buttonElements}
                         selectedButtonStyle={{
                             backgroundColor: themeColor('highlight'),
                             borderRadius: 12
@@ -386,6 +392,7 @@ export default class SquarePosPane extends React.PureComponent<
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={(value: string) => {
                             updateSearch(value);
                             this.setState({

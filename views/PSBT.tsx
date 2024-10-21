@@ -31,6 +31,14 @@ interface PSBTProps {
     route: Route<'PSBT', { psbt: string }>;
 }
 
+interface PSBTDecoded {
+    inputCount?: number;
+    outputCount?: number;
+    data?: {
+        inputs?: Array<{ [key: string]: any }>;
+        outputs?: Array<{ [key: string]: any }>;
+    };
+}
 interface PSBTState {
     infoIndex: number;
     selectedIndex: number;
@@ -39,13 +47,13 @@ interface PSBTState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    psbtDecoded: any;
+    psbtDecoded?: PSBTDecoded;
 }
 
 @inject('ChannelsStore', 'TransactionsStore')
 @observer
 export default class PSBT extends React.Component<PSBTProps, PSBTState> {
-    state = {
+    state: PSBTState = {
         infoIndex: 0,
         selectedIndex: 0,
         fundedPsbt: '',
@@ -53,7 +61,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        psbtDecoded: null
+        psbtDecoded: undefined
     };
 
     UNSAFE_componentWillMount(): void {
@@ -176,6 +184,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         const infoButtons = [{ element: qrButton }, { element: infoButton }];
 
+        const infoButtonsElements = infoButtons.map((btn) => btn.element());
+
         const singleButton = () => (
             <Text
                 style={{
@@ -221,6 +231,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             { element: bcurButton },
             { element: bbqrButton }
         ];
+
+        const qrButtonElements = qrButtons.map((btn) => btn.element());
 
         return (
             <Screen>
@@ -293,7 +305,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                     this.setState({ infoIndex });
                                 }}
                                 selectedIndex={infoIndex}
-                                buttons={infoButtons}
+                                buttons={infoButtonsElements}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12
@@ -315,7 +327,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                             this.setState({ selectedIndex });
                                         }}
                                         selectedIndex={selectedIndex}
-                                        buttons={qrButtons}
+                                        buttons={qrButtonElements}
                                         selectedButtonStyle={{
                                             backgroundColor:
                                                 themeColor('highlight'),
@@ -435,21 +447,21 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                         'views.PSBT.inputCount'
                                                     )}
                                                     value={
-                                                        psbtDecoded.inputCount
+                                                        psbtDecoded?.inputCount
                                                     }
                                                 />
                                             )}
-                                            {psbtDecoded.outputCount && (
+                                            {psbtDecoded?.outputCount && (
                                                 <KeyValue
                                                     keyValue={localeString(
                                                         'views.PSBT.outputCount'
                                                     )}
                                                     value={
-                                                        psbtDecoded.outputCount
+                                                        psbtDecoded?.outputCount
                                                     }
                                                 />
                                             )}
-                                            {psbtDecoded.data?.inputs?.map(
+                                            {psbtDecoded?.data?.inputs?.map(
                                                 (input: any, index: number) => (
                                                     <View
                                                         key={`input-${index}`}

@@ -292,9 +292,11 @@ export default class TransactionsStore {
             outputs[addr] = Number(amount);
         }
 
-        additional_outputs.map((output) => {
-            outputs[output.address] = Number(output.satAmount);
-        });
+        if (additional_outputs) {
+            additional_outputs.map((output) => {
+                outputs[output.address] = Number(output.satAmount);
+            });
+        }
 
         const fundPsbtRequest = {
             raw: {
@@ -359,7 +361,8 @@ export default class TransactionsStore {
             (BackendUtils.isLNDBased() &&
                 transactionRequest.utxos &&
                 transactionRequest.utxos.length > 0) ||
-            transactionRequest?.additional_outputs?.length > 0
+            (transactionRequest?.additional_outputs?.length &&
+                transactionRequest?.additional_outputs?.length > 0)
         ) {
             return this.sendCoinsLNDCoinControl(transactionRequest);
         }

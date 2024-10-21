@@ -20,7 +20,7 @@ interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
     amount?: string;
     locked?: boolean;
-    title: string;
+    title?: string;
     hideConversion?: boolean;
     hideUnitChangeButton?: boolean;
     FiatStore?: FiatStore;

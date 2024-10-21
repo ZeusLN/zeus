@@ -60,7 +60,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         const { settings } = SettingsStore;
         const disableTips: boolean =
-            settings && settings.pos && settings.pos.disableTips;
+            (settings && settings.pos && settings.pos.disableTips) || false;
 
         this.state = {
             order,
@@ -244,6 +244,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             { element: thirtyPercentButton },
             { element: customButton }
         ];
+
+        const buttonElements = buttons.map((btn) => btn.element());
 
         // sats
         // total amount is subtotal + tip + tax
@@ -626,7 +628,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     this.setState({ selectedIndex });
                                 }}
                                 selectedIndex={selectedIndex}
-                                buttons={buttons}
+                                buttons={buttonElements}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12
