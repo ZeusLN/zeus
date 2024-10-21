@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Vill du kopiera ditt 24-ords seed till ditt urklipp?",
     "views.Settings.Seed.dangerousText2": "Detta är FARLIGT. Din seed kan läsas av andra program som du öppnar. Fortsätt med försiktighet.",
     "views.Settings.Seed.dangerousButton": "Kopiera seed till urklipp är farligt",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Inbäddad nod",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Sökväg",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Lägg till peer",
