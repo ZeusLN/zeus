@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Paramètres de confidentialité",
     "views.Settings.Payments.title": "Paramètres de paiement",
     "views.Settings.Payments.defaultFeeLimit": "Limite de frais par défaut",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Délai d'attente (secondes)",
     "views.Settings.Payments.preferredMempoolRate": "Taux de Mempool préféré",
     "views.Settings.Payments.feeLimitMethodExplainer": "La méthode de limite de frais sera défini par défaut pour les montants allant jusqu'à 1000 sats et pourcentage pour des montants supérieurs à 1000 sats. Vous pourrez cependant modifier la méthode et les valeurs à utiliser, dans la section Paramètres de la vue de la demande de paiement.",
