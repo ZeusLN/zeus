@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Ρυθμίσεις Ιδιωτικότητας",
     "views.Settings.Payments.title": "Ρυθμίσεις πληρωμών",
     "views.Settings.Payments.defaultFeeLimit": "Προκαθορισμένο Όριο Τελών",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (δευτερόλεπτα)",
     "views.Settings.Payments.preferredMempoolRate": "Προτιμώμενα τέλη Mempool",
     "views.Settings.Payments.feeLimitMethodExplainer": "Η μέθοδος ορίου τελών είναι εξ ορισμού σταθερή για ποσά έως 1000 sats και ποσοστιαία για ποσά μεγαλύτερα από 1000 sats. Ωστόσο, μπορείτε να αλλάξετε τη μέθοδο και τις τιμές που θα χρησιμοποιηθούν, στην ενότητα Ρυθμίσεις της προβολής Αίτησης πληρωμής.",
