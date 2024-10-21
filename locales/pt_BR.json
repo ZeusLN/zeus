@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Ajustes de privacidade",
     "views.Settings.Payments.title": "Ajustes de pagamentos",
     "views.Settings.Payments.defaultFeeLimit": "Limite de taxa padrão",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Tempo máximo (segundos)",
     "views.Settings.Payments.preferredMempoolRate": "Taxa preferida de mempool",
     "views.Settings.Payments.feeLimitMethodExplainer": "O método de limite de taxa será o padrão para fixar valores de até 1000 SATs e porcentagem de valores superiores a 1000 SATs. Você poderá alterar qual método e valores a serem usados, na seção de configurações da visualização de solicitação de pagamento",
