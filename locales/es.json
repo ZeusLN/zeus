@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "¿Quieres copiar tu semilla de 24 palabras a tu portapapeles?",
     "views.Settings.Seed.dangerousText2": "Esto es PELIGROSO. Su semilla puede ser leída por otras aplicaciones que abra. Proceda con precaución.",
     "views.Settings.Seed.dangerousButton": "Copiar peligrosamente la semilla al portapapeles",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Nodo integrado",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Búsqueda de rutas",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Agregar pares",
