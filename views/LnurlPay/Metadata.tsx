@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, Image, View } from 'react-native';
+import { Text, Image, View, ScrollView } from 'react-native';
 
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -26,33 +26,34 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
             .map(([typ, content]: any) => `data:${typ},${content}`)[0];
 
         return (
-            <View
-                style={{
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center'
-                }}
-                keyboardShouldPersistTaps="handled"
-            >
-                {image ? (
-                    <Image
-                        style={{
-                            width: 90,
-                            height: 90,
-                            marginBottom: 10
-                        }}
-                        source={{ uri: image }}
-                    />
-                ) : null}
-                <Text
+            <ScrollView keyboardShouldPersistTaps="handled">
+                <View
                     style={{
-                        color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center'
                     }}
                 >
-                    {text}
-                </Text>
-            </View>
+                    {image ? (
+                        <Image
+                            style={{
+                                width: 90,
+                                height: 90,
+                                marginBottom: 10
+                            }}
+                            source={{ uri: image }}
+                        />
+                    ) : null}
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {text}
+                    </Text>
+                </View>
+            </ScrollView>
         );
     }
 }

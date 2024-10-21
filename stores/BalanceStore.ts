@@ -13,7 +13,7 @@ export default class BalanceStore {
     @observable public loadingBlockchainBalance = false;
     @observable public loadingLightningBalance = false;
     @observable public error = false;
-    @observable public pendingOpenBalance: number | string;
+    @observable public pendingOpenBalance: number | string | any;
     @observable public lightningBalance: number | string;
     @observable public otherAccounts: any = {};
     settingsStore: SettingsStore;

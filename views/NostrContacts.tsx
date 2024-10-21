@@ -137,7 +137,7 @@ export default class NostrContacts extends React.Component<
 
                     let latestContactEvent: any;
 
-                    eventReceived.forEach((content) => {
+                    eventReceived.forEach((content: any) => {
                         if (
                             !latestContactEvent ||
                             content.created_at > latestContactEvent.created_at

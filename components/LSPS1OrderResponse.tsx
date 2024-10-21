@@ -21,9 +21,9 @@ import { ChannelItem } from './Channels/ChannelItem';
 interface LSPS1OrderResponseProps {
     navigation: any;
     orderResponse: any;
-    InvoicesStore: InvoicesStore;
-    NodeInfoStore: NodeInfoStore;
-    FiatStore: FiatStore;
+    InvoicesStore?: InvoicesStore;
+    NodeInfoStore?: NodeInfoStore;
+    FiatStore?: FiatStore;
     orderView: boolean;
 }
 
@@ -31,7 +31,7 @@ interface LSPS1OrderResponseProps {
 @observer
 export default class LSPS1OrderResponse extends React.Component<
     LSPS1OrderResponseProps,
-    null
+    {}
 > {
     render() {
         const {
@@ -42,7 +42,7 @@ export default class LSPS1OrderResponse extends React.Component<
             orderView,
             navigation
         } = this.props;
-        const { testnet } = NodeInfoStore;
+        const { testnet } = NodeInfoStore!;
         const payment = orderResponse?.payment;
         const channel = orderResponse?.channel;
         return (
@@ -108,7 +108,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 keyValue={localeString(
                                     'views.LSPS1.channelExpiryBlocks'
                                 )}
-                                value={FiatStore.numberWithCommas(
+                                value={FiatStore!.numberWithCommas(
                                     orderResponse?.channel_expiry_blocks
                                 )}
                             />
@@ -460,11 +460,13 @@ export default class LSPS1OrderResponse extends React.Component<
                                                 paddingVertical: 20
                                             }}
                                             onPress={() => {
-                                                InvoicesStore.getPayReq(
-                                                    payment.bolt11?.invoice ||
-                                                        payment.lightning_invoice ||
-                                                        payment.bolt11_invoice
-                                                )
+                                                InvoicesStore!
+                                                    .getPayReq(
+                                                        payment.bolt11
+                                                            ?.invoice ||
+                                                            payment.lightning_invoice ||
+                                                            payment.bolt11_invoice
+                                                    )
                                                     .then(() => {
                                                         navigation.navigate(
                                                             'PaymentRequest',

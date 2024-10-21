@@ -14,21 +14,19 @@ import { Row } from '../../components/layout/Row';
 import BalanceStore from '../../stores/BalanceStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import Add from '../../assets/images/SVG/Add.svg';
-import Filter from '../../assets/images/SVG/Filter On.svg';
+const Add = require('../../assets/images/SVG/Add.svg');
+const Filter = require('../../assets/images/SVG/Filter On.svg');
 
 interface AccountsProps {
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     UTXOsStore: UTXOsStore;
     UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
     route: Route<
         'Accounts',
         {
@@ -50,7 +48,7 @@ interface AccountsState {
     editMode: boolean;
 }
 
-@inject('BalanceStore', 'UTXOsStore', 'UnitsStore', 'SettingsStore')
+@inject('BalanceStore', 'UTXOsStore', 'UnitsStore')
 @observer
 export default class Accounts extends React.Component<
     AccountsProps,
@@ -96,13 +94,7 @@ export default class Accounts extends React.Component<
     }
 
     render() {
-        const {
-            BalanceStore,
-            UnitsStore,
-            UTXOsStore,
-            SettingsStore,
-            navigation
-        } = this.props;
+        const { BalanceStore, UnitsStore, UTXOsStore, navigation } = this.props;
         const { value, amount, lightning, offer, locked, editMode } =
             this.state;
         const { loadingAccounts, accounts } = UTXOsStore;
@@ -147,7 +139,9 @@ export default class Accounts extends React.Component<
                         style: { color: themeColor('text') }
                     }}
                     rightComponent={
-                        value ? null : (
+                        value ? (
+                            <></>
+                        ) : (
                             <Row>
                                 {accounts.length > 0 && <FilterButton />}
                                 <AddButton />
@@ -162,18 +156,25 @@ export default class Accounts extends React.Component<
                         navigation={navigation}
                         BalanceStore={BalanceStore}
                         UnitsStore={UnitsStore}
-                        SettingsStore={SettingsStore}
                         onRefresh={async () =>
                             await Promise.all(
                                 BackendUtils.supportsAccounts()
                                     ? [
-                                          BalanceStore.getBlockchainBalance(),
-                                          BalanceStore.getLightningBalance(),
+                                          BalanceStore.getBlockchainBalance(
+                                              true,
+                                              false
+                                          ),
+                                          BalanceStore.getLightningBalance(
+                                              true
+                                          ),
                                           UTXOsStore.listAccounts()
                                       ]
                                     : [
-                                          BalanceStore.getBlockchainBalance(),
-                                          BalanceStore.getLightningBalance()
+                                          BalanceStore.getBlockchainBalance(
+                                              true,
+                                              false
+                                          ),
+                                          BalanceStore.getLightningBalance(true)
                                       ]
                             )
                         }

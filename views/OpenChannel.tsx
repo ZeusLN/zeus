@@ -380,7 +380,7 @@ export default class OpenChannel extends React.Component<
                             </View>
                         </View>
                     }
-                    rightComponent={ScanButton}
+                    rightComponent={<ScanButton />}
                     navigation={navigation}
                 />
                 <ScrollView

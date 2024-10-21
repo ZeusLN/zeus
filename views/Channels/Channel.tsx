@@ -42,7 +42,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import ContactStore from '../../stores/ContactStore';
 
+// @ts-ignore:next-line
 import Edit from '../../assets/images/SVG/Edit.svg';
+// @ts-ignore:next-line
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 
 interface ChannelProps {
@@ -90,7 +92,7 @@ export default class ChannelView extends React.Component<
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
-        return contacts.find((contact) => contact.pubkey.includes(pubkey));
+        return contacts.find((contact: any) => contact.pubkey.includes(pubkey));
     };
 
     renderContactLink = (remotePubkey: string) => {
@@ -150,11 +152,13 @@ export default class ChannelView extends React.Component<
         }
 
         const streamingCall = await ChannelsStore.closeChannel(
-            channelPoint ? { funding_txid_str, output_index } : null,
-            channelId ? channelId : null,
-            satPerVbyte ? satPerVbyte : null,
-            forceClose,
-            deliveryAddress ? deliveryAddress : null
+            funding_txid_str && output_index
+                ? { funding_txid_str, output_index }
+                : undefined,
+            channelId ? channelId : undefined,
+            satPerVbyte ? satPerVbyte : undefined,
+            forceClose || false,
+            deliveryAddress ? deliveryAddress : undefined
         );
 
         if (implementation === 'lightning-node-connect') {
@@ -283,16 +287,6 @@ export default class ChannelView extends React.Component<
             </TouchableOpacity>
         );
 
-        const rightComponent = () => {
-            if (
-                editableFees &&
-                this.props.SettingsStore.implementation !== 'embedded-lnd'
-            ) {
-                return <EditFees />;
-            }
-            return null;
-        };
-
         return (
             <Screen>
                 <Header
@@ -300,7 +294,15 @@ export default class ChannelView extends React.Component<
                     onBack={() => {
                         ChannelsStore.clearCloseChannelErr();
                     }}
-                    rightComponent={rightComponent}
+                    rightComponent={
+                        editableFees &&
+                        this.props.SettingsStore.implementation !==
+                            'embedded-lnd' ? (
+                            <EditFees />
+                        ) : (
+                            <></>
+                        )
+                    }
                     placement="right"
                     navigation={navigation}
                 />
@@ -316,7 +318,7 @@ export default class ChannelView extends React.Component<
                                 ...styles.alias
                             }}
                         >
-                            {peerDisplay}
+                            {`${peerDisplay}`}
                         </Text>
                         {remotePubkey && (
                             <TouchableOpacity
@@ -334,13 +336,19 @@ export default class ChannelView extends React.Component<
                                         ...styles.pubkey
                                     }}
                                 >
-                                    {PrivacyUtils.sensitiveValue(
-                                        remotePubkey
-                                    ).slice(0, 6) +
-                                        '...' +
-                                        PrivacyUtils.sensitiveValue(
-                                            remotePubkey
-                                        ).slice(-6)}
+                                    {remotePubkey
+                                        ? (() => {
+                                              const maskedPubkey: string | any =
+                                                  PrivacyUtils.sensitiveValue(
+                                                      remotePubkey
+                                                  );
+                                              return (
+                                                  maskedPubkey.slice(0, 6) +
+                                                  '...' +
+                                                  maskedPubkey.slice(-6)
+                                              );
+                                          })()
+                                        : ''}
                                 </Text>
                             </TouchableOpacity>
                         )}

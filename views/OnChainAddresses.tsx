@@ -122,7 +122,7 @@ const AddressGroup = (props: any) => {
                 </ListItem.Content>
             </ListItem>
             {!isCollapsed &&
-                addressGroup.addresses.map((address) => (
+                addressGroup.addresses.map((address: Address) => (
                     <ListItem
                         key={`address-${address.address}`}
                         containerStyle={{
@@ -246,7 +246,7 @@ export default class OnChainAddresses extends React.Component<
             !loadingAddressesError
         ) {
             if (sortBy === SortBy.creationTimeAscending) {
-                accounts?.forEach((account) =>
+                accounts?.forEach((account: Account) =>
                     account.addresses.sort(
                         (a, b) =>
                             Number(a.derivation_path.split('/').at(-1)) -
@@ -254,7 +254,7 @@ export default class OnChainAddresses extends React.Component<
                     )
                 );
             } else if (sortBy === SortBy.creationTimeDescending) {
-                accounts?.forEach((account) =>
+                accounts?.forEach((account: Account) =>
                     account.addresses.sort(
                         (a, b) =>
                             Number(b.derivation_path.split('/').at(-1)) -
@@ -262,13 +262,13 @@ export default class OnChainAddresses extends React.Component<
                     )
                 );
             } else if (sortBy === SortBy.balanceAscending) {
-                accounts?.forEach((account) =>
+                accounts?.forEach((account: Account) =>
                     account.addresses.sort(
                         (a, b) => Number(a.balance) - Number(b.balance)
                     )
                 );
             } else if (sortBy === SortBy.balanceDescending) {
-                accounts?.forEach((account) =>
+                accounts?.forEach((account: Account) =>
                     account.addresses.sort(
                         (a, b) => Number(b.balance) - Number(a.balance)
                     )
@@ -412,7 +412,7 @@ export default class OnChainAddresses extends React.Component<
                     rightComponent={
                         !loadingAddresses &&
                         !loadingAddressesError &&
-                        !addressGroups && (
+                        !addressGroups ? (
                             <TouchableOpacity
                                 onPress={() =>
                                     navigation.navigate('Receive', {
@@ -433,7 +433,7 @@ export default class OnChainAddresses extends React.Component<
                                     style={{ alignSelf: 'center' }}
                                 />
                             </TouchableOpacity>
-                        )
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
