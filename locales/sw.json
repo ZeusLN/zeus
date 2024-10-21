@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Je, unataka kunakili maneno yako 24 ya hifadhi kwenye ubao wako wa kunakili?",
     "views.Settings.Seed.dangerousText2": "Hii NI HATARI. Maneno yako yanaweza kusomwa na programu nyingine unazofungua. Endelea kwa uangalifu.",
     "views.Settings.Seed.dangerousButton": "Nakili hatari maneno kwenye ubao wa kunakili",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Nodi iliyowekwa",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Pathfinding",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Ongeza rika",
