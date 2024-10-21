@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Setări Intimitate",
     "views.Settings.Payments.title": "Setări plăți",
     "views.Settings.Payments.defaultFeeLimit": "Limită comision implicită ",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Expirare (secunde)",
     "views.Settings.Payments.preferredMempoolRate": "Rata mempool preferată",
     "views.Settings.Payments.feeLimitMethodExplainer": "Metoda limită a taxelor va fi fixată pentru a fi fixată pentru sume de până la 1000 sats și procent pentru sume mai mari de 1000 sats. Cu toate acestea, veți putea modifica ce metodă și valori să utilizați, în secțiunea Setări din vizualizarea cererii de plată.",
