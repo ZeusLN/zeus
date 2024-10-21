@@ -249,7 +249,10 @@ export const SPEEDLOADER_KEYS = [
     }
 ];
 
-export const INTERFACE_KEYS = [
+export const INTERFACE_KEYS: {
+    key: string;
+    value: string;
+}[] = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },

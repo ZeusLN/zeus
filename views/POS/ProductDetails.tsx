@@ -39,7 +39,7 @@ interface ProductProps {
 
 interface ProductState {
     categories: Array<any>;
-    product: Product | null;
+    product: Product | any;
     isLoading: boolean;
     isExisting: boolean;
     confirmDelete: boolean;
@@ -354,7 +354,6 @@ export default class ProductDetails extends React.Component<
                                                 );
                                                 this.setValue('price', price);
                                             }}
-                                            preventUnitReset={true}
                                         />
                                         <DropdownSetting
                                             title={localeString(

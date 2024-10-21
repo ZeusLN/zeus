@@ -9,8 +9,8 @@ import SettingsStore from '../stores/SettingsStore';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface UnitToggleProps {
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
+    UnitsStore?: UnitsStore;
+    SettingsStore?: SettingsStore;
     onToggle?: () => void;
 }
 
@@ -19,8 +19,8 @@ interface UnitToggleProps {
 export default class UnitToggle extends React.Component<UnitToggleProps, {}> {
     render() {
         const { UnitsStore, SettingsStore, onToggle } = this.props;
-        const { changeUnits, units } = UnitsStore;
-        const { settings } = SettingsStore;
+        const { changeUnits, units } = UnitsStore!;
+        const { settings } = SettingsStore!;
         const { fiat } = settings;
 
         return (

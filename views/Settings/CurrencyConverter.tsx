@@ -410,8 +410,14 @@ export default class CurrencyConverter extends React.Component<
         );
 
         const getFlagEmoji = (currencyValue: string) => {
-            if (EMOJI_REPLACEMENTS[currencyValue])
-                return EMOJI_REPLACEMENTS[currencyValue];
+            if (
+                EMOJI_REPLACEMENTS[
+                    currencyValue as keyof typeof EMOJI_REPLACEMENTS
+                ]
+            )
+                return EMOJI_REPLACEMENTS[
+                    currencyValue as keyof typeof EMOJI_REPLACEMENTS
+                ];
 
             const currency = CURRENCY_KEYS.find(
                 (currency) => currency.value === currencyValue
@@ -609,7 +615,9 @@ export default class CurrencyConverter extends React.Component<
                                                         value={
                                                             inputValues[item]
                                                         }
-                                                        onChangeText={(value) =>
+                                                        onChangeText={(
+                                                            value: string
+                                                        ) =>
                                                             this.handleInputChange(
                                                                 value,
                                                                 item

@@ -20,18 +20,18 @@ import Amount from './Amount';
 import KeyValue from './KeyValue';
 
 interface FeeBreakdownProps {
-    ChannelsStore: ChannelsStore;
-    NodeInfoStore: NodeInfoStore;
-    channelId: string;
+    ChannelsStore?: ChannelsStore;
+    NodeInfoStore?: NodeInfoStore;
+    channelId: string | any;
     channelPoint: string;
-    peerDisplay?: string;
+    peerDisplay?: string | any;
     initiator?: boolean;
     isActive?: boolean;
     isClosed?: boolean;
     total_satoshis_received?: string;
     total_satoshis_sent?: string;
-    commit_weight?: number;
-    commit_fee?: number;
+    commit_weight?: number | string;
+    commit_fee?: number | string;
     csv_delay?: number;
     label?: string;
 }
@@ -59,8 +59,8 @@ export default class FeeBreakdown extends React.Component<
             csv_delay,
             label
         } = this.props;
-        const { loading, chanInfo } = ChannelsStore;
-        const { nodeInfo, testnet } = NodeInfoStore;
+        const { loading, chanInfo } = ChannelsStore!;
+        const { nodeInfo, testnet } = NodeInfoStore!;
         const { nodeId } = nodeInfo;
 
         let localPolicy, remotePolicy;

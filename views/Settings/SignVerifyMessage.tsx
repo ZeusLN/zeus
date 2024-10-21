@@ -125,6 +125,8 @@ export default class SignVerifyMessage extends React.Component<
 
         const buttons = [{ element: signButton }, { element: verifyButton }];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         return (
             <Screen>
                 <Header
@@ -146,7 +148,7 @@ export default class SignVerifyMessage extends React.Component<
                     <ButtonGroup
                         onPress={this.updateIndex}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={buttonElements}
                         selectedButtonStyle={{
                             backgroundColor: themeColor('text'),
                             borderRadius: 12
