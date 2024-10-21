@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "24 kelimelik seed'inizi panonuza kopyalamak istiyor musunuz?",
     "views.Settings.Seed.dangerousText2": "Bu TEHLİKELİDİR. Seed'iniz açtığınız diğer uygulamalar tarafından okunabilir. Dikkatle ilerleyin.",
     "views.Settings.Seed.dangerousButton": "Seed'i tehlikeli bir şekilde panoya kopyala",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Gömülü Nod",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Pathfinding",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Add peer",
