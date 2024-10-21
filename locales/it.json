@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Vuoi copiare il tuo seme di 24 parole negli appunti?",
     "views.Settings.Seed.dangerousText2": "Questo è pericoloso. Il tuo seme può essere letto da altre applicazioni che apri. Procedi con cautela.",
     "views.Settings.Seed.dangerousButton": "Copia pericolosamente semi negli appunti",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Nodo incorporato",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Pathfinding",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Aggiungi peer",
