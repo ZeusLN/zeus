@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "آیا می‌خواهید 24 واژه‌ی دانه را در بریده‌دان رونویسی کنید؟",
     "views.Settings.Seed.dangerousText2": "این خطرناک است. ممکن است کلمات بازیابی شما توسط اپ های دیگری که باز می کنید خوانده شود. با احتیاط عمل کنید.",
     "views.Settings.Seed.dangerousButton": "با پذیرش خطر، دانه در بریده‌دان رونویسی شود!",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "نود ادغام شده",
     "views.Settings.EmbeddedNode.Pathfinding.title": "مسیریابی",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Add peer",
