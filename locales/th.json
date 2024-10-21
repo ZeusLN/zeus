@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "ต้องการคัดลอกทั้งหมด 24 คำนี้หรือไม่?",
     "views.Settings.Seed.dangerousText2": "อันตรายนะ แอพอื่นอาจจะแอบอ่านข้อมูลที่คุณคัดลอกไว้ได้. โปรดระมัดระวัง",
     "views.Settings.Seed.dangerousButton": "อันตรายของการคัดลอก SEED ",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "โหนดบนเครื่องนี้",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Pathfinding",
     "views.Settings.EmbeddedNode.Peers.addPeer": "เพิ่มวงเชื่อมต่อเครือข่าย",
