@@ -78,8 +78,8 @@ interface InvoiceState {
     feeOption: string;
     maxFeePercent: string;
     timeoutSeconds: string;
-    outgoingChanId: string | undefined;
-    lastHopPubkey: string | undefined;
+    outgoingChanId: string | any;
+    lastHopPubkey: string | any;
     settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
@@ -321,12 +321,12 @@ export default class PaymentRequest extends React.Component<
         this.sendPayment({
             payment_request: paymentRequest,
             amount: satAmount ? satAmount.toString() : undefined,
-            max_parts: enableMultiPathPayment ? maxParts : null,
-            max_shard_amt: enableMultiPathPayment ? maxShardAmt : null,
-            fee_limit_sat: isLnd ? feeLimitSat : null,
-            max_fee_percent: isCLightning ? maxFeePercentFormatted : null,
-            outgoing_chan_id: outgoingChanId,
-            last_hop_pubkey: lastHopPubkey,
+            max_parts: enableMultiPathPayment ? maxParts : '16',
+            max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
+            fee_limit_sat: isLnd ? feeLimitSat : '1000',
+            max_fee_percent: isCLightning ? maxFeePercentFormatted : '5.0',
+            outgoing_chan_id: outgoingChanId ?? '',
+            last_hop_pubkey: lastHopPubkey ?? '',
             amp: enableAmp,
             timeout_seconds: timeoutSeconds
         });
@@ -375,7 +375,10 @@ export default class PaymentRequest extends React.Component<
 
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
-        const requestAmount = pay_req && pay_req.getRequestAmount;
+        const requestAmount =
+            pay_req && pay_req.getRequestAmount
+                ? pay_req.getRequestAmount
+                : undefined;
         const expiry = pay_req && pay_req.expiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;
@@ -1102,7 +1105,8 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
-                            {requestAmount >= slideToPayThreshold ? (
+                            {requestAmount &&
+                            requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
                                     onSwipeSuccess={this.triggerPayment}
                                     instructionText={localeString(

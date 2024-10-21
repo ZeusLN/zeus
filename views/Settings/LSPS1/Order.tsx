@@ -20,6 +20,8 @@ import InvoicesStore from '../../../stores/InvoicesStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
 import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
 
+import { Order } from './OrdersPane';
+
 interface OrderProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'LSPS1Order', { orderId: string; orderShouldUpdate: boolean }>;
@@ -56,7 +58,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
-                    const order = responseArray.find((response) => {
+                    const order = responseArray.find((response: any) => {
                         const decodedResponse = JSON.parse(response);
                         const result =
                             decodedResponse?.order?.result ||
@@ -128,14 +130,14 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
             });
     }
 
-    updateOrderInStorage(order) {
+    updateOrderInStorage(order: Order) {
         console.log('Updating order in encrypted storage...');
         EncryptedStorage.getItem('orderResponses')
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     let responseArray = JSON.parse(responseArrayString);
                     // Find the index of the order to be updated
-                    const index = responseArray.findIndex((response) => {
+                    const index = responseArray.findIndex((response: any) => {
                         const decodedResponse = JSON.parse(response);
                         const result =
                             decodedResponse?.order?.result ||
@@ -216,12 +218,14 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                 />
                             </View>
                         )}
-                        {order && Object.keys(order).length > 0 && (
+                        {order && Object.keys(order).length > 0 ? (
                             <LSPS1OrderResponse
                                 orderResponse={result}
                                 orderView={true}
                                 navigation={navigation}
                             />
+                        ) : (
+                            <></>
                         )}
                     </ScrollView>
                 )}

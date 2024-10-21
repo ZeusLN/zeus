@@ -27,7 +27,7 @@ interface TextInputProps {
     multiline?: boolean;
     autoFocus?: boolean;
     secureTextEntry?: boolean;
-    prefix?: string;
+    prefix?: string | number;
     prefixStyle?: any;
     suffix?: string;
     toggleUnits?: any;
@@ -35,6 +35,7 @@ interface TextInputProps {
     right?: number;
     ref?: React.Ref<TextInputRN>;
     error?: boolean;
+    onFocus?: any;
 }
 
 const TextInput = React.forwardRef<TextInputRN, TextInputProps>(

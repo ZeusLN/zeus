@@ -900,6 +900,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 backgroundColor:
                                                     themeColor('chain')
                                             }}
+                                            // @ts-ignore:next-line
                                             type="inline"
                                             containerStyle={{
                                                 backgroundColor:

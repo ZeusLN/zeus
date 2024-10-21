@@ -18,7 +18,7 @@ interface LanguageProps {
 }
 
 interface LanguageState {
-    selectedLocale: string;
+    selectedLocale: string | any;
     search: string;
     locales: any;
 }
@@ -82,6 +82,7 @@ export default class Language extends React.Component<
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
                         value={search}
                         inputStyle={{
@@ -97,6 +98,7 @@ export default class Language extends React.Component<
                             borderRadius: 15,
                             backgroundColor: themeColor('secondary')
                         }}
+                        // @ts-ignore:next-line
                         searchIcon={{
                             importantForAccessibility: 'no-hide-descendants',
                             accessibilityElementsHidden: true
@@ -134,16 +136,17 @@ export default class Language extends React.Component<
                                 </ListItem.Content>
                                 {(selectedLocale === item.key ||
                                     (!selectedLocale && item.key === 'en')) && (
-                                    <View style={{ textAlign: 'right' }}>
+                                    <View>
                                         <Icon
                                             name="check"
                                             color={themeColor('highlight')}
+                                            style={{ textAlign: 'right' }}
                                         />
                                     </View>
                                 )}
                             </ListItem>
                         )}
-                        keyExtractor={(item, index) => `${item.host}-${index}`}
+                        keyExtractor={(_, index) => index.toString()}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>

@@ -142,7 +142,7 @@ export default class PosKeypadPane extends React.PureComponent<
                     duration: 1000,
                     useNativeDriver: false
                 })
-            ]).start(),
+            ]),
             Animated.sequence([
                 Animated.timing(this.shakeAnimation, {
                     toValue: 10,
@@ -164,8 +164,8 @@ export default class PosKeypadPane extends React.PureComponent<
                     duration: 100,
                     useNativeDriver: true
                 })
-            ]).start()
-        ]);
+            ])
+        ]).start();
     };
 
     addItemAndCheckout = async () => {
@@ -241,7 +241,7 @@ export default class PosKeypadPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
-                        {FiatStore.numberWithCommas(amount)}
+                        {FiatStore?.numberWithCommas(amount)}
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {getDecimalPlaceholder(amount, units).string}
                         </Text>

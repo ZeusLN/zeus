@@ -204,9 +204,9 @@ interface WalletHeaderProps {
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     navigation: StackNavigationProp<any, any>;
-    loading: boolean;
-    title: string;
-    channels: boolean;
+    loading?: boolean;
+    title?: string;
+    channels?: boolean;
     toggle?: () => void;
 }
 
