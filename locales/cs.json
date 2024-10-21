@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Nastavení soukromí",
     "views.Settings.Payments.title": "Nastavení plateb",
     "views.Settings.Payments.defaultFeeLimit": "Výchozí limit poplatků",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Časový limit (sekundy)",
     "views.Settings.Payments.preferredMempoolRate": "Preferovaná sazba Mempool",
     "views.Settings.Payments.feeLimitMethodExplainer": "Limit poplatků se vrátí na výchozí nastavení na fixní částku z částky do 1000 sats a procenta z částky nad 1000 sats. V nastavení v části zobrazení žádosti o platbu však budete moci změnit metodu a hodnoty, které se mají použít.",

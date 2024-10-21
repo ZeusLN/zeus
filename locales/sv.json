@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Integritetsinställningar",
     "views.Settings.Payments.title": "Betalningsinställningar",
     "views.Settings.Payments.defaultFeeLimit": "Standard avgiftgräns",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (sekunder)",
     "views.Settings.Payments.preferredMempoolRate": "Önskat Mempool-pris",
     "views.Settings.Payments.feeLimitMethodExplainer": "Avgiftsgränsmetoden kommer som standard att vara fast för belopp upp till 1000 sats och procentsats för belopp större än 1000 sats. Du kommer dock att kunna ändra vilken metod och vilka värden du ska använda under Inställningar i vyn Betalningsförfrågan.",

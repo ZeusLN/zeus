@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "การตั้งค่าความเป็นส่วนตัว",
     "views.Settings.Payments.title": "ตั้งค่าธุรกรรม",
     "views.Settings.Payments.defaultFeeLimit": "จำกัดค่าธรรมเนียมเริ่มต้น",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "ขาดการเชื่อมต่อ (วินาที)",
     "views.Settings.Payments.preferredMempoolRate": "ใช้เรทค่าธรรมเนียมจาก Mempool",
     "views.Settings.Payments.feeLimitMethodExplainer": "การกำหนดค่าธรรมเนียมเริ่มต้นนั้นสามารถกำหนดสูงสุดได้ 1,000 sats และกำหนดเป็นเปอร์เซ็นเมื่อยอดสูงกว่า 1000 sats. คุณสามารถกำหนดได้ว่าจะใช้วิธีเก็บค่าธรรมเนียมแบบไหนบนหน้า ตั้งค่า ของเมนูเรียกเก็บเงิน",

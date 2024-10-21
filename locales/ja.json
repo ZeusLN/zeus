@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "プライバシー設定",
     "views.Settings.Payments.title": "ペイメント設定",
     "views.Settings.Payments.defaultFeeLimit": "デフォルト手数料上限",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (seconds)",
     "views.Settings.Payments.preferredMempoolRate": "Preferred Mempool Rate",
     "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You'll be able to change which method and values to use though, under the Settings section of the Payment Request view.",

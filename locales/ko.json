@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "개인정보 설정",
     "views.Settings.Payments.title": "결제 설정",
     "views.Settings.Payments.defaultFeeLimit": "기본 수수료 한도",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "제한 시간 (초)",
     "views.Settings.Payments.preferredMempoolRate": "선호하는 멤풀 수수료율",
     "views.Settings.Payments.feeLimitMethodExplainer": "수수료 한도 정책은 1000 사토시까지로 수수료 상한을 제한하거나, 1000 사토시 초과 금액에 대해서는 금액의 퍼센티지로 수수료를 제한할 수 있게 합니다. '결제' 메뉴의  '설정' 화면에서 고정 혹은 비율 방식을 선택하고 상한값을 설정할 수 있습니다.",

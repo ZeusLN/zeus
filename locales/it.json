@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Impostazioni della privacy",
     "views.Settings.Payments.title": "Impostazioni dei pagamenti",
     "views.Settings.Payments.defaultFeeLimit": "Limite di commissione predefinito",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Timeout (secondi)",
     "views.Settings.Payments.preferredMempoolRate": "Tasso di mempool preferito",
     "views.Settings.Payments.feeLimitMethodExplainer": "Il metodo del limite delle commissioni sarà corretto per fissarsi per importi fino a 1000 sats e percentuale per importi superiori a 1000 sats. Sarai in grado di modificare il metodo e i valori da utilizzare, nella sezione Impostazioni della visualizzazione della richiesta di pagamento.",
