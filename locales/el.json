@@ -830,6 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Θέλετε να αντιγράψετε τον σπόρο 24 λέξεων στο πρόχειρό σας;",
     "views.Settings.Seed.dangerousText2": "Αυτό είναι ΕΠΙΚΙΝΔΥΝΟ. Η κωδική φράση σας μπορεί να διαβαστεί από άλλες εφαρμογές που ανοίγετε. Προχωρήστε με προσοχή.",
     "views.Settings.Seed.dangerousButton": "Επικίνδυνη αντιγραφή κωδικής φράσης στο πρόχειρο",
+    "views.Settings.SeedRecovery.title": "Wallet recovery",
     "views.Settings.EmbeddedNode.title": "Ενσωματωμένος κόμβος",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Εύρεση διαδρομής",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Προσθήκη ομότιμου",
