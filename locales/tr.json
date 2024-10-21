@@ -742,6 +742,7 @@
     "views.Settings.Privacy.title": "Gizlilik ayarları",
     "views.Settings.Payments.title": "Ödeme ayarları",
     "views.Settings.Payments.defaultFeeLimit": "Varsayılan Ücret Limiti",
+    "views.Settings.Payments.slideToPayThreshold": "Slide to Pay Threshold",
     "views.Settings.Payments.timeoutSeconds": "Zamanaşımı (saniye)",
     "views.Settings.Payments.preferredMempoolRate": "Preferred Mempool Rate",
     "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You'll be able to change which method and values to use though, under the Settings section of the Payment Request view.",
