@@ -483,7 +483,7 @@ export const subscribeInvoices = async (): Promise<string> => {
             false
         );
         return response;
-    } catch (e) {
+    } catch (e: any) {
         throw e.message;
     }
 };

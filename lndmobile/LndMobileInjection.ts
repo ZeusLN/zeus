@@ -103,6 +103,7 @@ import {
     routerrpc,
     walletrpc
 } from '../proto/lightning';
+// @ts-ignore:next-line
 import type { WorkInfo } from './LndMobile.d.ts';
 import { OutPoint } from '../models/TransactionRequest';
 
@@ -187,7 +188,7 @@ export interface ILndMobileInjections {
             payment_request,
             amt,
             max_shard_size_msat,
-            max_parts = 1,
+            max_parts,
             fee_limit_sat,
             last_hop_pubkey,
             message,
@@ -228,7 +229,7 @@ export interface ILndMobileInjections {
         sendKeysendPaymentV2: ({
             amt,
             max_shard_size_msat,
-            max_parts = 1,
+            max_parts,
             fee_limit_sat,
             message,
             cltv_limit,
@@ -460,6 +461,7 @@ export interface ILndMobileInjections {
     };
 }
 
+// @ts-ignore:next-line
 export default {
     index: {
         initialize,
