@@ -391,9 +391,10 @@ export default class SeedRecovery extends React.PureComponent<
                         padding: 8,
                         backgroundColor: themeColor('secondary'),
                         borderRadius: 5,
-                        margin: 6,
                         marginTop: 4,
                         marginBottom: 4,
+                        marginLeft: index > 11 ? 0 : 6,
+                        marginRight: 6,
                         flexDirection: 'row',
                         maxHeight:
                             index ===
@@ -612,12 +613,7 @@ export default class SeedRecovery extends React.PureComponent<
                                         flexDirection: 'row'
                                     }}
                                 >
-                                    <View
-                                        style={{
-                                            ...styles.column,
-                                            flexDirection: 'row'
-                                        }}
-                                    >
+                                    <View style={styles.column}>
                                         {[
                                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
                                         ].map((index: number) => {
@@ -683,7 +679,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     {suggestionsTwo.map((key, index) => {
                                         return (
                                             <MnemonicWord
-                                                index={index}
+                                                index={index + 12}
                                                 word={key}
                                                 key={key}
                                             />
@@ -849,14 +845,14 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         alignItems: 'flex-start',
         alignSelf: 'center',
-        flexDirection: 'column',
+        flexDirection: 'row',
         width: '50%'
     },
     columnSuggestion: {
         marginTop: 8,
         flexWrap: 'wrap',
         alignItems: 'flex-start',
-        flexDirection: 'column',
+        flexDirection: 'row',
         width: '50%'
     },
     scb: {
