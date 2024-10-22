@@ -179,9 +179,9 @@ export default class Accounts extends React.Component<
                             )
                         }
                         refreshing={
-                            BalanceStore.loadingLightningBalance ||
-                            BalanceStore.loadingBlockchainBalance ||
-                            UTXOsStore.loadingAccounts
+                            BalanceStore?.loadingLightningBalance ||
+                            BalanceStore?.loadingBlockchainBalance ||
+                            UTXOsStore?.loadingAccounts
                         }
                         // for payment method selection
                         value={value}
