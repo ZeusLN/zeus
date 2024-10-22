@@ -122,7 +122,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         const AddButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('NodeConfiguration', {
+                    navigation.navigate('WalletConfiguration', {
                         newEntry: true,
                         index:
                             (nodes && nodes.length && Number(nodes.length)) || 0
@@ -317,7 +317,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     }}
                                                     onPress={() =>
                                                         navigation.navigate(
-                                                            'NodeConfiguration',
+                                                            'WalletConfiguration',
                                                             {
                                                                 node: cloneDeep(
                                                                     item

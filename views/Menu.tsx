@@ -222,7 +222,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             <TouchableOpacity
                                 style={styles.columnField}
                                 onPress={() =>
-                                    navigation.navigate('NodeConfiguration', {
+                                    navigation.navigate('WalletConfiguration', {
                                         newEntry: true,
                                         index: 0
                                     })

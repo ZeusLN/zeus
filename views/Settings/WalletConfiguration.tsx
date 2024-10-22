@@ -59,11 +59,11 @@ import {
     createLndWallet
 } from '../../utils/LndMobileUtils';
 
-interface NodeConfigurationProps {
+interface WalletConfigurationProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     route: Route<
-        'NodeConfiguration',
+        'WalletConfiguration',
         {
             node: Node;
             index: any;
@@ -76,7 +76,7 @@ interface NodeConfigurationProps {
     >;
 }
 
-interface NodeConfigurationState {
+interface WalletConfigurationState {
     node: Node | null;
     nickname: string; //
     host: string; // lnd, c-lightning-REST
@@ -128,11 +128,11 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
 
 @inject('SettingsStore')
 @observer
-export default class NodeConfiguration extends React.Component<
-    NodeConfigurationProps,
-    NodeConfigurationState
+export default class WalletConfiguration extends React.Component<
+    WalletConfigurationProps,
+    WalletConfigurationState
 > {
-    state: NodeConfigurationState = {
+    state: WalletConfigurationState = {
         node: null,
         nickname: '',
         dismissCustodialWarning: false,
@@ -299,7 +299,7 @@ export default class NodeConfiguration extends React.Component<
         this.initFromProps(nextProps);
     }
 
-    async initFromProps(props: NodeConfigurationProps) {
+    async initFromProps(props: WalletConfigurationProps) {
         const { route } = props;
 
         const node = route.params.node ?? this.state.node;
@@ -381,7 +381,7 @@ export default class NodeConfiguration extends React.Component<
         }
     }
 
-    saveNodeConfiguration = (recoveryCipherSeed?: string) => {
+    saveWalletConfiguration = (recoveryCipherSeed?: string) => {
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
@@ -542,7 +542,7 @@ export default class NodeConfiguration extends React.Component<
             photo
         };
 
-        navigation.navigate('NodeConfiguration', {
+        navigation.navigate('WalletConfiguration', {
             node,
             newEntry: true,
             saved: false,
@@ -594,7 +594,7 @@ export default class NodeConfiguration extends React.Component<
             : undefined;
     }
 
-    setNodeConfigurationAsActive = () => {
+    setWalletConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
         const { index } = this.state;
@@ -638,7 +638,7 @@ export default class NodeConfiguration extends React.Component<
                 creatingWallet: false
             });
 
-            this.saveNodeConfiguration(recoveryCipherSeed);
+            this.saveWalletConfiguration(recoveryCipherSeed);
         } else {
             this.setState({
                 creatingWallet: false,
@@ -972,7 +972,7 @@ export default class NodeConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.certificateUnderstand'
                                             )}
                                             onPress={() => {
-                                                this.saveNodeConfiguration();
+                                                this.saveWalletConfiguration();
                                                 this.setState({
                                                     showCertModal: false
                                                 });
@@ -1809,7 +1809,7 @@ export default class NodeConfiguration extends React.Component<
                                                 showCertModal: true
                                             });
                                         } else {
-                                            this.saveNodeConfiguration();
+                                            this.saveWalletConfiguration();
                                         }
                                     }}
                                     // disable save button if no creds passed
@@ -1843,7 +1843,7 @@ export default class NodeConfiguration extends React.Component<
                                     'views.Settings.AddEditNode.setNodeActive'
                                 )}
                                 onPress={() =>
-                                    this.setNodeConfigurationAsActive()
+                                    this.setWalletConfigurationAsActive()
                                 }
                                 disabled={loading}
                             />
