@@ -158,7 +158,7 @@ export default class EmbeddedLND extends LND {
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
-        await decodePayReq(urlParams && urlParams[0]);
+        await decodePayReq((urlParams && urlParams[0]) || '');
     payLightningInvoice = async (data: any) => {
         const sendPaymentReq = {
             payment_request: data.payment_request,
@@ -216,8 +216,8 @@ export default class EmbeddedLND extends LND {
     };
 
     getNodeInfo = async (urlParams?: Array<string>) =>
-        await getNodeInfo(urlParams[0]);
-    signMessage = async (msg: Uint8Array) => {
+        await getNodeInfo((urlParams && urlParams[0]) || '');
+    signMessage = async (msg: any) => {
         return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
     };
     verifyMessage = async (data: any) => {
@@ -230,7 +230,7 @@ export default class EmbeddedLND extends LND {
 
     // getFees = () => N/A;
     // setFees = () => N/A;
-    getRoutes = async (urlParams?: Array<string>) =>
+    getRoutes = async (urlParams?: Array<any>) =>
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
     // // Coin Control

@@ -192,7 +192,7 @@ export default class LightningNodeConnect {
             })
             .then((data: walletrpc.AddrResponse) => snakeize(data));
     openChannelSync = async (data: OpenChannelRequest) => {
-        let request: lnrpc.OpenChannelRequest = {
+        let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
             local_funding_amount: data.local_funding_amount || 0,
@@ -226,7 +226,7 @@ export default class LightningNodeConnect {
     };
 
     openChannelStream = (data: OpenChannelRequest) => {
-        let request: lnrpc.OpenChannelRequest = {
+        let request: any = {
             private: data.privateChannel || false,
             scid_alias: data.scidAlias,
             local_funding_amount: data.local_funding_amount,
@@ -397,7 +397,7 @@ export default class LightningNodeConnect {
             })
             .then((data: lnrpc.QueryRoutesResponse) => snakeize(data));
     getForwardingHistory = async (hours = 24) => {
-        const req: lnrpc.ForwardingHistoryRequest = {
+        const req: any = {
             numMaxEvents: 10000000,
             startTime: Math.round(
                 new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
@@ -422,13 +422,13 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .finalizePsbt(req)
             .then((data: walletrpc.FinalizePsbtResponse) => snakeize(data));
-    publishTransaction = async (req: walletrpc.Transaction) => {
+    publishTransaction = async (req: any) => {
         if (req.tx_hex) req.tx_hex = Base64Utils.hexToBase64(req.tx_hex);
         return await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: walletrpc.PublishResponse) => snakeize(data));
     };
-    fundingStateStep = async (req: lnrpc.FundingTransitionMsg) => {
+    fundingStateStep = async (req: any) => {
         // Finalize
         if (req.psbt_finalize?.final_raw_tx)
             req.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
@@ -481,7 +481,7 @@ export default class LightningNodeConnect {
                 .digest()
         };
     };
-    lookupInvoice = async (data: lnrpc.PaymentHash) =>
+    lookupInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
             .lookupInvoice({ r_hash: Base64Utils.hexToBase64(data.r_hash) })
             .then((data: lnrpc.Invoice) => snakeize(data));

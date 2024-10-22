@@ -26,10 +26,8 @@ export default class Channel extends BaseModel {
     closing: any;
     blocks_til_maturity: any;
     chain_hash: string;
-    closeHeight: any;
     closing_tx_hash: string;
     closing_txid: string;
-    closeType: any;
     settled_balance: any;
     time_locked_balance: any;
     num_updates: string;
