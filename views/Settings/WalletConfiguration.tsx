@@ -770,7 +770,7 @@ export default class WalletConfiguration extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Settings.AddEditNode.walletConfig'
+                            'views.Settings.WalletConfiguration.title'
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
