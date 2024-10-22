@@ -229,7 +229,7 @@ const Intro: React.FC<IntroProps> = (props) => {
                                 title={localeString(
                                     'views.Intro.advancedSetUp'
                                 )}
-                                onPress={() => navigation.navigate('Settings')}
+                                onPress={() => navigation.navigate('Menu')}
                                 secondary
                             />
                         </View>
