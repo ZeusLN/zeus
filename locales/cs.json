@@ -830,7 +830,7 @@
     "views.Settings.Seed.dangerousText1": "Chcete zkopírovat váš 24slovný seed do schránky?",
     "views.Settings.Seed.dangerousText2": "Tohle je NEBEZPEČNÉ. Váš seed mohou přečíst další aplikace. Postupujte opatrně.",
     "views.Settings.Seed.dangerousButton": "Nebezpečně zkopírovat seed do schránky",
-    "views.Settings.SeedRecovery.title": "Wallet recovery",
+    "views.Settings.SeedRecovery.title": "Obnova peněženky",
     "views.Settings.EmbeddedNode.title": "Vestavěný uzel",
     "views.Settings.EmbeddedNode.Pathfinding.title": "Vyhledávání cesty",
     "views.Settings.EmbeddedNode.Peers.addPeer": "Přidat peer",
