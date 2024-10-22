@@ -191,7 +191,7 @@ export default class CustodialWalletWarning extends React.Component<
                                     'views.Settings.CustodialWalletWarning.create'
                                 )}
                                 onPress={() => {
-                                    navigation.navigate('NodeConfiguration', {
+                                    navigation.navigate('WalletConfiguration', {
                                         newEntry: true,
                                         index:
                                             (nodes &&

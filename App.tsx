@@ -45,7 +45,7 @@ import ContactQR from './views/ContactQR';
 
 // Settings views
 import Settings from './views/Settings/Settings';
-import NodeConfiguration from './views/Settings/NodeConfiguration';
+import WalletConfiguration from './views/Settings/WalletConfiguration';
 import Nodes from './views/Settings/Nodes';
 import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
@@ -341,9 +341,9 @@ export default class App extends React.PureComponent {
                                                         component={Tools}
                                                     />
                                                     <Stack.Screen
-                                                        name="NodeConfiguration" // @ts-ignore:next-line
+                                                        name="WalletConfiguration" // @ts-ignore:next-line
                                                         component={
-                                                            NodeConfiguration
+                                                            WalletConfiguration
                                                         }
                                                     />
                                                     <Stack.Screen

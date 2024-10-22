@@ -154,7 +154,7 @@ export default class SetNodePicture extends React.Component<
     onChoosePicturePress = async () => {
         const { navigation } = this.props;
 
-        navigation.popTo('NodeConfiguration', {
+        navigation.popTo('WalletConfiguration', {
             photo: this.state.photo,
             saved: false
         });
