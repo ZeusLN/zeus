@@ -207,7 +207,7 @@ const handleAnything = async (
 
         if (host && port && macaroonHex) {
             return [
-                'NodeConfiguration',
+                'WalletConfiguration',
                 {
                     node: {
                         host,
@@ -234,7 +234,7 @@ const handleAnything = async (
 
         if (host && port && rune) {
             return [
-                'NodeConfiguration',
+                'WalletConfiguration',
                 {
                     node: {
                         host,
@@ -263,7 +263,7 @@ const handleAnything = async (
 
         if (pairingPhrase && mailboxServer) {
             return [
-                'NodeConfiguration',
+                'WalletConfiguration',
                 {
                     node: {
                         pairingPhrase,
@@ -286,7 +286,7 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         const node = ConnectionFormatUtils.processLndConnectUrl(value);
         return [
-            'NodeConfiguration',
+            'WalletConfiguration',
             {
                 node,
                 enableTor: node.host && node.host.includes('.onion'),
@@ -321,7 +321,7 @@ const handleAnything = async (
             };
         }
         return [
-            'NodeConfiguration',
+            'WalletConfiguration',
             {
                 node,
                 newEntry: true
@@ -462,7 +462,7 @@ const handleAnything = async (
                 }
 
                 return [
-                    'NodeConfiguration',
+                    'WalletConfiguration',
                     {
                         node,
                         enableTor: node.host && node.host.includes('.onion'),
