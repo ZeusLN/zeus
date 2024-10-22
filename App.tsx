@@ -78,6 +78,7 @@ import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetNodePicture from './views/Settings/SetNodePicture';
+import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -310,6 +311,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="Lockscreen"
                                                         component={Lockscreen}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ChoosePaymentMethod"
+                                                        component={
+                                                            ChoosePaymentMethod
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Accounts"

@@ -30,6 +30,7 @@ interface LightningSwipeableRowProps {
     offer?: string;
     locked?: boolean;
     children: React.ReactNode;
+    disabled?: boolean;
 }
 
 export default class LightningSwipeableRow extends Component<
@@ -258,11 +259,11 @@ export default class LightningSwipeableRow extends Component<
     };
 
     render() {
-        const { children, lightning, offer, locked } = this.props;
+        const { children, lightning, offer, locked, disabled } = this.props;
         if (locked && (lightning || offer)) {
             return (
                 <TouchableOpacity
-                    onPress={() => this.fetchLnInvoice()}
+                    onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
                 >
                     {children}
