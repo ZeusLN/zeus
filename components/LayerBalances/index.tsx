@@ -29,8 +29,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-const EyeClosed = require('../../assets/images/SVG/eye_closed.svg');
-const EyeOpened = require('../../assets/images/SVG/eye_opened.svg');
+import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
+import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';

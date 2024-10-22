@@ -19,8 +19,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-const Add = require('../../assets/images/SVG/Add.svg');
-const Filter = require('../../assets/images/SVG/Filter On.svg');
+import Add from '../../assets/images/SVG/Add.svg';
+import Filter from '../../assets/images/SVG/Filter On.svg';
 
 interface AccountsProps {
     navigation: StackNavigationProp<any, any>;

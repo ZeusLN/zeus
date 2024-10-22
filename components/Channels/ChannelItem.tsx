@@ -13,8 +13,8 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import Stores from '../../stores/Stores';
 
-const ClockIcon = require('../../assets/images/SVG/Clock.svg');
-const HourglassIcon = require('../../assets/images/SVG/Hourglass.svg');
+import ClockIcon from '../../assets/images/SVG/Clock.svg';
+import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 import { localeString } from './../../utils/LocaleUtils';
 
 export function ChannelItem({

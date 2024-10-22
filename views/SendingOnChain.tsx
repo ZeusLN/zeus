@@ -17,8 +17,8 @@ import UrlUtils from '../utils/UrlUtils';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
-const ErrorIcon = require('../assets/images/SVG/ErrorIcon.svg');
-const Wordmark = require('../assets/images/SVG/wordmark-black.svg');
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
+import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 
 interface SendingOnChainProps {
     navigation: StackNavigationProp<any, any>;
