@@ -15,7 +15,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import NotesStore from '../stores/NotesStore';
 import TextInput from '../components/TextInput';
 
-const SaveIcon = require('../assets/images/SVG/Save.svg');
+import SaveIcon from '../assets/images/SVG/Save.svg';
 
 interface AddNotesProps {
     navigation: StackNavigationProp<any, any>;

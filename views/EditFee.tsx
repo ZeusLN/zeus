@@ -23,9 +23,9 @@ import Screen from '../components/Screen';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
-const MempoolSpace = require('../assets/images/affiliates/Mempool.svg');
-const Refresh = require('../assets/images/SVG/Sync.svg');
-const ErrorIcon = require('../assets/images/SVG/ErrorIcon.svg');
+import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
+import Refresh from '../assets/images/SVG/Sync.svg';
+import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 
 import FeeStore from './../stores/FeeStore';
 import SettingsStore from './../stores/SettingsStore';
