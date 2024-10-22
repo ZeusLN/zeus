@@ -15,6 +15,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Channel from '../../models/Channel';
+import ClosedChannel from '../../models/ClosedChannel';
 
 import Amount from '../../components/Amount';
 import BalanceSlider from '../../components/BalanceSlider';
@@ -53,7 +54,7 @@ interface ChannelProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     ContactStore: ContactStore;
-    route: Route<'Channel', { channel: Channel }>;
+    route: Route<'Channel', { channel: Channel | ClosedChannel }>;
 }
 
 interface ChannelState {
@@ -261,7 +262,7 @@ export default class ChannelView extends React.Component<
             zero_conf,
             getCommitmentType,
             pending_htlcs
-        } = channel;
+        } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
 
@@ -644,7 +645,7 @@ export default class ChannelView extends React.Component<
                     {BackendUtils.isLNDBased() && editableFees && (
                         <FeeBreakdown
                             isActive={isActive}
-                            isClosed={closeHeight || closeType}
+                            isClosed={!!closeHeight || !!closeType}
                             channelId={channelId}
                             peerDisplay={peerDisplay}
                             channelPoint={channel_point}
