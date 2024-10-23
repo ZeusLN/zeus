@@ -113,7 +113,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             implementation
         }: any = SettingsStore;
 
-        const implementationDisplayValue = {};
+        const implementationDisplayValue: { [key: string]: string } = {};
+
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
@@ -237,8 +238,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 selectedNode: index
                                             }).then(() => {
                                                 if (
+                                                    currentImplementation &&
                                                     currentImplementation ===
-                                                    'lightning-node-connect'
+                                                        'lightning-node-connect'
                                                 ) {
                                                     BackendUtils.disconnect();
                                                 }

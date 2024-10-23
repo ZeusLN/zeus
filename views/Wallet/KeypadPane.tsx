@@ -24,11 +24,11 @@ import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
 
 interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
-    ChannelsStore: ChannelsStore;
-    FiatStore: FiatStore;
-    NodeInfoStore: NodeInfoStore;
-    SettingsStore: SettingsStore;
-    UnitsStore: UnitsStore;
+    ChannelsStore?: ChannelsStore;
+    FiatStore?: FiatStore;
+    NodeInfoStore?: NodeInfoStore;
+    SettingsStore?: SettingsStore;
+    UnitsStore?: UnitsStore;
 }
 
 interface KeypadPaneState {
@@ -73,7 +73,7 @@ export default class KeypadPane extends React.PureComponent<
 
     async handleLsp() {
         const { lspNotConfigured } =
-            this.props.NodeInfoStore.lspNotConfigured();
+            this.props.NodeInfoStore!.lspNotConfigured();
 
         this.setState({
             lspNotConfigured
@@ -82,7 +82,7 @@ export default class KeypadPane extends React.PureComponent<
 
     appendValue = (value: string) => {
         const { amount } = this.state;
-        const { units } = this.props.UnitsStore;
+        const { units } = this.props.UnitsStore!;
 
         let newAmount;
 
@@ -215,7 +215,7 @@ export default class KeypadPane extends React.PureComponent<
                     duration: 1000,
                     useNativeDriver: false
                 })
-            ]).start(),
+            ]),
             Animated.sequence([
                 Animated.timing(this.shakeAnimation, {
                     toValue: 10,
@@ -237,8 +237,8 @@ export default class KeypadPane extends React.PureComponent<
                     duration: 100,
                     useNativeDriver: true
                 })
-            ]).start()
-        ]);
+            ])
+        ]).start();
     };
 
     render() {
@@ -281,7 +281,7 @@ export default class KeypadPane extends React.PureComponent<
                                     fontSize: 15
                                 }}
                             >
-                                {this.props.ChannelsStore.channels.length === 0
+                                {this.props.ChannelsStore?.channels.length === 0
                                     ? localeString(
                                           'views.Wallet.KeypadPane.lspExplainerFirstChannel'
                                       )
@@ -309,7 +309,6 @@ export default class KeypadPane extends React.PureComponent<
                         flex: 1,
                         flexDirection: 'column',
                         alignSelf: 'center',
-                        textAlign: 'center',
                         justifyContent: 'center',
                         zIndex: 10,
                         transform: [{ translateX: this.shakeAnimation }],
@@ -327,7 +326,7 @@ export default class KeypadPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
-                        {FiatStore.numberWithCommas(amount)}
+                        {FiatStore?.numberWithCommas(amount)}
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {getDecimalPlaceholder(amount, units).string}
                         </Text>
@@ -368,7 +367,7 @@ export default class KeypadPane extends React.PureComponent<
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore.resetUnits();
+                                            UnitsStore?.resetUnits();
                                             this.setState({
                                                 amount: '50000',
                                                 belowMinAmount: false
@@ -383,7 +382,7 @@ export default class KeypadPane extends React.PureComponent<
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore.resetUnits();
+                                            UnitsStore?.resetUnits();
                                             this.setState({
                                                 amount: '100000',
                                                 belowMinAmount: false
@@ -398,7 +397,7 @@ export default class KeypadPane extends React.PureComponent<
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore.resetUnits();
+                                            UnitsStore?.resetUnits();
                                             this.setState({
                                                 amount: '1000000',
                                                 belowMinAmount: false
@@ -413,7 +412,7 @@ export default class KeypadPane extends React.PureComponent<
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore.resetUnits();
+                                            UnitsStore?.resetUnits();
                                             this.setState({
                                                 belowMinAmount: false,
                                                 overrideBelowMinAmount: true

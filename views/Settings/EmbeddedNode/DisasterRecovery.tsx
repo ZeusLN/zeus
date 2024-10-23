@@ -441,7 +441,7 @@ export default class DisasterRecovery extends React.Component<
                                             } else {
                                                 setChannelBackupRecoveredError();
                                             }
-                                        } catch (e) {
+                                        } catch (e: any) {
                                             setChannelBackupRecoveredErrorMessage(
                                                 e
                                             );

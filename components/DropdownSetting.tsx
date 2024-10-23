@@ -13,8 +13,8 @@ import CaretDown from './../assets/images/SVG/Caret Down.svg';
 import { localeString } from './../utils/LocaleUtils';
 
 interface DropdownSettingProps {
-    title: string;
-    selectedValue: string | boolean;
+    title?: string;
+    selectedValue: string | number;
     onValueChange: (value: any) => void;
     values: Array<any>;
     disabled?: boolean;
@@ -46,9 +46,9 @@ export default class DropdownSetting extends React.Component<
             }
         );
 
-        const displayItem = values.filter(
+        const displayItem = values.find(
             (value: any) => value.value === selectedValue
-        )[0];
+        );
 
         const display = displayItem ? displayItem.key : null;
 

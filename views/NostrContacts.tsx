@@ -12,6 +12,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from 'react-native-elements';
 import EncryptedStorage from 'react-native-encrypted-storage';
+// @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -136,7 +137,7 @@ export default class NostrContacts extends React.Component<
 
                     let latestContactEvent: any;
 
-                    eventReceived.forEach((content) => {
+                    eventReceived.forEach((content: any) => {
                         if (
                             !latestContactEvent ||
                             content.created_at > latestContactEvent.created_at

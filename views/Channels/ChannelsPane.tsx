@@ -44,7 +44,7 @@ interface ChannelsProps {
     SettingsStore?: SettingsStore;
 }
 
-const ColorChangingButton = ({ onPress }) => {
+const ColorChangingButton = (onPress: any) => {
     const [forward, setForward] = useState(true);
     const animation = useRef(new Animated.Value(0)).current;
 
@@ -144,7 +144,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     pendingTimelock={
                         item.forceClose
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
-                            : null
+                            : undefined
                     }
                 />
             </TouchableHighlight>
@@ -191,8 +191,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
         const { settings } = SettingsStore!;
 
-        const lurkerMode: boolean = settings?.privacy?.lurkerMode || false;
-
         let headerString;
         let channelsData: Channel[];
         switch (channelsType) {
@@ -232,7 +230,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
-                    lurkerMode={lurkerMode}
                 />
                 {settings?.lsps1ShowPurchaseButton &&
                     (BackendUtils.supportsLSPS1customMessage() ||

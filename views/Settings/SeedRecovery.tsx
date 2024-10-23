@@ -295,116 +295,35 @@ export default class SeedRecovery extends React.PureComponent<
                 val?.toLowerCase()?.startsWith(text?.toLowerCase())
             );
 
-        const MnemonicWord = ({ index, word }) => {
+        const MnemonicWord = ({
+            index,
+            word
+        }: {
+            index: number;
+            word?: string;
+        }) => {
             return (
                 <TouchableOpacity
                     key={index}
                     onPress={() => {
                         if (showSuggestions) {
-                            this.setState(
-                                selectedIndex === 0
-                                    ? {
-                                          seed0: word
-                                      }
-                                    : selectedIndex === 1
-                                    ? {
-                                          seed1: word
-                                      }
-                                    : selectedIndex === 2
-                                    ? {
-                                          seed2: word
-                                      }
-                                    : selectedIndex === 3
-                                    ? {
-                                          seed3: word
-                                      }
-                                    : selectedIndex === 4
-                                    ? {
-                                          seed4: word
-                                      }
-                                    : selectedIndex === 5
-                                    ? {
-                                          seed5: word
-                                      }
-                                    : selectedIndex === 6
-                                    ? {
-                                          seed6: word
-                                      }
-                                    : selectedIndex === 7
-                                    ? {
-                                          seed7: word
-                                      }
-                                    : selectedIndex === 8
-                                    ? {
-                                          seed8: word
-                                      }
-                                    : selectedIndex === 9
-                                    ? {
-                                          seed9: word
-                                      }
-                                    : selectedIndex === 10
-                                    ? {
-                                          seed10: word
-                                      }
-                                    : selectedIndex === 11
-                                    ? {
-                                          seed11: word
-                                      }
-                                    : selectedIndex === 12
-                                    ? {
-                                          seed12: word
-                                      }
-                                    : selectedIndex === 13
-                                    ? {
-                                          seed13: word
-                                      }
-                                    : selectedIndex === 14
-                                    ? {
-                                          seed14: word
-                                      }
-                                    : selectedIndex === 15
-                                    ? {
-                                          seed15: word
-                                      }
-                                    : selectedIndex === 16
-                                    ? {
-                                          seed16: word
-                                      }
-                                    : selectedIndex === 17
-                                    ? {
-                                          seed17: word
-                                      }
-                                    : selectedIndex === 18
-                                    ? {
-                                          seed18: word
-                                      }
-                                    : selectedIndex === 19
-                                    ? {
-                                          seed19: word
-                                      }
-                                    : selectedIndex === 20
-                                    ? {
-                                          seed20: word
-                                      }
-                                    : selectedIndex === 21
-                                    ? {
-                                          seed21: word
-                                      }
-                                    : selectedIndex === 22
-                                    ? {
-                                          seed22: word
-                                      }
-                                    : selectedIndex === 23
-                                    ? {
-                                          seed23: word
-                                      }
-                                    : {
-                                          channelBackupsBase64: word
-                                      }
-                            );
-                            this.setState({
-                                selectedText: word
-                            });
+                            if (
+                                selectedIndex ===
+                                localeString(
+                                    'views.Settings.AddEditNode.disasterRecoveryBase64'
+                                )
+                            ) {
+                                this.setState({
+                                    channelBackupsBase64: word || '',
+                                    selectedText: word || ''
+                                });
+                            } else {
+                                // @ts-ignore:next-line
+                                this.setState({
+                                    [`seed${selectedIndex}`]: word || '',
+                                    selectedText: word || ''
+                                });
+                            }
                         } else {
                             this.setState({
                                 selectedText:
@@ -472,9 +391,10 @@ export default class SeedRecovery extends React.PureComponent<
                         padding: 8,
                         backgroundColor: themeColor('secondary'),
                         borderRadius: 5,
-                        margin: 6,
                         marginTop: 4,
                         marginBottom: 4,
+                        marginLeft: index > 11 ? 0 : 6,
+                        marginRight: 6,
                         flexDirection: 'row',
                         maxHeight:
                             index ===
@@ -600,9 +520,7 @@ export default class SeedRecovery extends React.PureComponent<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text:
-                            'Wallet recovery' ||
-                            localeString('views.Settings.Seed.title'),
+                        text: localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -643,7 +561,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                     autoCapitalize="none"
                                     autoFocus
-                                    onChangeText={(text) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             errorMsg: '',
                                             selectedText: text
@@ -668,107 +586,21 @@ export default class SeedRecovery extends React.PureComponent<
                                             });
                                         }
 
-                                        this.setState(
-                                            selectedIndex === 0
-                                                ? {
-                                                      seed0: text
-                                                  }
-                                                : selectedIndex === 1
-                                                ? {
-                                                      seed1: text
-                                                  }
-                                                : selectedIndex === 2
-                                                ? {
-                                                      seed2: text
-                                                  }
-                                                : selectedIndex === 3
-                                                ? {
-                                                      seed3: text
-                                                  }
-                                                : selectedIndex === 4
-                                                ? {
-                                                      seed4: text
-                                                  }
-                                                : selectedIndex === 5
-                                                ? {
-                                                      seed5: text
-                                                  }
-                                                : selectedIndex === 6
-                                                ? {
-                                                      seed6: text
-                                                  }
-                                                : selectedIndex === 7
-                                                ? {
-                                                      seed7: text
-                                                  }
-                                                : selectedIndex === 8
-                                                ? {
-                                                      seed8: text
-                                                  }
-                                                : selectedIndex === 9
-                                                ? {
-                                                      seed9: text
-                                                  }
-                                                : selectedIndex === 10
-                                                ? {
-                                                      seed10: text
-                                                  }
-                                                : selectedIndex === 11
-                                                ? {
-                                                      seed11: text
-                                                  }
-                                                : selectedIndex === 12
-                                                ? {
-                                                      seed12: text
-                                                  }
-                                                : selectedIndex === 13
-                                                ? {
-                                                      seed13: text
-                                                  }
-                                                : selectedIndex === 14
-                                                ? {
-                                                      seed14: text
-                                                  }
-                                                : selectedIndex === 15
-                                                ? {
-                                                      seed15: text
-                                                  }
-                                                : selectedIndex === 16
-                                                ? {
-                                                      seed16: text
-                                                  }
-                                                : selectedIndex === 17
-                                                ? {
-                                                      seed17: text
-                                                  }
-                                                : selectedIndex === 18
-                                                ? {
-                                                      seed18: text
-                                                  }
-                                                : selectedIndex === 19
-                                                ? {
-                                                      seed19: text
-                                                  }
-                                                : selectedIndex === 20
-                                                ? {
-                                                      seed20: text
-                                                  }
-                                                : selectedIndex === 21
-                                                ? {
-                                                      seed21: text
-                                                  }
-                                                : selectedIndex === 22
-                                                ? {
-                                                      seed22: text
-                                                  }
-                                                : selectedIndex === 23
-                                                ? {
-                                                      seed23: text
-                                                  }
-                                                : {
-                                                      channelBackupsBase64: text
-                                                  }
-                                        );
+                                        if (
+                                            selectedIndex ===
+                                            localeString(
+                                                'views.Settings.AddEditNode.disasterRecoveryBase64'
+                                            )
+                                        ) {
+                                            this.setState({
+                                                channelBackupsBase64: text
+                                            });
+                                        } else {
+                                            // @ts-ignore:next-line
+                                            this.setState({
+                                                [`seed${selectedIndex}`]: text
+                                            });
+                                        }
                                     }}
                                 />
                             )}
@@ -781,12 +613,7 @@ export default class SeedRecovery extends React.PureComponent<
                                         flexDirection: 'row'
                                     }}
                                 >
-                                    <View
-                                        style={{
-                                            ...styles.column,
-                                            flexDirection: 'row'
-                                        }}
-                                    >
+                                    <View style={styles.column}>
                                         {[
                                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
                                         ].map((index: number) => {
@@ -852,7 +679,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     {suggestionsTwo.map((key, index) => {
                                         return (
                                             <MnemonicWord
-                                                index={index}
+                                                index={index + 12}
                                                 word={key}
                                                 key={key}
                                             />
@@ -922,7 +749,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 errorCreatingWallet: true
                                             });
                                         }
-                                    } catch (e) {
+                                    } catch (e: any) {
                                         this.setState({
                                             errorCreatingWallet: true,
                                             errorMsg: e.toString(),
@@ -1018,14 +845,14 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         alignItems: 'flex-start',
         alignSelf: 'center',
-        flexDirection: 'column',
+        flexDirection: 'row',
         width: '50%'
     },
     columnSuggestion: {
         marginTop: 8,
         flexWrap: 'wrap',
         alignItems: 'flex-start',
-        flexDirection: 'column',
+        flexDirection: 'row',
         width: '50%'
     },
     scb: {

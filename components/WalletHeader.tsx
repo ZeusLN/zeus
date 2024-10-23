@@ -204,9 +204,9 @@ interface WalletHeaderProps {
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     navigation: StackNavigationProp<any, any>;
-    loading: boolean;
-    title: string;
-    channels: boolean;
+    loading?: boolean;
+    title?: string;
+    channels?: boolean;
     toggle?: () => void;
 }
 
@@ -406,7 +406,7 @@ export default class WalletHeader extends React.Component<
 
         const AlertButton = () => (
             <TouchableOpacity
-                onPress={() => ModalStore.toggleAlertModal(true)}
+                onPress={() => ModalStore?.toggleAlertModal(true)}
                 accessibilityLabel={localeString('general.search')}
             >
                 <Alert
@@ -630,7 +630,9 @@ export default class WalletHeader extends React.Component<
                                     <SyncBadge navigation={navigation} />
                                 </View>
                             )}
-                            {!loading && AlertStore.hasError && <AlertButton />}
+                            {!loading && AlertStore?.hasError && (
+                                <AlertButton />
+                            )}
                             {posEnabled === PosEnabled.Disabled && (
                                 <View>
                                     <NodeButton />

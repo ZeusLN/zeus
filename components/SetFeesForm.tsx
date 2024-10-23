@@ -188,7 +188,8 @@ export default class SetFeesForm extends React.Component<
                             )} (${localeString('general.sats')})`}
                         </Text>
                         <TextInput
-                            keyboardType="numeric"
+                            // @ts-ignore:next-line
+                            keyboardType="decimal"
                             placeholder={baseFeeInbound || '1'}
                             value={newBaseFeeInbound}
                             onChangeText={(text: string) =>
@@ -212,7 +213,8 @@ export default class SetFeesForm extends React.Component<
                             )} (${localeString('general.percentage')})`}
                         </Text>
                         <TextInput
-                            keyboardType="numeric"
+                            // @ts-ignore:next-line
+                            keyboardType="decimal"
                             placeholder={feeRateInbound || '1'}
                             value={newFeeRateInbound}
                             onChangeText={(text: string) =>

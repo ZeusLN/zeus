@@ -1684,17 +1684,17 @@
   resolved "https://registry.yarnpkg.com/@keystonehq/alias-sampling/-/alias-sampling-0.1.2.tgz#63af931ffe6500aef4c0d87775a5b279189abf8d"
   integrity sha512-5ukLB3bcgltgaFfQfYKYwHDUbwHicekYo53fSEa7xhVkAEqsA74kxdIwoBIURmGUtXe3EVIRm4SYlgcrt2Ri0w==
 
-"@keystonehq/bc-ur-registry@0.4.2":
-  version "0.4.2"
-  resolved "https://registry.yarnpkg.com/@keystonehq/bc-ur-registry/-/bc-ur-registry-0.4.2.tgz#5ccb02c55dc44825138d661cc6afaffa972a3f7a"
-  integrity sha512-qAuh8bfKbIQWBRpQ03bD+O7tEA9xYg0I5t41DZ+LquRPNZ3vOLLat7j/0KZF5PK2d0jW/HLM3LFoJ2k5c3UgWg==
+"@keystonehq/bc-ur-registry@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@keystonehq/bc-ur-registry/-/bc-ur-registry-0.7.0.tgz#d0322d6a5cd2796dd0e40662c47b5a95ec917d9a"
+  integrity sha512-E6NUd6Y+YYM+IcYGOEXfO9+MU1s63Qjm8brtHftvNhxbdXhGtTYIsa4FQmqZ6q34q91bMkMqUQFsQYPmIxcxfg==
   dependencies:
     "@ngraveio/bc-ur" "^1.1.5"
-    base58check "^2.0.0"
-    tslib "~2.2.0"
+    bs58check "^2.1.2"
+    tslib "^2.3.0"
 
 "@lightninglabs/lnc-core@file:zeus_modules/@lightninglabs/lnc-core":
-  version "0.3.1-alpha"
+  version "0.3.2-alpha"
 
 "@ngraveio/bc-ur@1.1.12":
   version "1.1.12"
@@ -2958,26 +2958,12 @@
     "@types/react" "*"
     "@types/react-native" "^0.70"
 
-"@types/react-native@*":
+"@types/react-native@*", "@types/react-native@0.73.0", "@types/react-native@^0.70":
   version "0.73.0"
   resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.73.0.tgz#b316be230745779814caa533360262140b0f5984"
   integrity sha512-6ZRPQrYM72qYKGWidEttRe6M5DZBEV5F+MHMHqd4TTYx0tfkcdrUFGdef6CCxY0jXU7wldvd/zA/b0A/kTeJmA==
   dependencies:
     react-native "*"
-
-"@types/react-native@0.70.6":
-  version "0.70.6"
-  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.70.6.tgz#0d1bc3014111f64f13e0df643aec2ab03f021fdb"
-  integrity sha512-ynQ2jj0km9d7dbnyKqVdQ6Nti7VQ8SLTA/KKkkS5+FnvGyvij2AOo1/xnkBR/jnSNXuzrvGVzw2n0VWfppmfKw==
-  dependencies:
-    "@types/react" "*"
-
-"@types/react-native@^0.70":
-  version "0.70.19"
-  resolved "https://registry.yarnpkg.com/@types/react-native/-/react-native-0.70.19.tgz#b4e651dcf7f49c69ff3a4c3072584cad93155582"
-  integrity sha512-c6WbyCgWTBgKKMESj/8b4w+zWcZSsCforson7UdXtXMecG3MxCinYi6ihhrHVPyUrVzORsvEzK8zg32z4pK6Sg==
-  dependencies:
-    "@types/react" "*"
 
 "@types/react-test-renderer@18.0.2":
   version "18.0.2"
@@ -2986,27 +2972,13 @@
   dependencies:
     "@types/react" "*"
 
-"@types/react@*":
-  version "18.3.2"
-  resolved "https://registry.yarnpkg.com/@types/react/-/react-18.3.2.tgz#462ae4904973bc212fa910424d901e3d137dbfcd"
-  integrity sha512-Btgg89dAnqD4vV7R3hlwOxgqobUQKgx3MmrQRi0yYbs/P0ym8XozIAlkqVilPqHQwXs4e9Tf63rrCgl58BcO4w==
+"@types/react@*", "@types/react@18.3.11":
+  version "18.3.11"
+  resolved "https://registry.yarnpkg.com/@types/react/-/react-18.3.11.tgz#9d530601ff843ee0d7030d4227ea4360236bd537"
+  integrity sha512-r6QZ069rFTjrEYgFdOck1gK7FLVsgJE7tTz0pQBczlBNUhBNk0MQH4UbnFSwjpQLMkLzgqvBBa+qGpLje16eTQ==
   dependencies:
     "@types/prop-types" "*"
     csstype "^3.0.2"
-
-"@types/react@18.0.38":
-  version "18.0.38"
-  resolved "https://registry.yarnpkg.com/@types/react/-/react-18.0.38.tgz#02a23bef8848b360a0d1dceef4432c15c21c600c"
-  integrity sha512-ExsidLLSzYj4cvaQjGnQCk4HFfVT9+EZ9XZsQ8Hsrcn8QNgXtpZ3m9vSIC2MWtx7jHictK6wYhQgGh6ic58oOw==
-  dependencies:
-    "@types/prop-types" "*"
-    "@types/scheduler" "*"
-    csstype "^3.0.2"
-
-"@types/scheduler@*":
-  version "0.23.0"
-  resolved "https://registry.yarnpkg.com/@types/scheduler/-/scheduler-0.23.0.tgz#0a6655b3e2708eaabca00b7372fafd7a792a7b09"
-  integrity sha512-YIoDCTH3Af6XM5VuwGG/QL/CJqga1Zm3NkU3HZ4ZHK2fRMPYP1VczsTUqtsf43PH/iJNVlPHAo2oWX7BSdB2Hw==
 
 "@types/semver@^7.3.12", "@types/semver@^7.5.0":
   version "7.5.8"
@@ -3702,24 +3674,12 @@ base-x@4.0.0, base-x@^4.0.0:
   resolved "https://registry.yarnpkg.com/base-x/-/base-x-4.0.0.tgz#d0e3b7753450c73f8ad2389b5c018a4af7b2224a"
   integrity sha512-FuwxlW4H5kh37X/oW59pwTzzTKRzfrrQwhmyspRM7swOEZcHtDZSCt45U6oKgtuFE+WYPblePMVIPR4RZrh/hw==
 
-base-x@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/base-x/-/base-x-1.1.0.tgz#42d3d717474f9ea02207f6d1aa1f426913eeb7ac"
-  integrity sha512-c0WLeG3K5OlL4Skz2/LVdS+MjggByKhowxQpG+JpCLA48s/bGwIDyzA1naFjywtNvp/37fLK0p0FpjTNNLLUXQ==
-
 base-x@^3.0.2:
   version "3.0.9"
   resolved "https://registry.yarnpkg.com/base-x/-/base-x-3.0.9.tgz#6349aaabb58526332de9f60995e548a53fe21320"
   integrity sha512-H7JU6iBHTal1gp56aKoaa//YUxEaAOUiydvrV/pILqIHXTtqxSkATOnDA2u+jZ/61sD+L/412+7kzXRtWukhpQ==
   dependencies:
     safe-buffer "^5.0.1"
-
-base58check@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/base58check/-/base58check-2.0.0.tgz#8046652d14bc87f063bd16be94a39134d3b61173"
-  integrity sha512-sTzsDAOC9+i2Ukr3p1Ie2DWpD117ua+vBJRDnpsSlScGwImeeiTg/IatwcFLsz9K9wEGoBLVd5ahNZzrZ/jZyg==
-  dependencies:
-    bs58 "^3.0.0"
 
 base64-js@*, base64-js@^1.0.2, base64-js@^1.2.3, base64-js@^1.3.1, base64-js@^1.5.1:
   version "1.5.1"
@@ -3968,13 +3928,6 @@ browserslist@^4.22.2, browserslist@^4.23.0:
     node-releases "^2.0.14"
     update-browserslist-db "^1.0.13"
 
-bs58@^3.0.0:
-  version "3.1.0"
-  resolved "https://registry.yarnpkg.com/bs58/-/bs58-3.1.0.tgz#d4c26388bf4804cac714141b1945aa47e5eb248e"
-  integrity sha512-9C2bRFTGy3meqO65O9jLvVTyawvhLVp4h2ECm5KlRPuV5KPDNJZcJIj3gl+aA0ENXcYrUSLCkPAeqbTcI2uWyQ==
-  dependencies:
-    base-x "^1.1.0"
-
 bs58@^4.0.0:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/bs58/-/bs58-4.0.1.tgz#be161e76c354f6f788ae4071f63f34e8c4f0a42a"
@@ -3989,7 +3942,7 @@ bs58@^5.0.0:
   dependencies:
     base-x "^4.0.0"
 
-bs58check@2.1.2:
+bs58check@2.1.2, bs58check@^2.1.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/bs58check/-/bs58check-2.1.2.tgz#53b018291228d82a5aa08e7d796fdafda54aebfc"
   integrity sha512-0TS1jicxdU09dwJMNZtVAfzPi6Q6QeN0pM1Fkzrjn+XYHvzMKPU3pHVpva+769iNVSfIYWf7LJ6WR+BuuMf8cA==
@@ -4845,7 +4798,7 @@ electron-to-chromium@^1.4.668:
   resolved "https://registry.yarnpkg.com/electron-to-chromium/-/electron-to-chromium-1.4.778.tgz#1e429f3f9cf572936693a898c0527adf6123ef76"
   integrity sha512-C6q/xcUJf/2yODRxAVCfIk4j3y3LMsD0ehiE2RQNV2cxc8XU62gR6vvYh3+etSUzlgTfil+qDHI1vubpdf0TOA==
 
-elliptic@6.5.7, elliptic@^6.5.3, elliptic@^6.5.4, elliptic@^6.5.5:
+elliptic@6.5.7, elliptic@^6.5.3, elliptic@^6.5.5, elliptic@^6.5.7:
   version "6.5.7"
   resolved "https://registry.yarnpkg.com/elliptic/-/elliptic-6.5.7.tgz#8ec4da2cb2939926a1b9a73619d768207e647c8b"
   integrity sha512-ESVCtTwiA+XhY3wyh24QqRGBoP3rEdDUl3EDUUo9tft074fi19IrdpH7hLCMMP3CIj7jb3W96rn8lt/BqIlt5Q==
@@ -7786,10 +7739,10 @@ node-abort-controller@^3.1.1:
   resolved "https://registry.yarnpkg.com/node-abort-controller/-/node-abort-controller-3.1.1.tgz#a94377e964a9a37ac3976d848cb5c765833b8548"
   integrity sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==
 
-node-addon-api@^2.0.0:
-  version "2.0.2"
-  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-2.0.2.tgz#432cfa82962ce494b132e9d72a15b29f71ff5d32"
-  integrity sha512-Ntyt4AIXyaLIuMHF6IOoTakB3K+RWxwtsHNRxllEoA6vPwP9o4866g6YWDLUdnucilZhmkxiHwHr11gAENw+QA==
+node-addon-api@^5.0.0:
+  version "5.1.0"
+  resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-5.1.0.tgz#49da1ca055e109a23d537e9de43c09cca21eb762"
+  integrity sha512-eh0GgfEkpnoWDq+VY8OyvYhFEzBk6jIYbRKdIlyTiAXIVJ8PyBaKb0rp7oDtoddbdoHWhq8wwr+XZ81F1rpNdA==
 
 node-dir@^0.1.17:
   version "0.1.17"
@@ -9355,12 +9308,12 @@ scheduler@^0.23.0:
     loose-envify "^1.1.0"
 
 secp256k1@^4.0.2:
-  version "4.0.3"
-  resolved "https://registry.yarnpkg.com/secp256k1/-/secp256k1-4.0.3.tgz#c4559ecd1b8d3c1827ed2d1b94190d69ce267303"
-  integrity sha512-NLZVf+ROMxwtEj3Xa562qgv2BK5e2WNmXPiOdVIPLgs6lyTzMvBq0aWTYMI5XCP9jZMVKOcqZLw/Wc4vDkuxhA==
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/secp256k1/-/secp256k1-4.0.4.tgz#58f0bfe1830fe777d9ca1ffc7574962a8189f8ab"
+  integrity sha512-6JfvwvjUOn8F/jUoBY2Q1v5WY5XS+rj8qSe0v8Y4ezH4InLgTEeOOPQsRll9OV429Pvo6BCHGavIyJfr3TAhsw==
   dependencies:
-    elliptic "^6.5.4"
-    node-addon-api "^2.0.0"
+    elliptic "^6.5.7"
+    node-addon-api "^5.0.0"
     node-gyp-build "^4.2.0"
 
 selfsigned@^2.4.1:
@@ -9999,10 +9952,10 @@ tslib@^2.0.1, tslib@^2.0.3:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.6.2.tgz#703ac29425e7b37cd6fd456e92404d46d1f3e4ae"
   integrity sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==
 
-tslib@~2.2.0:
-  version "2.2.0"
-  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.2.0.tgz#fb2c475977e35e241311ede2693cee1ec6698f5c"
-  integrity sha512-gS9GVHRU+RGn5KQM2rllAlR3dU6m7AcpJKdtH8gFvQiC4Otgk98XnmMU+nZenHt/+VhnBPWwgrJsyrdcw6i23w==
+tslib@^2.3.0:
+  version "2.8.0"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.8.0.tgz#d124c86c3c05a40a91e6fdea4021bd31d377971b"
+  integrity sha512-jWVzBLplnCmoaTr13V9dYbiQ99wvZRd0vNWaDRg+aVYRcjDF3nDksxFDE/+fkXnKhpnUUkmx5pK/v8mCtLVqZA==
 
 tsutils@^3.21.0:
   version "3.21.0"

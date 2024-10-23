@@ -1,5 +1,5 @@
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
-import { lnrpc } from './../proto/lightning';
+import { lnrpc, walletrpc } from './../proto/lightning';
 import Long from 'long';
 
 /**
@@ -45,6 +45,30 @@ export const newAddress = async (
 /**
  * @throws
  */
+export const newChangeAddress = async (
+    type: walletrpc.AddressType = walletrpc.AddressType.WITNESS_PUBKEY_HASH,
+    account: string = 'default'
+): Promise<walletrpc.AddrResponse> => {
+    const response = await sendCommand<
+        walletrpc.IAddrRequest,
+        walletrpc.AddrRequest,
+        walletrpc.AddrResponse
+    >({
+        request: walletrpc.AddrRequest,
+        response: walletrpc.AddrResponse,
+        method: 'WalletKitNextAddr',
+        options: {
+            type,
+            account,
+            change: true
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const walletBalance = async ({
     account
 }: {
@@ -73,7 +97,8 @@ export const sendCoins = async (
     sat: number,
     feeRate?: number,
     spend_unconfirmed?: boolean,
-    send_all?: boolean
+    send_all?: boolean,
+    outpoints?: Array<lnrpc.IOutPoint>
 ): Promise<lnrpc.SendCoinsResponse> => {
     const response = await sendCommand<
         lnrpc.ISendCoinsRequest,
@@ -83,19 +108,14 @@ export const sendCoins = async (
         request: lnrpc.SendCoinsRequest,
         response: lnrpc.SendCoinsResponse,
         method: 'SendCoins',
-        options: send_all
-            ? {
-                  addr: address,
-                  sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
-                  spend_unconfirmed,
-                  send_all
-              }
-            : {
-                  addr: address,
-                  amount: Long.fromValue(sat),
-                  sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
-                  spend_unconfirmed
-              }
+        options: {
+            addr: address,
+            amount: send_all ? undefined : Long.fromValue(sat),
+            sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
+            spend_unconfirmed,
+            send_all,
+            outpoints
+        }
     });
     return response;
 };

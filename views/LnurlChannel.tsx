@@ -54,7 +54,7 @@ export default class LnurlChannel extends React.Component<
 
         try {
             this.state = this.stateFromProps(props);
-        } catch (err) {
+        } catch (err: any) {
             this.state = {
                 domain: '',
                 privateChannel: true,

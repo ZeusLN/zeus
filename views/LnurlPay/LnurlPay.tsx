@@ -17,7 +17,6 @@ import { Row } from '../..//components/layout/Row';
 
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
-import UnitsStore from '../../stores/UnitsStore';
 
 import LnurlPayMetadata from './Metadata';
 
@@ -29,8 +28,7 @@ interface LnurlPayProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
-    UnitsStore: UnitsStore;
-    route: Route<'LnurlPay', { lnurlParams: any; amount: any }>;
+    route: Route<'LnurlPay', { lnurlParams: any; amount: any; satAmount: any }>;
 }
 
 interface LnurlPayState {
@@ -40,7 +38,7 @@ interface LnurlPayState {
     comment: string;
 }
 
-@inject('InvoicesStore', 'LnurlPayStore', 'UnitsStore')
+@inject('InvoicesStore', 'LnurlPayStore')
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -51,7 +49,7 @@ export default class LnurlPay extends React.Component<
 
         try {
             this.state = this.stateFromProps(props);
-        } catch (err) {
+        } catch (err: any) {
             this.state = {
                 amount: '',
                 satAmount: '',
@@ -69,16 +67,15 @@ export default class LnurlPay extends React.Component<
     }
 
     stateFromProps(props: LnurlPayProps) {
-        const { UnitsStore, route } = props;
-        const { lnurlParams: lnurl, amount } = route.params ?? {};
-
-        UnitsStore.resetUnits();
+        const { route } = props;
+        const { lnurlParams: lnurl, amount, satAmount } = route.params ?? {};
 
         return {
             amount:
                 amount && amount != 0
                     ? amount
                     : Math.floor(lnurl.minSendable / 1000).toString(),
+            satAmount: satAmount ? satAmount : '',
             domain: lnurl.domain,
             comment: ''
         };
@@ -90,7 +87,9 @@ export default class LnurlPay extends React.Component<
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
-        qs.amount = Number((parseFloat(satAmount) * 1000).toString());
+        qs.amount = Number(
+            (parseFloat(satAmount.toString()) * 1000).toString()
+        );
         qs.comment = comment;
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
@@ -320,7 +319,6 @@ export default class LnurlPay extends React.Component<
                                     onChangeText={(text: string) => {
                                         this.setState({ comment: text });
                                     }}
-                                    style={styles.textInput}
                                 />
                             </>
                         ) : null}
@@ -340,7 +338,6 @@ export default class LnurlPay extends React.Component<
                                 onPress={() => {
                                     this.sendValues(satAmount);
                                 }}
-                                style={styles.button}
                                 buttonStyle={{
                                     backgroundColor: themeColor('secondary')
                                 }}

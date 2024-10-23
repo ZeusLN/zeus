@@ -20,8 +20,9 @@ interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
     amount?: string;
     locked?: boolean;
-    title: string;
+    title?: string;
     hideConversion?: boolean;
+    hideUnitChangeButton?: boolean;
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
@@ -48,7 +49,7 @@ const getSatAmount = (amount: string | number) => {
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
-    let satAmount: string | number;
+    let satAmount: string | number = 0;
     switch (units) {
         case 'sats':
             satAmount = value;
@@ -59,13 +60,17 @@ const getSatAmount = (amount: string | number) => {
                 .toNumber();
             break;
         case 'fiat':
-            satAmount = rate
-                ? new BigNumber(value.toString().replace(/,/g, '.'))
-                      .dividedBy(rate)
-                      .multipliedBy(SATS_PER_BTC)
-                      .toNumber()
-                      .toFixed(0)
-                : 0;
+            satAmount =
+                rate && value
+                    ? new BigNumber(value.toString().replace(/,/g, '.'))
+                          .dividedBy(rate)
+                          .multipliedBy(SATS_PER_BTC)
+                          .toNumber()
+                          .toFixed(0)
+                    : 0;
+            break;
+        default:
+            satAmount = 0;
             break;
     }
 
@@ -124,6 +129,7 @@ export default class AmountInput extends React.Component<
             title,
             locked,
             hideConversion,
+            hideUnitChangeButton,
             FiatStore,
             UnitsStore,
             SettingsStore
@@ -178,24 +184,26 @@ export default class AmountInput extends React.Component<
                             flexDirection: 'row'
                         }}
                     />
-                    <TouchableOpacity
-                        onPress={() => !locked && this.onChangeUnits()}
-                        style={{ marginTop: 22, marginLeft: 15 }}
-                    >
-                        {UnitsStore!.getNextUnit() === 'fiat' ? (
-                            <ExchangeFiatSVG
-                                fill={themeColor('text')}
-                                width="35"
-                                height="35"
-                            />
-                        ) : (
-                            <ExchangeBitcoinSVG
-                                fill={themeColor('text')}
-                                width="35"
-                                height="35"
-                            />
-                        )}
-                    </TouchableOpacity>
+                    {!hideUnitChangeButton && (
+                        <TouchableOpacity
+                            onPress={() => !locked && this.onChangeUnits()}
+                            style={{ marginTop: 22, marginLeft: 15 }}
+                        >
+                            {UnitsStore!.getNextUnit() === 'fiat' ? (
+                                <ExchangeFiatSVG
+                                    fill={themeColor('text')}
+                                    width="35"
+                                    height="35"
+                                />
+                            ) : (
+                                <ExchangeBitcoinSVG
+                                    fill={themeColor('text')}
+                                    width="35"
+                                    height="35"
+                                />
+                            )}
+                        </TouchableOpacity>
+                    )}
                 </View>
                 {!hideConversion && (
                     <View style={{ marginBottom: 10 }}>

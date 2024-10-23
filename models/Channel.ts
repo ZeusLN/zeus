@@ -20,6 +20,16 @@ export default class Channel extends BaseModel {
     fee_per_kw: string;
     total_satoshis_received: string;
     pending_htlcs: Array<HTLC>;
+    pendingOpen: any;
+    pendingClose: any;
+    forceClose: any;
+    closing: any;
+    blocks_til_maturity: any;
+    chain_hash: string;
+    closing_tx_hash: string;
+    closing_txid: string;
+    settled_balance: any;
+    time_locked_balance: any;
     num_updates: string;
     @observable
     active: boolean;
@@ -121,7 +131,7 @@ export default class Channel extends BaseModel {
 
     @computed
     public get remotePubkey(): string {
-        return this.remote_pubkey || this.remote_node_pub;
+        return this.remote_pubkey || this.remote_node_pub || '';
     }
 
     @computed

@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-    StyleProp,
-    TextStyle,
-    ViewStyle,
-    TouchableOpacity
-} from 'react-native';
+import { StyleProp, ViewStyle, TouchableOpacity } from 'react-native';
 import { Header, TextProps } from 'react-native-elements';
 import { IconObject } from 'react-native-elements/dist/icons/Icon';
 
@@ -19,7 +14,7 @@ interface HeaderIcon extends IconObject {
     icon?: string;
     text?: string;
     color?: string;
-    style?: StyleProp<TextStyle>;
+    style?: StyleProp<ViewStyle>;
 }
 
 interface HeaderProps {
@@ -31,7 +26,7 @@ interface HeaderProps {
         | 'Close';
     centerComponent?: React.ReactElement<{}> | TextProps | HeaderIcon;
     rightComponent?: React.ReactElement<{}> | TextProps | HeaderIcon;
-    containerStyle?: ViewStyle;
+    containerStyle?: ViewStyle | any;
     placement?: 'left' | 'center' | 'right' | undefined;
     navigation?: StackNavigationProp<any, any>;
     onBack?: () => void;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import TextInput from '../components/TextInput';
 import { themeColor } from '../utils/ThemeUtils';

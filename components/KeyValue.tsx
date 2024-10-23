@@ -79,7 +79,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             );
 
         const copyText = () => {
-            Clipboard.setString(value);
+            Clipboard.setString(value.toString());
             Vibration.vibrate(50);
         };
 

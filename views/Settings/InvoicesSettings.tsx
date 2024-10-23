@@ -272,6 +272,7 @@ export default class InvoicesSettings extends React.Component<
                                 >
                                     <DropdownSetting
                                         selectedValue={timePeriod}
+                                        title="test lol"
                                         values={TIME_PERIOD_KEYS}
                                         onValueChange={async (
                                             value: string
@@ -309,7 +310,9 @@ export default class InvoicesSettings extends React.Component<
 
                                             this.setState({
                                                 timePeriod: value,
-                                                expirySeconds
+                                                expirySeconds: expirySeconds
+                                                    ? expirySeconds
+                                                    : ''
                                             });
 
                                             await updateSettings({
@@ -371,6 +374,7 @@ export default class InvoicesSettings extends React.Component<
                                         }
                                     });
                                 }}
+                                disabled={blindedPaths}
                             />
                         </>
                     )}
@@ -413,6 +417,7 @@ export default class InvoicesSettings extends React.Component<
                                         }
                                     });
                                 }}
+                                disabled={blindedPaths}
                             />
                         </>
                     )}
@@ -440,8 +445,11 @@ export default class InvoicesSettings extends React.Component<
                                 value={blindedPaths}
                                 onValueChange={async () => {
                                     this.setState({
-                                        blindedPaths: !blindedPaths
+                                        blindedPaths: !blindedPaths,
+                                        ampInvoice: false,
+                                        routeHints: false
                                     });
+
                                     await updateSettings({
                                         invoices: {
                                             addressType,
@@ -449,8 +457,8 @@ export default class InvoicesSettings extends React.Component<
                                             expiry,
                                             timePeriod,
                                             expirySeconds,
-                                            routeHints,
-                                            ampInvoice,
+                                            routeHints: false,
+                                            ampInvoice: false,
                                             blindedPaths: !blindedPaths,
                                             showCustomPreimageField
                                         }

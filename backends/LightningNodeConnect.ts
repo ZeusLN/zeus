@@ -22,6 +22,15 @@ const ADDRESS_TYPES = [
     'UNUSED_TAPROOT_PUBKEY'
 ];
 
+const NEXT_ADDR_MAP: any = {
+    WITNESS_PUBKEY_HASH: 0,
+    NESTED_PUBKEY_HASH: 1,
+    UNUSED_WITNESS_PUBKEY_HASH: 2,
+    UNUSED_NESTED_PUBKEY_HASH: 3,
+    TAPROOT_PUBKEY: 4,
+    UNUSED_TAPROOT_PUBKEY: 5
+};
+
 export default class LightningNodeConnect {
     lnc: any;
     listener: any;
@@ -76,7 +85,7 @@ export default class LightningNodeConnect {
         );
     };
     isConnected = async () => await this.lnc.isConnected();
-    disconnect = () => this.lnc.disconnect();
+    disconnect = () => this.lnc && this.lnc.disconnect();
 
     getTransactions = async () =>
         await this.lnc.lnd.lightning
@@ -120,7 +129,8 @@ export default class LightningNodeConnect {
                 sat_per_vbyte: data.sat_per_vbyte,
                 amount: data.amount,
                 spend_unconfirmed: data.spend_unconfirmed,
-                send_all: data.send_all
+                send_all: data.send_all,
+                outpoints: data.outpoints
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     sendCustomMessage = async (data: any) =>
@@ -169,13 +179,20 @@ export default class LightningNodeConnect {
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
-                type: ADDRESS_TYPES[data.type],
+                type: ADDRESS_TYPES[data.type] || data.type,
                 account: data.account || 'default'
             })
-            .then((data: lnrpc.NewAddressResponse) => snakeize(data));
-
+            .then((data: walletrpc.AddrRequest) => snakeize(data));
+    getNewChangeAddress = async (data: any) =>
+        await this.lnc.lnd.walletKit
+            .nextAddr({
+                type: NEXT_ADDR_MAP[data.type],
+                account: data.account || 'default',
+                change: true
+            })
+            .then((data: walletrpc.AddrResponse) => snakeize(data));
     openChannelSync = async (data: OpenChannelRequest) => {
-        let request: lnrpc.OpenChannelRequest = {
+        let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
             local_funding_amount: data.local_funding_amount || 0,
@@ -209,7 +226,7 @@ export default class LightningNodeConnect {
     };
 
     openChannelStream = (data: OpenChannelRequest) => {
-        let request: lnrpc.OpenChannelRequest = {
+        let request: any = {
             private: data.privateChannel || false,
             scid_alias: data.scidAlias,
             local_funding_amount: data.local_funding_amount,
@@ -297,7 +314,7 @@ export default class LightningNodeConnect {
             force: urlParams && urlParams[2]
         };
 
-        if (urlParams && urlParams[3]) {
+        if (urlParams && urlParams[3] && !urlParams[2]) {
             params.sat_per_vbyte = Number(urlParams[3]);
         }
 
@@ -380,7 +397,7 @@ export default class LightningNodeConnect {
             })
             .then((data: lnrpc.QueryRoutesResponse) => snakeize(data));
     getForwardingHistory = async (hours = 24) => {
-        const req: lnrpc.ForwardingHistoryRequest = {
+        const req: any = {
             numMaxEvents: 10000000,
             startTime: Math.round(
                 new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
@@ -405,13 +422,13 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .finalizePsbt(req)
             .then((data: walletrpc.FinalizePsbtResponse) => snakeize(data));
-    publishTransaction = async (req: walletrpc.Transaction) => {
+    publishTransaction = async (req: any) => {
         if (req.tx_hex) req.tx_hex = Base64Utils.hexToBase64(req.tx_hex);
         return await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: walletrpc.PublishResponse) => snakeize(data));
     };
-    fundingStateStep = async (req: lnrpc.FundingTransitionMsg) => {
+    fundingStateStep = async (req: any) => {
         // Finalize
         if (req.psbt_finalize?.final_raw_tx)
             req.psbt_finalize.final_raw_tx = Base64Utils.hexToBase64(
@@ -434,6 +451,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .listAccounts({})
             .then((data: walletrpc.ListAccountsResponse) => snakeize(data));
+    listAddresses = async () =>
+        await this.lnc.lnd.walletKit
+            .listAddresses({})
+            .then((data: walletrpc.ListAddressesResponse) => snakeize(data));
     importAccount = async (req: walletrpc.ImportAccountRequest) =>
         await this.lnc.lnd.walletKit
             .importAccount(req)
@@ -460,7 +481,7 @@ export default class LightningNodeConnect {
                 .digest()
         };
     };
-    lookupInvoice = async (data: lnrpc.PaymentHash) =>
+    lookupInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
             .lookupInvoice({ r_hash: Base64Utils.hexToBase64(data.r_hash) })
             .then((data: lnrpc.Invoice) => snakeize(data));
@@ -503,12 +524,14 @@ export default class LightningNodeConnect {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
 }

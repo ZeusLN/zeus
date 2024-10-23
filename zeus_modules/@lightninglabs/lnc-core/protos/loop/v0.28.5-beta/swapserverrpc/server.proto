@@ -646,3 +646,10 @@ message FetchL402Request {
 // confirm the lnd l402.
 message FetchL402Response {
 }
+
+// StaticAddressProtocolVersion represents the static address protocol version
+// the client adheres to.
+enum StaticAddressProtocolVersion {
+    // V0 is the initially released static address protocol version.
+    V0 = 0;
+}

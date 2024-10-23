@@ -292,9 +292,11 @@ export default class TransactionsStore {
             outputs[addr] = Number(amount);
         }
 
-        additional_outputs.map((output) => {
-            outputs[output.address] = Number(output.satAmount);
-        });
+        if (additional_outputs) {
+            additional_outputs.map((output) => {
+                outputs[output.address] = Number(output.satAmount);
+            });
+        }
 
         const fundPsbtRequest = {
             raw: {
@@ -339,11 +341,28 @@ export default class TransactionsStore {
         this.crafting = true;
         this.loading = true;
 
+        if (transactionRequest.send_all) {
+            delete transactionRequest.amount;
+        }
+
         if (
+            BackendUtils.isLNDBased() &&
+            transactionRequest.utxos &&
+            transactionRequest.utxos.length > 0 &&
+            transactionRequest.account === 'default'
+        ) {
+            transactionRequest.utxos.forEach((input) => {
+                const [txid_str, output_index] = input.split(':');
+                const inputs = [];
+                inputs.push({ txid_str, output_index: Number(output_index) });
+                transactionRequest.outpoints = inputs;
+            });
+        } else if (
             (BackendUtils.isLNDBased() &&
                 transactionRequest.utxos &&
                 transactionRequest.utxos.length > 0) ||
-            transactionRequest?.additional_outputs?.length > 0
+            (transactionRequest?.additional_outputs?.length &&
+                transactionRequest?.additional_outputs?.length > 0)
         ) {
             return this.sendCoinsLNDCoinControl(transactionRequest);
         }
@@ -513,7 +532,9 @@ export default class TransactionsStore {
             this.payment_error =
                 (implementation === 'embedded-lnd'
                     ? errorToUserFriendly(
-                          lnrpc.PaymentFailureReason[result.failure_reason]
+                          new Error(
+                              lnrpc.PaymentFailureReason[result.failure_reason]
+                          )
                       )
                     : errorToUserFriendly(result.failure_reason)) ||
                 errorToUserFriendly(result.payment_error);
