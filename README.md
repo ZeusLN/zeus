@@ -97,7 +97,6 @@ ZEUS is proud to be integrated on the following platforms:
 * [myNode](https://mynodebtc.com/) ([Standard guide](https://mynodebtc.com/guide/zeus), [Tor guide](https://mynodebtc.com/guide/zeus_tor))
 * [RaspiBlitz](https://github.com/rootzoll/raspiblitz)
 * [Umbrel](https://getumbrel.com/)
-* [Citadel](https://runcitadel.space/)
 
 ### Payment platforms
 * [BTCPay Server](https://btcpayserver.org/)
