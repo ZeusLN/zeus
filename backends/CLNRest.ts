@@ -272,7 +272,7 @@ export default class CLNRest {
     getNewAddress = () => this.postRequest('/v1/newaddr');
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
-        const feeRate = `${new BigNumber(data.sat_per_vbyte)
+        const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
             .times(1000)
             .toString()}perkb`;
         if (data.utxos && data.utxos.length > 0) {
@@ -412,11 +412,13 @@ export default class CLNRest {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = async () => {
         const { configs } = await this.postRequest('/v1/listconfigs');
 

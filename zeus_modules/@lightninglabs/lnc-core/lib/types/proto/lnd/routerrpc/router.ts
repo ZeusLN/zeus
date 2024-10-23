@@ -1,5 +1,6 @@
 /* eslint-disable */
 import type {
+    PaymentFailureReason,
     Failure_FailureCode,
     RouteHint,
     FeatureBit,
@@ -84,12 +85,6 @@ export interface SendPaymentRequest {
      * The fields amt and amt_msat are mutually exclusive.
      */
     amt: string;
-    /**
-     * Number of millisatoshis to send.
-     *
-     * The fields amt and amt_msat are mutually exclusive.
-     */
-    amtMsat: string;
     /** The hash to use within the payment's HTLC */
     paymentHash: Uint8Array | string;
     /**
@@ -97,8 +92,6 @@ export interface SendPaymentRequest {
      * timelock for the final hop.
      */
     finalCltvDelta: number;
-    /** An optional payment addr to be included within the last hop of the route. */
-    paymentAddr: Uint8Array | string;
     /**
      * A bare-bones invoice for a payment within the Lightning Network.  With the
      * details of the invoice, the sender has all the data necessary to send a
@@ -124,16 +117,6 @@ export interface SendPaymentRequest {
      */
     feeLimitSat: string;
     /**
-     * The maximum number of millisatoshis that will be paid as a fee of the
-     * payment. If this field is left to the default value of 0, only zero-fee
-     * routes will be considered. This usually means single hop routes connecting
-     * directly to the destination. To send the payment without a fee limit, use
-     * max int here.
-     *
-     * The fields fee_limit_sat and fee_limit_msat are mutually exclusive.
-     */
-    feeLimitMsat: string;
-    /**
      * Deprecated, use outgoing_chan_ids. The channel id of the channel that must
      * be taken to the first hop. If zero, any channel may be used (unless
      * outgoing_chan_ids are set).
@@ -142,15 +125,8 @@ export interface SendPaymentRequest {
      */
     outgoingChanId: string;
     /**
-     * The channel ids of the channels are allowed for the first hop. If empty,
-     * any channel may be used.
-     */
-    outgoingChanIds: string[];
-    /** The pubkey of the last hop of the route. If empty, any hop may be used. */
-    lastHopPubkey: Uint8Array | string;
-    /**
-     * An optional maximum total time lock for the route. This should not exceed
-     * lnd's `--max-cltv-expiry` setting. If zero, then the value of
+     * An optional maximum total time lock for the route. This should not
+     * exceed lnd's `--max-cltv-expiry` setting. If zero, then the value of
      * `--max-cltv-expiry` is enforced.
      */
     cltvLimit: number;
@@ -164,6 +140,24 @@ export interface SendPaymentRequest {
      * must be encoded as base64.
      */
     destCustomRecords: { [key: string]: Uint8Array | string };
+    /**
+     * Number of millisatoshis to send.
+     *
+     * The fields amt and amt_msat are mutually exclusive.
+     */
+    amtMsat: string;
+    /**
+     * The maximum number of millisatoshis that will be paid as a fee of the
+     * payment. If this field is left to the default value of 0, only zero-fee
+     * routes will be considered. This usually means single hop routes connecting
+     * directly to the destination. To send the payment without a fee limit, use
+     * max int here.
+     *
+     * The fields fee_limit_sat and fee_limit_msat are mutually exclusive.
+     */
+    feeLimitMsat: string;
+    /** The pubkey of the last hop of the route. If empty, any hop may be used. */
+    lastHopPubkey: Uint8Array | string;
     /** If set, circular payments to self are permitted. */
     allowSelfPayment: boolean;
     /**
@@ -185,6 +179,16 @@ export interface SendPaymentRequest {
      */
     noInflightUpdates: boolean;
     /**
+     * The channel ids of the channels are allowed for the first hop. If empty,
+     * any channel may be used.
+     */
+    outgoingChanIds: string[];
+    /**
+     * An optional payment addr to be included within the last hop of the route.
+     * This is also called payment secret in specifications (e.g. BOLT 11).
+     */
+    paymentAddr: Uint8Array | string;
+    /**
      * The largest payment split that should be attempted when making a payment if
      * splitting is necessary. Setting this value will effectively cause lnd to
      * split more aggressively, vs only when it thinks it needs to. Note that this
@@ -198,6 +202,14 @@ export interface SendPaymentRequest {
      * only, to 1 to optimize for reliability only or a value inbetween for a mix.
      */
     timePref: number;
+    /**
+     * If set, the payment loop can be interrupted by manually canceling the
+     * payment context, even before the payment timeout is reached. Note that the
+     * payment may still succeed after cancellation, as in-flight attempts can
+     * still settle afterwards. Canceling will only prevent further attempts from
+     * being sent.
+     */
+    cancelable: boolean;
 }
 
 export interface SendPaymentRequest_DestCustomRecordsEntry {
@@ -224,10 +236,37 @@ export interface TrackPaymentsRequest {
 }
 
 export interface RouteFeeRequest {
-    /** The destination once wishes to obtain a routing fee quote to. */
+    /**
+     * The destination one wishes to obtain a routing fee quote to. If set, this
+     * parameter requires the amt_sat parameter also to be set. This parameter
+     * combination triggers a graph based routing fee estimation as opposed to a
+     * payment probe based estimate in case a payment request is provided. The
+     * graph based estimation is an algorithm that is executed on the in memory
+     * graph. Hence its runtime is significantly shorter than a payment probe
+     * estimation that sends out actual payments to the network.
+     */
     dest: Uint8Array | string;
-    /** The amount one wishes to send to the target destination. */
+    /**
+     * The amount one wishes to send to the target destination. It is only to be
+     * used in combination with the dest parameter.
+     */
     amtSat: string;
+    /**
+     * A payment request of the target node that the route fee request is intended
+     * for. Its parameters are input to probe payments that estimate routing fees.
+     * The timeout parameter can be specified to set a maximum time on the probing
+     * attempt. Cannot be used in combination with dest and amt_sat.
+     */
+    paymentRequest: string;
+    /**
+     * A user preference of how long a probe payment should maximally be allowed to
+     * take, denoted in seconds. The probing payment loop is aborted if this
+     * timeout is reached. Note that the probing process itself can take longer
+     * than the timeout if the HTLC becomes delayed or stuck. Canceling the context
+     * of this call will not cancel the payment loop, the duration is only
+     * controlled by the timeout parameter.
+     */
+    timeout: number;
 }
 
 export interface RouteFeeResponse {
@@ -242,6 +281,11 @@ export interface RouteFeeResponse {
      * value.
      */
     timeLockDelay: string;
+    /**
+     * An indication whether a probing payment succeeded or whether and why it
+     * failed. FAILURE_REASON_NONE indicates success.
+     */
+    failureReason: PaymentFailureReason;
 }
 
 export interface SendToRouteRequest {
@@ -487,7 +531,10 @@ export interface BuildRouteRequest {
      * pubkey.
      */
     hopPubkeys: Uint8Array | string[];
-    /** An optional payment addr to be included within the last hop of the route. */
+    /**
+     * An optional payment addr to be included within the last hop of the route.
+     * This is also called payment secret in specifications (e.g. BOLT 11).
+     */
     paymentAddr: Uint8Array | string;
 }
 
@@ -704,7 +751,10 @@ export interface Router {
     /**
      * SendPaymentV2 attempts to route a payment described by the passed
      * PaymentRequest to the final destination. The call returns a stream of
-     * payment updates.
+     * payment updates. When using this RPC, make sure to set a fee limit, as the
+     * default routing fee limit is 0 sats. Without a non-zero fee limit only
+     * routes without fees will be attempted which often fails with
+     * FAILURE_REASON_NO_ROUTE.
      */
     sendPaymentV2(
         request?: DeepPartial<SendPaymentRequest>,
@@ -712,6 +762,7 @@ export interface Router {
         onError?: (err: Error) => void
     ): void;
     /**
+     * lncli: `trackpayment`
      * TrackPaymentV2 returns an update stream for the payment identified by the
      * payment hash.
      */
@@ -762,6 +813,7 @@ export interface Router {
         request?: DeepPartial<SendToRouteRequest>
     ): Promise<HTLCAttempt>;
     /**
+     * lncli: `resetmc`
      * ResetMissionControl clears all mission control state and starts with a clean
      * slate.
      */
@@ -769,6 +821,7 @@ export interface Router {
         request?: DeepPartial<ResetMissionControlRequest>
     ): Promise<ResetMissionControlResponse>;
     /**
+     * lncli: `querymc`
      * QueryMissionControl exposes the internal mission control state to callers.
      * It is a development feature.
      */
@@ -776,6 +829,7 @@ export interface Router {
         request?: DeepPartial<QueryMissionControlRequest>
     ): Promise<QueryMissionControlResponse>;
     /**
+     * lncli: `importmc`
      * XImportMissionControl is an experimental API that imports the state provided
      * to the internal mission control's state, using all results which are more
      * recent than our existing values. These values will only be imported
@@ -784,11 +838,15 @@ export interface Router {
     xImportMissionControl(
         request?: DeepPartial<XImportMissionControlRequest>
     ): Promise<XImportMissionControlResponse>;
-    /** GetMissionControlConfig returns mission control's current config. */
+    /**
+     * lncli: `getmccfg`
+     * GetMissionControlConfig returns mission control's current config.
+     */
     getMissionControlConfig(
         request?: DeepPartial<GetMissionControlConfigRequest>
     ): Promise<GetMissionControlConfigResponse>;
     /**
+     * lncli: `setmccfg`
      * SetMissionControlConfig will set mission control's config, if the config
      * provided is valid.
      */
@@ -796,6 +854,7 @@ export interface Router {
         request?: DeepPartial<SetMissionControlConfigRequest>
     ): Promise<SetMissionControlConfigResponse>;
     /**
+     * lncli: `queryprob`
      * Deprecated. QueryProbability returns the current success probability
      * estimate for a given node pair and amount. The call returns a zero success
      * probability if no channel is available or if the amount violates min/max
@@ -805,9 +864,14 @@ export interface Router {
         request?: DeepPartial<QueryProbabilityRequest>
     ): Promise<QueryProbabilityResponse>;
     /**
+     * lncli: `buildroute`
      * BuildRoute builds a fully specified route based on a list of hop public
      * keys. It retrieves the relevant channel policies from the graph in order to
      * calculate the correct fees and time locks.
+     * Note that LND will use its default final_cltv_delta if no value is supplied.
+     * Make sure to add the correct final_cltv_delta depending on the invoice
+     * restriction. Moreover the caller has to make sure to provide the
+     * payment_addr if the route is paying an invoice which signaled it.
      */
     buildRoute(
         request?: DeepPartial<BuildRouteRequest>
@@ -857,6 +921,7 @@ export interface Router {
         onError?: (err: Error) => void
     ): void;
     /**
+     * lncli: `updatechanstatus`
      * UpdateChanStatus attempts to manually set the state of a channel
      * (enabled, disabled, or auto). A manual "disable" request will cause the
      * channel to stay disabled until a subsequent manual request of either

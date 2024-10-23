@@ -123,7 +123,12 @@ export default class LightningAddressInfo extends React.Component<
                                             limitQualifier,
                                             fee,
                                             feeQualifier
-                                        } = feeItem;
+                                        } = feeItem as {
+                                            limitAmount: number | string;
+                                            limitQualifier: keyof typeof LIMIT_QUALIFIERS;
+                                            fee: number | string;
+                                            feeQualifier: keyof typeof FEE_QUALIFIERS;
+                                        };
 
                                         return (
                                             <KeyValue

@@ -56,6 +56,12 @@ export default class Contacts extends React.Component<
         };
     }
 
+    componentDidMount() {
+        this.props.navigation.addListener('focus', () => {
+            this.props.ContactStore?.loadContacts();
+        });
+    }
+
     displayAddress = (item: Contact) => {
         const contact = new Contact(item);
         const {
@@ -118,43 +124,43 @@ export default class Contacts extends React.Component<
 
     renderContactItem = ({ item }: { item: Contact }) => {
         const contact = new Contact(item);
+        const { hasMultiplePayableAddresses } = contact;
         return (
             <TouchableOpacity
                 onPress={() => {
-                    (contact.isSingleLnAddress &&
-                        this.state.SendScreen &&
-                        this.props.navigation.navigate('Send', {
-                            destination: item.lnAddress[0],
-                            contactName: item.name
-                        })) ||
-                        (contact.isSingleBolt12Address &&
-                            this.state.SendScreen &&
+                    if (this.state.SendScreen && !hasMultiplePayableAddresses) {
+                        if (contact.isSingleLnAddress) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.lnAddress[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleBolt12Address) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.bolt12Address[0],
                                 contactName: item.name
-                            })) ||
-                        (contact.isSingleBolt12Offer &&
-                            this.state.SendScreen &&
+                            });
+                        } else if (contact.isSingleBolt12Offer) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.bolt12Offer[0],
                                 contactName: item.name
-                            })) ||
-                        (contact.isSingleOnchainAddress &&
-                            this.state.SendScreen &&
+                            });
+                        } else if (contact.isSingleOnchainAddress) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.onchainAddress[0],
                                 contactName: item.name
-                            })) ||
-                        (contact.isSinglePubkey &&
-                            this.state.SendScreen &&
+                            });
+                        } else if (contact.isSinglePubkey) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.pubkey[0],
                                 contactName: item.name
-                            })) ||
+                            });
+                        }
+                    } else {
                         this.props.navigation.navigate('ContactDetails', {
                             contactId: item.contactId || item.id,
                             isNostrContact: false
                         });
+                    }
                 }}
             >
                 <View
@@ -208,7 +214,7 @@ export default class Contacts extends React.Component<
         const filteredContacts = contacts.filter((contact: any) => {
             const hasMatch = (field: string) =>
                 Array.isArray(contact[field])
-                    ? contact[field].some((input) =>
+                    ? contact[field].some((input: string) =>
                           input.toLowerCase().includes(search.toLowerCase())
                       )
                     : contact[field]
@@ -243,10 +249,10 @@ export default class Contacts extends React.Component<
         );
 
         const favoriteContacts = filteredContacts.filter(
-            (contact) => contact.isFavourite
+            (contact: Contact) => contact.isFavourite
         );
         const nonFavoriteContacts = filteredContacts.filter(
-            (contact) => !contact.isFavourite
+            (contact: Contact) => !contact.isFavourite
         );
 
         return (
@@ -287,6 +293,7 @@ export default class Contacts extends React.Component<
                                     placeholder={localeString(
                                         'views.Settings.Contacts.searchBar1'
                                     )}
+                                    // @ts-ignore:next-line
                                     onChangeText={this.updateSearch}
                                     value={this.state.search}
                                     inputStyle={{
@@ -303,6 +310,7 @@ export default class Contacts extends React.Component<
                                     inputContainerStyle={{
                                         backgroundColor: 'none'
                                     }}
+                                    // @ts-ignore:next-line
                                     searchIcon={
                                         <Text
                                             style={{
@@ -330,6 +338,7 @@ export default class Contacts extends React.Component<
                                 placeholder={localeString(
                                     'views.Settings.Contacts.searchBar2'
                                 )}
+                                // @ts-ignore:next-line
                                 onChangeText={this.updateSearch}
                                 value={this.state.search}
                                 inputStyle={{
@@ -370,7 +379,7 @@ export default class Contacts extends React.Component<
                     <FlatList
                         data={favoriteContacts}
                         renderItem={this.renderContactItem}
-                        keyExtractor={(item, index) => index.toString()}
+                        keyExtractor={(_item, index) => index.toString()}
                         scrollEnabled={false}
                     />
 
@@ -460,6 +469,7 @@ export default class Contacts extends React.Component<
                                     color: themeColor('text'),
                                     fontFamily: 'PPNeueMontreal-Book'
                                 }}
+                                onPress={() => ContactStore?.loadContacts()}
                             />
                         )
                     )}

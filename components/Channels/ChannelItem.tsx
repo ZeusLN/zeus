@@ -33,8 +33,8 @@ export function ChannelItem({
 }: {
     title?: string;
     secondTitle?: string;
-    inbound: number;
-    outbound: number;
+    inbound: string | number;
+    outbound: string | number;
     largestTotal?: number;
     status?: Status;
     pendingHTLCs?: boolean;
@@ -79,7 +79,10 @@ export function ChannelItem({
                             }
                             bold={selected}
                         >
-                            {PrivacyUtils.sensitiveValue(title)}
+                            {`${
+                                typeof title === 'string' &&
+                                PrivacyUtils.sensitiveValue(title)
+                            }`}
                         </Body>
                     </View>
                 )}

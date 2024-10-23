@@ -198,6 +198,11 @@ export interface SignMessageReq {
      * privKey + h_tapTweak(internalKey || tapTweak)
      */
     schnorrSigTapTweak: Uint8Array | string;
+    /**
+     * An optional tag that can be provided when taking a tagged hash of a
+     * message. This option can only be used when schnorr_sig is true.
+     */
+    tag: Uint8Array | string;
 }
 
 export interface SignMessageResp {
@@ -225,6 +230,11 @@ export interface VerifyMessageReq {
     pubkey: Uint8Array | string;
     /** Specifies if the signature is a Schnorr signature. */
     isSchnorrSig: boolean;
+    /**
+     * An optional tag that can be provided when taking a tagged hash of a
+     * message. This option can only be used when is_schnorr_sig is true.
+     */
+    tag: Uint8Array | string;
 }
 
 export interface VerifyMessageResp {
@@ -294,7 +304,7 @@ export interface MuSig2CombineKeysRequest {
      */
     allSignerPubkeys: Uint8Array | string[];
     /**
-     * A series of optional generic tweaks to be applied to the the aggregated
+     * A series of optional generic tweaks to be applied to the aggregated
      * public key.
      */
     tweaks: TweakDesc[];
@@ -347,7 +357,7 @@ export interface MuSig2SessionRequest {
      */
     otherSignerPublicNonces: Uint8Array | string[];
     /**
-     * A series of optional generic tweaks to be applied to the the aggregated
+     * A series of optional generic tweaks to be applied to the aggregated
      * public key.
      */
     tweaks: TweakDesc[];

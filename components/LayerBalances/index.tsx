@@ -36,9 +36,9 @@ import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
 
 interface LayerBalancesProps {
-    BalanceStore: BalanceStore;
-    UTXOsStore: UTXOsStore;
-    UnitsStore: UnitsStore;
+    BalanceStore?: BalanceStore;
+    UTXOsStore?: UTXOsStore;
+    UnitsStore?: UnitsStore;
     navigation: StackNavigationProp<any, any>;
     onRefresh?: any;
     value?: string;
@@ -48,6 +48,7 @@ interface LayerBalancesProps {
     locked?: boolean;
     consolidated?: boolean;
     editMode?: boolean;
+    refreshing?: boolean;
 }
 
 //  To toggle LTR/RTL change to `true`
@@ -58,7 +59,7 @@ type DataRow = {
     subtitle?: string;
     balance: string | number;
     // TODO check if exists
-    count: number;
+    count?: number;
     watchOnly?: boolean;
     hidden?: boolean;
 };
@@ -147,7 +148,7 @@ const Row = ({ item }: { item: DataRow }) => {
                             color: themeColor('buttonText')
                         }}
                     >
-                        {`+${item.count - 1}`}
+                        {item.count && `+${item.count - 1}`}
                     </Text>
                 )}
             </LinearGradient>
@@ -169,7 +170,7 @@ const SwipeableRow = ({
     item: DataRow;
     index: number;
     navigation: StackNavigationProp<any, any>;
-    selectMode: boolean;
+    // selectMode: boolean; // not used for no
     value?: string;
     amount?: string;
     lightning?: string;
@@ -268,14 +269,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             onRefresh,
             locked,
             consolidated,
-            editMode
+            editMode,
+            refreshing
         } = this.props;
 
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore;
+        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
 
         const otherAccounts = editMode
-            ? this.props.UTXOsStore.accounts
-            : this.props.UTXOsStore.accounts.filter(
+            ? this.props.UTXOsStore?.accounts
+            : this.props.UTXOsStore?.accounts.filter(
                   (item: any) => !item.hidden
               );
 
@@ -326,7 +328,8 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         if (Object.keys(otherAccounts).length > 1 && consolidated) {
             DATA.push({
                 layer: localeString('components.LayerBalances.moreAccounts'),
-                count: Object.keys(otherAccounts).length
+                count: Object.keys(otherAccounts).length,
+                balance: 0
             });
         }
 
@@ -363,7 +366,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     keyExtractor={(_item, index) => `message ${index}`}
                     style={{ marginTop: 20 }}
                     onRefresh={() => onRefresh()}
-                    refreshing={false}
+                    refreshing={refreshing ? refreshing : false}
                 />
             </View>
         );

@@ -23,12 +23,12 @@ interface ChannelInfoIndex {
 
 interface PendingHTLC {
     incoming: boolean;
-    amount: number;
+    amount: number | string;
     hash_lock: string;
     expiration_height: number;
-    htlc_index: number;
-    forwarding_channel: number;
-    forwarding_htlc_index: number;
+    htlc_index?: number;
+    forwarding_channel?: number;
+    forwarding_htlc_index?: number;
 }
 
 export enum ChannelsType {
@@ -303,8 +303,8 @@ export default class ChannelsStore {
     enrichChannels = async (
         channels: Array<Channel>,
         setPendingHtlcs?: boolean
-    ) => {
-        if (channels.length === 0) return;
+    ): Promise<Channel[]> => {
+        if (channels.length === 0) return [];
 
         const channelsWithMissingAliases = channels?.filter(
             (c) => c.channelId != null && this.aliasesById[c.channelId] == null
@@ -478,11 +478,11 @@ export default class ChannelsStore {
 
     @action
     public closeChannel = async (
-        channelPoint?: CloseChannelRequest | null,
-        channelId?: string | null,
-        satPerVbyte?: string | null,
-        forceClose?: boolean | string | null,
-        deliveryAddress?: string | null
+        channelPoint?: CloseChannelRequest,
+        channelId?: string,
+        satPerVbyte?: string,
+        forceClose?: boolean | string,
+        deliveryAddress?: string
     ) => {
         this.closeChannelErr = null;
         this.closingChannel = true;
@@ -498,7 +498,7 @@ export default class ChannelsStore {
         ) {
             // c-lightning, eclair
             urlParams = [channelId, forceClose];
-        } else {
+        } else if (channelPoint) {
             // lnd
             const { funding_txid_str, output_index } = channelPoint;
 

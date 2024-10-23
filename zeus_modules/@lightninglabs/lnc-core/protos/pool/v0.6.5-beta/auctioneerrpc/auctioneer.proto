@@ -373,6 +373,11 @@ enum ChannelType {
     outputs that pay directly to the channel initiator (the seller).
     */
     SCRIPT_ENFORCED_LEASE = 2;
+
+    /*
+    A channel type that uses a Pay-to-Taproot output for the funding output.
+    */
+    SIMPLE_TAPROOT = 3;
 }
 
 message ChannelInfo {
@@ -897,6 +902,11 @@ enum OrderChannelType {
     channel initiator/seller.
     */
     ORDER_CHANNEL_TYPE_SCRIPT_ENFORCED = 2;
+
+    /*
+    A channel type that uses a Pay-to-Taproot output for the funding output.
+    */
+    ORDER_CHANNEL_TYPE_SIMPLE_TAPROOT = 3;
 }
 
 enum AuctionType {

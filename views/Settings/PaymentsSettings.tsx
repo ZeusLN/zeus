@@ -16,6 +16,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import TextInput from '../../components/TextInput';
+import AmountInput from '../../components/AmountInput';
 
 interface PaymentsSettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -29,6 +30,7 @@ interface PaymentsSettingsState {
     timeoutSeconds: string;
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
+    slideToPayThreshold: string;
 }
 
 @inject('SettingsStore')
@@ -43,7 +45,8 @@ export default class PaymentsSettings extends React.Component<
         feePercentage: '5.0',
         timeoutSeconds: '60',
         enableMempoolRates: false,
-        preferredMempoolRate: 'fastestFee'
+        preferredMempoolRate: 'fastestFee',
+        slideToPayThreshold: '10000'
     };
 
     async UNSAFE_componentWillMount() {
@@ -58,7 +61,9 @@ export default class PaymentsSettings extends React.Component<
             enableMempoolRates: settings?.privacy?.enableMempoolRates || false,
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
             preferredMempoolRate:
-                settings?.payments?.preferredMempoolRate || 'fastestFee'
+                settings?.payments?.preferredMempoolRate || 'fastestFee',
+            slideToPayThreshold:
+                settings?.payments?.slideToPayThreshold?.toString() || '10000'
         });
     }
 
@@ -79,7 +84,8 @@ export default class PaymentsSettings extends React.Component<
             feePercentage,
             enableMempoolRates,
             timeoutSeconds,
-            preferredMempoolRate
+            preferredMempoolRate,
+            slideToPayThreshold
         } = this.state;
         const { SettingsStore } = this.props;
         const { updateSettings, settings, implementation } = SettingsStore;
@@ -117,14 +123,6 @@ export default class PaymentsSettings extends React.Component<
                                     'views.Settings.Payments.defaultFeeLimit'
                                 )}
                             </Text>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexWrap: 'wrap',
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            ></View>
                             <View
                                 style={{
                                     flexDirection: 'row',
@@ -281,6 +279,37 @@ export default class PaymentsSettings extends React.Component<
                             </View>
                         </View>
                     )}
+
+                    <AmountInput
+                        amount={slideToPayThreshold.toString()}
+                        title={
+                            localeString('general.lightning') +
+                            ' - ' +
+                            localeString(
+                                'views.Settings.Payments.slideToPayThreshold'
+                            )
+                        }
+                        onAmountChange={async (amount, _) => {
+                            this.setState({
+                                slideToPayThreshold: amount
+                            });
+                            const amountNumber = Number(amount);
+                            if (!Number.isNaN(amountNumber)) {
+                                await updateSettings({
+                                    payments: {
+                                        defaultFeeMethod: feeLimitMethod,
+                                        defaultFeePercentage: feePercentage,
+                                        defaultFeeFixed: feeLimit,
+                                        timeoutSeconds,
+                                        preferredMempoolRate,
+                                        slideToPayThreshold: Number(amount)
+                                    }
+                                });
+                            }
+                        }}
+                        hideConversion={true}
+                        hideUnitChangeButton={true}
+                    />
 
                     {BackendUtils.isLNDBased() && (
                         <>

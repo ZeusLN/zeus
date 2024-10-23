@@ -40,7 +40,7 @@ interface SendingLightningProps {
 }
 
 interface SendingLightningState {
-    storedNotes: '';
+    storedNotes: string;
     wasSuccessful: boolean;
     currentPayment: any;
 }
@@ -70,7 +70,7 @@ export default class SendingLightning extends React.Component<
             if (!noteKey) return;
             EncryptedStorage.getItem(noteKey)
                 .then((storedNotes) => {
-                    this.setState({ storedNotes });
+                    this.setState({ storedNotes: storedNotes || '' });
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);
@@ -465,7 +465,7 @@ export default class SendingLightning extends React.Component<
                                     )}
                                 </Text>
                             )}
-                            {payment_error && (
+                            {(!!payment_error || !!error) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.tryAgain'

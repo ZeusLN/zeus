@@ -25,15 +25,15 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import handleAnything from '../utils/handleAnything';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
-import ZIcon from '../assets/images/icon-black.png';
-import LightningIcon from '../assets/images/lightning-black.png';
-import OnChainIcon from '../assets/images/onchain-black.png';
-import ZPayIcon from '../assets/images/pay-z-black.png';
+const ZIcon = require('../assets/images/icon-black.png');
+const LightningIcon = require('../assets/images/lightning-black.png');
+const OnChainIcon = require('../assets/images/onchain-black.png');
+const ZPayIcon = require('../assets/images/pay-z-black.png');
 
-import ZIconWhite from '../assets/images/icon-white.png';
-import LightningIconWhite from '../assets/images/lightning-white.png';
-import OnChainIconWhite from '../assets/images/onchain-white.png';
-import ZPayIconWhite from '../assets/images/pay-z-white.png';
+const ZIconWhite = require('../assets/images/icon-white.png');
+const LightningIconWhite = require('../assets/images/lightning-white.png');
+const OnChainIconWhite = require('../assets/images/onchain-white.png');
+const ZPayIconWhite = require('../assets/images/pay-z-white.png');
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
@@ -108,7 +108,9 @@ interface ReceiveProps {
             amount: string;
             autoGenerate: boolean;
             autoGenerateOnChain: boolean;
+            autoGenerateChange?: boolean;
             account: string;
+            addressType?: string;
             selectedIndex: number;
             memo: string;
             orderId: string;
@@ -116,6 +118,7 @@ interface ReceiveProps {
             orderTip: string;
             exchangeRate: string;
             rate: number;
+            hideRightHeaderComponent: boolean;
         }
     >;
 }
@@ -148,6 +151,7 @@ interface ReceiveState {
     lspNotConfigured: boolean;
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
+    hideRightHeaderComponent?: boolean;
 }
 
 enum RouteHintMode {
@@ -279,29 +283,28 @@ export default class Receive extends React.Component<
             amount,
             autoGenerate,
             autoGenerateOnChain,
+            autoGenerateChange,
             account,
-            selectedIndex
+            selectedIndex,
+            hideRightHeaderComponent
         } = route.params ?? {};
 
+        if (hideRightHeaderComponent) {
+            this.setState({ hideRightHeaderComponent });
+        }
+
         if (account) {
-            this.setState({
-                account
-            });
+            this.setState({ account });
         }
 
         if (selectedIndex) {
-            this.setState({
-                selectedIndex
-            });
+            this.setState({ selectedIndex });
         }
 
-        const {
-            expirySeconds,
-            routeHints,
-            ampInvoice,
-            blindedPaths,
-            addressType
-        } = this.state;
+        const { expirySeconds, routeHints, ampInvoice, blindedPaths } =
+            this.state;
+
+        const addressType = route.params?.addressType || this.state.addressType;
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -363,7 +366,7 @@ export default class Receive extends React.Component<
 
         if (autoGenerate) {
             this.autoGenerateInvoice(
-                getSatAmount(amount),
+                getSatAmount(amount).toString(),
                 memo,
                 expirySeconds,
                 routeHints,
@@ -373,8 +376,10 @@ export default class Receive extends React.Component<
             );
         }
 
-        if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress(account);
+        if (autoGenerateChange) {
+            this.autoGenerateChange(account, addressType);
+        } else if (autoGenerateOnChain) {
+            this.autoGenerateOnChainAddress(account, addressType);
         }
     }
 
@@ -481,13 +486,12 @@ export default class Receive extends React.Component<
         );
     };
 
-    autoGenerateOnChainAddress = (account?: string) => {
+    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
         const { InvoicesStore } = this.props;
-        const { addressType } = this.state;
         const { getNewAddress } = InvoicesStore;
 
         let request: any = {
-            type: addressType
+            type: address_type || this.state.addressType
         };
 
         if (account) {
@@ -495,6 +499,23 @@ export default class Receive extends React.Component<
         }
 
         getNewAddress(request).then((onChainAddress: string) => {
+            this.subscribeInvoice(undefined, onChainAddress);
+        });
+    };
+
+    autoGenerateChange = (account?: string, address_type?: string) => {
+        const { InvoicesStore } = this.props;
+        const { getNewChangeAddress } = InvoicesStore;
+
+        let request: any = {
+            type: address_type || this.state.addressType
+        };
+
+        if (account) {
+            request.account = account;
+        }
+
+        getNewChangeAddress(request).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -646,6 +667,7 @@ export default class Receive extends React.Component<
 
                             if (
                                 invoice.settled &&
+                                // @ts-ignore:next-line
                                 Base64Utils.bytesToHex(invoice.r_hash) === rHash
                             ) {
                                 setWatchedInvoicePaid(
@@ -661,6 +683,7 @@ export default class Receive extends React.Component<
                                     type: 'ln',
                                     tx: invoice.payment_request,
                                     preimage: Base64Utils.bytesToHex(
+                                        // @ts-ignore:next-line
                                         invoice.r_preimage
                                     )
                                 });
@@ -1051,7 +1074,8 @@ export default class Receive extends React.Component<
             lspNotConfigured,
             routeHintMode,
             selectedRouteHintChannels,
-            blindedPaths
+            blindedPaths,
+            hideRightHeaderComponent
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1253,6 +1277,8 @@ export default class Receive extends React.Component<
                       { element: onChainButton }
                   ];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         const haveUnifiedInvoice = !!payment_request && !!address;
         const haveInvoice = !!payment_request || !!address;
 
@@ -1370,6 +1396,10 @@ export default class Receive extends React.Component<
             { element: oneWButton }
         ];
 
+        const expirationButtonsElement = expirationButtons.map((btn) =>
+            btn.element()
+        );
+
         const routeHintModeButtons = [
             {
                 element: () => (
@@ -1402,6 +1432,10 @@ export default class Receive extends React.Component<
                 )
             }
         ];
+
+        const routeHintModeButtonsElement = routeHintModeButtons.map((btn) =>
+            btn.element()
+        );
 
         const setRouteHintMode = (mode: RouteHintMode) => {
             if (this.state.routeHintMode === mode) {
@@ -1439,7 +1473,8 @@ export default class Receive extends React.Component<
                     rightComponent={
                         loading ||
                         watchedInvoicePaid ||
-                        posStatus === 'active' ? null : haveInvoice ? (
+                        posStatus === 'active' ||
+                        hideRightHeaderComponent ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
                             BackendUtils.supportsAddressTypeSelection() &&
@@ -1487,7 +1522,8 @@ export default class Receive extends React.Component<
                                                   'views.Receive.youReceived'
                                               )} ${getAmountFromSats(
                                                   watchedInvoicePaidAmt ||
-                                                      payment_request_amt
+                                                      payment_request_amt ||
+                                                      ''
                                               )}`}
                                     </Text>
                                 </>
@@ -1622,6 +1658,7 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
+                                    zeroConfFee &&
                                     zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
@@ -1755,7 +1792,7 @@ export default class Receive extends React.Component<
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
-                                                    value={unifiedInvoice}
+                                                    value={unifiedInvoice || ''}
                                                     copyText={localeString(
                                                         'views.Receive.copyInvoice'
                                                     )}
@@ -1775,7 +1812,7 @@ export default class Receive extends React.Component<
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
-                                                    value={lnInvoice}
+                                                    value={lnInvoice || ''}
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
@@ -1898,7 +1935,7 @@ export default class Receive extends React.Component<
                                             (belowDustLimit ||
                                                 !haveUnifiedInvoice) && (
                                                 <CollapsedQR
-                                                    value={lnInvoice}
+                                                    value={lnInvoice || ''}
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
@@ -2394,7 +2431,9 @@ export default class Receive extends React.Component<
                                                     selectedIndex={
                                                         expirationIndex
                                                     }
-                                                    buttons={expirationButtons}
+                                                    buttons={
+                                                        expirationButtonsElement
+                                                    }
                                                     selectedButtonStyle={{
                                                         backgroundColor:
                                                             themeColor(
@@ -2481,6 +2520,7 @@ export default class Receive extends React.Component<
                                                                     !routeHints
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2508,7 +2548,7 @@ export default class Receive extends React.Component<
                                                             routeHintMode
                                                         }
                                                         buttons={
-                                                            routeHintModeButtons
+                                                            routeHintModeButtonsElement
                                                         }
                                                         selectedButtonStyle={{
                                                             backgroundColor:
@@ -2615,6 +2655,7 @@ export default class Receive extends React.Component<
                                                                     !ampInvoice
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2649,7 +2690,11 @@ export default class Receive extends React.Component<
                                                         onValueChange={() =>
                                                             this.setState({
                                                                 blindedPaths:
-                                                                    !blindedPaths
+                                                                    !blindedPaths,
+                                                                ampInvoice:
+                                                                    false,
+                                                                routeHints:
+                                                                    false
                                                             })
                                                         }
                                                     />
@@ -2734,7 +2779,7 @@ export default class Receive extends React.Component<
                             <ButtonGroup
                                 onPress={this.updateIndex}
                                 selectedIndex={selectedIndex}
-                                buttons={buttons}
+                                buttons={buttonElements}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12

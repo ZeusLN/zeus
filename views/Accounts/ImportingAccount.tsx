@@ -2,19 +2,21 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { LinearProgress } from 'react-native-elements';
 
-import Button from './../../components/Button';
+import Button from '../../components/Button';
 import Header from '../../components/Header';
 import {
     SuccessMessage,
     ErrorMessage
-} from './../../components/SuccessErrorMessage';
-import KeyValue from './../../components/KeyValue';
+} from '../../components/SuccessErrorMessage';
+import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
 import Base64Utils from '../../utils/Base64Utils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import UTXOsStore from '../../stores/UTXOsStore';
 
@@ -34,7 +36,15 @@ export default class ImportingAccount extends React.Component<
 > {
     render() {
         const { navigation, UTXOsStore } = this.props;
-        const { accountToImport, errorMsg, success } = UTXOsStore;
+        const {
+            accountToImport,
+            errorMsg,
+            success,
+            importingAccount,
+            addresses_to_generate,
+            addresses_to_generate_progress,
+            start_height
+        } = UTXOsStore;
         const { account, dry_run_external_addrs, dry_run_internal_addrs } =
             accountToImport;
         const {
@@ -54,6 +64,19 @@ export default class ImportingAccount extends React.Component<
                         text: localeString('views.ImportAccount.title'),
                         style: { color: themeColor('text') }
                     }}
+                    rightComponent={
+                        importingAccount ? (
+                            <View
+                                style={{
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <LoadingIndicator size={35} />
+                            </View>
+                        ) : (
+                            <></>
+                        )
+                    }
                     navigation={navigation}
                 />
                 <ScrollView style={styles.content}>
@@ -65,8 +88,40 @@ export default class ImportingAccount extends React.Component<
                             )}
                         />
                     )}
+
+                    {importingAccount && !success && !errorMsg && start_height && (
+                        <View
+                            style={{
+                                marginTop: 15,
+                                marginBottom: 15,
+                                flex: 1,
+                                flexDirection: 'row',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                minWidth: '100%'
+                            }}
+                        >
+                            <LinearProgress
+                                value={
+                                    Math.floor(
+                                        (addresses_to_generate_progress /
+                                            addresses_to_generate) *
+                                            100
+                                    ) / 100
+                                }
+                                variant="determinate"
+                                color={themeColor('highlight')}
+                                trackColor={themeColor('secondaryBackground')}
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row'
+                                }}
+                            />
+                        </View>
+                    )}
+
                     <KeyValue
-                        keyValue={localeString('views.ImportAccount.name')}
+                        keyValue={localeString('general.accountName')}
                         value={name}
                     />
 
@@ -89,9 +144,7 @@ export default class ImportingAccount extends React.Component<
                     )}
 
                     <KeyValue
-                        keyValue={localeString(
-                            'views.ImportAccount.addressType'
-                        )}
+                        keyValue={localeString('general.addressType')}
                         value={
                             walletrpc.AddressType[address_type] || address_type
                         }
@@ -148,7 +201,7 @@ export default class ImportingAccount extends React.Component<
                         {dry_run_internal_addrs.join(', ')}
                     </Text>
                 </ScrollView>
-                <View style={{ bottom: 10 }}>
+                <View style={{ marginBottom: 10 }}>
                     <View style={styles.button}>
                         <Button
                             title={localeString(
@@ -163,6 +216,7 @@ export default class ImportingAccount extends React.Component<
                                     dry_run: false
                                 }).then(() => navigation.popTo('Wallet'))
                             }
+                            disabled={importingAccount}
                         />
                     </View>
                 </View>

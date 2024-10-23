@@ -249,7 +249,8 @@ export default class LND {
             sat_per_vbyte: data.sat_per_vbyte,
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed,
-            send_all: data.send_all
+            send_all: data.send_all,
+            outpoints: data.outpoints
         });
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {
@@ -325,6 +326,8 @@ export default class LND {
         });
     getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
+    getNewChangeAddress = (data: any) =>
+        this.postRequest('/v2/wallet/address/next', data);
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any = {
             private: data.privateChannel,
@@ -479,7 +482,7 @@ export default class LND {
             urlParams && urlParams[1]
         }?force=${urlParams && urlParams[2]}`;
 
-        if (urlParams && urlParams[3]) {
+        if (urlParams && !urlParams[2] && urlParams[3]) {
             requestString += `&sat_per_vbyte=${urlParams && urlParams[3]}`;
         }
 
@@ -570,6 +573,7 @@ export default class LND {
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
+    listAddresses = () => this.getRequest('/v2/wallet/addresses');
     importAccount = (data: any) =>
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
@@ -682,12 +686,14 @@ export default class LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = (): Promise<boolean> | boolean => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
 }

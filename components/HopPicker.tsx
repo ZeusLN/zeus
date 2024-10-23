@@ -33,8 +33,8 @@ interface ChannelPickerProps {
     onCancel?: () => void;
     ChannelsStore: ChannelsStore;
     UnitsStore: UnitsStore;
-    containerStyle: ViewStyle;
-    clearOnTap: boolean;
+    containerStyle?: ViewStyle;
+    clearOnTap?: boolean;
     selectionMode?: 'single' | 'multiple';
     selectedChannels?: Channel[];
 }
@@ -226,7 +226,7 @@ export default class ChannelPicker extends React.Component<
                                       )}
                             </Text>
 
-                            <ChannelsFilter width="86%" />
+                            <ChannelsFilter />
 
                             <FlatList
                                 data={channels}

@@ -182,8 +182,10 @@ export const sendCustomMessage = async (
         response: lnrpc.SendCustomMessageResponse,
         method: 'SendCustomMessage',
         options: {
+            // @ts-ignore:next-line
             peer: Base64Utils.hexToBase64(peer),
             type,
+            // @ts-ignore:next-line
             data: Base64Utils.hexToBase64(data)
         }
     });
@@ -490,7 +492,7 @@ export const sendKeysendPayment = async (
     pre_image: Uint8Array,
     route_hints: lnrpc.IRouteHint[],
     tlv_record_name_str: string
-): Promise<lnrpc.SendResponse> => {
+): Promise<lnrpc.SendResponse | null> => {
     try {
         const responseQueryRoutes = await sendCommand<
             lnrpc.IQueryRoutesRequest,
@@ -545,7 +547,7 @@ export const sendKeysendPayment = async (
                 console.log(e);
             }
         }
-    } catch (e) {
+    } catch (e: any) {
         console.log('QueryRoutes Error', e.message);
     }
     return null;

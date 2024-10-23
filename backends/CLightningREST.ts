@@ -167,7 +167,7 @@ export default class CLightningREST extends LND {
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
-        const feeRate = `${new BigNumber(data.sat_per_vbyte)
+        const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
             .times(1000)
             .toString()}perkb`;
         if (data.utxos && data.utxos.length > 0) {
@@ -300,11 +300,13 @@ export default class CLightningREST extends LND {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = async () => {
         const res = await this.getRequest('/v1/utility/listConfigs');
         const supportsOffers: boolean = res['experimental-offers'] || false;

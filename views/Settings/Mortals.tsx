@@ -84,7 +84,7 @@ export default class Mortals extends React.Component<MortalsProps, {}> {
                                 </ListItem>
                             )}
                             numColumns={5}
-                            keyExtractor={(item, index) => index}
+                            keyExtractor={(_, index) => index.toString()}
                             style={{ alignSelf: 'center' }}
                         />
                         <Button

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+// @ts-ignore:next-line
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -97,9 +98,9 @@ export default class NostrKey extends React.Component<
         this.setState({
             existingNostrPrivateKey: nostrPrivateKey,
             nostrPrivateKey,
-            nostrPublicKey,
-            nostrNsec,
-            nostrNpub,
+            nostrPublicKey: nostrPublicKey ? nostrPublicKey : '',
+            nostrNsec: nostrNsec ? nostrNsec : '',
+            nostrNpub: nostrNpub ? nostrNpub : '',
             setup,
             editMode: setup,
             revealSensitive: false
@@ -261,8 +262,13 @@ export default class NostrKey extends React.Component<
                                                 } catch (e) {}
                                                 this.setState({
                                                     nostrPrivateKey,
-                                                    nostrPublicKey,
-                                                    nostrNpub
+                                                    nostrPublicKey:
+                                                        nostrPublicKey
+                                                            ? nostrPublicKey
+                                                            : '',
+                                                    nostrNpub: nostrNpub
+                                                        ? nostrNpub
+                                                        : ''
                                                 });
                                             }}
                                             autoCapitalize="none"

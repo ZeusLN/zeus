@@ -890,4 +890,27 @@ describe('AddressUtils', () => {
             });
         });
     });
+
+    describe('snakeToHumanReadable', () => {
+        it('processes address types properly', () => {
+            expect(
+                AddressUtils.snakeToHumanReadable('WITNESS_PUBKEY_HASH')
+            ).toEqual('Witness pubkey hash');
+            expect(
+                AddressUtils.snakeToHumanReadable('NESTED_PUBKEY_HASH')
+            ).toEqual('Nested pubkey hash');
+            expect(
+                AddressUtils.snakeToHumanReadable('UNUSED_WITNESS_PUBKEY_HASH')
+            ).toEqual('Unused witness pubkey hash');
+            expect(
+                AddressUtils.snakeToHumanReadable('UNUSED_NESTED_PUBKEY_HASH')
+            ).toEqual('Unused nested pubkey hash');
+            expect(AddressUtils.snakeToHumanReadable('TAPROOT_PUBKEY')).toEqual(
+                'Taproot pubkey'
+            );
+            expect(
+                AddressUtils.snakeToHumanReadable('UNUSED_TAPROOT_PUBKEY')
+            ).toEqual('Unused taproot pubkey');
+        });
+    });
 });
