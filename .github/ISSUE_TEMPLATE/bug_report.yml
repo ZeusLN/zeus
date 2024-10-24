@@ -50,9 +50,9 @@ body:
         - LND (Lightning Node Connect)
         - Core Lightning (CLNRest)
         - LndHub
-        - [DEPRECATED] Core Lightning (c-lightning-REST)
-        - [DEPRECATED] Core Lightning (Spark)
-        - [DEPRECATED] Eclair
+        - DEPRECATED Core Lightning (c-lightning-REST)
+        - DEPRECATED Core Lightning (Spark)
+        - DEPRECATED Eclair
         - Multiple (specified in comments)
     validations:
       required: true
