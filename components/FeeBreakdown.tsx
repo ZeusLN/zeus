@@ -149,37 +149,37 @@ export default class FeeBreakdown extends React.Component<
                         />
                         {BackendUtils.supportInboundFees() && (
                             <>
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.inboundBaseFee'
-                                    )}
-                                    value={
-                                        <Amount
-                                            sats={
-                                                localPolicy.inbound_fee_base_msat
-                                                    ? Number(
-                                                          localPolicy.inbound_fee_base_msat
-                                                      ) / 1000
-                                                    : undefined
-                                            }
-                                            toggleable
-                                            sensitive
-                                        />
-                                    }
-                                />
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.Channel.inboundFeeRate'
-                                    )}
-                                    value={`${
-                                        localPolicy.inbound_fee_rate_milli_msat
-                                            ? Number(
-                                                  localPolicy.inbound_fee_rate_milli_msat
-                                              ) / 10000
-                                            : undefined
-                                    }%`}
-                                    sensitive
-                                />
+                                {!!localPolicy.inbound_fee_base_msat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.inboundBaseFee'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    Number(
+                                                        localPolicy.inbound_fee_base_msat
+                                                    ) / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {!!localPolicy.inbound_fee_rate_milli_msat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.inboundFeeRate'
+                                        )}
+                                        value={`${
+                                            Number(
+                                                localPolicy.inbound_fee_rate_milli_msat
+                                            ) / 10000
+                                        }%`}
+                                        sensitive
+                                    />
+                                )}
                             </>
                         )}
                     </React.Fragment>
