@@ -10,7 +10,17 @@ import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
+interface ActivityProps {
+    filteredActivity: Array<Invoice | Payment | Transaction>;
+    isVisible: boolean;
+    closeModal: () => void;
+}
+
+const ActivityToCsv: React.FC<ActivityProps> = ({
+    filteredActivity,
+    isVisible,
+    closeModal
+}) => {
     const [customFileName, setCustomFileName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
@@ -31,9 +41,14 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         return `${year}${month}${day}_${hours}${minutes}${seconds}`;
     };
 
-    const filterData = (data, invoiceKeys, paymentKeys, transactionKeys) => {
+    const filterData = (
+        data: Array<Invoice | Payment | Transaction>,
+        invoiceKeys: string[],
+        paymentKeys: string[],
+        transactionKeys: string[]
+    ) => {
         return data.map((item) => {
-            let filteredItem = {};
+            let filteredItem: any = {};
             if (item instanceof Invoice) {
                 invoiceKeys.forEach((key) => {
                     switch (key) {
@@ -51,8 +66,6 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         case 'expiry':
                             filteredItem[key] = item.formattedTimeUntilExpiry;
                             break;
-                        default:
-                            filteredItem[key] = item[key];
                     }
                 });
             } else if (item instanceof Payment) {
@@ -71,8 +84,6 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         case 'creation_date':
                             filteredItem[key] = item.getDisplayTime;
                             break;
-                        default:
-                            filteredItem[key] = item[key];
                     }
                 });
             } else if (item instanceof Transaction) {
@@ -81,7 +92,7 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         case 'tx_hash':
                             filteredItem[key] = item.tx;
                             break;
-                        case 'value':
+                        case 'amount':
                             filteredItem[key] = item.getAmount;
                             break;
                         case 'total_fees':
@@ -90,8 +101,6 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                         case 'time_stamp':
                             filteredItem[key] = item.getDisplayTime;
                             break;
-                        default:
-                            filteredItem[key] = item[key];
                     }
                 });
             }
@@ -99,7 +108,7 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         });
     };
 
-    const convertActivityToCsv = async (data, type) => {
+    const convertActivityToCsv = async (data: any, type: any) => {
         if (!data || data.length === 0) {
             return '';
         }
@@ -134,7 +143,53 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
         );
 
         try {
-            if (type === 'transaction') {
+            if (type === 'invoice') {
+                const invoiceData = filteredData.filter(
+                    (item) => item.amt_paid
+                );
+
+                const header = [
+                    localeString('views.ActivityToCsv.amountPaid'),
+                    `${localeString(
+                        'views.ActivityToCsv.amountPaid'
+                    )} (${localeString('general.sats')})`,
+                    localeString('views.Invoice.cltvExpiry'),
+                    localeString('views.Payment.creationDate'),
+                    '',
+                    '',
+                    localeString('views.PaymentRequest.expiry')
+                ].join(',');
+                const rows = invoiceData
+                    .map((item) =>
+                        invoiceKeysToInclude
+                            .map((field) => item[field.value] || '')
+                            .join(',')
+                    )
+                    .join('\n');
+
+                return `${localeString(
+                    'pos.print.invoice'
+                )}\n${header}\n${rows}`;
+            } else if (type === 'payment') {
+                const paymentData = filteredData.filter(
+                    (item) => item.payment_addr
+                );
+
+                const header = paymentKeysToInclude
+                    .map((field) => field.label)
+                    .join(',');
+                const rows = paymentData
+                    .map((item) =>
+                        paymentKeysToInclude
+                            .map((field) => item[field.value] || '')
+                            .join(',')
+                    )
+                    .join('\n');
+
+                return `${localeString(
+                    'views.Wallet.Wallet.payments'
+                )}\n${header}\n${rows}`;
+            } else if (type === 'transaction') {
                 const transactionData = filteredData.filter(
                     (item) => item.tx_hash
                 );
@@ -153,47 +208,6 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
                 return `${localeString(
                     'general.transaction'
                 )}\n${header}\n${rows}`;
-            } else {
-                const invoiceData = filteredData.filter(
-                    (item) => item.amt_paid
-                );
-                const paymentData = filteredData.filter(
-                    (item) => item.payment_addr
-                );
-
-                const invoiceHeader = [
-                    localeString('views.ActivityToCsv.amountPaid'),
-                    `${localeString(
-                        'views.ActivityToCsv.amountPaid'
-                    )} (${localeString('general.sats')})`,
-                    localeString('views.Invoice.cltvExpiry'),
-                    localeString('views.Payment.creationDate'),
-                    '',
-                    '',
-                    localeString('views.PaymentRequest.expiry')
-                ].join(',');
-
-                const invoiceSection = [
-                    localeString('pos.print.invoice'),
-                    invoiceHeader,
-                    ...invoiceData.map((item) =>
-                        invoiceKeysToInclude
-                            .map((field) => item[field.value] || '')
-                            .join(',')
-                    )
-                ].join('\n');
-
-                const paymentSection = [
-                    localeString('views.Wallet.Wallet.payments'),
-                    paymentKeysToInclude.map((field) => field.label).join(','),
-                    ...paymentData.map((item) =>
-                        paymentKeysToInclude
-                            .map((field) => item[field.value] || '')
-                            .join(',')
-                    )
-                ].join('\n');
-
-                return `${invoiceSection}\n\n${paymentSection}`;
             }
         } catch (err) {
             console.error(err);
@@ -204,18 +218,22 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
     const downloadCsv = async () => {
         setIsLoading(true);
         setTimeout(async () => {
-            const invoicePaymentCsv = await convertActivityToCsv(
-                filteredActivity.filter(
-                    (item) => !(item instanceof Transaction)
-                ),
-                'invoice_payment'
+            const invoiceCsv = await convertActivityToCsv(
+                filteredActivity.filter((item: any) => item instanceof Invoice),
+                'invoice'
+            );
+            const paymentCsv = await convertActivityToCsv(
+                filteredActivity.filter((item: any) => item instanceof Payment),
+                'payment'
             );
             const transactionCsv = await convertActivityToCsv(
-                filteredActivity.filter((item) => item instanceof Transaction),
+                filteredActivity.filter(
+                    (item: any) => item instanceof Transaction
+                ),
                 'transaction'
             );
 
-            if (!invoicePaymentCsv && !transactionCsv) {
+            if (!invoiceCsv && !paymentCsv && !transactionCsv) {
                 setIsLoading(false);
                 return;
             }
@@ -223,29 +241,33 @@ const ActivityToCsv = ({ filteredActivity, isVisible, closeModal }) => {
             try {
                 const dateTime = getFormattedDateTime();
                 const baseFileName = customFileName || `data_${dateTime}`;
-                const invoicePaymentFileName = `${baseFileName}_invoice_payment.csv`;
+                const invoiceFileName = `${baseFileName}_invoice.csv`;
+                const paymentFileName = `${baseFileName}_payment.csv`;
                 const transactionFileName = `${baseFileName}_transaction.csv`;
 
-                const invoicePaymentFilePath =
+                const invoiceFilePath =
                     Platform.OS === 'android'
-                        ? `${RNFS.DownloadDirectoryPath}/${invoicePaymentFileName}`
-                        : `${RNFS.DocumentDirectoryPath}/${invoicePaymentFileName}`;
+                        ? `${RNFS.DownloadDirectoryPath}/${invoiceFileName}`
+                        : `${RNFS.DocumentDirectoryPath}/${invoiceFileName}`;
+
+                const paymentFilePath =
+                    Platform.OS === 'android'
+                        ? `${RNFS.DownloadDirectoryPath}/${paymentFileName}`
+                        : `${RNFS.DocumentDirectoryPath}/${paymentFileName}`;
 
                 const transactionFilePath =
                     Platform.OS === 'android'
                         ? `${RNFS.DownloadDirectoryPath}/${transactionFileName}`
                         : `${RNFS.DocumentDirectoryPath}/${transactionFileName}`;
 
-                if (invoicePaymentCsv) {
-                    console.log(
-                        'invoicePaymentFilePath',
-                        invoicePaymentFilePath
-                    );
-                    await RNFS.writeFile(
-                        invoicePaymentFilePath,
-                        invoicePaymentCsv,
-                        'utf8'
-                    );
+                if (invoiceCsv) {
+                    console.log('invoiceFilePath', invoiceFilePath);
+                    await RNFS.writeFile(invoiceFilePath, invoiceCsv, 'utf8');
+                }
+
+                if (paymentCsv) {
+                    console.log('paymentFilePath', paymentFilePath);
+                    await RNFS.writeFile(paymentFilePath, paymentCsv, 'utf8');
                 }
 
                 if (transactionCsv) {
