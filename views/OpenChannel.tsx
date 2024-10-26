@@ -808,6 +808,28 @@ export default class OpenChannel extends React.Component<
                                         </View>
                                     )}
 
+                                <View style={{ marginTop: 10 }}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OpenChannel.satsPerVbyte'
+                                        )}
+                                    </Text>
+                                    <OnchainFeeInput
+                                        fee={sat_per_vbyte}
+                                        onChangeFee={(text: string) => {
+                                            this.setState({
+                                                sat_per_vbyte: text
+                                            });
+                                        }}
+                                        navigation={navigation}
+                                    />
+                                </View>
+
                                 <TouchableOpacity
                                     onPress={() => {
                                         this.setState({
@@ -818,7 +840,6 @@ export default class OpenChannel extends React.Component<
                                 >
                                     <View
                                         style={{
-                                            marginTop: 10,
                                             marginBottom: 10
                                         }}
                                     >
@@ -864,30 +885,6 @@ export default class OpenChannel extends React.Component<
                                                 />
                                             </View>
                                         )}
-
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.satsPerVbyte'
-                                                )}
-                                            </Text>
-                                            <OnchainFeeInput
-                                                fee={sat_per_vbyte}
-                                                onChangeFee={(text: string) => {
-                                                    this.setState({
-                                                        sat_per_vbyte: text
-                                                    });
-                                                }}
-                                                navigation={navigation}
-                                            />
-                                        </>
 
                                         <>
                                             <Text
@@ -1029,7 +1026,10 @@ export default class OpenChannel extends React.Component<
                                 icon={{
                                     name: 'swap-horiz',
                                     size: 25,
-                                    color: 'white'
+                                    color:
+                                        sat_per_vbyte === '0'
+                                            ? themeColor('secondaryText')
+                                            : themeColor('background')
                                 }}
                                 onPress={() => {
                                     this.scrollViewRef.current?.scrollTo({
@@ -1046,6 +1046,9 @@ export default class OpenChannel extends React.Component<
                                         connectPeerOnly
                                     );
                                 }}
+                                disabled={
+                                    !connectPeerOnly && sat_per_vbyte === '0'
+                                }
                             />
                         </View>
 
