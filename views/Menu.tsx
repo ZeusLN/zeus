@@ -241,7 +241,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         color: themeColor('highlight')
                                     }}
                                 >
-                                    {localeString('views.Settings.connectNode')}
+                                    {localeString(
+                                        'views.Settings.createConnectWallet'
+                                    )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />

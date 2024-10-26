@@ -719,9 +719,11 @@ export default class WalletConfiguration extends React.Component<
             </View>
         );
 
-        const NodeInterface = () => (
+        const WalletInterface = () => (
             <DropdownSetting
-                title={localeString('views.Settings.AddEditNode.nodeInterface')}
+                title={localeString(
+                    'views.Settings.WalletConfiguration.walletInterface'
+                )}
                 selectedValue={implementation}
                 onValueChange={(value: Implementations) => {
                     this.setState({
@@ -969,7 +971,7 @@ export default class WalletConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
-                                                'views.Settings.AddEditNode.certificateUnderstand'
+                                                'views.Settings.WalletConfiguration.certificateUnderstand'
                                             )}
                                             onPress={() => {
                                                 this.saveWalletConfiguration();
@@ -1102,7 +1104,7 @@ export default class WalletConfiguration extends React.Component<
                             </View>
                         </View>
 
-                        {!adminMacaroon && <NodeInterface />}
+                        {!adminMacaroon && <WalletInterface />}
 
                         {!adminMacaroon && implementation === 'embedded-lnd' && (
                             <View>
@@ -1713,7 +1715,7 @@ export default class WalletConfiguration extends React.Component<
                         <View style={{ alignItems: 'center' }}>
                             <Pill
                                 title={localeString(
-                                    'views.Settings.AddEditNode.nodeActive'
+                                    'views.Settings.WalletConfiguration.walletActive'
                                 )}
                                 backgroundColor="transparent"
                             />
@@ -1794,7 +1796,7 @@ export default class WalletConfiguration extends React.Component<
                             <View style={{ ...styles.button }}>
                                 <Button
                                     title={localeString(
-                                        'views.Settings.AddEditNode.saveNode'
+                                        'views.Settings.WalletConfiguration.saveWallet'
                                     )}
                                     onPress={() => {
                                         if (
@@ -1840,7 +1842,7 @@ export default class WalletConfiguration extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.setNodeActive'
+                                    'views.Settings.WalletConfiguration.setWalletActive'
                                 )}
                                 onPress={() =>
                                     this.setWalletConfigurationAsActive()
@@ -1854,7 +1856,7 @@ export default class WalletConfiguration extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.duplicateNode'
+                                    'views.Settings.WalletConfiguration.duplicateWallet'
                                 )}
                                 onPress={() => {
                                     /**
@@ -1884,7 +1886,7 @@ export default class WalletConfiguration extends React.Component<
                                               'views.Settings.AddEditNode.tapToConfirm'
                                           )
                                         : localeString(
-                                              'views.Settings.AddEditNode.deleteNode'
+                                              'views.Settings.WalletConfiguration.deleteWallet'
                                           )
                                 }
                                 onPress={() => {
@@ -1984,10 +1986,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 22
-    },
-    nodeInterface: {
-        paddingTop: 10,
-        paddingBottom: 10
     },
     container: {
         flexDirection: 'row',
