@@ -92,7 +92,7 @@ export default class Lockscreen extends React.Component<
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
-            navigation.navigate('Nodes');
+            navigation.navigate('Wallets');
         } else {
             navigation.pop();
         }

@@ -153,7 +153,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 >
                     {selectedNode ? (
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Nodes')}
+                            onPress={() => navigation.navigate('Wallets')}
                         >
                             <View
                                 style={{
