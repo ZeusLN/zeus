@@ -175,7 +175,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Settings.Nodes.title'),
+                        text: localeString('views.Settings.Wallets.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -381,7 +381,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             color={themeColor('text')}
                         />
                         <Text style={{ color: themeColor('text') }}>
-                            {localeString('views.Settings.Nodes.noNodes')}
+                            {localeString('views.Settings.Wallets.noWallets')}
                         </Text>
                     </View>
                 )}
