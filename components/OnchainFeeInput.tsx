@@ -14,6 +14,8 @@ interface OnchainFeeInputProps {
     onChangeFee: (fee: string) => void;
 }
 
+const DEFAULT_FEE = '2';
+
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { fee, onChangeFee, navigation } = props;
 
@@ -45,6 +47,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     setErrorOccurredLoadingFees(true);
                     setLoading(false);
                 });
+        } else {
+            onChangeFee(DEFAULT_FEE);
         }
     }, []);
 
@@ -97,7 +101,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             ) : (
                 <TextInput
                     keyboardType="numeric"
-                    placeholder="2"
+                    placeholder={DEFAULT_FEE}
                     value={newFee}
                     onChangeText={(text: string) => {
                         setNewFee(text);
