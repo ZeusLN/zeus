@@ -41,6 +41,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     setLoading(false);
                 })
                 .catch(() => {
+                    onChangeFee('0');
                     setErrorOccurredLoadingFees(true);
                     setLoading(false);
                 });

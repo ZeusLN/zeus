@@ -1250,7 +1250,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             size: 25,
                                             color:
                                                 totalBlockchainBalanceAccounts ===
-                                                0
+                                                    0 || fee === '0'
                                                     ? themeColor(
                                                           'secondaryText'
                                                       )
@@ -1260,7 +1260,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             this.sendCoins(satAmount)
                                         }
                                         disabled={
-                                            totalBlockchainBalanceAccounts === 0
+                                            totalBlockchainBalanceAccounts ===
+                                                0 || fee === '0'
                                         }
                                     />
                                 </View>
