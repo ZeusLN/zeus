@@ -111,7 +111,7 @@ export default class OpenChannel extends React.Component<
             satAmount: '',
             min_confs: 1,
             spend_unconfirmed: false,
-            sat_per_vbyte: '2',
+            sat_per_vbyte: '',
             privateChannel: true,
             scidAlias: true,
             simpleTaprootChannel: false,
@@ -1027,7 +1027,7 @@ export default class OpenChannel extends React.Component<
                                     name: 'swap-horiz',
                                     size: 25,
                                     color:
-                                        sat_per_vbyte === '0'
+                                        sat_per_vbyte === '0' || !sat_per_vbyte
                                             ? themeColor('secondaryText')
                                             : themeColor('background')
                                 }}
@@ -1047,7 +1047,8 @@ export default class OpenChannel extends React.Component<
                                     );
                                 }}
                                 disabled={
-                                    !connectPeerOnly && sat_per_vbyte === '0'
+                                    !connectPeerOnly &&
+                                    (sat_per_vbyte === '0' || !sat_per_vbyte)
                                 }
                             />
                         </View>

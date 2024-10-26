@@ -800,7 +800,6 @@ export default class ChannelView extends React.Component<
                                             deliveryAddress
                                         )
                                     }
-                                    disabled={satPerByte === '0'}
                                     warning
                                 />
                             </View>

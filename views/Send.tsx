@@ -158,7 +158,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination: destination || '',
             amount: amount || '',
             satAmount: '',
-            fee: '2',
+            fee: '',
             utxos: [],
             utxoBalance: 0,
             confirmationTarget: '60',
@@ -1250,7 +1250,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             size: 25,
                                             color:
                                                 totalBlockchainBalanceAccounts ===
-                                                    0 || fee === '0'
+                                                    0 ||
+                                                fee === '0' ||
+                                                !fee
                                                     ? themeColor(
                                                           'secondaryText'
                                                       )
@@ -1261,7 +1263,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         }
                                         disabled={
                                             totalBlockchainBalanceAccounts ===
-                                                0 || fee === '0'
+                                                0 ||
+                                            fee === '0' ||
+                                            !fee
                                         }
                                     />
                                 </View>

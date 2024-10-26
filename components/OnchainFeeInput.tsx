@@ -47,8 +47,6 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     setErrorOccurredLoadingFees(true);
                     setLoading(false);
                 });
-        } else {
-            onChangeFee(DEFAULT_FEE);
         }
     }, []);
 
@@ -107,6 +105,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         setNewFee(text);
                         onChangeFee(text);
                     }}
+                    error={!newFee || newFee === '0'}
                 />
             )}
         </>
