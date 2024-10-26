@@ -570,7 +570,7 @@ export default class WalletConfiguration extends React.Component<
             if (newNodes.length === 0) {
                 navigation.navigate('IntroSplash');
             } else {
-                navigation.popTo('Nodes', { refresh: true });
+                navigation.popTo('Wallets', { refresh: true });
             }
         });
     };
