@@ -14,7 +14,7 @@ interface OnchainFeeInputProps {
     onChangeFee: (fee: string) => void;
 }
 
-const DEFAULT_FEE = '2';
+const DEFAULT_FEE = '10';
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { fee, onChangeFee, navigation } = props;
