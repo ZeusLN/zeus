@@ -108,7 +108,10 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
         });
     };
 
-    const convertActivityToCsv = async (data: any, type: any) => {
+    const convertActivityToCsv = async (
+        data: Array<Invoice | Payment | Transaction>,
+        type: string
+    ) => {
         if (!data || data.length === 0) {
             return '';
         }
