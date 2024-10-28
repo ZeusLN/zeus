@@ -189,7 +189,7 @@ export default class Routing extends React.PureComponent<
             </Text>
         );
 
-        const buttons = [
+        const buttons: any = [
             { element: oneDButton },
             { element: oneWButton },
             { element: oneMButton },
@@ -197,8 +197,6 @@ export default class Routing extends React.PureComponent<
             { element: sixMButton },
             { element: oneYButton }
         ];
-
-        const buttonElements = buttons.map((btn) => btn.element());
 
         return (
             <Screen>
@@ -227,7 +225,7 @@ export default class Routing extends React.PureComponent<
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
-                            buttons={buttonElements}
+                            buttons={buttons}
                             selectedButtonStyle={{
                                 backgroundColor: themeColor('highlight'),
                                 borderRadius: 12
