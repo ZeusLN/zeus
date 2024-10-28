@@ -179,9 +179,10 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             </Text>
         );
 
-        const infoButtons = [{ element: qrButton }, { element: infoButton }];
-
-        const infoButtonElements = infoButtons.map((btn) => btn.element());
+        const infoButtons: any = [
+            { element: qrButton },
+            { element: infoButton }
+        ];
 
         const singleButton = () => (
             <Text
@@ -223,13 +224,11 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             </Text>
         );
 
-        const qrButtons = [
+        const qrButtons: any = [
             { element: singleButton },
             { element: bcurButton },
             { element: bbqrButton }
         ];
-
-        const qrButtonElements = qrButtons.map((btn) => btn.element());
 
         return (
             <Screen>
@@ -320,7 +319,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                     this.setState({ infoIndex });
                                 }}
                                 selectedIndex={infoIndex}
-                                buttons={infoButtonElements}
+                                buttons={infoButtons}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12
@@ -342,7 +341,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                             this.setState({ selectedIndex });
                                         }}
                                         selectedIndex={selectedIndex}
-                                        buttons={qrButtonElements}
+                                        buttons={qrButtons}
                                         selectedButtonStyle={{
                                             backgroundColor:
                                                 themeColor('highlight'),
