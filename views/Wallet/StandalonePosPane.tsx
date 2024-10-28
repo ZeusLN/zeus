@@ -346,7 +346,7 @@ export default class StandalonePosPane extends React.PureComponent<
         });
     };
 
-    renderGridItem = (item: any) => {
+    renderGridItem = ({ item }: { item: any }) => {
         const { UnitsStore } = this.props;
 
         let priceDisplay = UnitsStore?.getFormattedAmount(
@@ -389,7 +389,7 @@ export default class StandalonePosPane extends React.PureComponent<
         );
     };
 
-    renderSectionHeader = (section: any) => {
+    renderSectionHeader = ({ section }: { section: any }) => {
         return (
             <View
                 style={{
@@ -411,7 +411,7 @@ export default class StandalonePosPane extends React.PureComponent<
         );
     };
 
-    renderSection = (item: any) => {
+    renderSection = ({ item }: { item: any }) => {
         return (
             <FlatList
                 data={item.items}
