@@ -457,14 +457,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             </Text>
         );
 
-        const expirationButtons = [
+        const expirationButtons: any = [
             { element: oneMoButton },
             { element: threeMoButton },
             { element: sixMoButton },
             { element: twelveMoButton }
         ];
-
-        const buttonElements = expirationButtons.map((btn) => btn.element());
 
         const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
 
@@ -955,7 +953,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     this.updateExpirationIndex
                                                 }
                                                 selectedIndex={expirationIndex}
-                                                buttons={buttonElements}
+                                                buttons={expirationButtons}
                                                 selectedButtonStyle={{
                                                     backgroundColor:
                                                         themeColor('highlight'),
