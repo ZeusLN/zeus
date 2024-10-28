@@ -26,21 +26,21 @@ import Button from '../../components/Button';
 
 import { localeString } from '../../utils/LocaleUtils';
 
-interface SetNodePictureProps {
+interface SetWalletPictureProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'SetNodePicture', { implementation: string }>;
+    route: Route<'SetWalletPicture', { implementation: string }>;
 }
 
-interface SetNodePictureState {
+interface SetWalletPictureState {
     images: string[];
     photo: string;
 }
 
-export default class SetNodePicture extends React.Component<
-    SetNodePictureProps,
-    SetNodePictureState
+export default class SetWalletPicture extends React.Component<
+    SetWalletPictureProps,
+    SetWalletPictureState
 > {
-    constructor(props: SetNodePictureProps) {
+    constructor(props: SetWalletPictureProps) {
         super(props);
         const implementation = this.props.route.params?.implementation;
         let images: string[] = [
@@ -179,7 +179,7 @@ export default class SetNodePicture extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.SetNodePicture.choosePicture'
+                            'views.SetWalletPicture.choosePicture'
                         ),
                         style: {
                             color: themeColor('text'),
@@ -251,7 +251,7 @@ export default class SetNodePicture extends React.Component<
                 />
 
                 <Button
-                    title={localeString('views.SetNodePicture.choosePicture')}
+                    title={localeString('views.SetWalletPicture.choosePicture')}
                     onPress={() => {
                         this.onChoosePicturePress();
                     }}

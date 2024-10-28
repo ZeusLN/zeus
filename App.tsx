@@ -77,7 +77,7 @@ import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
-import SetNodePicture from './views/Settings/SetNodePicture';
+import SetWalletPicture from './views/Settings/SetWalletPicture';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -831,9 +831,9 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SetNodePicture" // @ts-ignore:next-line
+                                                        name="SetWalletPicture" // @ts-ignore:next-line
                                                         component={
-                                                            SetNodePicture
+                                                            SetWalletPicture
                                                         }
                                                     />
                                                     <Stack.Screen
