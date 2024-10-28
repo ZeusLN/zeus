@@ -1263,7 +1263,7 @@ export default class Receive extends React.Component<
             </React.Fragment>
         );
 
-        const buttons =
+        const buttons: any =
             BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet
                 ? [
                       { element: unifiedButton },
@@ -1276,8 +1276,6 @@ export default class Receive extends React.Component<
                       { element: lightningButton },
                       { element: onChainButton }
                   ];
-
-        const buttonElements = buttons.map((btn) => btn.element());
 
         const haveUnifiedInvoice = !!payment_request && !!address;
         const haveInvoice = !!payment_request || !!address;
@@ -1389,18 +1387,14 @@ export default class Receive extends React.Component<
             </Text>
         );
 
-        const expirationButtons = [
+        const expirationButtons: any = [
             { element: tenMButton },
             { element: oneHButton },
             { element: oneDButton },
             { element: oneWButton }
         ];
 
-        const expirationButtonsElement = expirationButtons.map((btn) =>
-            btn.element()
-        );
-
-        const routeHintModeButtons = [
+        const routeHintModeButtons: any = [
             {
                 element: () => (
                     <Text
@@ -1432,10 +1426,6 @@ export default class Receive extends React.Component<
                 )
             }
         ];
-
-        const routeHintModeButtonsElement = routeHintModeButtons.map((btn) =>
-            btn.element()
-        );
 
         const setRouteHintMode = (mode: RouteHintMode) => {
             if (this.state.routeHintMode === mode) {
@@ -2431,9 +2421,7 @@ export default class Receive extends React.Component<
                                                     selectedIndex={
                                                         expirationIndex
                                                     }
-                                                    buttons={
-                                                        expirationButtonsElement
-                                                    }
+                                                    buttons={expirationButtons}
                                                     selectedButtonStyle={{
                                                         backgroundColor:
                                                             themeColor(
@@ -2548,7 +2536,7 @@ export default class Receive extends React.Component<
                                                             routeHintMode
                                                         }
                                                         buttons={
-                                                            routeHintModeButtonsElement
+                                                            routeHintModeButtons
                                                         }
                                                         selectedButtonStyle={{
                                                             backgroundColor:
@@ -2779,7 +2767,7 @@ export default class Receive extends React.Component<
                             <ButtonGroup
                                 onPress={this.updateIndex}
                                 selectedIndex={selectedIndex}
-                                buttons={buttonElements}
+                                buttons={buttons}
                                 selectedButtonStyle={{
                                     backgroundColor: themeColor('highlight'),
                                     borderRadius: 12
