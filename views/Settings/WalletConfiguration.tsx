@@ -1025,7 +1025,7 @@ export default class WalletConfiguration extends React.Component<
                                     (!node || !node.photo) && !photo
                                         ? () =>
                                               navigation.navigate(
-                                                  'SetNodePicture',
+                                                  'SetWalletPicture',
                                                   { implementation }
                                               )
                                         : () => {
