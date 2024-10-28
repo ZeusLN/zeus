@@ -182,9 +182,9 @@ export default class SetFeesForm extends React.Component<
                             }}
                         >
                             {`${localeString(
-                                'components.SetFeesForm.baseFee'
-                            )} ${localeString(
                                 'views.Channel.inbound'
+                            )} ${localeString(
+                                'components.SetFeesForm.baseFee'
                             )} (${localeString('general.sats')})`}
                         </Text>
                         <TextInput
@@ -207,9 +207,9 @@ export default class SetFeesForm extends React.Component<
                             }}
                         >
                             {`${localeString(
-                                'components.SetFeesForm.feeRate'
-                            )} ${localeString(
                                 'views.Channel.inbound'
+                            )} ${localeString(
+                                'components.SetFeesForm.feeRate'
                             )} (${localeString('general.percentage')})`}
                         </Text>
                         <TextInput
