@@ -78,6 +78,7 @@ import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetWalletPicture from './views/Settings/SetWalletPicture';
+import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -245,7 +246,7 @@ export default class App extends React.PureComponent {
                                                         );
                                                     }
                                                 }}
-                                                // @ts-ignore:next-line]
+                                                // @ts-ignore:next-line
                                                 theme={{
                                                     dark: true,
                                                     colors: {
@@ -315,6 +316,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="Accounts" // @ts-ignore:next-line
                                                         component={Accounts}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ChoosePaymentMethod" // @ts-ignore:next-line
+                                                        component={
+                                                            ChoosePaymentMethod
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Send" // @ts-ignore:next-line
