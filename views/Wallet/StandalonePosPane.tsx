@@ -672,43 +672,37 @@ export default class StandalonePosPane extends React.PureComponent<
                     </View>
                 )}
 
-                {!loading &&
-                    ((selectedIndex === 0 &&
-                        productsList &&
-                        productsList.length > 0) ||
-                        (orders &&
-                            orders.length > 0 &&
-                            selectedIndex !== 0)) && (
-                        <SearchBar
-                            placeholder={localeString('general.search')}
-                            // @ts-ignore:next-line
-                            onChangeText={(value: string) => {
-                                if (selectedIndex === 0) {
-                                    this.updateProductSearch(value);
-                                    return;
-                                }
+                {!loading && (
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
+                        onChangeText={(value: string) => {
+                            if (selectedIndex === 0) {
+                                this.updateProductSearch(value);
+                                return;
+                            }
 
-                                updateSearch(value);
-                                this.setState({
-                                    search: value
-                                });
-                            }}
-                            value={search}
-                            inputStyle={{
-                                color: themeColor('text')
-                            }}
-                            placeholderTextColor={themeColor('secondaryText')}
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                borderTopWidth: 0,
-                                borderBottomWidth: 0
-                            }}
-                            inputContainerStyle={{
-                                borderRadius: 15,
-                                backgroundColor: themeColor('secondary')
-                            }}
-                        />
-                    )}
+                            updateSearch(value);
+                            this.setState({
+                                search: value
+                            });
+                        }}
+                        value={search}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                    />
+                )}
 
                 {!loading &&
                     selectedIndex === 0 &&
