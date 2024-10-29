@@ -170,7 +170,6 @@ const SwipeableRow = ({
     item: DataRow;
     index: number;
     navigation: StackNavigationProp<any, any>;
-    // selectMode: boolean; // not used for no
     value?: string;
     amount?: string;
     lightning?: string;
