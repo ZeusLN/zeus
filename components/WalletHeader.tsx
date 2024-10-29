@@ -285,7 +285,7 @@ export default class WalletHeader extends React.Component<
         const NodeButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    protectedNavigation(navigation, 'Nodes', undefined, {
+                    protectedNavigation(navigation, 'Wallets', undefined, {
                         animation: 'slide_from_right'
                     })
                 }
@@ -558,7 +558,7 @@ export default class WalletHeader extends React.Component<
                                         fontSize: 16
                                     }}
                                     onPress={() => {
-                                        navigation.navigate('Nodes');
+                                        navigation.navigate('Wallets');
                                     }}
                                 >
                                     {PrivacyUtils.sensitiveValue(

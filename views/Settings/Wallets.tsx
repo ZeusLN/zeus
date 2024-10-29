@@ -122,7 +122,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         const AddButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    navigation.navigate('NodeConfiguration', {
+                    navigation.navigate('WalletConfiguration', {
                         newEntry: true,
                         index:
                             (nodes && nodes.length && Number(nodes.length)) || 0
@@ -175,7 +175,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Settings.Nodes.title'),
+                        text: localeString('views.Settings.Wallets.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -317,7 +317,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     }}
                                                     onPress={() =>
                                                         navigation.navigate(
-                                                            'NodeConfiguration',
+                                                            'WalletConfiguration',
                                                             {
                                                                 node: cloneDeep(
                                                                     item
@@ -381,7 +381,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                             color={themeColor('text')}
                         />
                         <Text style={{ color: themeColor('text') }}>
-                            {localeString('views.Settings.Nodes.noNodes')}
+                            {localeString('views.Settings.Wallets.noWallets')}
                         </Text>
                     </View>
                 )}

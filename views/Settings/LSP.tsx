@@ -155,7 +155,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                             )}
                                             onPress={() =>
                                                 navigation.navigate(
-                                                    'NodeConfiguration',
+                                                    'WalletConfiguration',
                                                     {
                                                         node: nodes[
                                                             selectedNode || 0

@@ -211,7 +211,7 @@ export default class SeedRecovery extends React.PureComponent<
         }
     }
 
-    saveNodeConfiguration = (recoveryCipherSeed?: string) => {
+    saveWalletConfiguration = (recoveryCipherSeed?: string) => {
         const { SettingsStore, navigation } = this.props;
         const {
             walletPassword,
@@ -248,7 +248,7 @@ export default class SeedRecovery extends React.PureComponent<
                 setConnectingStatus(true);
                 navigation.popTo('Wallet', { refresh: true });
             } else {
-                navigation.popTo('Nodes', { refresh: true });
+                navigation.popTo('Wallets', { refresh: true });
             }
         });
     };
@@ -740,7 +740,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                     network.slice(1)
                                             });
 
-                                            this.saveNodeConfiguration(
+                                            this.saveWalletConfiguration(
                                                 recoveryCipherSeed
                                             );
                                         } else {

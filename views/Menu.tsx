@@ -153,7 +153,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 >
                     {selectedNode ? (
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Nodes')}
+                            onPress={() => navigation.navigate('Wallets')}
                         >
                             <View
                                 style={{
@@ -222,7 +222,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             <TouchableOpacity
                                 style={styles.columnField}
                                 onPress={() =>
-                                    navigation.navigate('NodeConfiguration', {
+                                    navigation.navigate('WalletConfiguration', {
                                         newEntry: true,
                                         index: 0
                                     })
@@ -241,7 +241,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         color: themeColor('highlight')
                                     }}
                                 >
-                                    {localeString('views.Settings.connectNode')}
+                                    {localeString(
+                                        'views.Settings.createConnectWallet'
+                                    )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
