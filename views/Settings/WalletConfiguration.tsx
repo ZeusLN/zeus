@@ -59,11 +59,11 @@ import {
     createLndWallet
 } from '../../utils/LndMobileUtils';
 
-interface NodeConfigurationProps {
+interface WalletConfigurationProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     route: Route<
-        'NodeConfiguration',
+        'WalletConfiguration',
         {
             node: Node;
             index: any;
@@ -76,7 +76,7 @@ interface NodeConfigurationProps {
     >;
 }
 
-interface NodeConfigurationState {
+interface WalletConfigurationState {
     node: Node | null;
     nickname: string; //
     host: string; // lnd, c-lightning-REST
@@ -128,11 +128,11 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
 
 @inject('SettingsStore')
 @observer
-export default class NodeConfiguration extends React.Component<
-    NodeConfigurationProps,
-    NodeConfigurationState
+export default class WalletConfiguration extends React.Component<
+    WalletConfigurationProps,
+    WalletConfigurationState
 > {
-    state: NodeConfigurationState = {
+    state: WalletConfigurationState = {
         node: null,
         nickname: '',
         dismissCustodialWarning: false,
@@ -299,7 +299,7 @@ export default class NodeConfiguration extends React.Component<
         this.initFromProps(nextProps);
     }
 
-    async initFromProps(props: NodeConfigurationProps) {
+    async initFromProps(props: WalletConfigurationProps) {
         const { route } = props;
 
         const node = route.params.node ?? this.state.node;
@@ -381,7 +381,7 @@ export default class NodeConfiguration extends React.Component<
         }
     }
 
-    saveNodeConfiguration = (recoveryCipherSeed?: string) => {
+    saveWalletConfiguration = (recoveryCipherSeed?: string) => {
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
@@ -542,7 +542,7 @@ export default class NodeConfiguration extends React.Component<
             photo
         };
 
-        navigation.navigate('NodeConfiguration', {
+        navigation.navigate('WalletConfiguration', {
             node,
             newEntry: true,
             saved: false,
@@ -570,7 +570,7 @@ export default class NodeConfiguration extends React.Component<
             if (newNodes.length === 0) {
                 navigation.navigate('IntroSplash');
             } else {
-                navigation.popTo('Nodes', { refresh: true });
+                navigation.popTo('Wallets', { refresh: true });
             }
         });
     };
@@ -594,7 +594,7 @@ export default class NodeConfiguration extends React.Component<
             : undefined;
     }
 
-    setNodeConfigurationAsActive = () => {
+    setWalletConfigurationAsActive = () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
         const { index } = this.state;
@@ -638,7 +638,7 @@ export default class NodeConfiguration extends React.Component<
                 creatingWallet: false
             });
 
-            this.saveNodeConfiguration(recoveryCipherSeed);
+            this.saveWalletConfiguration(recoveryCipherSeed);
         } else {
             this.setState({
                 creatingWallet: false,
@@ -719,9 +719,11 @@ export default class NodeConfiguration extends React.Component<
             </View>
         );
 
-        const NodeInterface = () => (
+        const WalletInterface = () => (
             <DropdownSetting
-                title={localeString('views.Settings.AddEditNode.nodeInterface')}
+                title={localeString(
+                    'views.Settings.WalletConfiguration.walletInterface'
+                )}
                 selectedValue={implementation}
                 onValueChange={(value: Implementations) => {
                     this.setState({
@@ -770,7 +772,7 @@ export default class NodeConfiguration extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Settings.AddEditNode.nodeConfig'
+                            'views.Settings.WalletConfiguration.title'
                         ),
                         style: { ...styles.text, color: themeColor('text') }
                     }}
@@ -969,10 +971,10 @@ export default class NodeConfiguration extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
-                                                'views.Settings.AddEditNode.certificateUnderstand'
+                                                'views.Settings.WalletConfiguration.certificateUnderstand'
                                             )}
                                             onPress={() => {
-                                                this.saveNodeConfiguration();
+                                                this.saveWalletConfiguration();
                                                 this.setState({
                                                     showCertModal: false
                                                 });
@@ -1023,7 +1025,7 @@ export default class NodeConfiguration extends React.Component<
                                     (!node || !node.photo) && !photo
                                         ? () =>
                                               navigation.navigate(
-                                                  'SetNodePicture',
+                                                  'SetWalletPicture',
                                                   { implementation }
                                               )
                                         : () => {
@@ -1102,7 +1104,7 @@ export default class NodeConfiguration extends React.Component<
                             </View>
                         </View>
 
-                        {!adminMacaroon && <NodeInterface />}
+                        {!adminMacaroon && <WalletInterface />}
 
                         {!adminMacaroon && implementation === 'embedded-lnd' && (
                             <View>
@@ -1713,7 +1715,7 @@ export default class NodeConfiguration extends React.Component<
                         <View style={{ alignItems: 'center' }}>
                             <Pill
                                 title={localeString(
-                                    'views.Settings.AddEditNode.nodeActive'
+                                    'views.Settings.WalletConfiguration.walletActive'
                                 )}
                                 backgroundColor="transparent"
                             />
@@ -1794,7 +1796,7 @@ export default class NodeConfiguration extends React.Component<
                             <View style={{ ...styles.button }}>
                                 <Button
                                     title={localeString(
-                                        'views.Settings.AddEditNode.saveNode'
+                                        'views.Settings.WalletConfiguration.saveWallet'
                                     )}
                                     onPress={() => {
                                         if (
@@ -1809,7 +1811,7 @@ export default class NodeConfiguration extends React.Component<
                                                 showCertModal: true
                                             });
                                         } else {
-                                            this.saveNodeConfiguration();
+                                            this.saveWalletConfiguration();
                                         }
                                     }}
                                     // disable save button if no creds passed
@@ -1840,10 +1842,10 @@ export default class NodeConfiguration extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.setNodeActive'
+                                    'views.Settings.WalletConfiguration.setWalletActive'
                                 )}
                                 onPress={() =>
-                                    this.setNodeConfigurationAsActive()
+                                    this.setWalletConfigurationAsActive()
                                 }
                                 disabled={loading}
                             />
@@ -1854,7 +1856,7 @@ export default class NodeConfiguration extends React.Component<
                         <View style={styles.button}>
                             <Button
                                 title={localeString(
-                                    'views.Settings.AddEditNode.duplicateNode'
+                                    'views.Settings.WalletConfiguration.duplicateWallet'
                                 )}
                                 onPress={() => {
                                     /**
@@ -1884,7 +1886,7 @@ export default class NodeConfiguration extends React.Component<
                                               'views.Settings.AddEditNode.tapToConfirm'
                                           )
                                         : localeString(
-                                              'views.Settings.AddEditNode.deleteNode'
+                                              'views.Settings.WalletConfiguration.deleteWallet'
                                           )
                                 }
                                 onPress={() => {
@@ -1984,10 +1986,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginTop: 22
-    },
-    nodeInterface: {
-        paddingTop: 10,
-        paddingBottom: 10
     },
     container: {
         flexDirection: 'row',

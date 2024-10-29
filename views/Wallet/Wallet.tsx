@@ -281,7 +281,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.nodes.length > 0
             ) {
                 if (settings.selectNodeOnStartup && initialStart) {
-                    navigation.navigate('Nodes');
+                    navigation.navigate('Wallets');
                 }
                 if (!this.state.unlocked) {
                     this.startListeners();
