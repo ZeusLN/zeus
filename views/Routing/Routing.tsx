@@ -57,7 +57,7 @@ export default class Routing extends React.PureComponent<
         }
     }
 
-    renderItem = (item: any) => {
+    renderItem = ({ item }: { item: any }) => {
         const { navigation } = this.props;
         return (
             <TouchableOpacity

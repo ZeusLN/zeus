@@ -35,7 +35,7 @@ interface SeedState {
     showModal: boolean;
 }
 
-const MnemonicWord = (index: any, word: any) => {
+const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     const [isRevealed, setRevealed] = useState(false);
     return (
         <TouchableOpacity
