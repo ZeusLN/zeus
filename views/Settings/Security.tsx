@@ -188,7 +188,7 @@ export default class Security extends React.Component<
         }
     };
 
-    renderItem = (item: any) => {
+    renderItem = ({ item }: { item: any }) => {
         return (
             <ListItem
                 containerStyle={{
