@@ -276,16 +276,18 @@ export default class Activity extends React.PureComponent<
                         }
                     }}
                     rightComponent={
-                        <Row>
-                            <DownloadButton />
-                            {order ? (
-                                selectedPaymentForOrder ? (
-                                    <MarkPaymentButton />
-                                ) : undefined
-                            ) : (
-                                <FilterButton />
-                            )}
-                        </Row>
+                        !loading ? (
+                            <Row>
+                                <DownloadButton />
+                                {order ? (
+                                    selectedPaymentForOrder ? (
+                                        <MarkPaymentButton />
+                                    ) : undefined
+                                ) : (
+                                    <FilterButton />
+                                )}
+                            </Row>
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
