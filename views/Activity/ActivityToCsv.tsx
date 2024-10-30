@@ -66,6 +66,9 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                         case 'expiry':
                             filteredItem[key] = item.formattedTimeUntilExpiry;
                             break;
+                        case 'note':
+                            filteredItem[key] = item.getNote;
+                            break;
                     }
                 });
             } else if (item instanceof Payment) {
@@ -84,6 +87,9 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                         case 'creation_date':
                             filteredItem[key] = item.getDisplayTime;
                             break;
+                        case 'note':
+                            filteredItem[key] = item.getNote;
+                            break;
                     }
                 });
             } else if (item instanceof Transaction) {
@@ -100,6 +106,9 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                             break;
                         case 'time_stamp':
                             filteredItem[key] = item.getDisplayTime;
+                            break;
+                        case 'note':
+                            filteredItem[key] = item.getNote;
                             break;
                     }
                 });
@@ -120,6 +129,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
             { label: 'Amount Paid', value: 'amt_paid' },
             { label: 'Amount Paid (Sat)', value: 'amt_paid_sat' },
             { label: 'CLTV Expiry', value: 'cltv_expiry' },
+            { label: 'Note', value: 'note' },
             { label: 'Creation Date', value: 'creation_date' },
             { label: 'Expiry', value: 'expiry' }
         ];
@@ -128,6 +138,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
             { label: 'Destination', value: 'payment_addr' },
             { label: 'Payment Hash', value: 'payment_hash' },
             { label: 'Value', value: 'value' },
+            { label: 'Note', value: 'note' },
             { label: 'Creation Date', value: 'creation_date' }
         ];
 
@@ -135,6 +146,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
             { label: 'Transaction Hash', value: 'tx_hash' },
             { label: 'Amount', value: 'amount' },
             { label: 'Total Fees', value: 'total_fees' },
+            { label: 'Note', value: 'note' },
             { label: 'Timestamp', value: 'time_stamp' }
         ];
 
@@ -157,6 +169,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                         'views.ActivityToCsv.amountPaid'
                     )} (${localeString('general.sats')})`,
                     localeString('views.Invoice.cltvExpiry'),
+                    localeString('general.note'),
                     localeString('views.Payment.creationDate'),
                     '',
                     '',
