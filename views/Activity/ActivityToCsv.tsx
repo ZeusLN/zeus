@@ -56,12 +56,8 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                         case 'amt_paid_sat':
                             filteredItem[key] = item.getAmount;
                             break;
-                        case 'cltv_expiry':
-                            filteredItem[key] =
-                                item.originalTimeUntilExpiryInSeconds;
-                            break;
                         case 'creation_date':
-                            filteredItem[key] = item.formattedCreationDate;
+                            filteredItem[key] = item.getCreationDate;
                             break;
                         case 'expiry':
                             filteredItem[key] = item.formattedTimeUntilExpiry;
@@ -85,7 +81,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                             filteredItem[key] = item.getAmount;
                             break;
                         case 'creation_date':
-                            filteredItem[key] = item.getDisplayTime;
+                            filteredItem[key] = item.getDate;
                             break;
                         case 'note':
                             filteredItem[key] = item.getNote;
@@ -105,7 +101,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                             filteredItem[key] = item.getFee;
                             break;
                         case 'time_stamp':
-                            filteredItem[key] = item.getDisplayTime;
+                            filteredItem[key] = item.getDate;
                             break;
                         case 'note':
                             filteredItem[key] = item.getNote;
@@ -128,7 +124,6 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
         const invoiceKeysToInclude = [
             { label: 'Amount Paid', value: 'amt_paid' },
             { label: 'Amount Paid (Sat)', value: 'amt_paid_sat' },
-            { label: 'CLTV Expiry', value: 'cltv_expiry' },
             { label: 'Note', value: 'note' },
             { label: 'Creation Date', value: 'creation_date' },
             { label: 'Expiry', value: 'expiry' }
@@ -163,18 +158,9 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                     (item) => item.amt_paid
                 );
 
-                const header = [
-                    localeString('views.ActivityToCsv.amountPaid'),
-                    `${localeString(
-                        'views.ActivityToCsv.amountPaid'
-                    )} (${localeString('general.sats')})`,
-                    localeString('views.Invoice.cltvExpiry'),
-                    localeString('general.note'),
-                    localeString('views.Payment.creationDate'),
-                    '',
-                    '',
-                    localeString('views.PaymentRequest.expiry')
-                ].join(',');
+                const header = invoiceKeysToInclude
+                    .map((field) => field.label)
+                    .join(',');
                 const rows = invoiceData
                     .map((item) =>
                         invoiceKeysToInclude
