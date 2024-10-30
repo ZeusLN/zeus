@@ -244,6 +244,10 @@ export default class Invoice extends BaseModel {
         );
     }
 
+    @computed public get getCreationDate(): Date {
+        return DateTimeUtils.listDate(this.creation_date);
+    }
+
     @computed public get formattedCreationDate(): string {
         return DateTimeUtils.listFormattedDate(this.creation_date);
     }
