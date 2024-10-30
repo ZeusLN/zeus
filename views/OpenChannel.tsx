@@ -464,7 +464,6 @@ export default class OpenChannel extends React.Component<
                             values={[
                                 {
                                     key: 'Olympus by ZEUS',
-                                    translateKey: 'views.Settings.disabled',
                                     value: 'Olympus by ZEUS'
                                 },
                                 {
