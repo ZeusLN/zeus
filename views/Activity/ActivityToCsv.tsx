@@ -41,176 +41,25 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
         return `${year}${month}${day}_${hours}${minutes}${seconds}`;
     };
 
-    const filterData = (
-        data: Array<Invoice | Payment | Transaction>,
-        invoiceKeys: string[],
-        paymentKeys: string[],
-        transactionKeys: string[]
-    ) => {
-        return data.map((item) => {
-            let filteredItem: any = {};
-            if (item instanceof Invoice) {
-                invoiceKeys.forEach((key) => {
-                    switch (key) {
-                        case 'amt_paid':
-                        case 'amt_paid_sat':
-                            filteredItem[key] = item.getAmount;
-                            break;
-                        case 'creation_date':
-                            filteredItem[key] = item.getCreationDate;
-                            break;
-                        case 'expiry':
-                            filteredItem[key] = item.formattedTimeUntilExpiry;
-                            break;
-                        case 'note':
-                            filteredItem[key] = item.getNote;
-                            break;
-                    }
-                });
-            } else if (item instanceof Payment) {
-                paymentKeys.forEach((key) => {
-                    switch (key) {
-                        case 'payment_hash':
-                            filteredItem[key] = item.paymentHash;
-                            break;
-                        case 'payment_addr':
-                            filteredItem[key] = item.getDestination;
-                            break;
-                        case 'value':
-                        case 'amount_msat':
-                            filteredItem[key] = item.getAmount;
-                            break;
-                        case 'creation_date':
-                            filteredItem[key] = item.getDate;
-                            break;
-                        case 'note':
-                            filteredItem[key] = item.getNote;
-                            break;
-                    }
-                });
-            } else if (item instanceof Transaction) {
-                transactionKeys.forEach((key) => {
-                    switch (key) {
-                        case 'tx_hash':
-                            filteredItem[key] = item.tx;
-                            break;
-                        case 'amount':
-                            filteredItem[key] = item.getAmount;
-                            break;
-                        case 'total_fees':
-                            filteredItem[key] = item.getFee;
-                            break;
-                        case 'time_stamp':
-                            filteredItem[key] = item.getDate;
-                            break;
-                        case 'note':
-                            filteredItem[key] = item.getNote;
-                            break;
-                    }
-                });
-            }
-            return filteredItem;
-        });
-    };
-
     const convertActivityToCsv = async (
         data: Array<Invoice | Payment | Transaction>,
-        type: string
+        keysToInclude: Array<any>
     ) => {
         if (!data || data.length === 0) {
             return '';
         }
 
-        const invoiceKeysToInclude = [
-            { label: 'Amount Paid', value: 'amt_paid' },
-            { label: 'Amount Paid (Sat)', value: 'amt_paid_sat' },
-            { label: 'Note', value: 'note' },
-            { label: 'Creation Date', value: 'creation_date' },
-            { label: 'Expiry', value: 'expiry' }
-        ];
-
-        const paymentKeysToInclude = [
-            { label: 'Destination', value: 'payment_addr' },
-            { label: 'Payment Hash', value: 'payment_hash' },
-            { label: 'Value', value: 'value' },
-            { label: 'Note', value: 'note' },
-            { label: 'Creation Date', value: 'creation_date' }
-        ];
-
-        const transactionKeysToInclude = [
-            { label: 'Transaction Hash', value: 'tx_hash' },
-            { label: 'Amount', value: 'amount' },
-            { label: 'Total Fees', value: 'total_fees' },
-            { label: 'Note', value: 'note' },
-            { label: 'Timestamp', value: 'time_stamp' }
-        ];
-
-        const filteredData = filterData(
-            data,
-            invoiceKeysToInclude.map((key) => key.value),
-            paymentKeysToInclude.map((key) => key.value),
-            transactionKeysToInclude.map((key) => key.value)
-        );
-
         try {
-            if (type === 'invoice') {
-                const invoiceData = filteredData.filter(
-                    (item) => item.amt_paid
-                );
+            const header = keysToInclude.map((field) => field.label).join(',');
+            const rows = data
+                ?.map((item: any) =>
+                    keysToInclude
+                        .map((field) => item[field.value] || '')
+                        .join(',')
+                )
+                .join('\n');
 
-                const header = invoiceKeysToInclude
-                    .map((field) => field.label)
-                    .join(',');
-                const rows = invoiceData
-                    .map((item) =>
-                        invoiceKeysToInclude
-                            .map((field) => item[field.value] || '')
-                            .join(',')
-                    )
-                    .join('\n');
-
-                return `${localeString(
-                    'pos.print.invoice'
-                )}\n${header}\n${rows}`;
-            } else if (type === 'payment') {
-                const paymentData = filteredData.filter(
-                    (item) => item.payment_addr
-                );
-
-                const header = paymentKeysToInclude
-                    .map((field) => field.label)
-                    .join(',');
-                const rows = paymentData
-                    .map((item) =>
-                        paymentKeysToInclude
-                            .map((field) => item[field.value] || '')
-                            .join(',')
-                    )
-                    .join('\n');
-
-                return `${localeString(
-                    'views.Wallet.Wallet.payments'
-                )}\n${header}\n${rows}`;
-            } else if (type === 'transaction') {
-                const transactionData = filteredData.filter(
-                    (item) => item.tx_hash
-                );
-
-                const header = transactionKeysToInclude
-                    .map((field) => field.label)
-                    .join(',');
-                const rows = transactionData
-                    .map((item) =>
-                        transactionKeysToInclude
-                            .map((field) => item[field.value] || '')
-                            .join(',')
-                    )
-                    .join('\n');
-
-                return `${localeString(
-                    'general.transaction'
-                )}\n${header}\n${rows}`;
-            }
+            return `${header}\n${rows}`;
         } catch (err) {
             console.error(err);
             return '';
@@ -220,19 +69,42 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
     const downloadCsv = async () => {
         setIsLoading(true);
         setTimeout(async () => {
+            const invoiceKeys = [
+                { label: 'Amount Paid (sat)', value: 'getAmount' },
+                { label: 'Note', value: 'getNote' },
+                { label: 'Creation Date', value: 'getCreationDate' },
+                { label: 'Expiry', value: 'formattedTimeUntilExpiry' }
+            ];
+
+            const paymentKeys = [
+                { label: 'Destination', value: 'getDestination' },
+                { label: 'Payment Hash', value: 'paymentHash' },
+                { label: 'Amount Paid (sat)', value: 'getAmount' },
+                { label: 'Note', value: 'getNote' },
+                { label: 'Creation Date', value: 'getDate' }
+            ];
+
+            const transactionKeys = [
+                { label: 'Transaction Hash', value: 'tx' },
+                { label: 'Amount (sat)', value: 'getAmount' },
+                { label: 'Total Fees (sat)', value: 'getFee' },
+                { label: 'Note', value: 'getNote' },
+                { label: 'Timestamp', value: 'getDate' }
+            ];
+
             const invoiceCsv = await convertActivityToCsv(
                 filteredActivity.filter((item: any) => item instanceof Invoice),
-                'invoice'
+                invoiceKeys
             );
             const paymentCsv = await convertActivityToCsv(
                 filteredActivity.filter((item: any) => item instanceof Payment),
-                'payment'
+                paymentKeys
             );
             const transactionCsv = await convertActivityToCsv(
                 filteredActivity.filter(
                     (item: any) => item instanceof Transaction
                 ),
-                'transaction'
+                transactionKeys
             );
 
             if (!invoiceCsv && !paymentCsv && !transactionCsv) {
