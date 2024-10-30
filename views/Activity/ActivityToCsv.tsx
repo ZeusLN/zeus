@@ -243,10 +243,10 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
 
             try {
                 const dateTime = getFormattedDateTime();
-                const baseFileName = customFileName || `data_${dateTime}`;
-                const invoiceFileName = `${baseFileName}_invoice.csv`;
-                const paymentFileName = `${baseFileName}_payment.csv`;
-                const transactionFileName = `${baseFileName}_transaction.csv`;
+                const baseFileName = customFileName || `zeus_${dateTime}`;
+                const invoiceFileName = `${baseFileName}_ln_invoices.csv`;
+                const paymentFileName = `${baseFileName}_ln_payments.csv`;
+                const transactionFileName = `${baseFileName}_onchain.csv`;
 
                 const invoiceFilePath =
                     Platform.OS === 'android'
