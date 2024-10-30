@@ -9,6 +9,7 @@ import { localeString } from '../utils/LocaleUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
+import stores from '../stores/Stores';
 
 interface preimageBuffer {
     data: Array<number>;
@@ -311,5 +312,9 @@ export default class Payment extends BaseModel {
 
     @computed public get getNoteKey(): string {
         return `note-${this.paymentHash || this.getPreimage}`;
+    }
+
+    @computed public get getNote(): string {
+        return stores.notesStore.notes[this.getNoteKey] || '';
     }
 }

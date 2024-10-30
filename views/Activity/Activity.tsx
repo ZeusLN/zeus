@@ -264,20 +264,6 @@ export default class Activity extends React.PureComponent<
             </View>
         );
 
-        const getMatchingNote = (item: any) => {
-            const { NotesStore } = this.props;
-            const notes = NotesStore.notes;
-
-            // Use the getNoteKey from the model
-            const noteKey = item.getNoteKey;
-
-            if (noteKey && notes[noteKey]) {
-                return notes[noteKey];
-            }
-
-            return null;
-        };
-
         return (
             <Screen>
                 <Header
@@ -320,7 +306,7 @@ export default class Activity extends React.PureComponent<
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
-                            const note = getMatchingNote(item);
+                            const note = item.getNote;
 
                             let displayName = item.model;
                             let subTitle = item.model;

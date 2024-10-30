@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -29,29 +28,31 @@ interface InvoiceProps {
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
+interface InvoiceState {
+    storedNote: string;
+}
+
 @inject('SettingsStore')
-export default class InvoiceView extends React.Component<InvoiceProps> {
+export default class InvoiceView extends React.Component<
+    InvoiceProps,
+    InvoiceState
+> {
     state = {
-        storedNotes: ''
+        storedNote: ''
     };
+
     async componentDidMount() {
         const { navigation, route } = this.props;
         const invoice = route.params?.invoice;
         navigation.addListener('focus', () => {
-            const noteKey = invoice.getNoteKey;
-            EncryptedStorage.getItem(noteKey)
-                .then((storedNotes) => {
-                    this.setState({ storedNotes });
-                })
-                .catch((error) => {
-                    console.error('Error retrieving notes:', error);
-                });
+            const note = invoice.getNote;
+            this.setState({ storedNote: note });
         });
     }
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
-        const { storedNotes } = this.state;
+        const { storedNote } = this.state;
         const invoice = route.params?.invoice;
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
@@ -290,10 +291,10 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                             />
                         )}
 
-                        {storedNotes && (
+                        {storedNote && (
                             <KeyValue
                                 keyValue={localeString('general.note')}
-                                value={storedNotes}
+                                value={storedNote}
                                 sensitive
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
@@ -308,7 +309,7 @@ export default class InvoiceView extends React.Component<InvoiceProps> {
                     {getNoteKey && (
                         <Button
                             title={
-                                storedNotes
+                                storedNote
                                     ? localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )
