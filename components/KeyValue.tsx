@@ -14,6 +14,8 @@ import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
+
+import ModalStore from '../stores/ModalStore';
 import SettingsStore from '../stores/SettingsStore';
 
 interface KeyValueProps {
@@ -21,12 +23,16 @@ interface KeyValueProps {
     value?: any;
     color?: string;
     sensitive?: boolean;
+    infoText?: string | Array<string>;
+    infoLink?: string;
+    infoNav?: string;
     mempoolLink?: () => void;
     disableCopy?: boolean;
+    ModalStore?: ModalStore;
     SettingsStore?: SettingsStore;
 }
 
-@inject('SettingsStore')
+@inject('ModalStore', 'SettingsStore')
 @observer
 export default class KeyValue extends React.Component<KeyValueProps, {}> {
     render() {
@@ -35,10 +41,15 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             value,
             color,
             sensitive,
+            infoText,
+            infoLink,
+            infoNav,
             mempoolLink,
             disableCopy,
+            ModalStore,
             SettingsStore
         } = this.props;
+        const { toggleInfoModal } = ModalStore!;
 
         const lurkerMode: boolean =
             SettingsStore?.settings?.privacy?.lurkerMode || false;
@@ -50,7 +61,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             ? false
             : typeof value === 'string' || typeof value === 'number';
         const rtl = false;
-        const Key = (
+        const KeyBase = (
             <Body>
                 <Text
                     style={{
@@ -62,41 +73,58 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 >
                     {keyValue}
                 </Text>
+                {infoText && (
+                    <Text
+                        style={{
+                            color:
+                                value !== undefined
+                                    ? themeColor('secondaryText')
+                                    : themeColor('text'),
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        {'  ⓘ'}
+                    </Text>
+                )}
             </Body>
         );
 
-        let Value;
+        let Key: any;
+        if (infoText) {
+            Key = (
+                <TouchableOpacity
+                    onPress={() => toggleInfoModal(infoText, infoLink, infoNav)}
+                >
+                    {KeyBase}
+                </TouchableOpacity>
+            );
+        } else {
+            Key = KeyBase;
+        }
 
+        const ValueBase = (
+            <Text
+                style={{
+                    color: color || themeColor('text'),
+                    fontFamily: 'PPNeueMontreal-Book'
+                }}
+            >
+                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+            </Text>
+        );
+
+        let Value: any;
         if (!lurkerMode && isCopyable) {
             Value = (
                 <TouchableOpacity
                     onLongPress={() => copyText()}
                     onPress={mempoolLink}
                 >
-                    <Text
-                        style={{
-                            color: color || themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }}
-                    >
-                        {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-                    </Text>
+                    {ValueBase}
                 </TouchableOpacity>
             );
         } else {
-            Value =
-                typeof value === 'object' ? (
-                    value
-                ) : (
-                    <Text
-                        style={{
-                            color: color || themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }}
-                    >
-                        {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-                    </Text>
-                );
+            Value = typeof value === 'object' ? value : ValueBase;
         }
 
         const copyText = () => {
