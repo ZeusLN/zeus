@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import forEach from 'lodash/forEach';
 import isNull from 'lodash/isNull';
 import {
@@ -42,7 +41,7 @@ interface TransactionProps {
 }
 
 interface TransactionState {
-    storedNotes: string;
+    storedNote: string;
 }
 
 @inject('NodeInfoStore', 'TransactionsStore')
@@ -52,26 +51,21 @@ export default class TransactionView extends React.Component<
     TransactionState
 > {
     state = {
-        storedNotes: ''
+        storedNote: ''
     };
     async componentDidMount() {
         const { navigation, route } = this.props;
         const transaction = route.params?.transaction;
         navigation.addListener('focus', () => {
             this.props.TransactionsStore.resetBroadcast();
-            EncryptedStorage.getItem(transaction.getNoteKey)
-                .then((storedNotes) => {
-                    this.setState({ storedNotes: storedNotes || '' });
-                })
-                .catch((error) => {
-                    console.error('Error retrieving notes:', error);
-                });
+            const note = transaction.getNote;
+            this.setState({ storedNote: note });
         });
     }
     render() {
         const { NodeInfoStore, navigation, route } = this.props;
         const transaction = route.params?.transaction;
-        const { storedNotes } = this.state;
+        const { storedNote } = this.state;
         const { testnet } = NodeInfoStore;
 
         const {
@@ -378,7 +372,7 @@ export default class TransactionView extends React.Component<
                         </>
                     )}
 
-                    {storedNotes && (
+                    {storedNote && (
                         <TouchableOpacity
                             onPress={() =>
                                 navigation.navigate('AddNotes', {
@@ -388,7 +382,7 @@ export default class TransactionView extends React.Component<
                         >
                             <KeyValue
                                 keyValue={localeString('general.note')}
-                                value={storedNotes}
+                                value={storedNote}
                                 sensitive
                             />
                         </TouchableOpacity>
@@ -411,7 +405,7 @@ export default class TransactionView extends React.Component<
                     {getNoteKey && (
                         <Button
                             title={
-                                storedNotes
+                                storedNote
                                     ? localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )
