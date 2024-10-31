@@ -54,7 +54,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
             const rows = data
                 ?.map((item: any) =>
                     keysToInclude
-                        .map((field) => item[field.value] || '')
+                        .map((field) => `"${item[field.value]}"` || '')
                         .join(',')
                 )
                 .join('\n');
