@@ -64,19 +64,40 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 </Text>
             </Body>
         );
-        const Value =
-            typeof value === 'object' ? (
-                value
-            ) : (
-                <Text
-                    style={{
-                        color: color || themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
-                    }}
+
+        let Value;
+
+        if (!lurkerMode && isCopyable) {
+            Value = (
+                <TouchableOpacity
+                    onLongPress={() => copyText()}
+                    onPress={mempoolLink}
                 >
-                    {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-                </Text>
+                    <Text
+                        style={{
+                            color: color || themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+                    </Text>
+                </TouchableOpacity>
             );
+        } else {
+            Value =
+                typeof value === 'object' ? (
+                    value
+                ) : (
+                    <Text
+                        style={{
+                            color: color || themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    >
+                        {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+                    </Text>
+                );
+        }
 
         const copyText = () => {
             Clipboard.setString(value.toString());
@@ -96,21 +117,9 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             </Row>
         );
 
-        const InteractiveKeyValueRow = () =>
-            !lurkerMode && isCopyable ? (
-                <TouchableOpacity
-                    onLongPress={() => copyText()}
-                    onPress={mempoolLink}
-                >
-                    <KeyValueRow />
-                </TouchableOpacity>
-            ) : (
-                <KeyValueRow />
-            );
-
         return (
             <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                <InteractiveKeyValueRow />
+                <KeyValueRow />
             </View>
         );
     }
