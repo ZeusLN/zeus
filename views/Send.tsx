@@ -728,7 +728,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                         }
                     }}
                     rightComponent={
-                        <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                marginTop: 3
+                            }}
+                        >
                             {loading && (
                                 <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={30} />
@@ -740,7 +746,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 additionalOutputs.length === 0 && (
                                     <View
                                         style={{
-                                            marginTop: 3,
                                             marginRight: 20
                                         }}
                                     >
@@ -760,7 +765,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </TouchableOpacity>
                                     </View>
                                 )}
-                            <View style={{ marginTop: 3, marginRight: 15 }}>
+                            <View style={{ marginRight: 15 }}>
                                 <TouchableOpacity
                                     onPress={() => this.enableNfc()}
                                 >
@@ -771,7 +776,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     />
                                 </TouchableOpacity>
                             </View>
-                            <View style={{ marginTop: 3 }}>
+                            <View>
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
