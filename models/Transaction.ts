@@ -2,8 +2,9 @@ import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 
 import BaseModel from './BaseModel';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import { localeString } from './../utils/LocaleUtils';
+import DateTimeUtils from '../utils/DateTimeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import stores from '../stores/Stores';
 
 interface OutputDetail {
     address: string;
@@ -132,5 +133,9 @@ export default class Transaction extends BaseModel {
 
     @computed public get getNoteKey(): string {
         return `note-${this.tx}`;
+    }
+
+    @computed public get getNote(): string {
+        return stores.notesStore.notes[this.getNoteKey] || '';
     }
 }

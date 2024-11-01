@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import {
     StyleSheet,
     ScrollView,
@@ -25,7 +24,7 @@ import UrlUtils from '../utils/UrlUtils';
 
 import Payment from '../models/Payment';
 
-import LnurlPayStore from '../stores/LnurlPayStore';
+import LnurlPayStore, { LnurlPayTransaction } from '../stores/LnurlPayStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 
@@ -42,12 +41,20 @@ interface PaymentProps {
     route: Route<'Payment', { payment: Payment }>;
 }
 
+interface PaymentState {
+    lnurlpaytx: LnurlPayTransaction | null;
+    storedNote: string;
+}
+
 @inject('LnurlPayStore', 'NodeInfoStore', 'SettingsStore')
 @observer
-export default class PaymentView extends React.Component<PaymentProps> {
+export default class PaymentView extends React.Component<
+    PaymentProps,
+    PaymentState
+> {
     state = {
         lnurlpaytx: null,
-        storedNotes: ''
+        storedNote: ''
     };
 
     async componentDidMount() {
@@ -68,19 +75,13 @@ export default class PaymentView extends React.Component<PaymentProps> {
     getNote = () => {
         const { route } = this.props;
         const payment = route.params?.payment;
-        const noteKey = payment.getNoteKey;
-        EncryptedStorage.getItem(noteKey)
-            .then((storedNotes) => {
-                this.setState({ storedNotes });
-            })
-            .catch((error) => {
-                console.error('Error retrieving notes:', error);
-            });
+        const note = payment.getNote;
+        this.setState({ storedNote: note });
     };
 
     render() {
         const { navigation, SettingsStore, NodeInfoStore, route } = this.props;
-        const { storedNotes, lnurlpaytx } = this.state;
+        const { storedNote, lnurlpaytx } = this.state;
         const { testnet } = NodeInfoStore!;
 
         const payment = route.params?.payment;
@@ -305,10 +306,10 @@ export default class PaymentView extends React.Component<PaymentProps> {
                                 />
                             </ListItem>
                         )}
-                        {storedNotes && (
+                        {storedNote && (
                             <KeyValue
                                 keyValue={localeString('general.note')}
-                                value={storedNotes}
+                                value={storedNote}
                                 sensitive
                                 mempoolLink={() =>
                                     navigation.navigate('AddNotes', {
@@ -323,7 +324,7 @@ export default class PaymentView extends React.Component<PaymentProps> {
                     {getNoteKey && (
                         <Button
                             title={
-                                storedNotes
+                                storedNote
                                     ? localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )

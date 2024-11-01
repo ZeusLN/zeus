@@ -2,10 +2,11 @@ import { observable, computed } from 'mobx';
 import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
-import Base64Utils from './../utils/Base64Utils';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import Bolt11Utils from './../utils/Bolt11Utils';
-import { localeString } from './../utils/LocaleUtils';
+import Base64Utils from '../utils/Base64Utils';
+import DateTimeUtils from '../utils/DateTimeUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
+import { localeString } from '../utils/LocaleUtils';
+import stores from '../stores/Stores';
 
 interface HopHint {
     fee_proportional_millionths: number;
@@ -243,6 +244,10 @@ export default class Invoice extends BaseModel {
         );
     }
 
+    @computed public get getCreationDate(): Date {
+        return DateTimeUtils.listDate(this.creation_date);
+    }
+
     @computed public get formattedCreationDate(): string {
         return DateTimeUtils.listFormattedDate(this.creation_date);
     }
@@ -386,5 +391,9 @@ export default class Invoice extends BaseModel {
 
     @computed public get getNoteKey(): string {
         return `note-${this.payment_hash || this.getRPreimage}`;
+    }
+
+    @computed public get getNote(): string {
+        return stores.notesStore.notes[this.getNoteKey] || '';
     }
 }

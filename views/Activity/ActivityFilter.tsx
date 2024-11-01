@@ -264,7 +264,7 @@ export default class ActivityFilter extends React.Component<
                 color={themeColor('text')}
                 underlayColor="transparent"
                 accessibilityLabel={localeString('general.clearChanges')}
-                size={30}
+                size={35}
             />
         );
 

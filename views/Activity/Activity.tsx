@@ -18,6 +18,7 @@ import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -32,6 +33,7 @@ import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
+import ActivityToCsv from './ActivityToCsv';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -45,6 +47,7 @@ interface ActivityProps {
 
 interface ActivityState {
     selectedPaymentForOrder: any;
+    isCsvModalVisible: boolean;
 }
 
 @inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
@@ -57,7 +60,8 @@ export default class Activity extends React.PureComponent<
     invoicesListener: any;
 
     state = {
-        selectedPaymentForOrder: null
+        selectedPaymentForOrder: null,
+        isCsvModalVisible: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -143,7 +147,7 @@ export default class Activity extends React.PureComponent<
             SettingsStore,
             route
         } = this.props;
-        const { selectedPaymentForOrder } = this.state;
+        const { selectedPaymentForOrder, isCsvModalVisible } = this.state;
 
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
@@ -233,23 +237,32 @@ export default class Activity extends React.PureComponent<
                 }
                 accessibilityLabel={localeString('views.ActivityFilter.title')}
             >
-                <Filter fill={themeColor('text')} />
+                <Filter fill={themeColor('text')} size={35} />
             </TouchableOpacity>
         );
 
-        const getMatchingNote = (item: any) => {
-            const { NotesStore } = this.props;
-            const notes = NotesStore.notes;
-
-            // Use the getNoteKey from the model
-            const noteKey = item.getNoteKey;
-
-            if (noteKey && notes[noteKey]) {
-                return notes[noteKey];
-            }
-
-            return null;
-        };
+        const DownloadButton = () => (
+            <View style={{ marginRight: 15 }}>
+                <TouchableOpacity
+                    onPress={() =>
+                        this.setState({
+                            isCsvModalVisible: true
+                        })
+                    }
+                    accessibilityLabel={localeString(
+                        'views.ActivityToCsv.title'
+                    )}
+                >
+                    <Icon
+                        name="download"
+                        type="feather"
+                        color={themeColor('text')}
+                        underlayColor="transparent"
+                        size={35}
+                    />
+                </TouchableOpacity>
+            </View>
+        );
 
         return (
             <Screen>
@@ -263,16 +276,30 @@ export default class Activity extends React.PureComponent<
                         }
                     }}
                     rightComponent={
-                        order ? (
-                            selectedPaymentForOrder ? (
-                                <MarkPaymentButton />
-                            ) : undefined
-                        ) : (
-                            <FilterButton />
-                        )
+                        !loading ? (
+                            <Row>
+                                <DownloadButton />
+                                {order ? (
+                                    selectedPaymentForOrder ? (
+                                        <MarkPaymentButton />
+                                    ) : undefined
+                                ) : (
+                                    <FilterButton />
+                                )}
+                            </Row>
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
+
+                <ActivityToCsv
+                    filteredActivity={filteredActivity}
+                    closeModal={() =>
+                        this.setState({ isCsvModalVisible: false })
+                    }
+                    isVisible={isCsvModalVisible}
+                />
+
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
@@ -281,7 +308,7 @@ export default class Activity extends React.PureComponent<
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
-                            const note = getMatchingNote(item);
+                            const note = item.getNote;
 
                             let displayName = item.model;
                             let subTitle = item.model;
