@@ -71,6 +71,9 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
         setTimeout(async () => {
             const invoiceKeys = [
                 { label: 'Amount Paid (sat)', value: 'getAmount' },
+                { label: 'Payment Request', value: 'getPaymentRequest' },
+                { label: 'Payment Hash', value: 'getRHash' },
+                { label: 'Memo', value: 'getMemo' },
                 { label: 'Note', value: 'getNote' },
                 { label: 'Creation Date', value: 'getCreationDate' },
                 { label: 'Expiry', value: 'formattedTimeUntilExpiry' }
@@ -78,8 +81,10 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
 
             const paymentKeys = [
                 { label: 'Destination', value: 'getDestination' },
+                { label: 'Payment Request', value: 'getPaymentRequest' },
                 { label: 'Payment Hash', value: 'paymentHash' },
                 { label: 'Amount Paid (sat)', value: 'getAmount' },
+                { label: 'Memo', value: 'getMemo' },
                 { label: 'Note', value: 'getNote' },
                 { label: 'Creation Date', value: 'getDate' }
             ];
