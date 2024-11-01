@@ -159,10 +159,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                 );
                 closeModal();
             } catch (err) {
-                console.error(
-                    localeString('views.ActivityToCsv.csvDownloadFailed'),
-                    err
-                );
+                console.error('Failed to save CSV file:', err);
             } finally {
                 setIsLoading(false);
             }
