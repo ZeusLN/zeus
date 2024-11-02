@@ -5,6 +5,7 @@ import BigNumber from 'bignumber.js';
 
 import Amount from './Amount';
 import TextInput from './TextInput';
+import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
@@ -20,6 +21,7 @@ import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
     amount?: string;
+    sats?: string;
     locked?: boolean;
     title?: string;
     hideConversion?: boolean;
@@ -28,6 +30,8 @@ interface AmountInputProps {
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
+    prefix?: any;
+    error?: boolean;
 }
 
 interface AmountInputState {
@@ -78,6 +82,45 @@ const getSatAmount = (amount: string | number, forceUnit?: string) => {
     }
 
     return satAmount;
+};
+
+const getAmount = (sats: string | number) => {
+    const { fiatStore, settingsStore, unitsStore } = Stores;
+    const { fiatRates } = fiatStore;
+    const { settings } = settingsStore;
+    const { fiat } = settings;
+    const { units } = unitsStore;
+
+    // replace , with . for unit separator
+    const value = sats ? sats.toString().replace(/,/g, ',') : '';
+
+    const fiatEntry =
+        fiat && fiatRates
+            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            : null;
+
+    const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+    let amount: string;
+    switch (units) {
+        case 'sats':
+            amount = value;
+            break;
+        case 'BTC':
+            amount = new BigNumber(value || 0).div(SATS_PER_BTC).toString();
+            break;
+        case 'fiat':
+            amount = rate
+                ? new BigNumber(value.toString().replace(/,/g, '.'))
+                      .times(rate)
+                      .div(SATS_PER_BTC)
+                      .toNumber()
+                      .toFixed(0)
+                : '0';
+            break;
+    }
+
+    return amount;
 };
 
 @inject('FiatStore', 'SettingsStore', 'UnitsStore')
@@ -139,6 +182,7 @@ export default class AmountInput extends React.Component<
         const { satAmount } = this.state;
         const {
             amount,
+            sats,
             onAmountChange,
             title,
             locked,
@@ -147,7 +191,9 @@ export default class AmountInput extends React.Component<
             FiatStore,
             UnitsStore,
             SettingsStore,
-            forceUnit
+            forceUnit,
+            prefix,
+            error
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
@@ -167,11 +213,12 @@ export default class AmountInput extends React.Component<
                         {title}
                     </Text>
                 )}
-                <View style={{ display: 'flex', flexDirection: 'row' }}>
+                <Row>
+                    {prefix ? prefix : undefined}
                     <TextInput
                         keyboardType="numeric"
                         placeholder={'0'}
-                        value={amount}
+                        value={amount || sats ? getAmount(sats) : undefined}
                         onChangeText={(text: string) => {
                             // remove spaces and non-numeric chars
                             const formatted = text.replace(/[^\d.,-]/g, '');
@@ -202,11 +249,12 @@ export default class AmountInput extends React.Component<
                             flex: 1,
                             flexDirection: 'row'
                         }}
+                        error={error}
                     />
                     {!hideUnitChangeButton && (
                         <TouchableOpacity
                             onPress={() => !locked && this.onChangeUnits()}
-                            style={{ marginTop: 22, marginLeft: 15 }}
+                            style={{ marginLeft: 15 }}
                         >
                             {UnitsStore!.getNextUnit() === 'fiat' ? (
                                 <ExchangeFiatSVG
@@ -223,7 +271,7 @@ export default class AmountInput extends React.Component<
                             )}
                         </TouchableOpacity>
                     )}
-                </View>
+                </Row>
                 {!hideConversion && (
                     <View style={{ marginBottom: 10 }}>
                         {fiatEnabled && (
