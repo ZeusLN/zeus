@@ -20,6 +20,7 @@ import OffersStore from './OffersStore';
 import PaymentsStore from './PaymentsStore';
 import PosStore from './PosStore';
 import SettingsStore from './SettingsStore';
+import SwapStore from './SwapStore';
 import SyncStore from './SyncStore';
 import TransactionsStore from './TransactionsStore';
 import UnitsStore from './UnitsStore';
@@ -82,3 +83,4 @@ export const lightningAddressStore = new LightningAddressStore(
 );
 export const posStore = new PosStore(settingsStore, fiatStore);
 export const inventoryStore = new InventoryStore();
+export const swapStore = new SwapStore();

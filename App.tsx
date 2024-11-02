@@ -29,6 +29,7 @@ import {
     paymentsStore,
     posStore,
     settingsStore,
+    swapStore,
     syncStore,
     transactionsStore,
     unitsStore,
@@ -159,6 +160,7 @@ import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 
 import PendingHTLCs from './views/PendingHTLCs';
+import Swaps from './views/Swaps';
 
 // POS
 import Order from './views/Order';
@@ -289,6 +291,7 @@ export default class App extends React.PureComponent {
                 PaymentsStore={paymentsStore}
                 PosStore={posStore}
                 SettingsStore={settingsStore}
+                SwapStore={swapStore}
                 SyncStore={syncStore}
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
@@ -1120,6 +1123,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NWCAddressSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Swaps" // @ts-ignore:next-line
+                                                        component={Swaps}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

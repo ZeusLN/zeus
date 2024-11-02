@@ -1521,6 +1521,9 @@
     "zeuspay.intro.nwc.overview": "Connect directly to your remote node using Nostr Wallet Connect.",
     "zeuspay.enableEcash": "Enable ecash",
     "zeuspay.getChannel": "Get channel",
+    "views.Swaps.title": "Swaps",
+    "views.Swaps.create": "Create atomic swap",
+    "views.Swaps.initiate": "Initiate swap",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }
