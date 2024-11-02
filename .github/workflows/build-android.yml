@@ -8,13 +8,15 @@ on:
     permissions:
         users:
           - kaloudis
+  push:
+    branches:
+      - "master"
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    container: reactnativecommunity/react-native-android@sha256:6607421944d844b82e4d05df50c11dc9fa455108222d63475cd3a0f62465fbda
     steps:
     - uses: actions/checkout@v4
     - name: Envinfo
       run: npx envinfo
     - name: Build application
-      run: yarn install && cd android && chmod +x gradlew && ./gradlew app:assembleRelease
+      run: chmod +x build.sh && bash ./build.sh --no-tty
