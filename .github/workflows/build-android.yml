@@ -11,7 +11,7 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    container: reactnativecommunity/react-native-android@sha256:4ff9c9f80da57c72284900fcfdbd079183e735684c62d7fafd3df50fdb895453
+    container: reactnativecommunity/react-native-android@sha256:6607421944d844b82e4d05df50c11dc9fa455108222d63475cd3a0f62465fbda
     steps:
     - uses: actions/checkout@v4
     - name: Envinfo
