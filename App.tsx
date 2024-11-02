@@ -132,6 +132,7 @@ import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 
 import PendingHTLCs from './views/PendingHTLCs';
+import Swaps from './views/Swaps';
 
 // POS
 import Order from './views/Order';
@@ -265,6 +266,7 @@ export default class App extends React.PureComponent {
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
                 CashuStore={Stores.cashuStore}
+                SwapStore={Stores.swapStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -1088,6 +1090,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NWCAddressSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Swaps" // @ts-ignore:next-line
+                                                        component={Swaps}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
