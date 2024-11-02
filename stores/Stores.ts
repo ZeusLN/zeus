@@ -24,6 +24,7 @@ import LightningAddressStore from './LightningAddressStore';
 import ChannelBackupStore from './ChannelBackupStore';
 import InventoryStore from './InventoryStore';
 import OffersStore from './OffersStore';
+import SwapStore from './SwapStore';
 
 class Stores {
     public alertStore: AlertStore;
@@ -52,6 +53,7 @@ class Stores {
     public channelBackupStore: ChannelBackupStore;
     public inventoryStore: InventoryStore;
     public offersStore: OffersStore;
+    public swapStore: SwapStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -123,6 +125,7 @@ class Stores {
         );
         this.posStore = new PosStore(this.settingsStore, this.fiatStore);
         this.inventoryStore = new InventoryStore();
+        this.swapStore = new SwapStore();
     }
 }
 
