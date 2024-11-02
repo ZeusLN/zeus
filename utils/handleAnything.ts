@@ -122,7 +122,7 @@ const handleAnything = async (
                 offer
             }
         ];
-    } else if (offer && BackendUtils.supportsOffers()) {
+    } else if (offer) {
         if (isClipboardValue) return true;
         return [
             'Send',

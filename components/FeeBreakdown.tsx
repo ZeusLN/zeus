@@ -431,6 +431,12 @@ export default class FeeBreakdown extends React.Component<
                                 value={`${csv_delay} ${localeString(
                                     'general.blocks'
                                 )}`}
+                                infoText={[
+                                    localeString(
+                                        'views.Channel.csvDelay.info1'
+                                    ),
+                                    localeString('views.Channel.csvDelay.info2')
+                                ]}
                             />
                         )}
 

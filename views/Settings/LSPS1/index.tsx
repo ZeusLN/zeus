@@ -474,7 +474,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const isOlympus = LSPStore.isOlympus();
 
         const lspDisplay = isOlympus
-            ? 'OLYMPUS by ZEUS'
+            ? 'Olympus by ZEUS'
             : BackendUtils.supportsLSPS1customMessage()
             ? LSPStore.getLSPS1Pubkey()
             : LSPStore.getLSPS1Rest();

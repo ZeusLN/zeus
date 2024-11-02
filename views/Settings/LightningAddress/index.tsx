@@ -576,6 +576,9 @@ export default class LightningAddress extends React.Component<
                                             >
                                                 {localeString(
                                                     'views.Settings.LightningAddress.explainer2'
+                                                ).replace(
+                                                    'OLYMPUS by ZEUS',
+                                                    'Olympus by ZEUS'
                                                 )}
                                             </Text>
                                         )}
@@ -600,6 +603,9 @@ export default class LightningAddress extends React.Component<
                                             >
                                                 {localeString(
                                                     'views.Settings.LightningAddress.explainer3'
+                                                ).replace(
+                                                    'OLYMPUS by ZEUS',
+                                                    'Olympus by ZEUS'
                                                 )}
                                             </Text>
                                         )}

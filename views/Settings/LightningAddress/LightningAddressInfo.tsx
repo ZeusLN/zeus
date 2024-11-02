@@ -78,7 +78,7 @@ export default class LightningAddressInfo extends React.Component<
                             >
                                 {localeString(
                                     'views.Settings.LightningAddressInfo.explainer1'
-                                )}
+                                ).replace('OLYMPUS by ZEUS', 'Olympus by ZEUS')}
                             </Text>
                         </View>
                         <View

@@ -617,6 +617,10 @@ export default class ChannelView extends React.Component<
                                     toggleable
                                 />
                             }
+                            infoText={localeString(
+                                'views.Channel.localReserve.info'
+                            )}
+                            infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
                         />
                     )}
                     {!!remote_chan_reserve_sat && (
@@ -631,6 +635,10 @@ export default class ChannelView extends React.Component<
                                     toggleable
                                 />
                             }
+                            infoText={localeString(
+                                'views.Channel.remoteReserve.info'
+                            )}
+                            infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
                         />
                     )}
                     {capacity && (

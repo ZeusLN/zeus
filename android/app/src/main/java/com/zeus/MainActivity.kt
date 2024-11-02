@@ -1,6 +1,7 @@
 package app.zeusln.zeus
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import com.facebook.react.ReactActivity
@@ -31,6 +32,11 @@ class MainActivity : ReactActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(null)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(false) // Avoid data leak via recents
+        }
+
         currentActivity = WeakReference(this@MainActivity)
         started = true
     }
