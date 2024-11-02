@@ -28,6 +28,7 @@ import MailboxFlagDown from '../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
+import SwapsIcon from '../assets/images/SVG/Swap.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
 
 import Header from '../components/Header';
@@ -472,6 +473,46 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         <ForwardIcon
                                             stroke={forwardArrowColor}
                                         />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {BackendUtils.supportsOnchainSends() &&
+                        BackendUtils.supportsOnchainReceiving() && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate('Swaps')}
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <SwapsIcon
+                                                fill={themeColor('text')}
+                                                height={25}
+                                                width={25}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString('views.Swaps.title')}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
                                     </View>
                                 </TouchableOpacity>
                             </View>

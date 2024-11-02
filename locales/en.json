@@ -1273,5 +1273,8 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Balance (ascending)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Balance (descending)",
     "views.OnChainAddresses.createAddress": "Create address",
-    "views.OnChainAddresses.changeAddresses": "Change addresses"
+    "views.OnChainAddresses.changeAddresses": "Change addresses",
+    "views.Swaps.title": "Swaps",
+    "views.Swaps.create": "Create atomic swap",
+    "views.Swaps.initiate": "Initiate swap"
 }
