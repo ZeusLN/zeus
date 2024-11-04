@@ -6,7 +6,7 @@ import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { CryptoAccount } from '@keystonehq/bc-ur-registry';
+import { Bytes, CryptoAccount, CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -135,6 +135,28 @@ export default class HandleAnythingQRScanner extends React.Component<
                                 console.log(
                                     'Error found while decoding BC-UR crypto-account',
                                     e
+                                );
+                            }
+                        } else if (ur._type === 'crypto-psbt') {
+                            const data = CryptoPSBT.fromCBOR(ur._cborPayload);
+                            const psbt = data.getPSBT();
+                            handleData = Buffer.from(psbt).toString('base64');
+                        } else if (ur._type === 'bytes') {
+                            const data = Bytes.fromCBOR(ur._cborPayload);
+                            handleData = Buffer.from(data.getData()).toString();
+
+                            // TODO
+                            // For some reason the cH starting byte from Base64-encoded
+                            // PSBTs is being replaced with a linebreak
+                            if (
+                                handleData.includes('NidP8BA') &&
+                                (handleData.startsWith('\r\n') ||
+                                    handleData.startsWith('\n') ||
+                                    handleData.startsWith('\r'))
+                            ) {
+                                handleData = handleData.replace(
+                                    /(\r\n|\n|\r)/gm,
+                                    'cH'
                                 );
                             }
                         } else {
