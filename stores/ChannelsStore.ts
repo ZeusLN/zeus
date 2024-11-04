@@ -923,9 +923,13 @@ export default class ChannelsStore {
                 };
                 BackendUtils.openChannelStream(request)
                     .then((data: any) => {
-                        const { pending_chan_id } = data.result;
+                        const { psbt_fund, pending_chan_id } = data.result;
                         this.pending_chan_ids.push(pending_chan_id);
-                        this.handleChannelOpen(request);
+                        if (psbt_fund?.funding_address) {
+                            outputs[psbt_fund.funding_address] =
+                                psbt_fund.funding_amount;
+                        }
+                        this.handleChannelOpen(request, outputs);
                     })
                     .catch((error: Error) => {
                         this.handleChannelOpenError(error);
