@@ -8,13 +8,45 @@ on:
     permissions:
         users:
           - kaloudis
+  push:
+    branches:
+      - "master"
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    container: reactnativecommunity/react-native-android@sha256:4ff9c9f80da57c72284900fcfdbd079183e735684c62d7fafd3df50fdb895453
     steps:
     - uses: actions/checkout@v4
     - name: Envinfo
       run: npx envinfo
     - name: Build application
-      run: yarn install && cd android && chmod +x gradlew && ./gradlew app:assembleRelease
+      run: chmod +x build.sh && bash ./build.sh --no-tty
+    - name: 'Archive arm64-v8a'
+      uses: actions/upload-artifact@v4
+      with:
+        name: arm64-v8a
+        path: android/app/build/outputs/apk/release/zeus-arm64-v8a.apk
+        retention-days: 5
+    - name: 'Archive armeabi-v7a'
+      uses: actions/upload-artifact@v4
+      with:
+        name: armeabi-v7a
+        path: android/app/build/outputs/apk/release/zeus-armeabi-v7a.apk
+        retention-days: 5
+    - name: 'Archive universal'
+      uses: actions/upload-artifact@v4
+      with:
+        name: universal
+        path: android/app/build/outputs/apk/release/zeus-universal.apk
+        retention-days: 5
+    - name: 'Archive x86'
+      uses: actions/upload-artifact@v4
+      with:
+        name: x86
+        path: android/app/build/outputs/apk/release/zeus-x86.apk
+        retention-days: 5
+    - name: 'Archive x86_64'
+      uses: actions/upload-artifact@v4
+      with:
+        name: x86_64
+        path: android/app/build/outputs/apk/release/zeus-x86_64.apk
+        retention-days: 5
