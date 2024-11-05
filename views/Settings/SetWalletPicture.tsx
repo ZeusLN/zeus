@@ -251,7 +251,7 @@ export default class SetWalletPicture extends React.Component<
                 />
 
                 <Button
-                    title={localeString('views.SetWalletPicture.choosePicture')}
+                    title={localeString('views.SetNodePicture.choosePicture')}
                     onPress={() => {
                         this.onChoosePicturePress();
                     }}
