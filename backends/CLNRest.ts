@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';
@@ -29,7 +29,7 @@ export default class CLNRest {
         eosVersion?: string,
         minApiVersion?: string
     ) => {
-        const { nodeInfo } = stores.nodeInfoStore;
+        const { nodeInfo } = nodeInfoStore;
         const { version, api_version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         if (minApiVersion) {
@@ -127,8 +127,7 @@ export default class CLNRest {
     };
 
     request = (route: string, method: string, data?: any, params?: any) => {
-        const { host, port, rune, certVerification, enableTor } =
-            stores.settingsStore;
+        const { host, port, rune, certVerification, enableTor } = settingsStore;
 
         if (params) {
             route = `${route}?${Object.keys(params)

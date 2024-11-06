@@ -6,7 +6,7 @@ import Base64Utils from '../utils/Base64Utils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
-import stores from '../stores/Stores';
+import { notesStore } from '../stores/storeInstances';
 
 interface HopHint {
     fee_proportional_millionths: number;
@@ -394,6 +394,6 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getNote(): string {
-        return stores.notesStore.notes[this.getNoteKey] || '';
+        return notesStore.notes[this.getNoteKey] || '';
     }
 }

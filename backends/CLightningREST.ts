@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { nodeInfoStore } from '../stores/storeInstances';
 import LND from './LND';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -20,7 +20,7 @@ export default class CLightningREST extends LND {
         eosVersion?: string,
         minApiVersion?: string
     ) => {
-        const { nodeInfo } = stores.nodeInfoStore;
+        const { nodeInfo } = nodeInfoStore;
         const { version, api_version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         if (minApiVersion) {
