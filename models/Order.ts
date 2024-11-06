@@ -4,7 +4,7 @@ import moment from 'moment';
 import BaseModel from './BaseModel';
 import { localeString } from '../utils/LocaleUtils';
 import { orderPaymentInfo } from '../stores/PosStore';
-import stores from '../stores/Stores';
+import { fiatStore } from '../stores/storeInstances';
 
 interface BasePriceMoney {
     amount: number;
@@ -79,7 +79,7 @@ export default class Order extends BaseModel {
     }
 
     @computed public get getTotalMoneyDisplay(): string {
-        return stores.fiatStore.formatAmountForDisplay(this.getTotalMoney);
+        return fiatStore.formatAmountForDisplay(this.getTotalMoney);
     }
 
     @computed public get getTaxMoney(): string {
@@ -89,6 +89,6 @@ export default class Order extends BaseModel {
     }
 
     @computed public get getTaxMoneyDisplay(): string {
-        return stores.fiatStore.formatAmountForDisplay(this.getTaxMoney);
+        return fiatStore.formatAmountForDisplay(this.getTaxMoney);
     }
 }

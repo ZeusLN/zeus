@@ -1,6 +1,6 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import querystring from 'querystring-es3';
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -14,8 +14,8 @@ export default class Eclair {
     clearCachedCalls = () => calls.clear();
 
     api = (method: string, params: any = {}) => {
-        const { password, certVerification, enableTor } = stores.settingsStore;
-        let { url } = stores.settingsStore;
+        const { password, certVerification, enableTor } = settingsStore;
+        let { url } = settingsStore;
 
         const id: string = method + JSON.stringify(params);
         if (calls.has(id)) {

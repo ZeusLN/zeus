@@ -1,5 +1,5 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import stores from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
@@ -106,7 +106,7 @@ export default class LND {
     };
 
     supports = (minVersion: string, eosVersion?: string) => {
-        const { nodeInfo } = stores.nodeInfoStore;
+        const { nodeInfo } = nodeInfoStore;
         const { version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         return isSupportedVersion(version, minVersion, eosVersion);
@@ -114,7 +114,7 @@ export default class LND {
 
     wsReq = (route: string, method: string, data?: any) => {
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -199,7 +199,7 @@ export default class LND {
             accessToken,
             certVerification,
             enableTor
-        } = stores.settingsStore;
+        } = settingsStore;
 
         if (params) {
             route = `${route}?${Object.keys(params)
@@ -263,7 +263,7 @@ export default class LND {
         const method = 'GET';
 
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -403,7 +403,7 @@ export default class LND {
 
         // make call
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -600,7 +600,7 @@ export default class LND {
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     initChanAcceptor = (data?: any) => {
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
