@@ -2,9 +2,9 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
-import { UR, UREncoder } from '@ngraveio/bc-ur';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -102,9 +102,6 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         const messageBuffer = Buffer.from(fundedPsbt);
 
-        // First step is to create a UR object from a Buffer
-        const ur = UR.fromBuffer(messageBuffer);
-
         // Then, create the UREncoder object
 
         // The maximum amount of fragments to be generated in total
@@ -117,7 +114,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         const firstSeqNum = 0;
 
         // Create the encoder object
-        const encoder = new UREncoder(ur, maxFragmentLength, firstSeqNum);
+        const cryptoPSBT = new CryptoPSBT(messageBuffer);
+        const encoder = cryptoPSBT.toUREncoder(maxFragmentLength, firstSeqNum);
         //
 
         this.setState({
