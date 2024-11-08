@@ -100,7 +100,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         // bc-ur
 
-        const messageBuffer = Buffer.from(fundedPsbt);
+        const messageBuffer = Buffer.from(fundedPsbt, 'base64');
 
         // Then, create the UREncoder object
 

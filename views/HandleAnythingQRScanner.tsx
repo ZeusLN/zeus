@@ -138,9 +138,8 @@ export default class HandleAnythingQRScanner extends React.Component<
                                 );
                             }
                         } else if (ur._type === 'crypto-psbt') {
-                            const data = CryptoPSBT.fromCBOR(ur._cborPayload);
-                            const psbt = data.getPSBT();
-                            handleData = Buffer.from(psbt).toString('base64');
+                            const psbt = CryptoPSBT.fromCBOR(ur._cborPayload);
+                            handleData = psbt.getPSBT().toString('base64');
                         } else if (ur._type === 'bytes') {
                             const data = Bytes.fromCBOR(ur._cborPayload);
                             handleData = Buffer.from(data.getData()).toString();
