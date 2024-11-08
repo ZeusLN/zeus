@@ -20,6 +20,7 @@ import TextInput from '../../components/TextInput';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import UTXOsStore from '../../stores/UTXOsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import Base64Utils from '../../utils/Base64Utils';
@@ -46,6 +47,7 @@ interface ImportAccountProps {
     navigation: StackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     route: Route<
         'ImportAccount',
         {
@@ -68,7 +70,7 @@ interface ImportAccountState {
     understood: boolean;
 }
 
-@inject('UTXOsStore', 'SettingsStore')
+@inject('UTXOsStore', 'SettingsStore', 'NodeInfoStore')
 @observer
 export default class ImportAccount extends React.Component<
     ImportAccountProps,
@@ -89,6 +91,7 @@ export default class ImportAccount extends React.Component<
     }
 
     handleParams = (props: ImportAccountProps) => {
+        const { NodeInfoStore } = props;
         const {
             name,
             extended_public_key,
@@ -109,6 +112,12 @@ export default class ImportAccount extends React.Component<
 
         if (address_type) {
             this.setState({ address_type });
+        }
+
+        if (NodeInfoStore?.nodeInfo?.currentBlockHeight) {
+            this.setState({
+                block_height: NodeInfoStore?.nodeInfo?.currentBlockHeight
+            });
         }
     };
 
@@ -369,6 +378,18 @@ export default class ImportAccount extends React.Component<
                                 >
                                     {localeString(
                                         'views.ImportAccount.existingAccountNote'
+                                    )}
+                                    .
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginBottom: 10
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.ImportAccount.existingAccountNote2'
                                     )}
                                 </Text>
                                 <>
