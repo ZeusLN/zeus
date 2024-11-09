@@ -85,6 +85,8 @@
 		74B637832A5A350B00750202 /* StreamingCallback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377A2A5A350A00750202 /* StreamingCallback.mm */; };
 		74B637842A5A350B00750202 /* Callback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377C2A5A350A00750202 /* Callback.mm */; };
 		74B637872A5A35B600750202 /* Lndmobile.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74B637862A5A35B600750202 /* Lndmobile.xcframework */; };
+		74BFA2652CD5C658006BCE4B /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 74BFA2642CD5C658006BCE4B /* Config.xcconfig */; };
+		74BFA2662CD5C658006BCE4B /* Config.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 74BFA2642CD5C658006BCE4B /* Config.xcconfig */; };
 		74DE85FF2BB530E5001FEC15 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A116702A55DEE600F7078C /* libresolv.tbd */; };
 		74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */ = {isa = PBXBuildFile; fileRef = 74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */; };
 		7598B75F1F64426CAF420155 /* UnifiedSvg.tsx in Resources */ = {isa = PBXBuildFile; fileRef = C7FBAA85E56C4D5D92F74F11 /* UnifiedSvg.tsx */; };
@@ -425,6 +427,7 @@
 		74B6377E2A5A350A00750202 /* Callback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Callback.h; sourceTree = "<group>"; };
 		74B6377F2A5A350A00750202 /* LncModule.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LncModule.h; sourceTree = "<group>"; };
 		74B637862A5A35B600750202 /* Lndmobile.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = Lndmobile.xcframework; path = LncMobile/Lndmobile.xcframework; sourceTree = "<group>"; };
+		74BFA2642CD5C658006BCE4B /* Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		74DE86022BB530E5001FEC15 /* libresolv.9.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.9.tbd; path = usr/lib/libresolv.9.tbd; sourceTree = SDKROOT; };
 		74F9D7EF2AF33324007D44BF /* ppneuemontreal-medium.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "ppneuemontreal-medium.otf"; path = "../assets/fonts/ppneuemontreal-medium.otf"; sourceTree = "<group>"; };
 		77EC666A91C04742A050DEF4 /* Help Icon.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Help Icon.svg"; path = "../assets/images/SVG/Help Icon.svg"; sourceTree = "<group>"; };
@@ -747,6 +750,7 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
+				74BFA2642CD5C658006BCE4B /* Config.xcconfig */,
 				13B07FAE1A68108700A75B9A /* zeus */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				00E356EF1AD99517003FC87E /* zeusTests */,
@@ -1312,6 +1316,7 @@
 				97D6EBB726C487DC002ADC8C /* ioslauncher.png in Resources */,
 				13B07FBD1A68108700A75B9A /* LaunchScreen.xib in Resources */,
 				74F9D7F22AF33324007D44BF /* ppneuemontreal-medium.otf in Resources */,
+				74BFA2662CD5C658006BCE4B /* Config.xcconfig in Resources */,
 				2F59AB02206B4761AB921130 /* Mempool.svg in Resources */,
 				5ECDD76F848B4802B0B5D3C1 /* Loading.gif in Resources */,
 				D939E2C93F2B4F279F9923FD /* 1.png in Resources */,
@@ -1422,6 +1427,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				74BFA2652CD5C658006BCE4B /* Config.xcconfig in Resources */,
 				C26BE00A80C59796641EC9CD /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1818,11 +1824,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				BUILD_NUMBER = "${BUILD_NUMBER}";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = zeus/zeus.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "${BUILD_NUMBER}";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 9TU7M3555F;
 				ENABLE_BITCODE = NO;
@@ -1837,7 +1844,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.9.2;
+				MARKETING_VERSION = "${VERSION}";
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = (
 					"-ObjC",
@@ -1854,21 +1861,23 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSION = "${VERSION}";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Debug;
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 04FCBC4A7845073E39FACA73 /* Pods-zeus.release.xcconfig */;
+			baseConfigurationReference = 0DB55EB3FF0F9245280FEA6C /* Pods-zeus-zeusTests.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				BUILD_NUMBER = "${BUILD_NUMBER}";
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = zeus/zeusRelease.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = "${BUILD_NUMBER}";
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = 9TU7M3555F;
 				ENABLE_BITCODE = NO;
@@ -1882,7 +1891,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.9.2;
+				MARKETING_VERSION = "${VERSION}";
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -1903,6 +1912,7 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "LndMobile/zeus-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSION = "${VERSION}";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
 			name = Release;
@@ -2042,6 +2052,7 @@
 		};
 		83CBBA201A601CBA00E9B192 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 74BFA2642CD5C658006BCE4B /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CC = "";
@@ -2071,6 +2082,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = "${BUILD_NUMBER}";
 				CXX = "";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -2094,6 +2106,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
 				LD = "";
 				LDPLUSPLUS = "";
+				MARKETING_VERSION = "${VERSION}";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "$(inherited)";
@@ -2107,6 +2120,7 @@
 		};
 		83CBBA211A601CBA00E9B192 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 74BFA2642CD5C658006BCE4B /* Config.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CC = "";
@@ -2136,6 +2150,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = "${BUILD_NUMBER}";
 				CXX = "";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -2155,6 +2170,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 12.4;
 				LD = "";
 				LDPLUSPLUS = "";
+				MARKETING_VERSION = "${VERSION}";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "$(inherited)";
 				OTHER_CPLUSPLUSFLAGS = "$(inherited)";
