@@ -170,18 +170,33 @@ export default class TransactionsStore {
     public finalizePsbtAndBroadcast = (funded_psbt: string) => {
         this.funded_psbt = '';
         this.loading = true;
-        return BackendUtils.finalizePsbt({ funded_psbt })
-            .then((data: any) => {
-                const raw_final_tx = data.raw_final_tx;
 
-                this.broadcast(raw_final_tx);
-            })
-            .catch((error: any) => {
+        return new Promise((resolve) => {
+            try {
+                // Parse the PSBT
+                const psbt = bitcoin.Psbt.fromBase64(funded_psbt);
+                // Step 2: Finalize each input
+                psbt.data.inputs.forEach((input: any, index: number) => {
+                    if (!input.finalScriptSig && !input.finalScriptWitness) {
+                        psbt.finalizeInput(index); // This finalizes the input
+                    }
+                });
+
+                // Step 3: Extract the transaction
+                const txHex = psbt.extractTransaction().toHex();
+
+                this.broadcast(txHex);
+
+                resolve(true);
+            } catch (error: any) {
                 // handle error
-                this.error_msg = errorToUserFriendly(error.message);
+                this.error_msg = errorToUserFriendly(error?.message || error);
                 this.error = true;
                 this.loading = false;
-            });
+
+                resolve(true);
+            }
+        });
     };
 
     @action
