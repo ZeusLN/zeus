@@ -287,6 +287,7 @@
     "views.ImportAccount.addressType": "Loại địa chỉ",
     "views.ImportAccount.existingAccount": "Existing account (has funds already)",
     "views.ImportAccount.existingAccountNote": "If importing an existing account, ZEUS will initiate a rescan from the block height specified below. Please leave the app open for up to 10 minutes for balances to be reflected accurately",
+    "views.ImportAccount.existingAccountNote2": "For best results, set block height to the block right before the first transaction received to this external wallet.",
     "views.ImportAccount.addressesToGenerate": "Number of addresses to generate",
     "views.ImportAccount.importAccount": "Nhập Tài khoản",
     "views.ImportAccount.note": "NOTE: Events (deposits/spends) for keys derived from an account will only be detected by LND if they happen after the import. Rescans to detect past events will be supported later on.",
