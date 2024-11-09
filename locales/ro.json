@@ -287,6 +287,7 @@
     "views.ImportAccount.addressType": "Tip de Adresă",
     "views.ImportAccount.existingAccount": "Cont existent (are deja fonduri)",
     "views.ImportAccount.existingAccountNote": "Dacă importați un cont existent, ZEUS va iniția o rescanare de la înălțimea blocului specificată mai jos. Vă rugăm să lăsați aplicația deschisă timp de până la 10 minute pentru ca soldurile să fie reflectate cu acuratețe",
+    "views.ImportAccount.existingAccountNote2": "For best results, set block height to the block right before the first transaction received to this external wallet.",
     "views.ImportAccount.addressesToGenerate": "Numărul de adrese de generat",
     "views.ImportAccount.importAccount": "Importă Cont",
     "views.ImportAccount.note": "NOTĂ: Evenimentele (depozite/cheltuieli) pentru cheile derivate dintr-un cont vor fi detectate de LND numai dacă au loc după import. Rescanările pentru a detecta evenimentele trecute vor fi acceptate mai târziu.",
