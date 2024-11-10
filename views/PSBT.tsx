@@ -77,6 +77,19 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         );
     }
 
+    UNSAFE_componentWillReceiveProps(nextProps: any): void {
+        const { route } = nextProps;
+        const psbt = route.params?.psbt;
+        this.setState(
+            {
+                fundedPsbt: psbt
+            },
+            () => {
+                this.generateInfo();
+            }
+        );
+    }
+
     generateInfo = () => {
         const { fundedPsbt } = this.state;
 
