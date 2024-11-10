@@ -6,6 +6,7 @@ import { themeColor } from './../utils/ThemeUtils';
 
 interface PillProps {
     name: string;
+    hidden?: boolean;
     textColor?: string;
     borderColor?: string;
     backgroundColor?: string;
@@ -72,28 +73,32 @@ function AccountFilter(props: AccountFilterProps) {
 
     for (const item in props.items) {
         const account = props.items[item];
-        const { name } = account;
+        const { name, hidden } = account;
 
-        pills.push(
-            <View key={name} style={{ padding: 2 }}>
-                <Pill
-                    title={name}
-                    textColor={themeColor('background')}
-                    borderColor={
-                        selectedPin === name ? themeColor('highlight') : null
-                    }
-                    backgroundColor={
-                        selectedPin === name
-                            ? themeColor('highlight')
-                            : themeColor('text')
-                    }
-                    onPress={() => {
-                        if (props.onChangeAccount) props.onChangeAccount();
-                        setPin(name);
-                    }}
-                />
-            </View>
-        );
+        if (!hidden) {
+            pills.push(
+                <View key={name} style={{ padding: 2 }}>
+                    <Pill
+                        title={name}
+                        textColor={themeColor('background')}
+                        borderColor={
+                            selectedPin === name
+                                ? themeColor('highlight')
+                                : null
+                        }
+                        backgroundColor={
+                            selectedPin === name
+                                ? themeColor('highlight')
+                                : themeColor('text')
+                        }
+                        onPress={() => {
+                            if (props.onChangeAccount) props.onChangeAccount();
+                            setPin(name);
+                        }}
+                    />
+                </View>
+            );
+        }
     }
 
     return (
