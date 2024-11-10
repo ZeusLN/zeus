@@ -22,6 +22,7 @@ export function ChannelItem({
     secondTitle,
     inbound,
     outbound,
+    reserve = 0,
     largestTotal,
     status,
     pendingHTLCs,
@@ -35,6 +36,7 @@ export function ChannelItem({
     secondTitle?: string;
     inbound: string | number;
     outbound: string | number;
+    reserve?: string | number;
     largestTotal?: number;
     status?: Status;
     pendingHTLCs?: boolean;
@@ -129,6 +131,7 @@ export function ChannelItem({
                 <Row style={{ marginTop: 15, marginBottom: 15 }}>
                     <BalanceBar
                         left={lurkerMode ? 50 : Number(outbound)}
+                        center={lurkerMode ? 0 : Number(reserve)}
                         right={lurkerMode ? 50 : Number(inbound)}
                         offline={isOffline}
                         percentOfLargest={percentOfLargest}

@@ -34,7 +34,7 @@ import TextInput from '../../components/TextInput';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { themeColor, hexAverage } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 
@@ -230,6 +230,7 @@ export default class ChannelView extends React.Component<
             channel_point,
             commit_weight,
             localBalance,
+            totalReserveBalance,
             commit_fee,
             csv_delay,
             total_satoshis_received,
@@ -276,6 +277,11 @@ export default class ChannelView extends React.Component<
         const bumpable: boolean = pendingOpen;
 
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
+
+        const reserveColor = hexAverage([
+            themeColor('outbound'),
+            themeColor('inbound')
+        ]);
 
         const EditFees = () => (
             <TouchableOpacity
@@ -358,6 +364,7 @@ export default class ChannelView extends React.Component<
                     <BalanceSlider
                         localBalance={lurkerMode ? 50 : localBalance}
                         remoteBalance={lurkerMode ? 50 : remoteBalance}
+                        reserveBalance={lurkerMode ? 50 : totalReserveBalance}
                     />
                     <Text
                         style={{ ...styles.status, color: themeColor('text') }}
@@ -572,12 +579,14 @@ export default class ChannelView extends React.Component<
                         value={
                             <Amount sats={localBalance} sensitive toggleable />
                         }
+                        indicatorColor={themeColor('outbound')}
                     />
                     <KeyValue
                         keyValue={localeString('views.Channel.Total.inbound')}
                         value={
                             <Amount sats={remoteBalance} sensitive toggleable />
                         }
+                        indicatorColor={themeColor('inbound')}
                     />
                     {unsettled_balance && (
                         <KeyValue
@@ -621,6 +630,7 @@ export default class ChannelView extends React.Component<
                                 'views.Channel.localReserve.info'
                             )}
                             infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            indicatorColor={reserveColor}
                         />
                     )}
                     {!!remote_chan_reserve_sat && (
@@ -639,6 +649,7 @@ export default class ChannelView extends React.Component<
                                 'views.Channel.remoteReserve.info'
                             )}
                             infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            indicatorColor={reserveColor}
                         />
                     )}
                     {capacity && (
