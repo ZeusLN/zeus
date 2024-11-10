@@ -22,6 +22,7 @@ interface KeyValueProps {
     keyValue: string;
     value?: any;
     color?: string;
+    indicatorColor?: string;
     sensitive?: boolean;
     infoText?: string | Array<string>;
     infoLink?: string;
@@ -40,6 +41,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             keyValue,
             value,
             color,
+            indicatorColor,
             sensitive,
             infoText,
             infoLink,
@@ -63,6 +65,17 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         const rtl = false;
         const KeyBase = (
             <Body>
+                {indicatorColor && (
+                    <View
+                        style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: 12 / 2,
+                            backgroundColor: indicatorColor,
+                            marginRight: 7
+                        }}
+                    ></View>
+                )}
                 <Text
                     style={{
                         color:

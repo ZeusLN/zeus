@@ -1,16 +1,18 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Row } from '../layout/Row';
-import { themeColor } from '../../utils/ThemeUtils';
+import { themeColor, hexAverage } from '../../utils/ThemeUtils';
 
 export function BalanceBar({
     left,
+    center = 0,
     right,
     offline,
     percentOfLargest,
     showProportionally = true
 }: {
     left: number;
+    center: number;
     right: number;
     offline: boolean;
     // How big is this channel relative to the largest channel
@@ -18,7 +20,7 @@ export function BalanceBar({
     percentOfLargest: number;
     showProportionally: boolean;
 }) {
-    const total = left + right;
+    const total = left + center + right;
 
     // If we're supposed to show proportionally set the miniumum to 20% of the width
     // Otherwise take the full width
@@ -32,6 +34,19 @@ export function BalanceBar({
                     backgroundColor: offline
                         ? '#E5E5E5'
                         : themeColor('outbound'),
+                    marginRight: 1
+                }}
+            />
+            <View
+                style={{
+                    height: 8,
+                    flex: center / total,
+                    backgroundColor: offline
+                        ? '#C6C7C9'
+                        : hexAverage([
+                              themeColor('outbound'),
+                              themeColor('inbound')
+                          ]),
                     marginRight: 1
                 }}
             />
