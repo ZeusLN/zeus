@@ -5,7 +5,7 @@ import { ChannelItem } from '../components/Channels/ChannelItem';
 interface BalanceSliderProps {
     localBalance: string | number;
     remoteBalance: string | number;
-    reserveBalance: string | number;
+    reserveBalance?: string | number;
     list?: boolean;
 }
 
