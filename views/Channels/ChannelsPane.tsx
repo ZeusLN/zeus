@@ -121,7 +121,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                         pendingHTLCs={item?.pending_htlcs?.length > 0}
                         inbound={item.remoteBalance}
                         outbound={item.localBalance}
-                        reserve={item.totalReserveBalance}
                         largestTotal={largestChannelSats}
                     />
                 </TouchableHighlight>
@@ -140,7 +139,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     title={item.displayName}
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
-                    reserve={item.totalReserveBalance}
                     status={getStatus()}
                     pendingHTLCs={item?.pending_htlcs?.length > 0}
                     pendingTimelock={
