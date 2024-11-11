@@ -631,7 +631,7 @@ export default class ChannelView extends React.Component<
                                 'views.Channel.localReserve.info'
                             )}
                             infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
-                            indicatorColor="#E5E5E5"
+                            indicatorColor={themeColor('outboundReserve')}
                         />
                     )}
                     {!!remote_chan_reserve_sat && (
@@ -650,7 +650,7 @@ export default class ChannelView extends React.Component<
                                 'views.Channel.remoteReserve.info'
                             )}
                             infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
-                            indicatorColor="#A7A9AC"
+                            indicatorColor={themeColor('inboundReserve')}
                         />
                     )}
                     {capacity && (

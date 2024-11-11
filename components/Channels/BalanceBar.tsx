@@ -33,7 +33,7 @@ export function BalanceBar({
                 style={{
                     height: 8,
                     flex: outboundReserve / total,
-                    backgroundColor: '#E5E5E5',
+                    backgroundColor: themeColor('outboundReserve'),
                     marginRight: 1
                 }}
             />
@@ -61,7 +61,7 @@ export function BalanceBar({
                 style={{
                     height: 8,
                     flex: inboundReserve / total,
-                    backgroundColor: '#A7A9AC',
+                    backgroundColor: themeColor('inboundReserve'),
                     marginRight: 1
                 }}
             />
