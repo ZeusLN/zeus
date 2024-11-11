@@ -2,7 +2,7 @@ import { NativeModules, NativeEventEmitter } from 'react-native';
 
 import LNC, { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-rn';
 
-import stores from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import CredentialStore from './LNC/credentialStore';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
@@ -45,7 +45,7 @@ export default class LightningNodeConnect {
 
     initLNC = async () => {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
-            stores.settingsStore;
+            settingsStore;
 
         this.lnc = new LNC({
             credentialStore: new CredentialStore()
@@ -492,7 +492,7 @@ export default class LightningNodeConnect {
         this.lnc.lnd.lightning.subscribeTransactions();
 
     supports = (minVersion: string, eosVersion?: string) => {
-        const { nodeInfo } = stores.nodeInfoStore;
+        const { nodeInfo } = nodeInfoStore;
         const { version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         return isSupportedVersion(version, minVersion, eosVersion);
