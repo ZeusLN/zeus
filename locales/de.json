@@ -287,6 +287,7 @@
     "views.ImportAccount.addressType": "Adress-Typ",
     "views.ImportAccount.existingAccount": "Existierender Account (hat bereits Guthaben)",
     "views.ImportAccount.existingAccountNote": "Wenn ein existierender Account importiert wird, scannt ZEUS diesen ab der unten angegebenen Blockhöhe neu. Bitte lasse die App für bis zu 10 Minuten geöffnet, damit die Guthaben genau ermittelt werden können.",
+    "views.ImportAccount.existingAccountNote2": "For best results, set block height to the block right before the first transaction received to this external wallet.",
     "views.ImportAccount.addressesToGenerate": "Anzahl zu generierender Adressen",
     "views.ImportAccount.importAccount": "Account importieren",
     "views.ImportAccount.note": "HINWEIS: Ereignisse (Ein-/Auszahlungen) für Schlüssel, die von einem Account abgeleitet wurden, werden von LND nur erkannt, wenn sie nach dem Import passieren. Ein nachträgliches Scannen zur Erkennung älterer Ereignisse wird erst in zukünftigen ZEUS-Versionen unterstützt.",
