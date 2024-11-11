@@ -440,32 +440,3 @@ export function isLightTheme() {
     var L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     return L > 0.179;
 }
-
-const padToTwo = (numberString: string) => {
-    if (numberString.length < 2) {
-        numberString = '0' + numberString;
-    }
-    return numberString;
-};
-
-export const hexAverage = (args: string[] = []) => {
-    return args
-        .reduce(
-            function (previousValue, currentValue) {
-                // @ts-ignore:next-line
-                return currentValue
-                    .replace(/^#/, '')
-                    .match(/.{2}/g)
-                    .map(function (value, index) {
-                        return previousValue[index] + parseInt(value, 16);
-                    });
-            },
-            [0, 0, 0]
-        )
-        .reduce(function (previousValue, currentValue) {
-            return (
-                previousValue +
-                padToTwo(Math.floor(currentValue / args.length).toString(16))
-            );
-        }, '#');
-};
