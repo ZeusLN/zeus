@@ -287,6 +287,7 @@
     "views.ImportAccount.addressType": "Type d'adresse",
     "views.ImportAccount.existingAccount": "Compte existant (dispose déjà de fonds)",
     "views.ImportAccount.existingAccountNote": "Si vous importez un compte existant, ZEUS lancera une nouvelle analyse à partir de la hauteur de bloc spécifiée ci-dessous. Veuillez laisser l'application ouverte pendant 10 minutes maximum pour que les soldes soient reflétés avec précision",
+    "views.ImportAccount.existingAccountNote2": "For best results, set block height to the block right before the first transaction received to this external wallet.",
     "views.ImportAccount.addressesToGenerate": "Nombre d'adresses à générer",
     "views.ImportAccount.importAccount": "Importer un compte",
     "views.ImportAccount.note": "REMARQUE : Les événements (dépôts/dépenses) pour les clés dérivées d'un compte ne seront détectés par LND que s'ils se produisent après l'importation. Les nouvelles analyses pour détecter les événements passés seront prises en charge ultérieurement.",
