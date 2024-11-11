@@ -363,7 +363,9 @@ export default class ChannelsStore {
             }
         }
 
-        console.log('Pending HTLCs', this.pendingHTLCs);
+        if (this.pendingHTLCs.length > 0) {
+            console.log('Pending HTLCs', this.pendingHTLCs);
+        }
 
         this.loading = false;
         return channels;
