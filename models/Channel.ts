@@ -95,18 +95,21 @@ export default class Channel extends BaseModel {
 
     @computed
     public get localBalance(): string {
-        return this.to_us
+        const totalLocalBalance = this.to_us
             ? (Number(this.to_us) / 1000).toString()
             : this.to_us_msat
             ? (Number(this.to_us_msat) / 1000).toString()
             : this.msatoshi_to_us
             ? (Number(this.msatoshi_to_us) / 1000).toString()
             : this.local_balance || '0';
+        return (
+            Number(totalLocalBalance) - Number(this.localReserveBalance)
+        ).toString();
     }
 
     @computed
     public get remoteBalance(): string {
-        return this.total
+        const totalRemoteBalance = this.total
             ? ((Number(this.total) - Number(this.to_us)) / 1000).toString()
             : this.total_msat
             ? (
@@ -119,6 +122,30 @@ export default class Channel extends BaseModel {
                   1000
               ).toString()
             : this.remote_balance || '0';
+        return (
+            Number(totalRemoteBalance) - Number(this.remoteReserveBalance)
+        ).toString();
+    }
+
+    @computed
+    public get localReserveBalance(): string {
+        return this.local_chan_reserve_sat
+            ? Number(this.local_chan_reserve_sat).toString()
+            : '0';
+    }
+
+    @computed
+    public get remoteReserveBalance(): string {
+        return this.remote_chan_reserve_sat
+            ? Number(this.remote_chan_reserve_sat).toString()
+            : '0';
+    }
+
+    @computed
+    public get totalReserveBalance(): string {
+        return (
+            Number(this.localReserveBalance) + Number(this.remoteReserveBalance)
+        ).toString();
     }
 
     /** Channel id
