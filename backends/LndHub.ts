@@ -1,6 +1,6 @@
 import bolt11 from 'bolt11';
 
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';
@@ -84,12 +84,12 @@ export default class LndHub extends LND {
             .digest();
 
         let signed, signature, key, linkingKeyPair;
-        switch (stores.settingsStore.settings.lndHubLnAuthMode || 'Alby') {
+        switch (settingsStore.settings.lndHubLnAuthMode || 'Alby') {
             case 'Alby':
                 key = new sha256Hash()
                     .update(
                         Base64Utils.stringToUint8Array(
-                            `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+                            `lndhub://${settingsStore.username}:${settingsStore.password}`
                         )
                     )
                     .digest();
@@ -103,7 +103,7 @@ export default class LndHub extends LND {
                 break;
             case 'BlueWallet':
                 signature = Base64Utils.stringToUint8Array(
-                    `lndhub://${stores.settingsStore.username}:${stores.settingsStore.password}`
+                    `lndhub://${settingsStore.username}:${settingsStore.password}`
                 );
                 break;
         }
@@ -119,18 +119,18 @@ export default class LndHub extends LND {
     supportsOnchainSends = () => false;
     supportsOnchainReceiving = () =>
         !(
-            stores?.settingsStore?.lndhubUrl?.includes('lnbank/api/lndhub') ||
-            stores?.settingsStore?.lndhubUrl?.includes('lntxbot') ||
+            settingsStore?.lndhubUrl?.includes('lnbank/api/lndhub') ||
+            settingsStore?.lndhubUrl?.includes('lntxbot') ||
             // Alby
-            stores?.settingsStore?.lndhubUrl?.includes('ln.getalby.com') ||
-            stores?.settingsStore?.lndhubUrl?.includes('getalby.com/lndhub') ||
+            settingsStore?.lndhubUrl?.includes('ln.getalby.com') ||
+            settingsStore?.lndhubUrl?.includes('getalby.com/lndhub') ||
             // LNBits
-            stores?.settingsStore?.lndhubUrl?.includes('/lndhub/ext/')
+            settingsStore?.lndhubUrl?.includes('/lndhub/ext/')
         );
     supportsLightningSends = () => {
         return !(
-            stores?.settingsStore?.lndhubUrl?.includes('/lndhub/ext/') &&
-            stores.settingsStore.username === 'invoice'
+            settingsStore?.lndhubUrl?.includes('/lndhub/ext/') &&
+            settingsStore.username === 'invoice'
         );
     };
     supportsKeysend = () => false;
