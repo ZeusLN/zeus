@@ -1,26 +1,28 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Row } from '../layout/Row';
-import { themeColor, hexAverage } from '../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 export function BalanceBar({
-    left,
-    center = 0,
-    right,
+    outbound,
+    inbound,
+    outboundReserve = 0,
+    inboundReserve = 0,
     offline,
     percentOfLargest,
     showProportionally = true
 }: {
-    left: number;
-    center: number;
-    right: number;
+    outbound: number;
+    inbound: number;
+    outboundReserve: number;
+    inboundReserve: number;
     offline: boolean;
     // How big is this channel relative to the largest channel
     // A float from 0.0 -> 1.0, 1 being the largest channel
     percentOfLargest: number;
     showProportionally: boolean;
 }) {
-    const total = left + center + right;
+    const total = outboundReserve + outbound + inbound + inboundReserve;
 
     // If we're supposed to show proportionally set the miniumum to 20% of the width
     // Otherwise take the full width
@@ -30,7 +32,15 @@ export function BalanceBar({
             <View
                 style={{
                     height: 8,
-                    flex: left / total,
+                    flex: outboundReserve / total,
+                    backgroundColor: '#E5E5E5',
+                    marginRight: 1
+                }}
+            />
+            <View
+                style={{
+                    height: 8,
+                    flex: outbound / total,
                     backgroundColor: offline
                         ? '#E5E5E5'
                         : themeColor('outbound'),
@@ -40,21 +50,19 @@ export function BalanceBar({
             <View
                 style={{
                     height: 8,
-                    flex: center / total,
+                    flex: inbound / total,
                     backgroundColor: offline
-                        ? '#C6C7C9'
-                        : hexAverage([
-                              themeColor('outbound'),
-                              themeColor('inbound')
-                          ]),
+                        ? '#A7A9AC'
+                        : themeColor('inbound'),
                     marginRight: 1
                 }}
             />
             <View
                 style={{
                     height: 8,
-                    flex: right / total,
-                    backgroundColor: offline ? '#A7A9AC' : themeColor('inbound')
+                    flex: inboundReserve / total,
+                    backgroundColor: '#A7A9AC',
+                    marginRight: 1
                 }}
             />
         </Row>
