@@ -287,7 +287,7 @@
     "views.ImportAccount.addressType": "Typ adresy",
     "views.ImportAccount.existingAccount": "Existující účet (již s prostředky)",
     "views.ImportAccount.existingAccountNote": "Jestliže importujete existující účet, ZEUS zahájí přeskenování od výšky bloku specifikované níže. Nechejte prosím aplikaci otevřenou po dobu až 10 minut, aby byly zobrazené zůstatky přesné",
-    "views.ImportAccount.existingAccountNote2": "For best results, set block height to the block right before the first transaction received to this external wallet.",
+    "views.ImportAccount.existingAccountNote2": "Pro nejlepší výsledky nastavte výšku bloku na blok, který těsně předcházel první transakci přijaté do této externí peněženky.",
     "views.ImportAccount.addressesToGenerate": "Počet adres k vygenerování",
     "views.ImportAccount.importAccount": "Importovat účet",
     "views.ImportAccount.note": "POZNÁMKA: Události (vklady/výdaje) pro klíče odvozené z účtu budou v systému LND zjištěny pouze tehdy, pokud k nim dojde po importu. Opětovné skenování za účelem zjištění minulých událostí bude podporováno později.",
