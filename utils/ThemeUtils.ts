@@ -64,6 +64,8 @@ const Dark: { [key: string]: any } = {
     separator: '#31363F',
     outbound: '#FFD93F',
     inbound: '#FFF0CA',
+    outboundReserve: '#B7B7B7',
+    inboundReserve: '#636569',
     success: '#46BE43',
     warning: '#E14C4C',
     bitcoin: '#FFB040',

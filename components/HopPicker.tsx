@@ -146,6 +146,8 @@ export default class ChannelPicker extends React.Component<
                         title={item.displayName}
                         inbound={item.remoteBalance}
                         outbound={item.localBalance}
+                        inboundReserve={item.remoteReserveBalance}
+                        outboundReserve={item.localReserveBalance}
                         largestTotal={largestChannelSats}
                         selected={selected}
                     />
@@ -159,6 +161,8 @@ export default class ChannelPicker extends React.Component<
                     title={item.displayName}
                     inbound={item.remoteBalance}
                     outbound={item.localBalance}
+                    inboundReserve={item.remoteReserveBalance}
+                    outboundReserve={item.localReserveBalance}
                     selected={selected}
                 />
             </TouchableHighlight>
