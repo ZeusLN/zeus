@@ -156,9 +156,11 @@ export default class LightningAddress extends React.Component<
             create,
             status,
             redeemAllOpenPayments,
+            DEV_deleteLocalHashes,
             lightningAddressHandle,
             lightningAddressDomain,
             availableHashes,
+            localHashes,
             paid,
             fees,
             error,
@@ -350,7 +352,9 @@ export default class LightningAddress extends React.Component<
                                                 )
                                             ]}
                                         >
-                                            {` (${availableHashes})`}
+                                            {` (${
+                                                __DEV__ ? `${localHashes}|` : ''
+                                            }${availableHashes})`}
                                         </Text>
                                     </Row>
                                     <QRButton />
@@ -793,6 +797,17 @@ export default class LightningAddress extends React.Component<
                                                 }
                                                 disabled={!isReady}
                                             />
+                                        )}
+                                        {__DEV__ && (
+                                            <View style={{ marginTop: 10 }}>
+                                                <Button
+                                                    title={'Clear local hashes'}
+                                                    onPress={() =>
+                                                        DEV_deleteLocalHashes()
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
                                         )}
                                     </>
                                 )}
