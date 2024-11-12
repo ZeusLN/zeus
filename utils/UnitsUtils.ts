@@ -1,6 +1,6 @@
 const getDecimalPlaceholder = (amount: string, units: string) => {
-    const occupiedPlaces: number =
-        (amount.split('.')[1] && amount.split('.')[1].length) || 0;
+    const [_, decimalPart] = amount.split('.');
+    const occupiedPlaces: number = (decimalPart && decimalPart.length) || 0;
     let placeholderCount = 0;
 
     if (units === 'sats') {
@@ -12,7 +12,18 @@ const getDecimalPlaceholder = (amount: string, units: string) => {
     }
 
     return {
-        string: amount.includes('.') ? '0'.repeat(placeholderCount) : null,
+        string: amount.includes('.')
+            ? units === 'BTC'
+                ? '00 000 000'.slice(
+                      occupiedPlaces +
+                          (decimalPart.length > 5
+                              ? 2
+                              : decimalPart.length > 2
+                              ? 1
+                              : 0)
+                  )
+                : '0'.repeat(placeholderCount)
+            : null,
         count: amount.includes('.') ? placeholderCount : 0
     };
 };

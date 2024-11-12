@@ -185,6 +185,10 @@ function AmountDisplay({
                                 {negative ? '-' : ''}
                                 {amount === 'N/A' && fiatRatesLoading ? (
                                     <LoadingIndicator size={20} />
+                                ) : unit === 'BTC' ? (
+                                    stores.fiatStore.formatBitcoinWithSpaces(
+                                        amount
+                                    )
                                 ) : (
                                     amount.toString()
                                 )}
@@ -216,6 +220,10 @@ function AmountDisplay({
                                 {negative ? '-' : ''}
                                 {amount === 'N/A' && fiatRatesLoading ? (
                                     <LoadingIndicator size={20} />
+                                ) : unit === 'BTC' ? (
+                                    stores.fiatStore.formatBitcoinWithSpaces(
+                                        amount
+                                    )
                                 ) : (
                                     amount.toString()
                                 )}
