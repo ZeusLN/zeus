@@ -27,6 +27,27 @@ export default class FiatStore {
     @observable public numberWithCommas = (x: string | number) =>
         x?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
 
+    @observable public formatBitcoinWithSpaces = (x: string | number) => {
+        // Convert to string to handle decimal parts
+        const [integerPart, decimalPart] = x.toString().split('.');
+
+        const integerFormatted = this.numberWithCommas(integerPart);
+
+        // // If no decimal part, return the integer part as is
+        if (x.toString().includes('.') && !decimalPart) {
+            return `${integerFormatted}.`;
+        } else if (!decimalPart) {
+            return integerFormatted;
+        }
+
+        // Handle the first two characters, then group the rest in threes
+        const firstTwo = decimalPart.slice(0, 2);
+        const rest = decimalPart.slice(2).replace(/(\d{3})(?=\d)/g, '$1 ');
+
+        // Combine integer part, first two characters, and formatted rest
+        return `${integerFormatted}.${firstTwo} ${rest}`.trim();
+    };
+
     @observable public numberWithDecimals = (x: string | number) =>
         this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
             y === ',' ? '.' : ','

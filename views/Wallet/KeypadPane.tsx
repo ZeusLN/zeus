@@ -39,8 +39,6 @@ interface KeypadPaneState {
     lspNotConfigured: boolean;
 }
 
-const MAX_LENGTH = 10;
-
 @inject(
     'ChannelsStore',
     'FiatStore',
@@ -99,17 +97,34 @@ export default class KeypadPane extends React.PureComponent<
                 return this.startShake();
         }
         if (units === 'BTC') {
-            if (amount.split('.')[1] && amount.split('.')[1].length == 8)
+            const [integerPart, decimalPart] = amount.split('.');
+            // deny if trying to add more than 8 figures of Bitcoin
+            if (
+                !decimalPart &&
+                integerPart &&
+                integerPart.length == 8 &&
+                !amount.includes('.') &&
+                value !== '.'
+            )
+                return this.startShake();
+            // deny if trying to add more than 8 decimal places of satoshis
+            if (decimalPart && decimalPart.length == 8)
                 return this.startShake();
         }
 
-        if (amount.length >= MAX_LENGTH) {
-            newAmount = amount;
+        const proposedNewAmountStr = `${amount}${value}`;
+        const proposedNewAmount = new BigNumber(proposedNewAmountStr);
+
+        // deny if exceeding BTC 21 million capacity
+        if (units === 'BTC' && proposedNewAmount.gt(21000000))
             return this.startShake();
-        } else if (amount === '0') {
+        if (units === 'sats' && proposedNewAmount.gt(2100000000000000.0))
+            return this.startShake();
+
+        if (amount === '0') {
             newAmount = value;
         } else {
-            newAmount = `${amount}${value}`;
+            newAmount = proposedNewAmountStr;
         }
 
         let needInbound = false;
@@ -197,8 +212,10 @@ export default class KeypadPane extends React.PureComponent<
                 return needInbound ? 40 : 50;
             case 8:
                 return needInbound ? 35 : 45;
-            default:
+            case 9:
                 return needInbound ? 25 : 35;
+            default:
+                return needInbound ? 20 : 30;
         }
     };
 
@@ -326,7 +343,9 @@ export default class KeypadPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
-                        {FiatStore?.numberWithCommas(amount)}
+                        {units === 'BTC'
+                            ? FiatStore?.formatBitcoinWithSpaces(amount)
+                            : FiatStore?.numberWithCommas(amount)}
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {getDecimalPlaceholder(amount, units).string}
                         </Text>
