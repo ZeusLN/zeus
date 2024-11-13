@@ -1,3 +1,6 @@
+// 100_000_000
+const SATS_PER_BTC = 100000000;
+
 const getDecimalPlaceholder = (amount: string, units: string) => {
     const [_, decimalPart] = amount.split('.');
     const occupiedPlaces: number = (decimalPart && decimalPart.length) || 0;
@@ -28,4 +31,39 @@ const getDecimalPlaceholder = (amount: string, units: string) => {
     };
 };
 
-export { getDecimalPlaceholder };
+const numberWithCommas = (x: string | number) =>
+    x?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
+
+const numberWithDecimals = (x: string | number) =>
+    numberWithCommas(x).replace(/[,.]/g, (y: string) =>
+        y === ',' ? '.' : ','
+    );
+
+const formatBitcoinWithSpaces = (x: string | number) => {
+    // Convert to string to handle decimal parts
+    const [integerPart, decimalPart] = x.toString().split('.');
+
+    const integerFormatted = numberWithCommas(integerPart);
+
+    // // If no decimal part, return the integer part as is
+    if (x.toString().includes('.') && !decimalPart) {
+        return `${integerFormatted}.`;
+    } else if (!decimalPart) {
+        return integerFormatted;
+    }
+
+    // Handle the first two characters, then group the rest in threes
+    const firstTwo = decimalPart.slice(0, 2);
+    const rest = decimalPart.slice(2).replace(/(\d{3})(?=\d)/g, '$1 ');
+
+    // Combine integer part, first two characters, and formatted rest
+    return `${integerFormatted}.${firstTwo} ${rest}`.trim();
+};
+
+export {
+    SATS_PER_BTC,
+    getDecimalPlaceholder,
+    numberWithCommas,
+    numberWithDecimals,
+    formatBitcoinWithSpaces
+};

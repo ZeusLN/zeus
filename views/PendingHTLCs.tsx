@@ -15,15 +15,14 @@ import Switch from '../components/Switch';
 import { localeString } from '../utils/LocaleUtils';
 import { restartNeeded } from '../utils/RestartUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 
 import ChannelsStore from '../stores/ChannelsStore';
-import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 
 interface PendingHTLCsProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
-    FiatStore: FiatStore;
     SettingsStore: SettingsStore;
     route: Route<'PendingHTLCs', { pending_htlcs: any }>;
 }
@@ -35,7 +34,7 @@ interface PendingHTLCsState {
 
 const PERSISTENT_KEY = 'persistentServicesEnabled';
 
-@inject('ChannelsStore', 'FiatStore', 'SettingsStore')
+@inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class PendingHTLCs extends React.PureComponent<
     PendingHTLCsProps,
@@ -71,8 +70,7 @@ export default class PendingHTLCs extends React.PureComponent<
     };
 
     render() {
-        const { navigation, ChannelsStore, FiatStore, SettingsStore } =
-            this.props;
+        const { navigation, ChannelsStore, SettingsStore } = this.props;
         const { pendingHTLCs, persistentMode } = this.state;
         const { getChannels, loading } = ChannelsStore;
         const { updateSettings, implementation } = SettingsStore;
@@ -103,9 +101,7 @@ export default class PendingHTLCs extends React.PureComponent<
                                 : localeString('views.PendingHTLCs.outgoing');
                             const subTitle = `${localeString(
                                 'views.PendingHTLCs.expirationHeight'
-                            )}: ${FiatStore.numberWithCommas(
-                                item.expiration_height
-                            )}`;
+                            )}: ${numberWithCommas(item.expiration_height)}`;
 
                             return (
                                 <React.Fragment>

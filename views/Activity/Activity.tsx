@@ -23,13 +23,17 @@ import { Row } from '../../components/layout/Row';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import {
+    SATS_PER_BTC,
+    numberWithCommas,
+    numberWithDecimals
+} from '../../utils/UnitsUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NotesStore from '../../stores/NotesStore';
-import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
@@ -200,8 +204,8 @@ export default class Activity extends React.PureComponent<
                           };
 
                     const formattedRate = separatorSwap
-                        ? FiatStore.numberWithDecimals(rate)
-                        : FiatStore.numberWithCommas(rate);
+                        ? numberWithDecimals(rate)
+                        : numberWithCommas(rate);
 
                     const exchangeRate = rtl
                         ? `${formattedRate}${
