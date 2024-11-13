@@ -340,7 +340,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (amount) {
+        if (amount && amount != '0') {
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
@@ -390,7 +390,7 @@ export default class Receive extends React.Component<
         reset();
         const { amount, lnurlParams: lnurl } = route.params ?? {};
 
-        if (amount) {
+        if (amount && amount != '0') {
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
