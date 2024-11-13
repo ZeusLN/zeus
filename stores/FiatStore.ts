@@ -3,7 +3,11 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
-import { SATS_PER_BTC } from './UnitsStore';
+import {
+    SATS_PER_BTC,
+    numberWithCommas,
+    numberWithDecimals
+} from '../utils/UnitsUtils';
 
 interface CurrencyDisplayRules {
     symbol: string;
@@ -24,34 +28,6 @@ export default class FiatStore {
     @observable public loading = false;
     @observable public error = false;
 
-    @observable public numberWithCommas = (x: string | number) =>
-        x?.toString()?.replace(/\B(?=(\d{3})+(?!\d))/g, ',') || '0';
-
-    @observable public formatBitcoinWithSpaces = (x: string | number) => {
-        // Convert to string to handle decimal parts
-        const [integerPart, decimalPart] = x.toString().split('.');
-
-        const integerFormatted = this.numberWithCommas(integerPart);
-
-        // // If no decimal part, return the integer part as is
-        if (x.toString().includes('.') && !decimalPart) {
-            return `${integerFormatted}.`;
-        } else if (!decimalPart) {
-            return integerFormatted;
-        }
-
-        // Handle the first two characters, then group the rest in threes
-        const firstTwo = decimalPart.slice(0, 2);
-        const rest = decimalPart.slice(2).replace(/(\d{3})(?=\d)/g, '$1 ');
-
-        // Combine integer part, first two characters, and formatted rest
-        return `${integerFormatted}.${firstTwo} ${rest}`.trim();
-    };
-
-    @observable public numberWithDecimals = (x: string | number) =>
-        this.numberWithCommas(x).replace(/[,.]/g, (y: string) =>
-            y === ',' ? '.' : ','
-        );
     private sourceOfCurrentFiatRates: string | undefined;
 
     getFiatRatesToken: any;
@@ -602,12 +578,12 @@ export default class FiatStore {
                 .toFixed(0);
 
             const formattedRate = separatorSwap
-                ? this.numberWithDecimals(rate)
-                : this.numberWithCommas(rate);
+                ? numberWithDecimals(rate)
+                : numberWithCommas(rate);
 
             const formattedMoscow = separatorSwap
-                ? this.numberWithDecimals(moscowTime)
-                : this.numberWithCommas(moscowTime);
+                ? numberWithDecimals(moscowTime)
+                : numberWithCommas(moscowTime);
 
             if (sats) {
                 return `${formattedMoscow} sats = 1 ${fiat}`;
@@ -770,8 +746,8 @@ export default class FiatStore {
     public formatAmountForDisplay = (input: string | number) => {
         const { symbol, space, rtl, separatorSwap } = this.getSymbol();
         const amount = separatorSwap
-            ? this.numberWithDecimals(input)
-            : this.numberWithCommas(input);
+            ? numberWithDecimals(input)
+            : numberWithCommas(input);
 
         if (rtl) return `${amount}${space ? ' ' : ''}${symbol}`;
         return `${symbol}${space ? ' ' : ''}${amount}`;

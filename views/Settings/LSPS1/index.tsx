@@ -35,12 +35,12 @@ import { Row } from '../../../components/layout/Row';
 import BackendUtils from '../../../utils/BackendUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
+import { numberWithCommas } from '../../../utils/UnitsUtils';
 
 import LSPStore from '../../../stores/LSPStore';
 import InvoicesStore from '../../../stores/InvoicesStore';
 import ChannelsStore from '../../../stores/ChannelsStore';
 import SettingsStore from '../../../stores/SettingsStore';
-import FiatStore from '../../../stores/FiatStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
 
 import { LSPS1OrderResponse as Order } from './OrdersPane';
@@ -50,7 +50,6 @@ interface LSPS1Props {
     InvoicesStore: InvoicesStore;
     ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
-    FiatStore: FiatStore;
     NodeInfoStore: NodeInfoStore;
     navigation: StackNavigationProp<any, any>;
 }
@@ -74,7 +73,6 @@ interface LSPS1State {
     'ChannelsStore',
     'InvoicesStore',
     'SettingsStore',
-    'FiatStore',
     'NodeInfoStore'
 )
 @observer
@@ -352,7 +350,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             navigation,
             LSPStore,
             InvoicesStore,
-            FiatStore,
             NodeInfoStore,
             SettingsStore
         } = this.props;
@@ -683,9 +680,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 keyValue={`${localeString(
                                                                     'views.Channel.channelBalance'
                                                                 )}`}
-                                                                value={`${FiatStore.numberWithCommas(
+                                                                value={`${numberWithCommas(
                                                                     info?.min_channel_balance_sat
-                                                                )} - ${FiatStore.numberWithCommas(
+                                                                )} - ${numberWithCommas(
                                                                     info?.max_channel_balance_sat
                                                                 )} ${localeString(
                                                                     'general.sats'
@@ -698,9 +695,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 keyValue={`${localeString(
                                                                     'views.LSPS1.initialLSPBalance'
                                                                 )}`}
-                                                                value={`${FiatStore.numberWithCommas(
+                                                                value={`${numberWithCommas(
                                                                     info?.min_initial_lsp_balance_sat
-                                                                )} - ${FiatStore.numberWithCommas(
+                                                                )} - ${numberWithCommas(
                                                                     info?.max_initial_lsp_balance_sat
                                                                 )} ${localeString(
                                                                     'general.sats'
@@ -736,7 +733,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                             keyValue={localeString(
                                                                 'views.LSPS1.maxChannelExpiryBlocks'
                                                             )}
-                                                            value={FiatStore.numberWithCommas(
+                                                            value={numberWithCommas(
                                                                 info?.max_channel_expiry_blocks
                                                             )}
                                                         />
@@ -833,9 +830,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         placeholder={`${localeString(
                                             'views.LSPS1.initialLSPBalance'
                                         )} (${localeString('general.sats')})`}
-                                        value={FiatStore.numberWithCommas(
-                                            lspBalanceSat
-                                        )}
+                                        value={numberWithCommas(lspBalanceSat)}
                                         onChangeText={(text: any) => {
                                             const value = text.replace(
                                                 /,/g,
@@ -856,7 +851,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {FiatStore.numberWithCommas(
+                                            {numberWithCommas(
                                                 info?.min_initial_lsp_balance_sat
                                             )}
                                         </Text>
@@ -865,7 +860,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 color: themeColor('text')
                                             }}
                                         >
-                                            {FiatStore.numberWithCommas(
+                                            {numberWithCommas(
                                                 info?.max_initial_lsp_balance_sat
                                             )}
                                         </Text>
@@ -914,7 +909,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             placeholder={localeString(
                                                 'views.LSPS1.channelExpiryBlocks'
                                             )}
-                                            value={FiatStore.numberWithCommas(
+                                            value={numberWithCommas(
                                                 channelExpiryBlocks
                                             )}
                                             onChangeText={(text: any) => {
@@ -1044,7 +1039,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         )} (${localeString(
                                                             'general.sats'
                                                         )})`}
-                                                        value={FiatStore.numberWithCommas(
+                                                        value={numberWithCommas(
                                                             clientBalanceSat
                                                         ).toString()}
                                                         onChangeText={(
@@ -1075,7 +1070,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 )
                                                             }}
                                                         >
-                                                            {FiatStore.numberWithCommas(
+                                                            {numberWithCommas(
                                                                 info?.min_initial_client_balance_sat
                                                             )}
                                                         </Text>
@@ -1086,7 +1081,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 )
                                                             }}
                                                         >
-                                                            {FiatStore.numberWithCommas(
+                                                            {numberWithCommas(
                                                                 info?.max_initial_client_balance_sat
                                                             )}
                                                         </Text>

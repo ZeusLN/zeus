@@ -21,11 +21,11 @@ import Export from '../../assets/images/SVG/Export.svg';
 
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
-import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 
 import { ReconHeader } from './PointOfSaleReconHeader';
 

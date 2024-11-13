@@ -23,10 +23,11 @@ import TextInput from '../components/TextInput';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import FiatStore from '../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 
 import RNPrint from 'react-native-print';
 import PosStore from '../stores/PosStore';

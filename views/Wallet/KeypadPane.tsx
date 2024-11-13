@@ -12,7 +12,6 @@ import WalletHeader from '../../components/WalletHeader';
 import { getSatAmount } from '../../components/AmountInput';
 
 import ChannelsStore from '../../stores/ChannelsStore';
-import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -20,12 +19,15 @@ import UnitsStore from '../../stores/UnitsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import {
+    getDecimalPlaceholder,
+    formatBitcoinWithSpaces,
+    numberWithCommas
+} from '../../utils/UnitsUtils';
 
 interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
-    FiatStore?: FiatStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
@@ -39,13 +41,7 @@ interface KeypadPaneState {
     lspNotConfigured: boolean;
 }
 
-@inject(
-    'ChannelsStore',
-    'FiatStore',
-    'NodeInfoStore',
-    'SettingsStore',
-    'UnitsStore'
-)
+@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
@@ -259,7 +255,7 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     render() {
-        const { FiatStore, UnitsStore, navigation } = this.props;
+        const { UnitsStore, navigation } = this.props;
         const { amount, needInbound, belowMinAmount, overrideBelowMinAmount } =
             this.state;
         const { units } = UnitsStore!;
@@ -344,8 +340,8 @@ export default class KeypadPane extends React.PureComponent<
                         }}
                     >
                         {units === 'BTC'
-                            ? FiatStore?.formatBitcoinWithSpaces(amount)
-                            : FiatStore?.numberWithCommas(amount)}
+                            ? formatBitcoinWithSpaces(amount)
+                            : numberWithCommas(amount)}
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {getDecimalPlaceholder(amount, units).string}
                         </Text>
