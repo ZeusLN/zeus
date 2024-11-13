@@ -1,3 +1,13 @@
+jest.mock('../stores/Stores', () => ({
+    SettingsStore: {
+        settings: {
+            display: {
+                removeDecimalSpaces: false
+            }
+        }
+    }
+}));
+
 import { getDecimalPlaceholder } from './UnitsUtils';
 
 describe('UnitsUtils', () => {

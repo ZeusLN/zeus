@@ -28,6 +28,7 @@ interface DisplayState {
     displayNickname: boolean;
     bigKeypadButtons: boolean;
     showAllDecimalPlaces: boolean;
+    removeDecimalSpaces: boolean;
     showMillisatoshiAmounts: boolean;
     selectNodeOnStartup: boolean;
 }
@@ -44,6 +45,7 @@ export default class Display extends React.Component<
         displayNickname: false,
         bigKeypadButtons: false,
         showAllDecimalPlaces: false,
+        removeDecimalSpaces: false,
         showMillisatoshiAmounts: false,
         selectNodeOnStartup: false
     };
@@ -64,6 +66,9 @@ export default class Display extends React.Component<
                 false,
             showAllDecimalPlaces:
                 (settings.display && settings.display.showAllDecimalPlaces) ||
+                false,
+            removeDecimalSpaces:
+                (settings.display && settings.display.removeDecimalSpaces) ||
                 false,
             showMillisatoshiAmounts:
                 (settings.display &&
@@ -90,6 +95,7 @@ export default class Display extends React.Component<
             bigKeypadButtons,
             theme,
             showAllDecimalPlaces,
+            removeDecimalSpaces,
             showMillisatoshiAmounts,
             selectNodeOnStartup
         } = this.state;
@@ -126,6 +132,7 @@ export default class Display extends React.Component<
                                     bigKeypadButtons,
                                     defaultView,
                                     showAllDecimalPlaces,
+                                    removeDecimalSpaces,
                                     showMillisatoshiAmounts
                                 }
                             });
@@ -156,6 +163,7 @@ export default class Display extends React.Component<
                                     bigKeypadButtons,
                                     theme,
                                     showAllDecimalPlaces,
+                                    removeDecimalSpaces,
                                     showMillisatoshiAmounts
                                 }
                             });
@@ -200,6 +208,7 @@ export default class Display extends React.Component<
                                             bigKeypadButtons,
                                             displayNickname: !displayNickname,
                                             showAllDecimalPlaces,
+                                            removeDecimalSpaces,
                                             showMillisatoshiAmounts
                                         }
                                     });
@@ -245,6 +254,7 @@ export default class Display extends React.Component<
                                             displayNickname,
                                             bigKeypadButtons: !bigKeypadButtons,
                                             showAllDecimalPlaces,
+                                            removeDecimalSpaces,
                                             showMillisatoshiAmounts
                                         }
                                     });
@@ -292,6 +302,7 @@ export default class Display extends React.Component<
                                             bigKeypadButtons,
                                             showAllDecimalPlaces:
                                                 !showAllDecimalPlaces,
+                                            removeDecimalSpaces,
                                             showMillisatoshiAmounts
                                         }
                                     });
@@ -299,6 +310,55 @@ export default class Display extends React.Component<
                             />
                         </View>
                     </ListItem>
+
+                    <ListItem
+                        containerStyle={{
+                            borderBottomWidth: 0,
+                            backgroundColor: 'transparent'
+                        }}
+                    >
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                left: -10
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.removeDecimalSpaces'
+                            )}
+                        </ListItem.Title>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Switch
+                                value={removeDecimalSpaces}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        removeDecimalSpaces:
+                                            !removeDecimalSpaces
+                                    });
+                                    await updateSettings({
+                                        display: {
+                                            defaultView,
+                                            theme,
+                                            displayNickname,
+                                            bigKeypadButtons,
+                                            showAllDecimalPlaces,
+                                            removeDecimalSpaces:
+                                                !removeDecimalSpaces,
+                                            showMillisatoshiAmounts
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </ListItem>
+
                     <ListItem
                         containerStyle={{
                             borderBottomWidth: 0,
@@ -337,6 +397,7 @@ export default class Display extends React.Component<
                                             displayNickname,
                                             bigKeypadButtons,
                                             showAllDecimalPlaces,
+                                            removeDecimalSpaces,
                                             showMillisatoshiAmounts:
                                                 !showMillisatoshiAmounts
                                         }
