@@ -44,6 +44,7 @@ interface DisplaySettings {
     displayNickname?: boolean;
     bigKeypadButtons?: boolean;
     showAllDecimalPlaces?: boolean;
+    removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
 }
 
@@ -1106,6 +1107,7 @@ export default class SettingsStore {
             displayNickname: false,
             bigKeypadButtons: false,
             showAllDecimalPlaces: false,
+            removeDecimalSpaces: false,
             showMillisatoshiAmounts: true
         },
         pos: {
