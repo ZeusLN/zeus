@@ -512,7 +512,7 @@ export default class LightningNodeConnect {
     supportsChannelCoinControl = () =>
         this.permNewAddress && this.supports('v0.17.0');
     supportsHopPicking = () => this.permOpenChannel;
-    supportsAccounts = () => this.permImportAccount;
+    supportsAccounts = () => this.permImportAccount && this.supports('v0.18.3');
     supportsRouting = () => this.permForwardingHistory;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
