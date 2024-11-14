@@ -674,7 +674,7 @@ export default class LND {
     supportsCoinControl = () => this.supports('v0.12.0');
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
-    supportsAccounts = () => this.supports('v0.18.3');
+    supportsAccounts = () => this.supports('v0.13.0');
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
