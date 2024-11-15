@@ -2,12 +2,14 @@ import { action, observable } from 'mobx';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
-
-import { SATS_PER_BTC } from './UnitsStore';
-import SettingsStore, { PosEnabled } from './SettingsStore';
-import Order from '../models/Order';
 import { v4 as uuidv4 } from 'uuid';
+
 import FiatStore from './FiatStore';
+import SettingsStore, { PosEnabled } from './SettingsStore';
+
+import Order from '../models/Order';
+
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 export interface orderPaymentInfo {
     orderId: string;

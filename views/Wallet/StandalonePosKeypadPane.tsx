@@ -10,21 +10,23 @@ import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 
 import ChannelsStore from '../../stores/ChannelsStore';
-import FiatStore from '../../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
+import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import PosStore from '../../stores/PosStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { getDecimalPlaceholder } from '../../utils/UnitsUtils';
+import {
+    SATS_PER_BTC,
+    getDecimalPlaceholder,
+    numberWithCommas
+} from '../../utils/UnitsUtils';
 
 import { PricedIn } from '../../models/Product';
 
 interface PosKeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
-    FiatStore?: FiatStore;
     UnitsStore?: UnitsStore;
     SettingsStore?: SettingsStore;
     PosStore?: PosStore;
@@ -36,7 +38,7 @@ interface PosKeypadPaneState {
 
 const MAX_LENGTH = 10;
 
-@inject('ChannelsStore', 'FiatStore', 'UnitsStore', 'SettingsStore', 'PosStore')
+@inject('ChannelsStore', 'UnitsStore', 'SettingsStore', 'PosStore')
 @observer
 export default class PosKeypadPane extends React.PureComponent<
     PosKeypadPaneProps,
@@ -206,7 +208,7 @@ export default class PosKeypadPane extends React.PureComponent<
     };
 
     render() {
-        const { FiatStore, UnitsStore, navigation } = this.props;
+        const { UnitsStore, navigation } = this.props;
         const { amount } = this.state;
         const { units } = UnitsStore!;
 
@@ -241,7 +243,7 @@ export default class PosKeypadPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Medium'
                         }}
                     >
-                        {FiatStore?.numberWithCommas(amount)}
+                        {numberWithCommas(amount)}
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {getDecimalPlaceholder(amount, units).string}
                         </Text>

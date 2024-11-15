@@ -5,6 +5,16 @@ jest.mock('react-native-encrypted-storage', () => ({
     clear: jest.fn(() => Promise.resolve())
 }));
 
+jest.mock('../stores/Stores', () => ({
+    SettingsStore: {
+        settings: {
+            display: {
+                removeDecimalSpaces: false
+            }
+        }
+    }
+}));
+
 import AddressUtils from './AddressUtils';
 import { walletrpc } from '../proto/lightning';
 

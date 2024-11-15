@@ -33,6 +33,8 @@ import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
 
+import { numberWithCommas } from '../../utils/UnitsUtils';
+
 interface CurrencyConverterProps {
     navigation: StackNavigationProp<any, any>;
     FiatStore?: FiatStore;
@@ -176,14 +178,14 @@ export default class CurrencyConverter extends React.Component<
             if (currency === 'BTC') {
                 // If BTC and the value is greater than 1, apply formatting with numberWithCommas
                 if (parseFloat(value) > 1) {
-                    return FiatStore.numberWithCommas(value);
+                    return numberWithCommas(value);
                 } else {
                     // Otherwise, return the value as it is
                     return value;
                 }
             } else {
                 // For other currencies, apply formatting with numberWithCommas
-                return FiatStore.numberWithCommas(value);
+                return numberWithCommas(value);
             }
         };
 
