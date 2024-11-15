@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "הצגת כינוי צומת בתצוגה הראשית",
     "views.Settings.Display.bigKeypadButtons": "כפתורי מקלדת גדולים",
     "views.Settings.Display.showAllDecimalPlaces": "הצגת כל הספרות העשרוניות",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "פרטיות",
