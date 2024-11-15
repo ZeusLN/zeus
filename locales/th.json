@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "แสดงชื่อของโหนดบนหน้าหลัก",
     "views.Settings.Display.bigKeypadButtons": "แป้นตัวเลขขนาดใหญ่",
     "views.Settings.Display.showAllDecimalPlaces": "แสดงจุดทศนิยมทั้งหมด",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "ความเป็นส่วนตัว",
