@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Ana görünümlerde nod'un takma adını göster",
     "views.Settings.Display.bigKeypadButtons": "Büyük tuş takımı düğmeleri",
     "views.Settings.Display.showAllDecimalPlaces": "Tüm ondalık basamakları göster",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Gizlilik",
