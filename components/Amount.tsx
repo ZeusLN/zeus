@@ -1,17 +1,22 @@
 import * as React from 'react';
 import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+
 import FiatStore from '../stores/FiatStore';
 import UnitsStore from '../stores/UnitsStore';
 import SettingsStore from '../stores/SettingsStore';
-import PrivacyUtils from '../utils/PrivacyUtils';
-import ClockIcon from '../assets/images/SVG/Clock.svg';
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+
 import { Spacer } from './layout/Spacer';
 import { Row } from './layout/Row';
 import { Body } from './text/Body';
 import LoadingIndicator from './LoadingIndicator';
+
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import { formatBitcoinWithSpaces } from '../utils/UnitsUtils';
+import PrivacyUtils from '../utils/PrivacyUtils';
+
+import ClockIcon from '../assets/images/SVG/Clock.svg';
 
 import stores from '../stores/Stores';
 
@@ -185,6 +190,8 @@ function AmountDisplay({
                                 {negative ? '-' : ''}
                                 {amount === 'N/A' && fiatRatesLoading ? (
                                     <LoadingIndicator size={20} />
+                                ) : unit === 'BTC' ? (
+                                    formatBitcoinWithSpaces(amount)
                                 ) : (
                                     amount.toString()
                                 )}
@@ -216,6 +223,8 @@ function AmountDisplay({
                                 {negative ? '-' : ''}
                                 {amount === 'N/A' && fiatRatesLoading ? (
                                     <LoadingIndicator size={20} />
+                                ) : unit === 'BTC' ? (
+                                    formatBitcoinWithSpaces(amount)
                                 ) : (
                                     amount.toString()
                                 )}
