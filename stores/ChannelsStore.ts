@@ -37,6 +37,15 @@ export enum ChannelsType {
     Closed = 2
 }
 
+interface aliases {
+    [index: string]: string;
+}
+
+const fixedAliases: aliases = {
+    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581':
+        'Olympus by ZEUS'
+};
+
 export default class ChannelsStore {
     @observable public loading = false;
     @observable public error = false;
@@ -338,15 +347,17 @@ export default class ChannelsStore {
 
         for (const channel of channelsWithMissingAliases) {
             const nodeInfo = this.nodes[channel.remotePubkey];
-            if (!nodeInfo) continue;
-            this.aliasesById[channel.channelId!] = nodeInfo.alias;
+            const alias = nodeInfo?.alias || fixedAliases[channel.remotePubkey];
+            if (alias) this.aliasesById[channel.channelId!] = alias;
         }
 
         if (setPendingHtlcs) this.pendingHTLCs = [];
 
         for (const channel of channels) {
             if (channel.alias == null) {
-                channel.alias = this.nodes[channel.remotePubkey]?.alias;
+                channel.alias =
+                    this.nodes[channel.remotePubkey]?.alias ||
+                    this.aliasesById[channel.channelId!];
             }
             channel.displayName =
                 channel.alias ||
