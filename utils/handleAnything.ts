@@ -629,7 +629,10 @@ const handleAnything = async (
         return ['PSBT', { psbt: value }];
     } else if (AddressUtils.isValidTxHex(value)) {
         return ['TxHex', { txHex: value }];
-    } else if (AddressUtils.isKeystoreWalletExport(value)) {
+    } else if (
+        BackendUtils.supportsAccounts() &&
+        AddressUtils.isKeystoreWalletExport(value)
+    ) {
         const { MasterFingerprint, ExtPubKey, Label } =
             AddressUtils.processKeystoreWalletExport(value);
         return [
@@ -640,7 +643,10 @@ const handleAnything = async (
                 master_key_fingerprint: MasterFingerprint
             }
         ];
-    } else if (AddressUtils.isJsonWalletExport(value)) {
+    } else if (
+        BackendUtils.supportsAccounts() &&
+        AddressUtils.isJsonWalletExport(value)
+    ) {
         const { MasterFingerprint, ExtPubKey } = JSON.parse(value);
         return [
             'ImportAccount',
@@ -649,7 +655,10 @@ const handleAnything = async (
                 master_key_fingerprint: MasterFingerprint
             }
         ];
-    } else if (AddressUtils.isStringWalletExport(value)) {
+    } else if (
+        BackendUtils.supportsAccounts() &&
+        AddressUtils.isStringWalletExport(value)
+    ) {
         const { MasterFingerprint, ExtPubKey } =
             AddressUtils.processStringWalletExport(value);
         return [
@@ -659,7 +668,10 @@ const handleAnything = async (
                 master_key_fingerprint: MasterFingerprint
             }
         ];
-    } else if (AddressUtils.isWpkhDescriptor(value)) {
+    } else if (
+        BackendUtils.supportsAccounts() &&
+        AddressUtils.isWpkhDescriptor(value)
+    ) {
         const { MasterFingerprint, ExtPubKey, AddressType } =
             AddressUtils.processWpkhDescriptor(value);
         return [
@@ -670,7 +682,10 @@ const handleAnything = async (
                 address_type: AddressType
             }
         ];
-    } else if (AddressUtils.isNestedWpkhDescriptor(value)) {
+    } else if (
+        BackendUtils.supportsAccounts() &&
+        AddressUtils.isNestedWpkhDescriptor(value)
+    ) {
         const { MasterFingerprint, ExtPubKey, AddressType } =
             AddressUtils.processNestedWpkhDescriptor(value);
         return [
@@ -681,7 +696,10 @@ const handleAnything = async (
                 address_type: AddressType
             }
         ];
-    } else if (AddressUtils.isValidXpub(value)) {
+    } else if (
+        BackendUtils.supportsAccounts() &&
+        AddressUtils.isValidXpub(value)
+    ) {
         return [
             'ImportAccount',
             {
