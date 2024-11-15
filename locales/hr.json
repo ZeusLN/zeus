@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Prikaži nadimak noda na glavnim pogledima",
     "views.Settings.Display.bigKeypadButtons": "Velike tipke tipkovnice",
     "views.Settings.Display.showAllDecimalPlaces": "Prikaži sva decimalna mjesta",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Privatnost",
