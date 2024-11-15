@@ -106,7 +106,9 @@ export default class LightningAddressInfo extends React.Component<
                                     keyValue={localeString(
                                         'views.Settings.LightningAddressInfo.minimumAmount'
                                     )}
-                                    value={`${minimumSats} sats`}
+                                    value={`${minimumSats} ${
+                                        minimumSats === 1 ? 'sat' : 'sats'
+                                    }`}
                                 />
                             )}
 
@@ -124,7 +126,7 @@ export default class LightningAddressInfo extends React.Component<
                                             fee,
                                             feeQualifier
                                         } = feeItem as {
-                                            limitAmount: number | string;
+                                            limitAmount: number;
                                             limitQualifier: keyof typeof LIMIT_QUALIFIERS;
                                             fee: number | string;
                                             feeQualifier: keyof typeof FEE_QUALIFIERS;
@@ -133,7 +135,15 @@ export default class LightningAddressInfo extends React.Component<
                                         return (
                                             <KeyValue
                                                 key={index}
-                                                keyValue={`${LIMIT_QUALIFIERS[limitQualifier]} ${limitAmount} sats`}
+                                                keyValue={`${
+                                                    LIMIT_QUALIFIERS[
+                                                        limitQualifier
+                                                    ]
+                                                } ${limitAmount} ${
+                                                    limitAmount === 1
+                                                        ? 'sat'
+                                                        : 'sats'
+                                                }`}
                                                 value={`${fee}${FEE_QUALIFIERS[feeQualifier]}`}
                                             />
                                         );
