@@ -32,8 +32,6 @@ const LNURL_SOCKET_PATH = '/stream';
 const ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
-const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
-
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
@@ -763,31 +761,33 @@ export default class LightningAddressStore {
             const hashpk = getPublicKey(hash);
 
             await Promise.all(
-                RELAYS.map(async (relayItem) => {
-                    const relay = relayInit(relayItem);
-                    relay.on('connect', () => {
-                        console.log(`connected to ${relay.url}`);
-                    });
-                    relay.on('error', () => {
-                        console.log(`failed to connect to ${relay.url}`);
-                    });
+                this.settingsStore.settings.lightningAddress.nostrRelays.map(
+                    async (relayItem) => {
+                        const relay = relayInit(relayItem);
+                        relay.on('connect', () => {
+                            console.log(`connected to ${relay.url}`);
+                        });
+                        relay.on('error', () => {
+                            console.log(`failed to connect to ${relay.url}`);
+                        });
 
-                    await relay.connect();
+                        await relay.connect();
 
-                    const events = await relay.list([
-                        {
-                            kinds: [55869],
-                            '#p': [hashpk]
-                        }
-                    ]);
+                        const events = await relay.list([
+                            {
+                                kinds: [55869],
+                                '#p': [hashpk]
+                            }
+                        ]);
 
-                    events.map((event: any) => {
-                        attestationEvents[event.id] = event;
-                    });
+                        events.map((event: any) => {
+                            attestationEvents[event.id] = event;
+                        });
 
-                    relay.close();
-                    return;
-                })
+                        relay.close();
+                        return;
+                    }
+                )
             );
 
             Object.keys(attestationEvents).map((key) => {
