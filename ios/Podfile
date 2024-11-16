@@ -20,6 +20,8 @@ target 'zeus' do
 
   pod 'react-native-blob-util', :path => '../node_modules/react-native-blob-util'
 
+  pod 'react-native-qrcode-local-image', :path => '../zeus_modules/@remobile/react-native-qrcode-local-image'
+
   target 'zeusTests' do
     inherit! :complete
     # Pods for testing

@@ -966,6 +966,8 @@ PODS:
     - React
   - react-native-print (0.11.0):
     - React-Core
+  - react-native-qrcode-local-image (1.0.4):
+    - React
   - react-native-randombytes (3.5.3):
     - React
   - react-native-restart (0.0.27):
@@ -1372,6 +1374,7 @@ DEPENDENCIES:
   - react-native-notifications (from `../node_modules/react-native-notifications`)
   - react-native-ping (from `../node_modules/react-native-ping`)
   - react-native-print (from `../node_modules/react-native-print`)
+  - "react-native-qrcode-local-image (from `../zeus_modules/@remobile/react-native-qrcode-local-image`)"
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -1517,6 +1520,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-ping"
   react-native-print:
     :path: "../node_modules/react-native-print"
+  react-native-qrcode-local-image:
+    :path: "../zeus_modules/@remobile/react-native-qrcode-local-image"
   react-native-randombytes:
     :path: "../node_modules/react-native-randombytes"
   react-native-restart:
@@ -1657,6 +1662,7 @@ SPEC CHECKSUMS:
   react-native-notifications: 4601a5a8db4ced6ae7cfc43b44d35fe437ac50c4
   react-native-ping: e9f64f02087c3cd2a0bc771ad0cf4a88edaa3072
   react-native-print: f704aef52d931bfce6d1d84351dbb5232d7ecb89
+  react-native-qrcode-local-image: 35ccb306e4265bc5545f813e54cc830b5d75bcfc
   react-native-randombytes: 3638d24759d67c68f6ccba60c52a7a8a8faa6a23
   react-native-restart: 7595693413fe3ca15893702f2c8306c62a708162
   react-native-safe-area-context: dcab599c527c2d7de2d76507a523d20a0b83823d
@@ -1706,6 +1712,6 @@ SPEC CHECKSUMS:
   VisionCamera: 2c4cb89c573c5d54d1191e433bd224998d3b14b7
   Yoga: ae3c32c514802d30f687a04a6a35b348506d411f
 
-PODFILE CHECKSUM: 729b36873182b9c4e555807ad9ca7519788863e0
+PODFILE CHECKSUM: 7f57cf007e54dd34e05bfbf127badc08dcead3e1
 
 COCOAPODS: 1.15.2
