@@ -2562,10 +2562,6 @@
     "@react-navigation/elements" "^2.0.0-alpha.17"
     color "^4.2.3"
 
-"@remobile/react-native-qrcode-local-image@github:BlueWallet/react-native-qrcode-local-image#31b0113":
-  version "1.0.4"
-  resolved "https://codeload.github.com/BlueWallet/react-native-qrcode-local-image/tar.gz/31b0113110fbafcf5a5f3ca4183a563550f5c352"
-
 "@rnx-kit/chromium-edge-launcher@^1.0.0":
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/@rnx-kit/chromium-edge-launcher/-/chromium-edge-launcher-1.0.0.tgz#c0df8ea00a902c7a417cd9655aab06de398b939c"

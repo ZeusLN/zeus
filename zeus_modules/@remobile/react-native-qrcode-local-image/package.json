@@ -1,0 +1,81 @@
+{
+  "name": "@remobile/react-native-qrcode-local-image",
+  "version": "1.0.4",
+  "qrcode-local-imagecription": "A local qrcode image parse for react-native",
+  "main": "index.js",
+  "author": {
+    "name": "YunJiang.Fang",
+    "email": "42550564@qq.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "react-native",
+    "react-component",
+    "ios",
+    "android",
+    "qrcode",
+    "local-image",
+    "remobile",
+    "mobile"
+  ],
+  "homepage": "https://github.com/remobile/react-native-qrcode-local-image",
+  "bugs": {
+    "url": "https://github.com/remobile/react-native-qrcode-local-image/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/remobile/react-native-qrcode-local-image.git"
+  },
+  "react-native": {
+    "zlib": "browserify-zlib",
+    "console": "console-browserify",
+    "constants": "constants-browserify",
+    "crypto": "react-native-crypto",
+    "dns": "dns.js",
+    "net": "react-native-tcp",
+    "domain": "domain-browser",
+    "http": "@tradle/react-native-http",
+    "https": "https-browserify",
+    "os": "react-native-os",
+    "path": "path-browserify",
+    "querystring": "querystring-es3",
+    "fs": "react-native-level-fs",
+    "_stream_transform": "readable-stream/transform",
+    "_stream_readable": "readable-stream/readable",
+    "_stream_writable": "readable-stream/writable",
+    "_stream_duplex": "readable-stream/duplex",
+    "_stream_passthrough": "readable-stream/passthrough",
+    "dgram": "react-native-udp",
+    "stream": "stream-browserify",
+    "timers": "timers-browserify",
+    "tty": "tty-browserify",
+    "vm": "vm-browserify",
+    "tls": false
+  },
+  "browser": {
+    "zlib": "browserify-zlib",
+    "console": "console-browserify",
+    "constants": "constants-browserify",
+    "crypto": "react-native-crypto",
+    "dns": "dns.js",
+    "net": "react-native-tcp",
+    "domain": "domain-browser",
+    "http": "@tradle/react-native-http",
+    "https": "https-browserify",
+    "os": "react-native-os",
+    "path": "path-browserify",
+    "querystring": "querystring-es3",
+    "fs": "react-native-level-fs",
+    "_stream_transform": "readable-stream/transform",
+    "_stream_readable": "readable-stream/readable",
+    "_stream_writable": "readable-stream/writable",
+    "_stream_duplex": "readable-stream/duplex",
+    "_stream_passthrough": "readable-stream/passthrough",
+    "dgram": "react-native-udp",
+    "stream": "stream-browserify",
+    "timers": "timers-browserify",
+    "tty": "tty-browserify",
+    "vm": "vm-browserify",
+    "tls": false
+  }
+}
