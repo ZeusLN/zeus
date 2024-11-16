@@ -29,6 +29,7 @@ export function Body({
         | 'text'
         | 'success'
         | 'warning'
+        | 'warningReserve'
         | 'highlight'
         | 'secondaryText'
         | 'outbound'

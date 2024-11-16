@@ -95,21 +95,30 @@ export default class Channel extends BaseModel {
 
     @computed
     public get localBalance(): string {
-        const totalLocalBalance = this.to_us
+        return this.to_us
             ? (Number(this.to_us) / 1000).toString()
             : this.to_us_msat
             ? (Number(this.to_us_msat) / 1000).toString()
             : this.msatoshi_to_us
             ? (Number(this.msatoshi_to_us) / 1000).toString()
             : this.local_balance || '0';
-        return (
-            Number(totalLocalBalance) - Number(this.localReserveBalance)
-        ).toString();
+    }
+
+    @computed
+    public get sendingCapacity(): string {
+        const localBalance = new BigNumber(this.localBalance).minus(
+            this.localReserveBalance
+        );
+        if (localBalance.gt(0)) {
+            return localBalance.toString();
+        } else {
+            return '0';
+        }
     }
 
     @computed
     public get remoteBalance(): string {
-        const totalRemoteBalance = this.total
+        return this.total
             ? ((Number(this.total) - Number(this.to_us)) / 1000).toString()
             : this.total_msat
             ? (
@@ -122,9 +131,18 @@ export default class Channel extends BaseModel {
                   1000
               ).toString()
             : this.remote_balance || '0';
-        return (
-            Number(totalRemoteBalance) - Number(this.remoteReserveBalance)
-        ).toString();
+    }
+
+    @computed
+    public get receivingCapacity(): string {
+        const remoteBalance = new BigNumber(this.remoteBalance).minus(
+            this.remoteReserveBalance
+        );
+        if (remoteBalance.gt(0)) {
+            return remoteBalance.toString();
+        } else {
+            return '0';
+        }
     }
 
     @computed
@@ -146,6 +164,14 @@ export default class Channel extends BaseModel {
         return (
             Number(this.localReserveBalance) + Number(this.remoteReserveBalance)
         ).toString();
+    }
+
+    @computed
+    public get isBelowReserve(): boolean {
+        return (
+            new BigNumber(this.localBalance).lt(this.localReserveBalance) &&
+            new BigNumber(this.localBalance).gt(0)
+        );
     }
 
     /** Channel id

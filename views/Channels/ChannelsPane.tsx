@@ -119,9 +119,12 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                         title={item.displayName}
                         status={getStatus()}
                         pendingHTLCs={item?.pending_htlcs?.length > 0}
-                        inbound={item.remoteBalance}
-                        outbound={item.localBalance}
+                        localBalance={item.localBalance}
+                        remoteBalance={item.remoteBalance}
+                        receivingCapacity={item.receivingCapacity}
+                        sendingCapacity={item.sendingCapacity}
                         largestTotal={largestChannelSats}
+                        isBelowReserve={item.isBelowReserve}
                     />
                 </TouchableHighlight>
             );
@@ -137,8 +140,10 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             >
                 <ChannelItem
                     title={item.displayName}
-                    inbound={item.remoteBalance}
-                    outbound={item.localBalance}
+                    localBalance={item.localBalance}
+                    remoteBalance={item.remoteBalance}
+                    receivingCapacity={item.receivingCapacity}
+                    sendingCapacity={item.sendingCapacity}
                     status={getStatus()}
                     pendingHTLCs={item?.pending_htlcs?.length > 0}
                     pendingTimelock={
@@ -146,6 +151,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
                             : undefined
                     }
+                    isBelowReserve={item.isBelowReserve}
                 />
             </TouchableHighlight>
         );

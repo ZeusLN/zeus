@@ -32,7 +32,13 @@ interface AmountDisplayProps {
     space?: boolean;
     jumboText?: boolean;
     defaultTextSize?: boolean;
-    color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    color?:
+        | 'text'
+        | 'success'
+        | 'warning'
+        | 'warningReserve'
+        | 'highlight'
+        | 'secondaryText';
     colorOverride?: string;
     pending?: boolean;
     fee?: boolean;
@@ -267,7 +273,13 @@ interface AmountProps {
     credit?: boolean;
     debit?: boolean;
     // If credit or debit doesn't cover the use case
-    color?: 'text' | 'success' | 'warning' | 'highlight' | 'secondaryText';
+    color?:
+        | 'text'
+        | 'success'
+        | 'warning'
+        | 'warningReserve'
+        | 'highlight'
+        | 'secondaryText';
     colorOverride?: string;
     toggleable?: boolean;
     pending?: boolean;
