@@ -17,7 +17,7 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-const LocalQRCode = require('@remobile/react-native-qrcode-local-image');
+const LocalQRCode = require('../zeus_modules/@remobile/react-native-qrcode-local-image');
 
 import Header from './Header';
 import Button from '../components/Button';
