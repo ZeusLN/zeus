@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Отображать название узла на главном экране",
     "views.Settings.Display.bigKeypadButtons": "Большие клавиши",
     "views.Settings.Display.showAllDecimalPlaces": "Отображать все десятичные знаки",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "Конфиденциальность",

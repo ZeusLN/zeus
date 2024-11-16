@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "ノードのニックネームをメイン画面に表示",
     "views.Settings.Display.bigKeypadButtons": "大きめのキーパッドボタン",
     "views.Settings.Display.showAllDecimalPlaces": "Show all decimal places",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
     "views.Settings.privacy": "プライバシー",

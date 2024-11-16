@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Display node nickname on main views",
     "views.Settings.Display.bigKeypadButtons": "Big keypad buttons",
     "views.Settings.Display.showAllDecimalPlaces": "Hiển thị tất cả các chữ số thập phân",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Hiển thị số lượng milli satoshi",
     "views.Settings.Display.selectNodeOnStartup": "Chọn nút khi khởi động",
     "views.Settings.privacy": "Quyền riêng tư",
