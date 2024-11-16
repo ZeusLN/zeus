@@ -43,7 +43,6 @@
     "@react-navigation/bottom-tabs": "7.0.0-alpha.22",
     "@react-navigation/native": "7.0.0-alpha.18",
     "@react-navigation/stack": "7.0.0-alpha.20",
-    "@remobile/react-native-qrcode-local-image": "github:BlueWallet/react-native-qrcode-local-image#31b0113",
     "@scure/base": "1.1.6",
     "@tradle/react-native-http": "2.0.1",
     "@types/dateformat": "5.0.0",
