@@ -405,10 +405,10 @@ export default class ChannelsStore {
                 );
                 channels.forEach((channel: Channel) => {
                     const channelRemoteBalance = new BigNumber(
-                        channel.remoteBalance
+                        channel.receivingCapacity
                     );
                     const channelLocalBalance = new BigNumber(
-                        channel.localBalance
+                        channel.sendingCapacity
                     );
                     const channelTotal =
                         channelRemoteBalance.plus(channelLocalBalance);
