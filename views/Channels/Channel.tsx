@@ -599,7 +599,11 @@ export default class ChannelView extends React.Component<
                                 sats={localBalance}
                                 sensitive
                                 toggleable
-                                color={isBelowReserve ? 'warning' : undefined}
+                                color={
+                                    isBelowReserve
+                                        ? 'warningReserve'
+                                        : undefined
+                                }
                             />
                         }
                     />
@@ -656,7 +660,9 @@ export default class ChannelView extends React.Component<
                                     sensitive
                                     toggleable
                                     color={
-                                        isBelowReserve ? 'warning' : undefined
+                                        isBelowReserve
+                                            ? 'warningReserve'
+                                            : undefined
                                     }
                                 />
                             }

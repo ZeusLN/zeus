@@ -170,7 +170,7 @@ export function ChannelItem({
                         colorOverride={
                             highlightLabels ? themeColor('outbound') : undefined
                         }
-                        color={isBelowReserve ? 'warning' : undefined}
+                        color={isBelowReserve ? 'warningReserve' : undefined}
                     />
                     <Amount
                         sats={receivingCapacity || remoteBalance}
