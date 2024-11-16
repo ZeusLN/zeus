@@ -609,6 +609,20 @@ export default class ChannelView extends React.Component<
                             <Amount sats={remoteBalance} sensitive toggleable />
                         }
                     />
+                    {unsettled_balance !== '0' && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.unsettledBalance'
+                            )}
+                            value={
+                                <Amount
+                                    sats={unsettled_balance}
+                                    sensitive
+                                    toggleable
+                                />
+                            }
+                        />
+                    )}
                     <KeyValue
                         keyValue={localeString('views.Channel.Total.outbound')}
                         value={
@@ -631,20 +645,6 @@ export default class ChannelView extends React.Component<
                         }
                         indicatorColor={themeColor('inbound')}
                     />
-                    {unsettled_balance && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.unsettledBalance'
-                            )}
-                            value={
-                                <Amount
-                                    sats={unsettled_balance}
-                                    sensitive
-                                    toggleable
-                                />
-                            }
-                        />
-                    )}
                     {!!local_chan_reserve_sat && (
                         <KeyValue
                             keyValue={localeString(
