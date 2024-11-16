@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Afficher le surnom du nœud sur les vues principales",
     "views.Settings.Display.bigKeypadButtons": "Gros boutons de clavier",
     "views.Settings.Display.showAllDecimalPlaces": "Montrer toutes les décimales",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Afficher les montants en millisatoshi",
     "views.Settings.Display.selectNodeOnStartup": "Sélectionnez le nœud au démarrage",
     "views.Settings.privacy": "Confidentialité",

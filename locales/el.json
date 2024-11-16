@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Εμφάνιση ψευδωνύμου κόμβου στις κύριες προβολές",
     "views.Settings.Display.bigKeypadButtons": "Μεγάλα πλήκτρα",
     "views.Settings.Display.showAllDecimalPlaces": "Προβολή όλων των δεκαδικών",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Εμφάνιση ποσών σε millisatoshi",
     "views.Settings.Display.selectNodeOnStartup": "Επιλέξτε κόμβο κατά την εκκίνηση",
     "views.Settings.privacy": "Ιδιωτικότητα",

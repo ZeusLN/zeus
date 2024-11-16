@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Visualizza il soprannome del nodo sulle viste principali",
     "views.Settings.Display.bigKeypadButtons": "Big bottoni di tastiera",
     "views.Settings.Display.showAllDecimalPlaces": "Mostra tutti i luoghi decimali",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Mostra gli importi in millisatoshi",
     "views.Settings.Display.selectNodeOnStartup": "Seleziona il nodo all'avvio",
     "views.Settings.privacy": "Privacy",

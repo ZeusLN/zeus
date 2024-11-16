@@ -742,6 +742,7 @@
     "views.Settings.Display.displayNickname": "Näytä solmun nimimerkki päänäkymissä",
     "views.Settings.Display.bigKeypadButtons": "Isot näppäimistön painikkeet",
     "views.Settings.Display.showAllDecimalPlaces": "Näytä kaikki desimaalit",
+    "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Valitse solmu käynnistyksen yhteydessä",
     "views.Settings.privacy": "Yksityisyys",
