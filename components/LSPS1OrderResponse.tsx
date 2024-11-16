@@ -48,8 +48,8 @@ export default class LSPS1OrderResponse extends React.Component<
                 <ScrollView>
                     <View style={{ paddingHorizontal: 20 }}>
                         <ChannelItem
-                            outbound={orderResponse?.client_balance_sat}
-                            inbound={orderResponse?.lsp_balance_sat}
+                            localBalance={orderResponse?.client_balance_sat}
+                            remoteBalance={orderResponse?.lsp_balance_sat}
                             title={localeString('views.LSPS1.yourBalance')}
                             secondTitle={localeString(
                                 'views.LSPS1.receiveLimit'

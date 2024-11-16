@@ -20,8 +20,10 @@ import { localeString } from './../../utils/LocaleUtils';
 export function ChannelItem({
     title,
     secondTitle,
-    inbound,
-    outbound,
+    localBalance,
+    remoteBalance,
+    sendingCapacity,
+    receivingCapacity,
     inboundReserve = 0,
     outboundReserve = 0,
     largestTotal,
@@ -31,12 +33,15 @@ export function ChannelItem({
     noBorder,
     hideLabels,
     selected,
-    highlightLabels
+    highlightLabels,
+    isBelowReserve
 }: {
     title?: string;
     secondTitle?: string;
-    inbound: string | number;
-    outbound: string | number;
+    localBalance: string | number;
+    remoteBalance: string | number;
+    sendingCapacity?: string | number;
+    receivingCapacity?: string | number;
     inboundReserve?: string | number;
     outboundReserve?: string | number;
     largestTotal?: number;
@@ -47,6 +52,7 @@ export function ChannelItem({
     hideLabels?: boolean;
     selected?: boolean;
     highlightLabels?: boolean;
+    isBelowReserve?: boolean;
 }) {
     const { settings } = Stores.settingsStore;
     const { privacy } = settings;
@@ -58,7 +64,7 @@ export function ChannelItem({
         status === Status.Opening;
 
     const percentOfLargest = largestTotal
-        ? (Number(inbound) + Number(outbound)) / largestTotal
+        ? (Number(localBalance) + Number(remoteBalance)) / largestTotal
         : 1.0;
     return (
         <View
@@ -129,25 +135,33 @@ export function ChannelItem({
                 ) : null}
                 {status && <Tag status={status} />}
             </Row>
-            {inbound && outbound && !(inbound == 0 && outbound == 0) && (
-                <Row style={{ marginTop: 15, marginBottom: 15 }}>
-                    <BalanceBar
-                        outbound={lurkerMode ? 50 : Number(outbound)}
-                        inbound={lurkerMode ? 50 : Number(inbound)}
-                        outboundReserve={
-                            lurkerMode ? 0 : Number(outboundReserve)
-                        }
-                        inboundReserve={lurkerMode ? 0 : Number(inboundReserve)}
-                        offline={isOffline}
-                        percentOfLargest={percentOfLargest}
-                        showProportionally={lurkerMode ? false : true}
-                    />
-                </Row>
-            )}
+            {localBalance &&
+                remoteBalance &&
+                !(localBalance == 0 && remoteBalance == 0) && (
+                    <Row style={{ marginTop: 15, marginBottom: 15 }}>
+                        <BalanceBar
+                            outbound={lurkerMode ? 50 : Number(localBalance)}
+                            inbound={lurkerMode ? 50 : Number(remoteBalance)}
+                            outboundReserve={
+                                lurkerMode ? 0 : Number(outboundReserve)
+                            }
+                            inboundReserve={
+                                lurkerMode ? 0 : Number(inboundReserve)
+                            }
+                            offline={isOffline}
+                            percentOfLargest={percentOfLargest}
+                            showProportionally={lurkerMode ? false : true}
+                        />
+                    </Row>
+                )}
             {!hideLabels && (
                 <Row justify="space-between">
                     <Amount
-                        sats={outbound}
+                        sats={
+                            isBelowReserve
+                                ? localBalance
+                                : sendingCapacity || localBalance
+                        }
                         sensitive
                         accessible
                         accessibilityLabel={localeString(
@@ -156,9 +170,10 @@ export function ChannelItem({
                         colorOverride={
                             highlightLabels ? themeColor('outbound') : undefined
                         }
+                        color={isBelowReserve ? 'warning' : undefined}
                     />
                     <Amount
-                        sats={inbound}
+                        sats={receivingCapacity || remoteBalance}
                         sensitive
                         accessible
                         accessibilityLabel={localeString(
