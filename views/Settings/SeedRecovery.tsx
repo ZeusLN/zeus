@@ -236,8 +236,7 @@ export default class SeedRecovery extends React.PureComponent<
                         borderRadius: 5,
                         marginTop: 4,
                         marginBottom: 4,
-                        marginLeft:
-                            typeof index === 'number' && index > 11 ? 0 : 6,
+                        marginLeft: 6,
                         marginRight: 6,
                         flexDirection: 'row',
                         maxHeight: type === 'scb' ? 60 : undefined
@@ -441,7 +440,14 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                     keyboardShouldPersistTaps="handled"
                                 >
-                                    <View style={styles.column}>
+                                    <View
+                                        style={{
+                                            ...styles.column,
+                                            alignSelf: !selectedInputType
+                                                ? 'center'
+                                                : undefined
+                                        }}
+                                    >
                                         {[
                                             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
                                         ].map((index: number) => {
@@ -454,7 +460,14 @@ export default class SeedRecovery extends React.PureComponent<
                                             );
                                         })}
                                     </View>
-                                    <View style={styles.column}>
+                                    <View
+                                        style={{
+                                            ...styles.column,
+                                            alignSelf: !selectedInputType
+                                                ? 'center'
+                                                : undefined
+                                        }}
+                                    >
                                         {[
                                             12, 13, 14, 15, 16, 17, 18, 19, 20,
                                             21, 22, 23
@@ -492,7 +505,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 }}
                                 keyboardShouldPersistTaps="handled"
                             >
-                                <View style={styles.columnSuggestion}>
+                                <View style={styles.column}>
                                     {suggestionsOne.map((key) => {
                                         return (
                                             <RecoveryLabel
@@ -502,7 +515,7 @@ export default class SeedRecovery extends React.PureComponent<
                                         );
                                     })}
                                 </View>
-                                <View style={styles.columnSuggestion}>
+                                <View style={styles.column}>
                                     {suggestionsTwo.map((key) => {
                                         return (
                                             <RecoveryLabel
@@ -589,14 +602,6 @@ const styles = StyleSheet.create({
         marginTop: 22
     },
     column: {
-        marginTop: 8,
-        flexWrap: 'wrap',
-        alignItems: 'flex-start',
-        alignSelf: 'center',
-        flexDirection: 'row',
-        width: '50%'
-    },
-    columnSuggestion: {
         marginTop: 8,
         flexWrap: 'wrap',
         alignItems: 'flex-start',
