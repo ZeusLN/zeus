@@ -680,7 +680,7 @@
     "views.ContactDetails.editAndSaveContact": "Modifier et enregistrer le contact",
     "views.ContactInfo.title": "Informations de contact",
     "views.Tools.title": "Outils",
-    "views.Settings.title": "Thème clair",
+    "views.Settings.title": "Réglages",
     "views.Settings.enabled": "Activé",
     "views.Settings.disabled": "Désactivé",
     "views.Settings.newPassword": "Nouveau mot de passe",
