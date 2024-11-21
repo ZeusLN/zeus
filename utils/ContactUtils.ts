@@ -71,8 +71,6 @@ const transformContactData = async (contact: any) => {
             }
         }
 
-        console.log('Transformed contact:', transformedContact);
-
         return transformedContact;
     } catch (error) {
         console.error('Error transforming contact:', error);
