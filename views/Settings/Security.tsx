@@ -80,16 +80,26 @@ export default class Security extends React.Component<
         isBiometryEnabled: undefined
     };
 
-    async componentDidMount() {
+    componentDidMount() {
+        this.checkSettings();
+        this.props.navigation.addListener('focus', this.checkSettings);
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('focus', this.checkSettings);
+    }
+
+    checkSettings = async () => {
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const biometricsStatus = await SettingsStore.checkBiometricsStatus();
+        const settings = await SettingsStore.getSettings();
 
         this.setState({
             scramblePin: settings.scramblePin ?? true,
             loginBackground: settings.loginBackground ?? false,
-            isBiometryEnabled: settings.isBiometryEnabled,
-            supportedBiometryType: settings.supportedBiometryType
+            isBiometryEnabled: biometricsStatus.isBiometryEnabled,
+            supportedBiometryType: biometricsStatus.supportedBiometryType
         });
 
         if (settings.pin) {
@@ -135,7 +145,7 @@ export default class Security extends React.Component<
                 displaySecurityItems: minPinItems
             });
         }
-    }
+    };
 
     async handleBiometricsSwitchChange(value: boolean): Promise<void> {
         const isVerified = await verifyBiometry(
