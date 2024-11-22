@@ -185,7 +185,7 @@ export default class OnchainSwipeableRow extends Component<
         }
         if (locked)
             return (
-                <View style={{ width: '100%', opacity: hidden ? 0.1 : 1 }}>
+                <View style={{ width: '100%', opacity: hidden ? 0.25 : 1 }}>
                     {children}
                 </View>
             );
