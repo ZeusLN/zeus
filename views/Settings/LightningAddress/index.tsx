@@ -163,7 +163,6 @@ export default class LightningAddress extends React.Component<
             localHashes,
             paid,
             fees,
-            error,
             error_msg,
             loading,
             redeeming,
@@ -255,8 +254,8 @@ export default class LightningAddress extends React.Component<
                         rightComponent={
                             !loading && !redeeming && !redeemingAll ? (
                                 <Row>
-                                    {fees && !error && <InfoButton />}
-                                    {lightningAddressHandle && !error && (
+                                    {fees && <InfoButton />}
+                                    {lightningAddressHandle && (
                                         <SettingsButton />
                                     )}
                                 </Row>
