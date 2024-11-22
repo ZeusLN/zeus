@@ -318,7 +318,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            navigation.navigate('Settings');
+            navigation.pop(2);
         });
     };
 
@@ -330,7 +330,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            navigation.navigate('Settings');
+            navigation.pop(2);
         });
     };
 
