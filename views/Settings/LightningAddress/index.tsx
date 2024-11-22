@@ -343,7 +343,7 @@ export default class LightningAddress extends React.Component<
                                                 ),
                                                 left: 5
                                             }}
-                                            infoText={[
+                                            infoModalText={[
                                                 localeString(
                                                     'views.Settings.LightningAddress.statusExplainer1'
                                                 ),

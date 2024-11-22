@@ -342,7 +342,7 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
-                                infoText={[
+                                infoModalText={[
                                     localeString(
                                         'views.Receive.routeHintSwitchExplainer1'
                                     ),
@@ -386,7 +386,7 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
-                                infoText={[
+                                infoModalText={[
                                     localeString(
                                         'views.Receive.ampSwitchExplainer1'
                                     ),
@@ -394,6 +394,7 @@ export default class InvoicesSettings extends React.Component<
                                         'views.Receive.ampSwitchExplainer2'
                                     )
                                 ]}
+                                infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                             >
                                 {localeString('views.Receive.ampInvoice')}
                             </Text>
@@ -429,7 +430,7 @@ export default class InvoicesSettings extends React.Component<
                                     color: themeColor('secondaryText'),
                                     top: 20
                                 }}
-                                infoText={[
+                                infoModalText={[
                                     localeString(
                                         'views.Receive.blindedPathsExplainer1'
                                     ),

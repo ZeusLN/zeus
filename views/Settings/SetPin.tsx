@@ -95,9 +95,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         await updateSettings({ pin }).then(() => {
             setLoginStatus(true);
             getSettings();
-            navigation.popTo('Settings', {
-                refresh: true
-            });
+            navigation.popTo('Security');
         });
     };
 
