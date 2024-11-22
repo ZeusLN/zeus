@@ -666,10 +666,10 @@ export default class ChannelView extends React.Component<
                                     }
                                 />
                             }
-                            infoText={localeString(
+                            infoModalText={localeString(
                                 'views.Channel.localReserve.info'
                             )}
-                            infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
                             indicatorColor={themeColor('outboundReserve')}
                         />
                     )}
@@ -685,10 +685,10 @@ export default class ChannelView extends React.Component<
                                     toggleable
                                 />
                             }
-                            infoText={localeString(
+                            infoModalText={localeString(
                                 'views.Channel.remoteReserve.info'
                             )}
-                            infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
                             indicatorColor={themeColor('inboundReserve')}
                         />
                     )}
@@ -824,7 +824,7 @@ export default class ChannelView extends React.Component<
                                                 ...styles.text,
                                                 color: themeColor('text')
                                             }}
-                                            infoText={localeString(
+                                            infoModalText={localeString(
                                                 'views.Channel.externalAddress.info'
                                             )}
                                         >

@@ -9,7 +9,10 @@ export default class ModalStore {
     @observable public clipboardValue: string;
     @observable public infoModalText: string | Array<string> | undefined;
     @observable public infoModalLink: string | undefined;
-    @observable public infoModalNav: string | undefined;
+    @observable public infoModalAdditionalButtons?: Array<{
+        title: string;
+        callback?: () => void;
+    }>;
     @observable public alertModalText: string | Array<string> | undefined;
     @observable public alertModalLink: string | undefined;
     @observable public alertModalNav: string | undefined;
@@ -25,12 +28,12 @@ export default class ModalStore {
     public toggleInfoModal = (
         text?: string | Array<string>,
         link?: string,
-        nav?: string
+        buttons?: Array<{ title: string; callback?: () => void }>
     ) => {
         this.showInfoModal = text ? true : false;
         this.infoModalText = text;
         this.infoModalLink = link;
-        this.infoModalNav = nav;
+        this.infoModalAdditionalButtons = buttons;
     };
 
     @action
@@ -73,7 +76,7 @@ export default class ModalStore {
             this.showInfoModal = false;
             this.infoModalText = '';
             this.infoModalLink = '';
-            this.infoModalNav = '';
+            this.infoModalAdditionalButtons = undefined;
             return true;
         }
         return false;

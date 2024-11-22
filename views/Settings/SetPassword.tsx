@@ -12,10 +12,12 @@ import TextInput from '../../components/TextInput';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
+import ModalStore from '../../stores/ModalStore';
 
 interface SetPassphraseProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    ModalStore: ModalStore;
 }
 
 interface SetPassphraseState {
@@ -26,9 +28,10 @@ interface SetPassphraseState {
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
     confirmDelete: boolean;
+    isBiometryEnabled: boolean;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'ModalStore')
 @observer
 export default class SetPassphrase extends React.Component<
     SetPassphraseProps,
@@ -41,14 +44,17 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
-        confirmDelete: false
+        confirmDelete: false,
+        isBiometryEnabled: false
     };
 
     async componentDidMount() {
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const settings = await SettingsStore.getSettings();
 
+        this.setState({
+            isBiometryEnabled: settings.isBiometryEnabled
+        });
         if (settings.passphrase) {
             this.setState({ savedPassphrase: settings.passphrase });
         }
@@ -96,9 +102,7 @@ export default class SetPassphrase extends React.Component<
         await updateSettings({ passphrase }).then(() => {
             setLoginStatus(true);
             getSettings();
-            navigation.popTo('Settings', {
-                refresh: true
-            });
+            navigation.popTo('Security', { refresh: true });
         });
     };
 
@@ -110,12 +114,10 @@ export default class SetPassphrase extends React.Component<
 
         await updateSettings({
             duressPassphrase: '',
-            passphrase: ''
-        }).then(() => {
-            navigation.popTo('Settings', {
-                refresh: true
-            });
+            passphrase: '',
+            isBiometryEnabled: false
         });
+        navigation.popTo('Security', { refresh: true });
     };
 
     render() {
@@ -251,6 +253,22 @@ export default class SetPassphrase extends React.Component<
                                         this.setState({
                                             confirmDelete: true
                                         });
+                                    } else if (this.state.isBiometryEnabled) {
+                                        this.props.ModalStore.toggleInfoModal(
+                                            localeString(
+                                                'views.Settings.Security.biometricsWillBeDisabled'
+                                            ),
+                                            undefined,
+                                            [
+                                                {
+                                                    title: localeString(
+                                                        'general.ok'
+                                                    ),
+                                                    callback: () =>
+                                                        this.deletePassword()
+                                                }
+                                            ]
+                                        );
                                     } else {
                                         this.deletePassword();
                                     }

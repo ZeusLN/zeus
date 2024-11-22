@@ -173,7 +173,7 @@ export default class Privacy extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
-                            infoText={localeString(
+                            infoModalText={localeString(
                                 'views.Settings.Privacy.clipboard.explainer'
                             ).replace('Zeus', 'ZEUS')}
                         >
@@ -218,7 +218,7 @@ export default class Privacy extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book',
                                 left: -10
                             }}
-                            infoText={[
+                            infoModalText={[
                                 localeString(
                                     'views.Settings.Privacy.lurkerMode.explainer1'
                                 ),
