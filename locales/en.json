@@ -437,6 +437,7 @@
     "views.Channel.SortButton.ascending": "ascending",
     "views.Channel.SortButton.descending": "descending",
     "views.Channel.channelId": "Channel ID",
+    "views.Channel.scid": "Short Channel ID (SCID)",
     "views.Channel.channelIds": "Channel IDs",
     "views.Channel.displayName": "Display name",
     "views.Channel.Total.outbound": "Sending capacity (outbound)",

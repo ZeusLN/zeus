@@ -51,6 +51,7 @@
     "bbqr": "1.0.0",
     "bc-ur": "0.1.6",
     "bech32": "2.0.0",
+    "big-integer": "1.6.52",
     "bignumber.js": "9.0.2",
     "bip39": "3.1.0",
     "bitcoinjs-lib": "6.1.5",
