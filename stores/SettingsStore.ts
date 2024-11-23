@@ -7,6 +7,7 @@ import isEqual from 'lodash/isEqual';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import { getSupportedBiometryType } from '../utils/BiometricUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
@@ -1820,6 +1821,19 @@ export default class SettingsStore {
         (this.settings.passphrase ||
             this.settings.pin ||
             this.isBiometryConfigured());
+
+    public checkBiometricsStatus = async () => {
+        const biometryType = await getSupportedBiometryType();
+        if (this.settings.supportedBiometryType !== biometryType) {
+            this.updateSettings({
+                supportedBiometryType: biometryType
+            });
+        }
+        return {
+            supportedBiometryType: biometryType,
+            isBiometryEnabled: this.settings.isBiometryEnabled
+        };
+    };
 
     public isBiometryConfigured = () =>
         this.settings != null &&
