@@ -206,7 +206,7 @@ export default class LightningAddressSettings extends React.Component<
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
-                                    infoText={[
+                                    infoModalText={[
                                         localeString(
                                             'views.Settings.LightningAddressSettings.routeHintsExplainer1'
                                         ),
