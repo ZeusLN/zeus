@@ -313,12 +313,14 @@ export default class Lockscreen extends React.Component<
         const { updateSettings } = SettingsStore;
 
         // duress pin is also deleted when pin is deleted
+        // biometry is also disabled when pin is deleted
         updateSettings({
             pin: '',
             duressPin: '',
-            authenticationAttempts: 0
+            authenticationAttempts: 0,
+            isBiometryEnabled: false
         }).then(() => {
-            navigation.pop(2);
+            navigation.popTo('Security');
         });
     };
 
@@ -330,7 +332,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            navigation.pop(2);
+            navigation.popTo('Security');
         });
     };
 

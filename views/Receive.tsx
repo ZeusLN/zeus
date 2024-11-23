@@ -1984,7 +1984,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.lspSwitchExplainer1'
                                                             ),
@@ -1992,7 +1992,17 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.lspSwitchExplainer2'
                                                             )
                                                         ]}
-                                                        infoNav="LspExplanationOverview"
+                                                        infoModalAdditionalButtons={[
+                                                            {
+                                                                title: localeString(
+                                                                    'general.learnMore'
+                                                                ),
+                                                                callback: () =>
+                                                                    navigation.navigate(
+                                                                        'LspExplanationOverview'
+                                                                    )
+                                                            }
+                                                        ]}
                                                     >
                                                         {localeString(
                                                             'views.Settings.LSP.enableLSP'
@@ -2488,7 +2498,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.routeHintSwitchExplainer1'
                                                             ),
@@ -2622,7 +2632,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.ampSwitchExplainer1'
                                                             ),
@@ -2630,7 +2640,7 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.ampSwitchExplainer2'
                                                             )
                                                         ]}
-                                                        infoLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                     >
                                                         {localeString(
                                                             'views.Receive.ampInvoice'
@@ -2660,7 +2670,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.blindedPathsExplainer1'
                                                             ),
@@ -2668,7 +2678,7 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.blindedPathsExplainer2'
                                                             )
                                                         ]}
-                                                        infoLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                        infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
                                                     >
                                                         {localeString(
                                                             'views.Receive.blindedPaths'

@@ -24,9 +24,12 @@ interface KeyValueProps {
     color?: string;
     indicatorColor?: string;
     sensitive?: boolean;
-    infoText?: string | Array<string>;
-    infoLink?: string;
-    infoNav?: string;
+    infoModalText?: string | Array<string>;
+    infoModalLink?: string;
+    infoModalAdditionalButtons?: Array<{
+        title: string;
+        callback?: () => void;
+    }>;
     mempoolLink?: () => void;
     disableCopy?: boolean;
     ModalStore?: ModalStore;
@@ -43,9 +46,9 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             color,
             indicatorColor,
             sensitive,
-            infoText,
-            infoLink,
-            infoNav,
+            infoModalText,
+            infoModalLink,
+            infoModalAdditionalButtons,
             mempoolLink,
             disableCopy,
             ModalStore,
@@ -86,7 +89,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 >
                     {keyValue}
                 </Text>
-                {infoText && (
+                {infoModalText && (
                     <Text
                         style={{
                             color:
@@ -103,10 +106,16 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         );
 
         let Key: any;
-        if (infoText) {
+        if (infoModalText) {
             Key = (
                 <TouchableOpacity
-                    onPress={() => toggleInfoModal(infoText, infoLink, infoNav)}
+                    onPress={() =>
+                        toggleInfoModal(
+                            infoModalText,
+                            infoModalLink,
+                            infoModalAdditionalButtons
+                        )
+                    }
                 >
                     {KeyBase}
                 </TouchableOpacity>
