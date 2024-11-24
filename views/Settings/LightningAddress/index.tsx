@@ -163,13 +163,13 @@ export default class LightningAddress extends React.Component<
             localHashes,
             paid,
             fees,
-            error,
             error_msg,
             loading,
             redeeming,
             redeemingAll,
             readyToAutomaticallyAccept,
-            prepareToAutomaticallyAcceptStart
+            prepareToAutomaticallyAcceptStart,
+            deleteAndGenerateNewPreimages
         } = LightningAddressStore;
 
         const { fontScale } = Dimensions.get('window');
@@ -254,8 +254,8 @@ export default class LightningAddress extends React.Component<
                         rightComponent={
                             !loading && !redeeming && !redeemingAll ? (
                                 <Row>
-                                    {fees && !error && <InfoButton />}
-                                    {lightningAddressHandle && !error && (
+                                    {fees && <InfoButton />}
+                                    {lightningAddressHandle && (
                                         <SettingsButton />
                                     )}
                                 </Row>
@@ -272,6 +272,21 @@ export default class LightningAddress extends React.Component<
                         {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
+                        {!loading &&
+                            !redeeming &&
+                            error_msg ===
+                                localeString(
+                                    'stores.LightningAddressStore.preimageNotFound'
+                                ) && (
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.LightningAddress.generateNew'
+                                    )}
+                                    onPress={() =>
+                                        deleteAndGenerateNewPreimages()
+                                    }
+                                />
+                            )}
                         {!loading &&
                             !redeemingAll &&
                             !redeeming &&
