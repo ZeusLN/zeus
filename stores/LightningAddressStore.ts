@@ -63,6 +63,16 @@ export default class LightningAddressStore {
     }
 
     @action
+    public deleteAndGenerateNewPreimages = async () => {
+        this.loading = true;
+        await EncryptedStorage.setItem(
+            HASHES_STORAGE_STRING,
+            JSON.stringify('')
+        );
+        this.generatePreimages(true);
+    };
+
+    @action
     public DEV_deleteLocalHashes = async () => {
         this.loading = true;
         await EncryptedStorage.setItem(
