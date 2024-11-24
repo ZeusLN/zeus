@@ -1,5 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
+import BigInt from 'big-integer';
+
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
 
@@ -180,6 +182,25 @@ export default class Channel extends BaseModel {
     @computed
     public get channelId(): string | undefined {
         return this.chan_id || this.channel_id;
+    }
+
+    @computed
+    public get shortChannelId(): string | undefined {
+        // make sure channelId is a number, or don't both w/ SCID calculation
+        if (Number.isNaN(Number(this.channelId))) return;
+
+        const chanId = BigInt(Number(this.channelId) || 0); // Use BigInt for large numbers
+
+        // Extract the components
+        // @ts-ignore:next-line
+        const blockHeight = chanId >> BigInt(40); // Shift right by 40 bits
+        // @ts-ignore:next-line
+        const txIndex = (chanId >> BigInt(16)) & BigInt(0xffffff); // Shift right by 16 bits and mask 24 bits
+        // @ts-ignore:next-line
+        const outputIndex = chanId & BigInt(0xffff); // Mask the lower 16 bits
+
+        // Combine components into the short channel ID
+        return `${blockHeight}x${txIndex}x${outputIndex}`;
     }
 
     @computed
