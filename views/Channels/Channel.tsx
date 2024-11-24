@@ -398,7 +398,7 @@ export default class ChannelView extends React.Component<
                             value={channelId}
                         />
                     )}
-                    {channelId && (
+                    {shortChannelId && (
                         <KeyValue
                             keyValue={localeString('views.Channel.scid')}
                             value={shortChannelId}

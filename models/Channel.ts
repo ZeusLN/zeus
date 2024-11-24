@@ -186,6 +186,9 @@ export default class Channel extends BaseModel {
 
     @computed
     public get shortChannelId(): string | undefined {
+        // make sure channelId is a number, or don't both w/ SCID calculation
+        if (Number.isNaN(Number(this.channelId))) return;
+
         const chanId = BigInt(Number(this.channelId) || 0); // Use BigInt for large numbers
 
         // Extract the components
