@@ -245,6 +245,7 @@ export default class ChannelView extends React.Component<
             remotePubkey,
             capacity,
             channelId,
+            shortChannelId,
             initiator,
             alias_scids,
             local_chan_reserve_sat,
@@ -360,18 +361,22 @@ export default class ChannelView extends React.Component<
                         )}
                         {remotePubkey && this.renderContactLink(remotePubkey)}
                     </View>
-                    <BalanceSlider
-                        sendingCapacity={lurkerMode ? 50 : sendingCapacity}
-                        receivingCapacity={lurkerMode ? 50 : receivingCapacity}
-                        localBalance={lurkerMode ? 50 : localBalance}
-                        remoteBalance={lurkerMode ? 50 : remoteBalance}
-                        localReserveBalance={
-                            lurkerMode ? 50 : localReserveBalance
-                        }
-                        remoteReserveBalance={
-                            lurkerMode ? 50 : remoteReserveBalance
-                        }
-                    />
+                    <View style={{ height: 40 }}>
+                        <BalanceSlider
+                            sendingCapacity={lurkerMode ? 50 : sendingCapacity}
+                            receivingCapacity={
+                                lurkerMode ? 50 : receivingCapacity
+                            }
+                            localBalance={lurkerMode ? 50 : localBalance}
+                            remoteBalance={lurkerMode ? 50 : remoteBalance}
+                            localReserveBalance={
+                                lurkerMode ? 50 : localReserveBalance
+                            }
+                            remoteReserveBalance={
+                                lurkerMode ? 50 : remoteReserveBalance
+                            }
+                        />
+                    </View>
                     <Text
                         style={{ ...styles.status, color: themeColor('text') }}
                     >
@@ -387,6 +392,30 @@ export default class ChannelView extends React.Component<
                             ? localeString('views.Channel.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
+                    {channelId && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.channelId')}
+                            value={channelId}
+                        />
+                    )}
+                    {shortChannelId && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.scid')}
+                            value={shortChannelId}
+                        />
+                    )}
+                    {!!alias_scids && alias_scids.length > 0 && (
+                        <KeyValue
+                            keyValue={
+                                alias_scids.length > 1
+                                    ? localeString('views.Channel.aliasScids')
+                                    : localeString('views.Channel.aliasScid')
+                            }
+                            value={PrivacyUtils.sensitiveValue(
+                                alias_scids.join(', ')
+                            )}
+                        />
+                    )}
                     {zero_conf && (
                         <KeyValue
                             keyValue={localeString('views.Channel.zeroConf')}
@@ -546,18 +575,6 @@ export default class ChannelView extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-                    )}
-                    {!!alias_scids && alias_scids.length > 0 && (
-                        <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
-                            )}
-                        />
                     )}
                     <KeyValue
                         keyValue={localeString('views.Channel.channelBalance')}
@@ -883,8 +900,10 @@ const styles = StyleSheet.create({
     },
     status: {
         fontFamily: 'PPNeueMontreal-Book',
-        alignSelf: 'center',
-        marginBottom: 10
+        margin: 18,
+        flex: 1,
+        flexDirection: 'row',
+        textAlign: 'center'
     },
     alias: {
         fontSize: 28,
