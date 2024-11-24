@@ -139,6 +139,7 @@ interface ReceiveState {
     routeHints: boolean;
     account: string;
     blindedPaths: boolean;
+    nfcSupported: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -195,6 +196,7 @@ export default class Receive extends React.Component<
         routeHints: false,
         account: 'default',
         blindedPaths: false,
+        nfcSupported: false,
         // POS
         orderId: '',
         orderTip: '',
@@ -426,6 +428,11 @@ export default class Receive extends React.Component<
                 needInbound
             });
         }
+    }
+
+    async componentDidMount() {
+        const nfcSupported = await NfcManager.isSupported();
+        this.setState({ nfcSupported });
     }
 
     clearListeners = () => {
@@ -1076,7 +1083,8 @@ export default class Receive extends React.Component<
             routeHintMode,
             selectedRouteHintChannels,
             blindedPaths,
-            hideRightHeaderComponent
+            hideRightHeaderComponent,
+            nfcSupported
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1797,6 +1805,7 @@ export default class Receive extends React.Component<
                                                             ? ZIconWhite
                                                             : ZIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1820,6 +1829,7 @@ export default class Receive extends React.Component<
                                                             ? LightningIconWhite
                                                             : LightningIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1843,6 +1853,7 @@ export default class Receive extends React.Component<
                                                             ? OnChainIconWhite
                                                             : OnChainIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
 
@@ -1911,6 +1922,7 @@ export default class Receive extends React.Component<
                                                             ? ZPayIconWhite
                                                             : ZPayIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
 
@@ -1936,39 +1948,42 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
                                         {!(
                                             selectedIndex === 3 &&
                                             !lightningAddress
-                                        ) && (
-                                            <View
-                                                style={[
-                                                    styles.button,
-                                                    { paddingTop: 0 }
-                                                ]}
-                                            >
-                                                <Button
-                                                    title={
-                                                        posStatus === 'active'
-                                                            ? localeString(
-                                                                  'general.payNfc'
-                                                              )
-                                                            : localeString(
-                                                                  'general.receiveNfc'
-                                                              )
-                                                    }
-                                                    icon={{
-                                                        name: 'nfc',
-                                                        size: 25
-                                                    }}
-                                                    onPress={() =>
-                                                        this.enableNfc()
-                                                    }
-                                                    secondary
-                                                />
-                                            </View>
-                                        )}
+                                        ) &&
+                                            nfcSupported && (
+                                                <View
+                                                    style={[
+                                                        styles.button,
+                                                        { paddingTop: 0 }
+                                                    ]}
+                                                >
+                                                    <Button
+                                                        title={
+                                                            posStatus ===
+                                                            'active'
+                                                                ? localeString(
+                                                                      'general.payNfc'
+                                                                  )
+                                                                : localeString(
+                                                                      'general.receiveNfc'
+                                                                  )
+                                                        }
+                                                        icon={{
+                                                            name: 'nfc',
+                                                            size: 25
+                                                        }}
+                                                        onPress={() =>
+                                                            this.enableNfc()
+                                                        }
+                                                        secondary
+                                                    />
+                                                </View>
+                                            )}
                                     </View>
                                 )}
                                 {!loading && !haveInvoice && !creatingInvoice && (
