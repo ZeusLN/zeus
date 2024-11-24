@@ -23,7 +23,6 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
 
-import Button from '../components/Button';
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
@@ -207,7 +206,6 @@ interface WalletHeaderProps {
     loading?: boolean;
     title?: string;
     channels?: boolean;
-    toggle?: () => void;
 }
 
 interface WalletHeaderState {
@@ -255,7 +253,6 @@ export default class WalletHeader extends React.Component<
             loading,
             title,
             channels,
-            toggle,
             AlertStore,
             SettingsStore,
             NodeInfoStore,
@@ -265,7 +262,7 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
-        const { filteredPendingChannels, pendingHTLCs } = ChannelsStore!;
+        const { pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
@@ -517,36 +514,7 @@ export default class WalletHeader extends React.Component<
                 centerComponent={
                     title ? (
                         <View style={{ flex: 1 }}>
-                            {toggle ? (
-                                <View
-                                    style={{ flex: 1, width: '100%' }}
-                                    accessibilityLiveRegion="polite"
-                                >
-                                    <Button
-                                        onPress={() => toggle()}
-                                        title={title}
-                                        noUppercase
-                                        buttonStyle={{
-                                            alignSelf: 'center',
-                                            height: 40
-                                        }}
-                                        icon={
-                                            filteredPendingChannels?.length > 0
-                                                ? {
-                                                      name: 'clockcircle',
-                                                      type: 'antdesign',
-                                                      size: 20,
-                                                      color: themeColor(
-                                                          'background'
-                                                      )
-                                                  }
-                                                : null
-                                        }
-                                    />
-                                </View>
-                            ) : (
-                                <Body bold>{title}</Body>
-                            )}
+                            <Body bold>{title}</Body>
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 0 }}>
