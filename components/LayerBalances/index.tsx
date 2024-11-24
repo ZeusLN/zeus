@@ -213,10 +213,10 @@ const SwipeableRow = ({
 
     const HideButton = () => (
         <TouchableOpacity
-            onPress={async () => {
+            onPress={() => {
                 item.hidden
-                    ? await stores.utxosStore.unhideAccount(item.layer)
-                    : await stores.utxosStore.hideAccount(item.layer);
+                    ? stores.utxosStore.unhideAccount(item.layer)
+                    : stores.utxosStore.hideAccount(item.layer);
             }}
         >
             {item.hidden ? (
