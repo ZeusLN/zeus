@@ -317,6 +317,7 @@
     "views.OpenChannel.removeAdditionalChannel": "Remove additional channel",
     "views.Wallet.BalancePane.sync.title": "Finishing sync",
     "views.Wallet.BalancePane.sync.text": "Hang on tight! You will be ready to use Zeus soon.",
+    "views.Wallet.waitForSync": "Your node must be fully synced before you can send or receive payments. Please wait.",
     "views.Wallet.BalancePane.recovery.title": "Recovery mode",
     "views.Wallet.BalancePane.recovery.text": "Please leave ZEUS open until the process completes.",
     "views.Wallet.BalancePane.recovery.textAlt": "Leave ZEUS open until completion.",
