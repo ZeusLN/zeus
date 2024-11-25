@@ -20,6 +20,11 @@ PODS:
     - fmt (= 9.1.0)
     - glog
     - RCT-Folly/Default (= 2024.01.01.00)
+  - RCT-Folly/Default (2024.01.01.00):
+    - boost
+    - DoubleConversion
+    - fmt (= 9.1.0)
+    - glog
   - RCT-Folly/Fabric (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -1308,6 +1313,8 @@ PODS:
     - React-Core
   - RNVectorIcons (7.1.0):
     - React
+  - secp256k1-zkp-react (0.0.13):
+    - React-Core
   - SocketRocket (0.7.0)
   - SwiftProtobuf (1.26.0)
   - TcpSockets (4.0.0):
@@ -1410,6 +1417,7 @@ DEPENDENCIES:
   - RNSecureRandom (from `../node_modules/react-native-securerandom`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
+  - "secp256k1-zkp-react (from `../node_modules/@nicolasflamel/secp256k1-zkp-react`)"
   - SwiftProtobuf (~> 1.0)
   - TcpSockets (from `../node_modules/react-native-tcp`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
@@ -1598,6 +1606,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
+  secp256k1-zkp-react:
+    :path: "../node_modules/@nicolasflamel/secp256k1-zkp-react"
   TcpSockets:
     :path: "../node_modules/react-native-tcp"
   VisionCamera:
@@ -1609,14 +1619,14 @@ SPEC CHECKSUMS:
   boost: d3f49c53809116a5d38da093a8aa78bf551aed09
   BVLinearGradient: 34a999fda29036898a09c6a6b728b0b4189e1a44
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
-  DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
+  DoubleConversion: 5189b271737e1565bdce30deb4a08d647e3f5f54
   FBLazyVector: 4bc164e5b5e6cfc288d2b5ff28643ea15fa1a589
-  fmt: 10c6e61f4be25dc963c36bd73fc7b1705fe975be
-  glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
+  fmt: 4c2741a687cc09f0634a2e2c72a838b99f1ff120
+  glog: 04b94705f318337d7ead9e6d17c019bd9b1f6b1b
   hermes-engine: 01d3e052018c2a13937aca1860fbedbccd4a41b7
   lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
   lottie-react-native: 8f9d4be452e23f6e5ca0fdc11669dc99ab52be81
-  RCT-Folly: bf5c0376ffe4dd2cf438dcf86db385df9fdce648
+  RCT-Folly: 02617c592a293bd6d418e0a88ff4ee1f88329b47
   RCTDeprecation: b03c35057846b685b3ccadc9bfe43e349989cdb2
   RCTRequired: 194626909cfa8d39ca6663138c417bc6c431648c
   RCTTypeSafety: 552aff5b8e8341660594db00e53ac889682bc120
@@ -1695,6 +1705,7 @@ SPEC CHECKSUMS:
   RNSecureRandom: 07efbdf2cd99efe13497433668e54acd7df49fef
   RNSVG: a48668fd382115bc89761ce291a81c4ca5f2fd2e
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
+  secp256k1-zkp-react: a0cb6c2717cb62845c19624d22e04f09b11e8aad
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   SwiftProtobuf: 5e8349171e7c2f88f5b9e683cb3cb79d1dc780b3
   TcpSockets: 4ef55305239923b343ed0a378b1fac188b1373b0
