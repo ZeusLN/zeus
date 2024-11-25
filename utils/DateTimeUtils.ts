@@ -15,13 +15,27 @@ class DateTimeUtils {
         }
     };
 
-    listFormattedDateShort = (timestamp: number | string) =>
-        this.listFormattedDate(timestamp, 'mmm d, HH:MM');
+    listFormattedDateShort = (timestamp: number | string) => {
+        const date = new Date(Number(timestamp) * 1000);
+        const currentYear = new Date().getFullYear();
+        const dateYear = date.getFullYear();
+
+        const format =
+            dateYear < currentYear ? "mmm d, 'yy, HH:MM" : 'mmm d, HH:MM';
+
+        return this.listFormattedDate(timestamp, format);
+    };
 
     listFormattedDateOrder = (timestamp: Date) => {
-        const updated = dateFormat(timestamp, 'hh:mm tt');
-        const day = dateFormat(timestamp, 'ddd, mmm dd');
-        return `${updated} | ${day}`;
+        const currentYear = new Date().getFullYear();
+        const dateYear = timestamp.getFullYear();
+
+        const time = dateFormat(timestamp, 'hh:mm tt');
+        const monthAndDay = dateFormat(timestamp, 'ddd, mmm dd');
+        const year =
+            dateYear < currentYear ? `, '${dateFormat(timestamp, 'yy')}` : '';
+
+        return `${time} | ${monthAndDay}${year}`;
     };
 }
 
