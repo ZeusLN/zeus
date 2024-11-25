@@ -282,7 +282,9 @@ export default class Activity extends React.PureComponent<
                     rightComponent={
                         !loading ? (
                             <Row>
-                                <DownloadButton />
+                                {filteredActivity?.length > 0 && (
+                                    <DownloadButton />
+                                )}
                                 {order ? (
                                     selectedPaymentForOrder ? (
                                         <MarkPaymentButton />
@@ -308,7 +310,7 @@ export default class Activity extends React.PureComponent<
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
                     </View>
-                ) : !!filteredActivity && filteredActivity.length > 0 ? (
+                ) : filteredActivity?.length > 0 ? (
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
