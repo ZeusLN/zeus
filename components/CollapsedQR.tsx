@@ -67,6 +67,7 @@ interface CollapsedQRProps {
     textBottom?: boolean;
     truncateLongValue?: boolean;
     logo?: any;
+    nfcSupported?: boolean;
 }
 
 interface CollapsedQRState {
@@ -259,7 +260,7 @@ export default class CollapsedQR extends React.Component<
                     />
                 )}
                 <CopyButton copyValue={copyValue || value} title={copyText} />
-                {Platform.OS === 'android' && (
+                {Platform.OS === 'android' && this.props.nfcSupported && (
                     <Button
                         title={
                             nfcBroadcast
