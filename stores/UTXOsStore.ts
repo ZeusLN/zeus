@@ -153,7 +153,6 @@ export default class UTXOsStore {
         this.loadingAccounts = true;
         return BackendUtils.listAccounts(data)
             .then(async (data: any) => {
-                this.loadingAccounts = false;
                 const accounts: any = [];
                 for (const i in data.accounts) {
                     const account = new Account(data.accounts[i]);
@@ -182,6 +181,7 @@ export default class UTXOsStore {
                     }
                 }
                 this.accounts = accounts;
+                this.loadingAccounts = false;
                 this.error = false;
                 return this.accounts;
             })

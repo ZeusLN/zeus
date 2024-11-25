@@ -11,11 +11,11 @@ import Button from './Button';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 import UrlUtils from '../utils/UrlUtils';
 
 import InvoicesStore from '../stores/InvoicesStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
-import FiatStore from '../stores/FiatStore';
 import { ChannelItem } from './Channels/ChannelItem';
 
 interface LSPS1OrderResponseProps {
@@ -23,11 +23,10 @@ interface LSPS1OrderResponseProps {
     orderResponse: any;
     InvoicesStore?: InvoicesStore;
     NodeInfoStore?: NodeInfoStore;
-    FiatStore?: FiatStore;
     orderView: boolean;
 }
 
-@inject('InvoicesStore', 'NodeInfoStore', 'FiatStore')
+@inject('InvoicesStore', 'NodeInfoStore')
 @observer
 export default class LSPS1OrderResponse extends React.Component<
     LSPS1OrderResponseProps,
@@ -38,7 +37,6 @@ export default class LSPS1OrderResponse extends React.Component<
             orderResponse,
             InvoicesStore,
             NodeInfoStore,
-            FiatStore,
             orderView,
             navigation
         } = this.props;
@@ -50,8 +48,8 @@ export default class LSPS1OrderResponse extends React.Component<
                 <ScrollView>
                     <View style={{ paddingHorizontal: 20 }}>
                         <ChannelItem
-                            outbound={orderResponse?.client_balance_sat}
-                            inbound={orderResponse?.lsp_balance_sat}
+                            localBalance={orderResponse?.client_balance_sat}
+                            remoteBalance={orderResponse?.lsp_balance_sat}
                             title={localeString('views.LSPS1.yourBalance')}
                             secondTitle={localeString(
                                 'views.LSPS1.receiveLimit'
@@ -108,7 +106,7 @@ export default class LSPS1OrderResponse extends React.Component<
                                 keyValue={localeString(
                                     'views.LSPS1.channelExpiryBlocks'
                                 )}
-                                value={FiatStore!.numberWithCommas(
+                                value={numberWithCommas(
                                     orderResponse?.channel_expiry_blocks
                                 )}
                             />

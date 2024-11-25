@@ -1091,7 +1091,9 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                 </Text>
                                 <TextInput
-                                    placeholder={'My lightning node'}
+                                    placeholder={localeString(
+                                        'general.defaultNodeNickname'
+                                    )}
                                     value={nickname}
                                     onChangeText={(text: string) =>
                                         this.setState({

@@ -8,11 +8,12 @@ import TextInput from './TextInput';
 import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import Stores from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';

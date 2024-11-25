@@ -230,16 +230,22 @@ export default class ChannelView extends React.Component<
             channel_point,
             commit_weight,
             localBalance,
+            remoteBalance,
+            sendingCapacity,
+            receivingCapacity,
+            localReserveBalance,
+            remoteReserveBalance,
+            isBelowReserve,
             commit_fee,
             csv_delay,
             total_satoshis_received,
             isActive,
-            remoteBalance,
             unsettled_balance,
             total_satoshis_sent,
             remotePubkey,
             capacity,
             channelId,
+            shortChannelId,
             initiator,
             alias_scids,
             local_chan_reserve_sat,
@@ -355,10 +361,22 @@ export default class ChannelView extends React.Component<
                         )}
                         {remotePubkey && this.renderContactLink(remotePubkey)}
                     </View>
-                    <BalanceSlider
-                        localBalance={lurkerMode ? 50 : localBalance}
-                        remoteBalance={lurkerMode ? 50 : remoteBalance}
-                    />
+                    <View style={{ height: 40 }}>
+                        <BalanceSlider
+                            sendingCapacity={lurkerMode ? 50 : sendingCapacity}
+                            receivingCapacity={
+                                lurkerMode ? 50 : receivingCapacity
+                            }
+                            localBalance={lurkerMode ? 50 : localBalance}
+                            remoteBalance={lurkerMode ? 50 : remoteBalance}
+                            localReserveBalance={
+                                lurkerMode ? 50 : localReserveBalance
+                            }
+                            remoteReserveBalance={
+                                lurkerMode ? 50 : remoteReserveBalance
+                            }
+                        />
+                    </View>
                     <Text
                         style={{ ...styles.status, color: themeColor('text') }}
                     >
@@ -374,6 +392,30 @@ export default class ChannelView extends React.Component<
                             ? localeString('views.Channel.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
+                    {channelId && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.channelId')}
+                            value={channelId}
+                        />
+                    )}
+                    {shortChannelId && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.scid')}
+                            value={shortChannelId}
+                        />
+                    )}
+                    {!!alias_scids && alias_scids.length > 0 && (
+                        <KeyValue
+                            keyValue={
+                                alias_scids.length > 1
+                                    ? localeString('views.Channel.aliasScids')
+                                    : localeString('views.Channel.aliasScid')
+                            }
+                            value={PrivacyUtils.sensitiveValue(
+                                alias_scids.join(', ')
+                            )}
+                        />
+                    )}
                     {zero_conf && (
                         <KeyValue
                             keyValue={localeString('views.Channel.zeroConf')}
@@ -568,18 +610,27 @@ export default class ChannelView extends React.Component<
                         />
                     )}
                     <KeyValue
-                        keyValue={localeString('views.Channel.Total.outbound')}
+                        keyValue={localeString('views.Channel.localBalance')}
                         value={
-                            <Amount sats={localBalance} sensitive toggleable />
+                            <Amount
+                                sats={localBalance}
+                                sensitive
+                                toggleable
+                                color={
+                                    isBelowReserve
+                                        ? 'warningReserve'
+                                        : undefined
+                                }
+                            />
                         }
                     />
                     <KeyValue
-                        keyValue={localeString('views.Channel.Total.inbound')}
+                        keyValue={localeString('views.Channel.remoteBalance')}
                         value={
                             <Amount sats={remoteBalance} sensitive toggleable />
                         }
                     />
-                    {unsettled_balance && (
+                    {unsettled_balance !== '0' && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.unsettledBalance'
@@ -593,18 +644,28 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
-                    {!!alias_scids && alias_scids.length > 0 && (
-                        <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
-                            )}
-                        />
-                    )}
+                    <KeyValue
+                        keyValue={localeString('views.Channel.Total.outbound')}
+                        value={
+                            <Amount
+                                sats={sendingCapacity}
+                                sensitive
+                                toggleable
+                            />
+                        }
+                        indicatorColor={themeColor('outbound')}
+                    />
+                    <KeyValue
+                        keyValue={localeString('views.Channel.Total.inbound')}
+                        value={
+                            <Amount
+                                sats={receivingCapacity}
+                                sensitive
+                                toggleable
+                            />
+                        }
+                        indicatorColor={themeColor('inbound')}
+                    />
                     {!!local_chan_reserve_sat && (
                         <KeyValue
                             keyValue={localeString(
@@ -615,12 +676,18 @@ export default class ChannelView extends React.Component<
                                     sats={local_chan_reserve_sat}
                                     sensitive
                                     toggleable
+                                    color={
+                                        isBelowReserve
+                                            ? 'warningReserve'
+                                            : undefined
+                                    }
                                 />
                             }
-                            infoText={localeString(
+                            infoModalText={localeString(
                                 'views.Channel.localReserve.info'
                             )}
-                            infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            indicatorColor={themeColor('outboundReserve')}
                         />
                     )}
                     {!!remote_chan_reserve_sat && (
@@ -635,10 +702,11 @@ export default class ChannelView extends React.Component<
                                     toggleable
                                 />
                             }
-                            infoText={localeString(
+                            infoModalText={localeString(
                                 'views.Channel.remoteReserve.info'
                             )}
-                            infoLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            indicatorColor={themeColor('inboundReserve')}
                         />
                     )}
                     {capacity && (
@@ -773,7 +841,7 @@ export default class ChannelView extends React.Component<
                                                 ...styles.text,
                                                 color: themeColor('text')
                                             }}
-                                            infoText={localeString(
+                                            infoModalText={localeString(
                                                 'views.Channel.externalAddress.info'
                                             )}
                                         >
@@ -832,8 +900,10 @@ const styles = StyleSheet.create({
     },
     status: {
         fontFamily: 'PPNeueMontreal-Book',
-        alignSelf: 'center',
-        marginBottom: 10
+        margin: 18,
+        flex: 1,
+        flexDirection: 'row',
+        textAlign: 'center'
     },
     alias: {
         fontSize: 28,

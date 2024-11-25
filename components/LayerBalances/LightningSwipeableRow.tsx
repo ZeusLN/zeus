@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { getParams as getlnurlParams } from 'js-lnurl';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { inject, observer } from 'mobx-react';
 
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
@@ -18,6 +19,7 @@ import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import stores from './../../stores/Stores';
+import SyncStore from '../../stores/SyncStore';
 const { invoicesStore } = stores;
 
 import Receive from './../../assets/images/SVG/Receive.svg';
@@ -31,8 +33,11 @@ interface LightningSwipeableRowProps {
     locked?: boolean;
     children: React.ReactNode;
     disabled?: boolean;
+    SyncStore?: SyncStore;
 }
 
+@inject('SyncStore')
+@observer
 export default class LightningSwipeableRow extends Component<
     LightningSwipeableRowProps,
     {}
@@ -259,7 +264,23 @@ export default class LightningSwipeableRow extends Component<
     };
 
     render() {
-        const { children, lightning, offer, locked, disabled } = this.props;
+        const { children, lightning, offer, locked, disabled, SyncStore } =
+            this.props;
+        const { isSyncing } = SyncStore!;
+        if (isSyncing) {
+            return (
+                <TouchableOpacity
+                    onPress={() =>
+                        stores.modalStore.toggleInfoModal(
+                            localeString('views.Wallet.waitForSync')
+                        )
+                    }
+                    activeOpacity={1}
+                >
+                    {children}
+                </TouchableOpacity>
+            );
+        }
         if (locked && (lightning || offer)) {
             return (
                 <TouchableOpacity

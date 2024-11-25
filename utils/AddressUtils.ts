@@ -3,7 +3,7 @@ const bitcoin = require('bitcoinjs-lib');
 
 import Base64Utils from '../utils/Base64Utils';
 
-import { SATS_PER_BTC } from '../stores/UnitsStore';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { walletrpc } from '../proto/lightning';
 

@@ -5,6 +5,10 @@ import { ChannelItem } from '../components/Channels/ChannelItem';
 interface BalanceSliderProps {
     localBalance: string | number;
     remoteBalance: string | number;
+    sendingCapacity: string | number;
+    receivingCapacity: string | number;
+    localReserveBalance?: string | number;
+    remoteReserveBalance?: string | number;
     list?: boolean;
 }
 
@@ -13,12 +17,23 @@ export default class BalanceSlider extends React.Component<
     {}
 > {
     render() {
-        const { localBalance, remoteBalance } = this.props;
+        const {
+            localBalance,
+            remoteBalance,
+            sendingCapacity,
+            receivingCapacity,
+            localReserveBalance,
+            remoteReserveBalance
+        } = this.props;
         return (
             <View style={styles.slider}>
                 <ChannelItem
-                    inbound={remoteBalance}
-                    outbound={localBalance}
+                    localBalance={localBalance}
+                    remoteBalance={remoteBalance}
+                    sendingCapacity={sendingCapacity}
+                    receivingCapacity={receivingCapacity}
+                    inboundReserve={localReserveBalance}
+                    outboundReserve={remoteReserveBalance}
                     noBorder
                     hideLabels
                 />

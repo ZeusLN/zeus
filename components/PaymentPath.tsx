@@ -275,6 +275,7 @@ export default class PaymentPath extends React.Component<
             if (enhancedPath.length > 1) {
                 hops.push(
                     <Hop
+                        key={`hop-${index}`}
                         index={index}
                         title={title}
                         path={path}
@@ -290,6 +291,7 @@ export default class PaymentPath extends React.Component<
             if (expanded.get(index) || enhancedPath.length === 1) {
                 hops.push(
                     <ExpandedHop
+                        key={`origin-${index}`}
                         pathIndex={0}
                         path={path}
                         hop={origin}
@@ -308,6 +310,7 @@ export default class PaymentPath extends React.Component<
                 (expanded.get(index) || enhancedPath.length === 1) &&
                     hops.push(
                         <ExpandedHop
+                            key={`hop-${index}-${pathIndex}`}
                             pathIndex={pathIndex + 1}
                             path={path}
                             hop={hop}

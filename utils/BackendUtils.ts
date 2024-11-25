@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
@@ -33,7 +33,7 @@ class BackendUtils {
     }
 
     getClass = () => {
-        const { implementation } = stores.settingsStore;
+        const { implementation } = settingsStore;
         switch (implementation) {
             case 'lnd':
                 return this.lnd;

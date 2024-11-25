@@ -66,13 +66,14 @@ import PosStore from '../stores/PosStore';
 import SettingsStore, { TIME_PERIOD_KEYS } from '../stores/SettingsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -138,6 +139,7 @@ interface ReceiveState {
     routeHints: boolean;
     account: string;
     blindedPaths: boolean;
+    nfcSupported: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -194,6 +196,7 @@ export default class Receive extends React.Component<
         routeHints: false,
         account: 'default',
         blindedPaths: false,
+        nfcSupported: false,
         // POS
         orderId: '',
         orderTip: '',
@@ -340,7 +343,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (amount) {
+        if (amount && amount != '0') {
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
@@ -390,7 +393,7 @@ export default class Receive extends React.Component<
         reset();
         const { amount, lnurlParams: lnurl } = route.params ?? {};
 
-        if (amount) {
+        if (amount && amount != '0') {
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
@@ -425,6 +428,11 @@ export default class Receive extends React.Component<
                 needInbound
             });
         }
+    }
+
+    async componentDidMount() {
+        const nfcSupported = await NfcManager.isSupported();
+        this.setState({ nfcSupported });
     }
 
     clearListeners = () => {
@@ -1075,7 +1083,8 @@ export default class Receive extends React.Component<
             routeHintMode,
             selectedRouteHintChannels,
             blindedPaths,
-            hideRightHeaderComponent
+            hideRightHeaderComponent,
+            nfcSupported
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1796,6 +1805,7 @@ export default class Receive extends React.Component<
                                                             ? ZIconWhite
                                                             : ZIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1819,6 +1829,7 @@ export default class Receive extends React.Component<
                                                             ? LightningIconWhite
                                                             : LightningIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1842,6 +1853,7 @@ export default class Receive extends React.Component<
                                                             ? OnChainIconWhite
                                                             : OnChainIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
 
@@ -1910,6 +1922,7 @@ export default class Receive extends React.Component<
                                                             ? ZPayIconWhite
                                                             : ZPayIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
 
@@ -1935,39 +1948,42 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
                                         {!(
                                             selectedIndex === 3 &&
                                             !lightningAddress
-                                        ) && (
-                                            <View
-                                                style={[
-                                                    styles.button,
-                                                    { paddingTop: 0 }
-                                                ]}
-                                            >
-                                                <Button
-                                                    title={
-                                                        posStatus === 'active'
-                                                            ? localeString(
-                                                                  'general.payNfc'
-                                                              )
-                                                            : localeString(
-                                                                  'general.receiveNfc'
-                                                              )
-                                                    }
-                                                    icon={{
-                                                        name: 'nfc',
-                                                        size: 25
-                                                    }}
-                                                    onPress={() =>
-                                                        this.enableNfc()
-                                                    }
-                                                    secondary
-                                                />
-                                            </View>
-                                        )}
+                                        ) &&
+                                            nfcSupported && (
+                                                <View
+                                                    style={[
+                                                        styles.button,
+                                                        { paddingTop: 0 }
+                                                    ]}
+                                                >
+                                                    <Button
+                                                        title={
+                                                            posStatus ===
+                                                            'active'
+                                                                ? localeString(
+                                                                      'general.payNfc'
+                                                                  )
+                                                                : localeString(
+                                                                      'general.receiveNfc'
+                                                                  )
+                                                        }
+                                                        icon={{
+                                                            name: 'nfc',
+                                                            size: 25
+                                                        }}
+                                                        onPress={() =>
+                                                            this.enableNfc()
+                                                        }
+                                                        secondary
+                                                    />
+                                                </View>
+                                            )}
                                     </View>
                                 )}
                                 {!loading && !haveInvoice && !creatingInvoice && (
@@ -1983,7 +1999,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.lspSwitchExplainer1'
                                                             ),
@@ -1991,7 +2007,17 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.lspSwitchExplainer2'
                                                             )
                                                         ]}
-                                                        infoNav="LspExplanationOverview"
+                                                        infoModalAdditionalButtons={[
+                                                            {
+                                                                title: localeString(
+                                                                    'general.learnMore'
+                                                                ),
+                                                                callback: () =>
+                                                                    navigation.navigate(
+                                                                        'LspExplanationOverview'
+                                                                    )
+                                                            }
+                                                        ]}
                                                     >
                                                         {localeString(
                                                             'views.Settings.LSP.enableLSP'
@@ -2487,7 +2513,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.routeHintSwitchExplainer1'
                                                             ),
@@ -2621,7 +2647,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.ampSwitchExplainer1'
                                                             ),
@@ -2629,7 +2655,7 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.ampSwitchExplainer2'
                                                             )
                                                         ]}
-                                                        infoLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                     >
                                                         {localeString(
                                                             'views.Receive.ampInvoice'
@@ -2659,7 +2685,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.blindedPathsExplainer1'
                                                             ),
@@ -2667,7 +2693,7 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.blindedPathsExplainer2'
                                                             )
                                                         ]}
-                                                        infoLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                        infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
                                                     >
                                                         {localeString(
                                                             'views.Receive.blindedPaths'

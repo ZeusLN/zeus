@@ -2,9 +2,9 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
-import { UR, UREncoder } from '@ngraveio/bc-ur';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -77,6 +77,19 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         );
     }
 
+    UNSAFE_componentWillReceiveProps(nextProps: any): void {
+        const { route } = nextProps;
+        const psbt = route.params?.psbt;
+        this.setState(
+            {
+                fundedPsbt: psbt
+            },
+            () => {
+                this.generateInfo();
+            }
+        );
+    }
+
     generateInfo = () => {
         const { fundedPsbt } = this.state;
 
@@ -100,10 +113,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         // bc-ur
 
-        const messageBuffer = Buffer.from(fundedPsbt);
-
-        // First step is to create a UR object from a Buffer
-        const ur = UR.fromBuffer(messageBuffer);
+        const messageBuffer = Buffer.from(fundedPsbt, 'base64');
 
         // Then, create the UREncoder object
 
@@ -117,7 +127,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         const firstSeqNum = 0;
 
         // Create the encoder object
-        const encoder = new UREncoder(ur, maxFragmentLength, firstSeqNum);
+        const cryptoPSBT = new CryptoPSBT(messageBuffer);
+        const encoder = cryptoPSBT.toUREncoder(maxFragmentLength, firstSeqNum);
         //
 
         this.setState({

@@ -1,5 +1,5 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -11,8 +11,8 @@ export default class Spark {
     clearCachedCalls = () => calls.clear();
 
     rpc = (rpcmethod: string, param = {}, range: any = null) => {
-        const { accessKey, certVerification, enableTor } = stores.settingsStore;
-        let { url } = stores.settingsStore;
+        const { accessKey, certVerification, enableTor } = settingsStore;
+        let { url } = settingsStore;
 
         const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
         if (calls.has(id)) {

@@ -167,21 +167,59 @@ export default class TransactionsStore {
     };
 
     @action
-    public finalizePsbtAndBroadcast = (funded_psbt: string) => {
+    public finalizePsbtAndBroadcast = (
+        funded_psbt: string,
+        defaultAccount?: boolean
+    ) => {
         this.funded_psbt = '';
         this.loading = true;
-        return BackendUtils.finalizePsbt({ funded_psbt })
-            .then((data: any) => {
-                const raw_final_tx = data.raw_final_tx;
 
-                this.broadcast(raw_final_tx);
-            })
-            .catch((error: any) => {
-                // handle error
-                this.error_msg = errorToUserFriendly(error.message);
-                this.error = true;
-                this.loading = false;
+        if (defaultAccount) {
+            return BackendUtils.finalizePsbt({ funded_psbt })
+                .then((data: any) => {
+                    const raw_final_tx = data.raw_final_tx;
+
+                    this.broadcast(raw_final_tx);
+                })
+                .catch((error: any) => {
+                    // handle error
+                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error = true;
+                    this.loading = false;
+                });
+        } else {
+            return new Promise((resolve) => {
+                try {
+                    // Parse the PSBT
+                    const psbt = bitcoin.Psbt.fromBase64(funded_psbt);
+                    // Step 2: Finalize each input
+                    psbt.data.inputs.forEach((input: any, index: number) => {
+                        if (
+                            !input.finalScriptSig &&
+                            !input.finalScriptWitness
+                        ) {
+                            psbt.finalizeInput(index); // This finalizes the input
+                        }
+                    });
+
+                    // Step 3: Extract the transaction
+                    const txHex = psbt.extractTransaction().toHex();
+
+                    this.broadcast(txHex);
+
+                    resolve(true);
+                } catch (error: any) {
+                    // handle error
+                    this.error_msg = errorToUserFriendly(
+                        error?.message || error
+                    );
+                    this.error = true;
+                    this.loading = false;
+
+                    resolve(true);
+                }
             });
+        }
     };
 
     @action
@@ -268,7 +306,8 @@ export default class TransactionsStore {
     };
 
     public sendCoinsLNDCoinControl = (
-        transactionRequest: TransactionRequest
+        transactionRequest: TransactionRequest,
+        defaultAccount?: boolean
     ) => {
         const {
             utxos,
@@ -319,7 +358,7 @@ export default class TransactionsStore {
                     this.funded_psbt = funded_psbt;
                     this.loading = false;
                 } else {
-                    this.finalizePsbtAndBroadcast(funded_psbt);
+                    this.finalizePsbtAndBroadcast(funded_psbt, defaultAccount);
                 }
             })
             .catch((error: any) => {
@@ -349,7 +388,8 @@ export default class TransactionsStore {
             BackendUtils.isLNDBased() &&
             transactionRequest.utxos &&
             transactionRequest.utxos.length > 0 &&
-            transactionRequest.account === 'default'
+            transactionRequest.account === 'default' &&
+            BackendUtils.supportsOnchainSendMax()
         ) {
             transactionRequest.utxos.forEach((input) => {
                 const [txid_str, output_index] = input.split(':');
@@ -364,7 +404,10 @@ export default class TransactionsStore {
             (transactionRequest?.additional_outputs?.length &&
                 transactionRequest?.additional_outputs?.length > 0)
         ) {
-            return this.sendCoinsLNDCoinControl(transactionRequest);
+            return this.sendCoinsLNDCoinControl(
+                transactionRequest,
+                transactionRequest.account === 'default'
+            );
         }
 
         this.crafting = false;

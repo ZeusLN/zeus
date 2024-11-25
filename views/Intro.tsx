@@ -173,7 +173,36 @@ const Intro: React.FC<IntroProps> = (props) => {
                             }}
                         >
                             <Button
-                                title={localeString('views.Intro.quickStart')}
+                                title={
+                                    <View>
+                                        <Text
+                                            style={{
+                                                fontSize: 20,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('white'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Intro.quickStart'
+                                            ).toUpperCase()}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontSize: 14,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('white'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Intro.quickStartExplainer'
+                                            ).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                }
                                 onPress={async () => {
                                     const { settingsStore } = stores;
                                     const {
@@ -202,7 +231,10 @@ const Intro: React.FC<IntroProps> = (props) => {
                                                     seed.cipher_seed_mnemonic,
                                                 walletPassword: randomBase64,
                                                 embeddedLndNetwork: 'Mainnet',
-                                                implementation: 'embedded-lnd'
+                                                implementation: 'embedded-lnd',
+                                                nickname: localeString(
+                                                    'general.defaultNodeNickname'
+                                                )
                                             }
                                         ];
 
@@ -226,9 +258,36 @@ const Intro: React.FC<IntroProps> = (props) => {
                             }}
                         >
                             <Button
-                                title={localeString(
-                                    'views.Intro.advancedSetUp'
-                                )}
+                                title={
+                                    <View>
+                                        <Text
+                                            style={{
+                                                fontSize: 20,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('highlight'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Intro.advancedSetUp'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontSize: 14,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('highlight'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Intro.advancedSetUpExplainer'
+                                            ).toUpperCase()}
+                                        </Text>
+                                    </View>
+                                }
                                 onPress={() => navigation.navigate('Menu')}
                                 secondary
                             />

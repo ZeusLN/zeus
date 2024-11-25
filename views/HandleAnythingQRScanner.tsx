@@ -6,7 +6,7 @@ import { Header } from 'react-native-elements';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { CryptoAccount } from '@keystonehq/bc-ur-registry';
+import { Bytes, CryptoAccount, CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -137,6 +137,12 @@ export default class HandleAnythingQRScanner extends React.Component<
                                     e
                                 );
                             }
+                        } else if (ur._type === 'crypto-psbt') {
+                            const psbt = CryptoPSBT.fromCBOR(ur._cborPayload);
+                            handleData = psbt.getPSBT().toString('base64');
+                        } else if (ur._type === 'bytes') {
+                            const data = Bytes.fromCBOR(ur._cborPayload);
+                            handleData = Buffer.from(data.getData()).toString();
                         } else {
                             // Decode the CBOR message to a Buffer
                             const decoded = ur.decodeCBOR();

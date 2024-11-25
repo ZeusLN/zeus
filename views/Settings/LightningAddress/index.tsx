@@ -156,18 +156,20 @@ export default class LightningAddress extends React.Component<
             create,
             status,
             redeemAllOpenPayments,
+            DEV_deleteLocalHashes,
             lightningAddressHandle,
             lightningAddressDomain,
             availableHashes,
+            localHashes,
             paid,
             fees,
-            error,
             error_msg,
             loading,
             redeeming,
             redeemingAll,
             readyToAutomaticallyAccept,
-            prepareToAutomaticallyAcceptStart
+            prepareToAutomaticallyAcceptStart,
+            deleteAndGenerateNewPreimages
         } = LightningAddressStore;
 
         const { fontScale } = Dimensions.get('window');
@@ -252,8 +254,8 @@ export default class LightningAddress extends React.Component<
                         rightComponent={
                             !loading && !redeeming && !redeemingAll ? (
                                 <Row>
-                                    {fees && !error && <InfoButton />}
-                                    {lightningAddressHandle && !error && (
+                                    {fees && <InfoButton />}
+                                    {lightningAddressHandle && (
                                         <SettingsButton />
                                     )}
                                 </Row>
@@ -270,6 +272,21 @@ export default class LightningAddress extends React.Component<
                         {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
+                        {!loading &&
+                            !redeeming &&
+                            error_msg ===
+                                localeString(
+                                    'stores.LightningAddressStore.preimageNotFound'
+                                ) && (
+                                <Button
+                                    title={localeString(
+                                        'views.Settings.LightningAddress.generateNew'
+                                    )}
+                                    onPress={() =>
+                                        deleteAndGenerateNewPreimages()
+                                    }
+                                />
+                            )}
                         {!loading &&
                             !redeemingAll &&
                             !redeeming &&
@@ -341,7 +358,7 @@ export default class LightningAddress extends React.Component<
                                                 ),
                                                 left: 5
                                             }}
-                                            infoText={[
+                                            infoModalText={[
                                                 localeString(
                                                     'views.Settings.LightningAddress.statusExplainer1'
                                                 ),
@@ -350,7 +367,9 @@ export default class LightningAddress extends React.Component<
                                                 )
                                             ]}
                                         >
-                                            {` (${availableHashes})`}
+                                            {` (${
+                                                __DEV__ ? `${localHashes}|` : ''
+                                            }${availableHashes})`}
                                         </Text>
                                     </Row>
                                     <QRButton />
@@ -793,6 +812,17 @@ export default class LightningAddress extends React.Component<
                                                 }
                                                 disabled={!isReady}
                                             />
+                                        )}
+                                        {__DEV__ && (
+                                            <View style={{ marginTop: 10 }}>
+                                                <Button
+                                                    title={'Clear local hashes'}
+                                                    onPress={() =>
+                                                        DEV_deleteLocalHashes()
+                                                    }
+                                                    secondary
+                                                />
+                                            </View>
                                         )}
                                     </>
                                 )}

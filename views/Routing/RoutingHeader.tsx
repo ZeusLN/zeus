@@ -8,7 +8,6 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
-import { Sats } from '../../components/Sats';
 import Amount from '../../components/Amount';
 
 function TotalRow({
@@ -34,7 +33,7 @@ function TotalRow({
                 <Spacer width={8} />
                 <Body secondary>{kind}</Body>
             </Row>
-            <Sats sats={amount} />
+            <Amount sats={amount} toggleable />
         </Row>
     );
 }
