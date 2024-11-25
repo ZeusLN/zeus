@@ -200,7 +200,9 @@ export default class Channel extends BaseModel {
         const outputIndex = chanId & BigInt(0xffff); // Mask the lower 16 bits
 
         // Combine components into the short channel ID
-        return `${blockHeight}x${txIndex}x${outputIndex}`;
+        const scid = `${blockHeight}x${txIndex}x${outputIndex}`;
+
+        return scid !== '0x0x0' ? scid : '';
     }
 
     @computed
