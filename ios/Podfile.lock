@@ -953,7 +953,7 @@ PODS:
     - React-Core
   - react-native-netinfo (11.3.2):
     - React-Core
-  - react-native-nfc-manager (3.14.11):
+  - react-native-nfc-manager (3.14.14):
     - React-Core
   - react-native-notifications (5.1.0):
     - React-Core
@@ -1648,7 +1648,7 @@ SPEC CHECKSUMS:
   react-native-hce: 677aa1c41edf183523bb7b1014d106a08631ff88
   react-native-image-picker: 8cb4280e2c1efc3daeb2d9d597f9429a60472e40
   react-native-netinfo: 076df4f9b07f6670acf4ce9a75aac8d34c2e2ccc
-  react-native-nfc-manager: 250424ac5f6b2827f98bec7a1ed7f27615852ed4
+  react-native-nfc-manager: ead2cd1d1eaab139cc8b2dc5fbfe575eaa45efc4
   react-native-notifications: 4601a5a8db4ced6ae7cfc43b44d35fe437ac50c4
   react-native-ping: e9f64f02087c3cd2a0bc771ad0cf4a88edaa3072
   react-native-print: f704aef52d931bfce6d1d84351dbb5232d7ecb89
