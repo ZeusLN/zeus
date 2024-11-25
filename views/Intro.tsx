@@ -231,7 +231,10 @@ const Intro: React.FC<IntroProps> = (props) => {
                                                     seed.cipher_seed_mnemonic,
                                                 walletPassword: randomBase64,
                                                 embeddedLndNetwork: 'Mainnet',
-                                                implementation: 'embedded-lnd'
+                                                implementation: 'embedded-lnd',
+                                                nickname: localeString(
+                                                    'general.defaultNodeNickname'
+                                                )
                                             }
                                         ];
 
