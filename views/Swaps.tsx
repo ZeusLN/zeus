@@ -4,17 +4,8 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { crypto } from 'bitcoinjs-lib';
-import bolt11 from 'bolt11';
-import { randomBytes } from 'crypto';
 import { ECPairFactory } from 'ecpair';
-import zkpInit from '@nicolasflamel/secp256k1-zkp-react';
 import ecc from '@bitcoinerlab/secp256k1';
-import { Musig, SwapTreeSerializer, TaprootUtils } from 'boltz-core';
-
-import SwapStore from '../stores/SwapStore';
-import UnitsStore from '../stores/UnitsStore';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
@@ -32,6 +23,10 @@ import {
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import SwapStore from '../stores/SwapStore';
+import UnitsStore from '../stores/UnitsStore';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
@@ -110,211 +105,6 @@ export default class SwapPane extends React.PureComponent<
 
         const endpoint = 'https://api.testnet.boltz.exchange/v2';
 
-        const subscribeToUpdatesWithPolling = async (
-            createdResponse: any,
-            pollingInterval: number = 2000
-        ) => {
-            console.log('In polling function->', createdResponse);
-
-            if (!createdResponse || !createdResponse.id) {
-                console.error('Invalid response:', createdResponse);
-                return;
-            }
-
-            console.log('Starting polling for updates...');
-
-            const pollForUpdates = async () => {
-                try {
-                    const response = await fetch(
-                        `${endpoint}/swap/${createdResponse.id}`,
-                        {
-                            method: 'GET',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            }
-                        }
-                    );
-                    const data = await response.json();
-
-                    this.setState({ apiUpdates: data.status });
-
-                    console.log('Update:', data);
-
-                    if (data.status === 'invoice.set') {
-                        console.log('Waiting for onchain transaction...');
-                    } else if (data.status === 'transaction.claim.pending') {
-                        console.log(
-                            'Creating cooperative claim transaction...'
-                        );
-
-                        const claimTxDetails = await fetchClaimDetails(
-                            createdResponse.id,
-                            endpoint
-                        );
-                        console.log('Fetched claim details:', claimTxDetails);
-
-                        const isValid = validatePreimage(
-                            claimTxDetails?.preimage,
-                            invoice
-                        );
-                        console.log('Is valid?', isValid);
-
-                        if (!isValid) {
-                            console.error('Invalid preimage received');
-                            return;
-                        }
-
-                        console.log(
-                            'Preimage validated. Proceeding with claim transaction...'
-                        );
-                        await createClaimTransaction(
-                            claimTxDetails,
-                            createdResponse,
-                            keys
-                        );
-                    } else if (data.status === 'transaction.claimed') {
-                        console.log('Swap successful');
-                        clearInterval(pollingTimer); // Stop polling when the swap is complete
-                    } else {
-                        console.log('Unhandled status:', data.status);
-                    }
-                } catch (error) {
-                    this.setState({ apiError: error });
-                    console.error('Error while polling for updates:', error);
-                }
-            };
-
-            // Start polling
-            const pollingTimer = setInterval(pollForUpdates, pollingInterval);
-
-            // Stop polling after 5 minutes to avoid infinite requests
-            setTimeout(() => {
-                clearInterval(pollingTimer);
-                console.log('Stopped polling after timeout.');
-            }, 15 * 60 * 1000); // 5 minutes
-        };
-
-        /**
-         * Fetch claim details from the Boltz endpoint.
-         */
-        const fetchClaimDetails = async (swapId: string, endpoint: string) => {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${endpoint}/swap/submarine/${swapId}/claim`,
-                { 'Content-Type': 'application/json' }
-            );
-            return response.json();
-        };
-
-        /**
-         * Validate the preimage by comparing its hash with the invoice's payment hash.
-         */
-        const validatePreimage = (
-            preimage: string,
-            invoice: string
-        ): boolean => {
-            let invoicePreimageHash: any;
-            try {
-                console.log('inside validatePreimage func--->', invoice);
-                let decoded: any;
-                try {
-                    decoded = bolt11.decode(invoice);
-                } catch (error) {
-                    console.log(error);
-                }
-
-                let paymentHash: any;
-                paymentHash = decoded.tags.find(
-                    (tag: any) => tag.tagName === 'payment_hash'
-                );
-                console.log('paymenthash', paymentHash);
-
-                invoicePreimageHash = Buffer.from(
-                    paymentHash!.data || '',
-                    'hex'
-                );
-
-                console.log('final invoicePreimageHash ', invoicePreimageHash);
-
-                // invoicePreimageHash = Buffer.from(
-                //     bolt11
-                //         .decode(invoice)
-                //         .tags.find((tag) => tag.tagName === 'payment_hash')!
-                //         .data as string,
-                //     'hex'
-                // );
-            } catch (error) {
-                console.log('block 1', error);
-            }
-            let resp: any;
-            try {
-                resp = crypto
-                    .sha256(Buffer.from(preimage, 'hex'))
-                    .equals(invoicePreimageHash);
-            } catch (error) {
-                console.log('block 2', error);
-            }
-
-            return resp;
-        };
-
-        /**
-         * Create and send a claim transaction using Musig and TaprootUtils.
-         */
-        const createClaimTransaction = async (
-            claimTxDetails: any,
-            createdResponse: any,
-            keys: any
-        ) => {
-            const boltzPublicKey = Buffer.from(
-                createdResponse.claimPublicKey,
-                'hex'
-            );
-
-            // Initialize Musig
-
-            let musig: any;
-            try {
-                musig = new Musig(await zkpInit(), keys, randomBytes(32), [
-                    boltzPublicKey,
-                    keys.publicKey
-                ]);
-            } catch (error) {
-                console.log(error);
-            }
-            // Tweak Musig
-            TaprootUtils.tweakMusig(
-                musig,
-                SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
-                    .tree
-            );
-
-            // Aggregate nonces and initialize session
-            musig.aggregateNonces([
-                [boltzPublicKey, Buffer.from(claimTxDetails.pubNonce, 'hex')]
-            ]);
-            musig.initializeSession(
-                Buffer.from(claimTxDetails.transactionHash, 'hex')
-            );
-
-            // Post claim transaction
-            await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${endpoint}/swap/submarine/${createdResponse.id}/claim`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubNonce: Buffer.from(musig.getPublicNonce()).toString(
-                        'hex'
-                    ),
-                    partialSignature: Buffer.from(musig.signPartial()).toString(
-                        'hex'
-                    )
-                })
-            );
-
-            console.log('Claim transaction submitted successfully.');
-        };
-
         const createSubmarineSwap = async (invoice: any) => {
             try {
                 console.log('Creating submarine swap...');
@@ -334,22 +124,32 @@ export default class SwapPane extends React.PureComponent<
                     })
                 );
 
-                const responseData = JSON.parse(response.data);
+                const responseData = JSON.parse(response.data); // Parse the response
                 console.log('Parsed Response Data:', responseData);
-                this.setState({
-                    response: responseData
-                });
-                if (responseData && responseData?.error) {
-                    this.setState({
-                        apiError: responseData?.error
-                    });
-                    return;
+
+                // Check for errors in the response
+                if (responseData?.error) {
+                    this.setState({ apiError: responseData.error });
+                    console.error('Error in API response:', responseData.error);
+                    return; // Stop further execution
                 }
 
-                subscribeToUpdatesWithPolling(responseData, 1000);
+                // No errors, proceed with setting the response and navigating
+                this.setState({ response: responseData }, () => {
+                    console.log('Navigating to SwapDetails...');
+                    navigation.navigate('SwapDetails', {
+                        swapData: responseData,
+                        keys,
+                        endpoint,
+                        invoice
+                    });
+                });
             } catch (error) {
+                // Handle errors during API call
+                this.setState({
+                    apiError: error.message || 'An unknown error occurred'
+                });
                 console.error('Error creating Submarine Swap:', error);
-                throw error;
             }
         };
 
