@@ -100,6 +100,8 @@
     "general.hash": "Hash",
     "general.kind": "Kind",
     "general.content": "Content",
+    "general.create": "Create",
+    "general.enter": "Enter",
     "general.lightningInvoice": "Lightning invoice",
     "general.or": "or",
     "general.reset": "Reset",
@@ -1389,6 +1391,14 @@
     "views.Swaps.title": "Swaps",
     "views.Swaps.create": "Create atomic swap",
     "views.Swaps.initiate": "Initiate swap",
+    "views.SwapDetails.title": "Swap Details",
+    "views.SwapDetails.acceptZerpConf": "Accept Zero Conf",
+    "views.SwapDetails.expectedAmount": "Expected amount",
+    "views.SwapDetails.swapId": "Swap ID",
+    "views.SwapDetails.timeoutBlockHeight": "Timeout Block Height",
+    "views.SwapDetails.claimPublicKey": "Claim Public Key",
+    "views.SwapDetails.swapTree": "Swap Tree",
+    "views.SwapDetails.bip21": "BIP21",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }

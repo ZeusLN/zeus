@@ -17,6 +17,7 @@ import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
 
+import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import TransactionsStore from '../stores/TransactionsStore';
@@ -312,7 +313,7 @@ export default class SwapDetails extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Swap Details',
+                        text: localeString('views.SwapDetails.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -324,7 +325,7 @@ export default class SwapDetails extends React.Component<
                 <ScrollView style={{ marginHorizontal: 20 }}>
                     {updates && (
                         <KeyValue
-                            keyValue="Status"
+                            keyValue={localeString('views.Channel.status')}
                             value={updates}
                             color={
                                 updates === 'transaction.claimed'
@@ -333,14 +334,25 @@ export default class SwapDetails extends React.Component<
                             }
                         />
                     )}
-                    <KeyValue keyValue="BIP21" value={swapData.bip21} />
                     <KeyValue
-                        keyValue="Accept Zero Conf"
-                        value={swapData.acceptZeroConf ? 'True' : 'False'}
+                        keyValue={localeString('views.SwapDetails.bip21')}
+                        value={swapData.bip21}
+                    />
+                    <KeyValue
+                        keyValue={localeString(
+                            'views.SwapDetails.acceptZerpConf'
+                        )}
+                        value={
+                            swapData.acceptZeroConf
+                                ? localeString('general.true')
+                                : localeString('general.false')
+                        }
                         color={swapData.acceptZeroConf ? 'green' : '#808000'}
                     />
                     <KeyValue
-                        keyValue="Expected Amount"
+                        keyValue={localeString(
+                            'views.SwapDetails.expectedAmount'
+                        )}
                         value={
                             <Amount
                                 sats={swapData?.expectedAmount}
@@ -349,29 +361,39 @@ export default class SwapDetails extends React.Component<
                             />
                         }
                     />
-                    <KeyValue keyValue="Swap ID" value={swapData.id} />
-                    <KeyValue keyValue="Address" value={swapData.address} />
+                    <KeyValue
+                        keyValue={localeString('views.SwapDetails.swapId')}
+                        value={swapData.id}
+                    />
+                    <KeyValue
+                        keyValue={localeString('general.address')}
+                        value={swapData.address}
+                    />
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData.swapTree)}
                     <KeyValue
-                        keyValue="Timeout Block Height"
+                        keyValue={localeString(
+                            'views.SwapDetails.timeoutBlockHeight'
+                        )}
                         value={swapData.timeoutBlockHeight}
                     />
                     <KeyValue
-                        keyValue="Claim Public Key"
+                        keyValue={localeString(
+                            'views.SwapDetails.claimPublicKey'
+                        )}
                         value={swapData.claimPublicKey}
                     />
 
                     {error && (
                         <KeyValue
-                            keyValue="Error"
+                            keyValue={localeString('general.error')}
                             value={error?.message || String(error)}
                             color="red"
                         />
                     )}
                 </ScrollView>
                 <Button
-                    title="PAY INVOICE"
+                    title={localeString('views.PaymentRequest.payInvoice')}
                     containerStyle={{
                         paddingVertical: 10
                     }}

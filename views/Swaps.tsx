@@ -587,8 +587,14 @@ export default class SwapPane extends React.PureComponent<
                                     }}
                                     title={
                                         !reverse
-                                            ? 'Generate Invoice'
-                                            : 'Create Onchain Address'
+                                            ? localeString(
+                                                  'views.Receive.createInvoice'
+                                              )
+                                            : `${localeString(
+                                                  'general.create'
+                                              )} ${localeString(
+                                                  'views.Settings.AddContact.onchainAddress'
+                                              )}`
                                     }
                                 />
                             </View>
@@ -602,8 +608,16 @@ export default class SwapPane extends React.PureComponent<
                                 }}
                                 placeholder={
                                     reverse
-                                        ? 'Enter onchain address'
-                                        : 'Enter invoice'
+                                        ? `${localeString(
+                                              'general.enter'
+                                          )} ${localeString(
+                                              'views.Settings.AddContact.onchainAddress'
+                                          )}`
+                                        : `${localeString(
+                                              'general.enter'
+                                          )} ${localeString(
+                                              'views.PaymentRequest.title'
+                                          )}`
                                 }
                                 style={{
                                     marginHorizontal: 20,
@@ -613,7 +627,7 @@ export default class SwapPane extends React.PureComponent<
                             />
                             <View>
                                 <Button
-                                    title="Create Atomic Swap"
+                                    title={localeString('views.Swaps.initiate')}
                                     onPress={() => {
                                         createSubmarineSwap(invoice);
                                     }}
