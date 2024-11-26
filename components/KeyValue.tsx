@@ -34,6 +34,7 @@ interface KeyValueProps {
     disableCopy?: boolean;
     ModalStore?: ModalStore;
     SettingsStore?: SettingsStore;
+    compact?: boolean;
 }
 
 @inject('ModalStore', 'SettingsStore')
@@ -52,7 +53,8 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             mempoolLink,
             disableCopy,
             ModalStore,
-            SettingsStore
+            SettingsStore,
+            compact
         } = this.props;
         const { toggleInfoModal } = ModalStore!;
 
@@ -167,7 +169,12 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
         );
 
         return (
-            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+            <View
+                style={{
+                    paddingTop: compact ? 5 : 10,
+                    paddingBottom: compact ? 5 : 10
+                }}
+            >
                 <KeyValueRow />
             </View>
         );

@@ -113,6 +113,7 @@ export default class FeeBreakdown extends React.Component<
                                     sensitive
                                 />
                             }
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString(
@@ -122,6 +123,7 @@ export default class FeeBreakdown extends React.Component<
                                 Number(localPolicy.fee_rate_milli_msat) / 10000
                             }%`}
                             sensitive
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString(
@@ -137,6 +139,7 @@ export default class FeeBreakdown extends React.Component<
                                     sensitive
                                 />
                             }
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString(
@@ -146,6 +149,7 @@ export default class FeeBreakdown extends React.Component<
                                 Number(remotePolicy.fee_rate_milli_msat) / 10000
                             }%`}
                             sensitive
+                            compact
                         />
                         {BackendUtils.supportInboundFees() && (
                             <>
@@ -165,6 +169,7 @@ export default class FeeBreakdown extends React.Component<
                                                 sensitive
                                             />
                                         }
+                                        compact
                                     />
                                 )}
                                 {!!localPolicy.inbound_fee_rate_milli_msat && (
@@ -178,6 +183,7 @@ export default class FeeBreakdown extends React.Component<
                                             ) / 10000
                                         }%`}
                                         sensitive
+                                        compact
                                     />
                                 )}
                                 {!!remotePolicy.inbound_fee_base_msat && (
@@ -196,6 +202,7 @@ export default class FeeBreakdown extends React.Component<
                                                 sensitive
                                             />
                                         }
+                                        compact
                                     />
                                 )}
                                 {!!remotePolicy.inbound_fee_rate_milli_msat && (
@@ -209,6 +216,7 @@ export default class FeeBreakdown extends React.Component<
                                             ) / 10000
                                         }%`}
                                         sensitive
+                                        compact
                                     />
                                 )}
                             </>
@@ -264,6 +272,7 @@ export default class FeeBreakdown extends React.Component<
                                     sensitive
                                 />
                             }
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString('views.Channel.remoteMin')}
@@ -274,6 +283,7 @@ export default class FeeBreakdown extends React.Component<
                                     sensitive
                                 />
                             }
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString('views.Channel.localMax')}
@@ -286,6 +296,7 @@ export default class FeeBreakdown extends React.Component<
                                     sensitive
                                 />
                             }
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString('views.Channel.remoteMax')}
@@ -299,6 +310,7 @@ export default class FeeBreakdown extends React.Component<
                                     sensitive
                                 />
                             }
+                            compact
                         />
 
                         <KeyValue
@@ -308,6 +320,7 @@ export default class FeeBreakdown extends React.Component<
                             value={`${
                                 localPolicy.time_lock_delta
                             } ${localeString('general.blocks')}`}
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString(
@@ -316,6 +329,7 @@ export default class FeeBreakdown extends React.Component<
                             value={`${
                                 remotePolicy.time_lock_delta
                             } ${localeString('general.blocks')}`}
+                            compact
                         />
                         <Divider
                             orientation="horizontal"
@@ -333,6 +347,7 @@ export default class FeeBreakdown extends React.Component<
                             value={DateTimeUtils.listFormattedDate(
                                 localPolicy.last_update
                             )}
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString(
@@ -341,6 +356,7 @@ export default class FeeBreakdown extends React.Component<
                             value={DateTimeUtils.listFormattedDate(
                                 remotePolicy.last_update
                             )}
+                            compact
                         />
                         <KeyValue
                             keyValue={localeString('views.Channel.peerStatus')}
@@ -349,6 +365,7 @@ export default class FeeBreakdown extends React.Component<
                                     ? localeString('views.Channel.active')
                                     : localeString('views.Channel.inactive')
                             }
+                            compact
                         />
                         {total_satoshis_received && (
                             <KeyValue
@@ -362,6 +379,7 @@ export default class FeeBreakdown extends React.Component<
                                         toggleable
                                     />
                                 }
+                                compact
                             />
                         )}
 
@@ -377,6 +395,7 @@ export default class FeeBreakdown extends React.Component<
                                         toggleable
                                     />
                                 }
+                                compact
                             />
                         )}
                         <Divider
@@ -396,6 +415,7 @@ export default class FeeBreakdown extends React.Component<
                                     ? localeString('views.Channel.yourNode')
                                     : peerDisplay
                             }
+                            compact
                         />
 
                         {commit_fee && (
@@ -411,6 +431,7 @@ export default class FeeBreakdown extends React.Component<
                                     />
                                 }
                                 sensitive
+                                compact
                             />
                         )}
 
@@ -420,6 +441,7 @@ export default class FeeBreakdown extends React.Component<
                                     'views.Channel.commitWeight'
                                 )}
                                 value={commit_weight}
+                                compact
                             />
                         )}
 
@@ -437,6 +459,7 @@ export default class FeeBreakdown extends React.Component<
                                     ),
                                     localeString('views.Channel.csvDelay.info2')
                                 ]}
+                                compact
                             />
                         )}
 
@@ -454,6 +477,7 @@ export default class FeeBreakdown extends React.Component<
                                         testnet
                                     )
                                 }
+                                compact
                             />
                         )}
                         {channelPoint && (
@@ -470,6 +494,7 @@ export default class FeeBreakdown extends React.Component<
                                         testnet
                                     )
                                 }
+                                compact
                             />
                         )}
                     </React.Fragment>

@@ -396,12 +396,14 @@ export default class ChannelView extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Channel.channelId')}
                             value={channelId}
+                            compact
                         />
                     )}
                     {shortChannelId && (
                         <KeyValue
                             keyValue={localeString('views.Channel.scid')}
                             value={shortChannelId}
+                            compact
                         />
                     )}
                     {!!alias_scids && alias_scids.length > 0 && (
@@ -414,12 +416,14 @@ export default class ChannelView extends React.Component<
                             value={PrivacyUtils.sensitiveValue(
                                 alias_scids.join(', ')
                             )}
+                            compact
                         />
                     )}
                     {zero_conf && (
                         <KeyValue
                             keyValue={localeString('views.Channel.zeroConf')}
                             value={localeString('general.true')}
+                            compact
                         />
                     )}
                     {!(closeHeight || closeType) && (
@@ -431,6 +435,7 @@ export default class ChannelView extends React.Component<
                                     : localeString('general.false')
                             }
                             color={privateChannel ? 'green' : '#808000'}
+                            compact
                         />
                     )}
                     {getCommitmentType && (
@@ -439,6 +444,7 @@ export default class ChannelView extends React.Component<
                                 'views.Channel.commitmentType'
                             )}
                             value={getCommitmentType}
+                            compact
                         />
                     )}
                     {chain_hash && (
@@ -446,6 +452,7 @@ export default class ChannelView extends React.Component<
                             keyValue={localeString('views.Channel.chainHash')}
                             value={chain_hash}
                             sensitive
+                            compact
                         />
                     )}
                     {!!closeHeight && (
@@ -460,6 +467,7 @@ export default class ChannelView extends React.Component<
                                     testnet
                                 )
                             }
+                            compact
                         />
                     )}
                     {closeType && (
@@ -467,6 +475,7 @@ export default class ChannelView extends React.Component<
                             keyValue={localeString('views.Channel.closeType')}
                             value={closeType}
                             sensitive
+                            compact
                         />
                     )}
                     {getOpenInitiator && (
@@ -476,6 +485,7 @@ export default class ChannelView extends React.Component<
                             )}
                             value={getOpenInitiator}
                             sensitive
+                            compact
                         />
                     )}
                     {getCloseInitiator && (
@@ -485,6 +495,7 @@ export default class ChannelView extends React.Component<
                             )}
                             value={getCloseInitiator}
                             sensitive
+                            compact
                         />
                     )}
                     {closing_txid && (
@@ -499,6 +510,7 @@ export default class ChannelView extends React.Component<
                                     testnet
                                 )
                             }
+                            compact
                         />
                     )}
                     {closing_tx_hash && (
@@ -515,6 +527,7 @@ export default class ChannelView extends React.Component<
                                     testnet
                                 )
                             }
+                            compact
                         />
                     )}
                     {(pendingOpen ||
@@ -535,6 +548,7 @@ export default class ChannelView extends React.Component<
                                         testnet
                                     )
                                 }
+                                compact
                             />
                         )}
                     {!!pending_htlcs && pending_htlcs.length > 0 && (
@@ -595,6 +609,7 @@ export default class ChannelView extends React.Component<
                                 />
                             }
                             sensitive
+                            compact
                         />
                     )}
                     {time_locked_balance && (
@@ -610,6 +625,7 @@ export default class ChannelView extends React.Component<
                                 />
                             }
                             sensitive
+                            compact
                         />
                     )}
                     <KeyValue
@@ -626,12 +642,14 @@ export default class ChannelView extends React.Component<
                                 }
                             />
                         }
+                        compact
                     />
                     <KeyValue
                         keyValue={localeString('views.Channel.remoteBalance')}
                         value={
                             <Amount sats={remoteBalance} sensitive toggleable />
                         }
+                        compact
                     />
                     {unsettled_balance !== '0' && (
                         <KeyValue
@@ -645,10 +663,13 @@ export default class ChannelView extends React.Component<
                                     toggleable
                                 />
                             }
+                            compact
                         />
                     )}
                     <KeyValue
-                        keyValue={localeString('views.Channel.Total.outbound')}
+                        keyValue={` ${localeString(
+                            'views.Channel.Total.outbound'
+                        )}`}
                         value={
                             <Amount
                                 sats={sendingCapacity}
@@ -657,9 +678,12 @@ export default class ChannelView extends React.Component<
                             />
                         }
                         indicatorColor={themeColor('outbound')}
+                        compact
                     />
                     <KeyValue
-                        keyValue={localeString('views.Channel.Total.inbound')}
+                        keyValue={` ${localeString(
+                            'views.Channel.Total.inbound'
+                        )}`}
                         value={
                             <Amount
                                 sats={receivingCapacity}
@@ -668,12 +692,13 @@ export default class ChannelView extends React.Component<
                             />
                         }
                         indicatorColor={themeColor('inbound')}
+                        compact
                     />
                     {!!local_chan_reserve_sat && (
                         <KeyValue
-                            keyValue={localeString(
+                            keyValue={` ${localeString(
                                 'views.Channel.localReserve'
-                            )}
+                            )}`}
                             value={
                                 <Amount
                                     sats={local_chan_reserve_sat}
@@ -691,13 +716,14 @@ export default class ChannelView extends React.Component<
                             )}
                             infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
                             indicatorColor={themeColor('outboundReserve')}
+                            compact
                         />
                     )}
                     {!!remote_chan_reserve_sat && (
                         <KeyValue
-                            keyValue={localeString(
+                            keyValue={` ${localeString(
                                 'views.Channel.remoteReserve'
-                            )}
+                            )}`}
                             value={
                                 <Amount
                                     sats={remote_chan_reserve_sat}
@@ -710,6 +736,7 @@ export default class ChannelView extends React.Component<
                             )}
                             infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
                             indicatorColor={themeColor('inboundReserve')}
+                            compact
                         />
                     )}
                     {capacity && (
@@ -718,6 +745,7 @@ export default class ChannelView extends React.Component<
                             value={
                                 <Amount sats={capacity} sensitive toggleable />
                             }
+                            compact
                         />
                     )}
 
