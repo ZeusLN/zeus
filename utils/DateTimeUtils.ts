@@ -1,8 +1,9 @@
 import dateFormat from 'dateformat';
 
 class DateTimeUtils {
-    listDate = (timestamp: number | string | Date) =>
+    listDate = (timestamp: number | string) =>
         new Date(Number(timestamp) * 1000);
+
     listFormattedDate = (
         timestamp: number | string,
         format = "ddd, mmm d 'yy, HH:MM Z"
@@ -21,7 +22,7 @@ class DateTimeUtils {
         const dateYear = date.getFullYear();
 
         const format =
-            dateYear < currentYear ? "mmm d, 'yy, HH:MM" : 'mmm d, HH:MM';
+            dateYear !== currentYear ? "mmm d, 'yy, HH:MM" : 'mmm d, HH:MM';
 
         return this.listFormattedDate(timestamp, format);
     };
@@ -30,10 +31,10 @@ class DateTimeUtils {
         const currentYear = new Date().getFullYear();
         const dateYear = timestamp.getFullYear();
 
-        const time = dateFormat(timestamp, 'hh:mm tt');
+        const time = dateFormat(timestamp, 'HH:MM tt');
         const monthAndDay = dateFormat(timestamp, 'ddd, mmm dd');
         const year =
-            dateYear < currentYear ? `, '${dateFormat(timestamp, 'yy')}` : '';
+            dateYear !== currentYear ? `, '${dateFormat(timestamp, 'yy')}` : '';
 
         return `${time} | ${monthAndDay}${year}`;
     };
