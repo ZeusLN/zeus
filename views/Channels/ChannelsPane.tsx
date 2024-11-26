@@ -306,9 +306,6 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                 initialRouteName={openChannelsTabName}
                                 backBehavior="none"
                                 screenOptions={() => ({
-                                    tabBarIcon: () => {
-                                        return null;
-                                    },
                                     headerShown: false,
                                     tabBarActiveTintColor: themeColor('text'),
                                     tabBarInactiveTintColor: 'gray',
@@ -316,11 +313,14 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                     tabBarStyle: {
                                         borderTopWidth: 0.2,
                                         borderTopColor:
-                                            themeColor('secondaryText'),
-                                        marginBottom: 20
+                                            themeColor('secondaryText')
                                     },
+                                    tabBarItemStyle: {
+                                        justifyContent: 'center'
+                                    },
+                                    tabBarIconStyle: { display: 'none' },
                                     tabBarLabelStyle: {
-                                        fontSize: 18,
+                                        fontSize: 16,
                                         fontFamily: 'PPNeueMontreal-Medium'
                                     },
                                     animation: 'shift'
