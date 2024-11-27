@@ -227,7 +227,7 @@ export default class Receive extends React.Component<
         const settings = await getSettings();
 
         if (settings?.lightningAddress?.enabled && !lightningAddressHandle) {
-            status();
+            await status();
         }
 
         const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
