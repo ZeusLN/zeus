@@ -5,7 +5,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 // import SettingsStore from './SettingsStore';
 
 // wss://api.testnet.boltz.exchange/v2/ws
-const HOST = 'https://api.testnet.boltz.exchange/v2';
+export const HOST = 'https://api.testnet.boltz.exchange/v2';
 
 export default class SwapStore {
     @observable public subInfo = {};
