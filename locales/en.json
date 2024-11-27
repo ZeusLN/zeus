@@ -764,6 +764,7 @@
     "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You'll be able to change which method and values to use though, under the Settings section of the Payment Request view.",
     "views.Settings.Invoices.title": "Invoices settings",
     "views.Settings.Invoices.showCustomPreimageField": "Show custom preimage field",
+    "views.Settings.Invoices.displayAmountOnInvoice": "Display requested amount on invoice",
     "views.Settings.Channels.title": "Channels settings",
     "views.Settings.Channels.lsps1ShowPurchaseButton": "Show channel purchase button",
     "views.Settings.Privacy.blockExplorer": "Default Block explorer",

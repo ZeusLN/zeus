@@ -74,7 +74,8 @@ export default class InvoiceView extends React.Component<
             getKeysendMessage,
             is_amp,
             value,
-            getNoteKey
+            getNoteKey,
+            getAmount
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -82,7 +83,8 @@ export default class InvoiceView extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: `lightning:${getPaymentRequest}`
+                        value: `lightning:${getPaymentRequest}`,
+                        satAmount: getAmount
                     })
                 }
             >
