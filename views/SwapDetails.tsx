@@ -10,6 +10,7 @@ import { Musig, SwapTreeSerializer, TaprootUtils } from 'boltz-core';
 import zkpInit from '@nicolasflamel/secp256k1-zkp-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Screen from '../components/Screen';
 import Header from '../components/Header';
@@ -45,6 +46,8 @@ export default class SwapDetails extends React.Component<
     SwapDetailsProps,
     SwapDetailsState
 > {
+    pollingTimer: NodeJS.Timeout | null = null;
+
     constructor(props: SwapDetailsProps) {
         super(props);
         this.state = {
@@ -92,8 +95,6 @@ export default class SwapDetails extends React.Component<
     ) => {
         const { keys, endpoint, invoice } = this.props.route.params;
 
-        console.log('In polling function->', createdResponse);
-
         if (!createdResponse || !createdResponse.id) {
             console.error('Invalid response:', createdResponse);
             this.setState({ error: 'Invalid response received.' });
@@ -115,7 +116,14 @@ export default class SwapDetails extends React.Component<
                 );
                 const data = await response.json();
 
+                // Update the status in the component state
                 this.setState({ updates: data.status });
+
+                // Update the status in Encrypted Storage
+                await this.updateSwapStatusInStorage(
+                    createdResponse.id,
+                    data.status
+                );
 
                 console.log('Update:', data);
 
@@ -152,7 +160,7 @@ export default class SwapDetails extends React.Component<
                     );
                 } else if (data.status === 'transaction.claimed') {
                     console.log('Swap successful');
-                    clearInterval(pollingTimer); // Stop polling when the swap is complete
+                    this.stopPolling(); // Stop polling when the swap is complete
                 } else {
                     console.log('Unhandled status:', data.status);
                 }
@@ -162,13 +170,38 @@ export default class SwapDetails extends React.Component<
             }
         };
 
-        const pollingTimer = setInterval(pollForUpdates, pollingInterval);
+        this.pollingTimer = setInterval(pollForUpdates, pollingInterval);
+    };
 
-        // Stop polling after 5 minutes to avoid infinite requests
-        setTimeout(() => {
-            clearInterval(pollingTimer);
-            console.log('Stopped polling after timeout.');
-        }, 15 * 60 * 1000); // 5 minutes
+    stopPolling = () => {
+        if (this.pollingTimer) {
+            clearInterval(this.pollingTimer);
+            this.pollingTimer = null;
+            console.log('Polling stopped.');
+        }
+    };
+
+    componentWillUnmount() {
+        this.stopPolling();
+    }
+
+    updateSwapStatusInStorage = async (swapId: string, status: string) => {
+        try {
+            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            const updatedSwaps = swaps.map((swap: any) =>
+                swap.id === swapId ? { ...swap, status } : swap
+            );
+
+            await EncryptedStorage.setItem(
+                'swaps',
+                JSON.stringify(updatedSwaps)
+            );
+            console.log(`Updated status for swap ID ${swapId} to "${status}"`);
+        } catch (error) {
+            console.error('Error updating swap status in storage:', error);
+        }
     };
 
     fetchClaimDetails = async (swapId: string, endpoint: string) => {
