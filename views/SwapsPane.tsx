@@ -38,7 +38,11 @@ export default class SwapsPane extends React.Component<
     }
 
     componentDidMount() {
-        this.fetchSwaps();
+        const { navigation } = this.props;
+
+        navigation.addListener('focus', async () => {
+            this.fetchSwaps();
+        });
     }
 
     fetchSwaps = async () => {
@@ -73,60 +77,93 @@ export default class SwapsPane extends React.Component<
         />
     );
 
-    renderSwap = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            key={item.id}
-            style={{ padding: 16 }}
-            onPress={() => this.handleSwapPress(item)}
-        >
-            <View
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginBottom: 5
-                }}
+    renderSwap = ({ item }: { item: any }) => {
+        let stateColor;
+        switch (item.status) {
+            case 'transaction.claimed':
+                stateColor = 'green';
+                break;
+            default:
+                stateColor = 'orange';
+                break;
+        }
+        return (
+            <TouchableOpacity
+                key={item.id}
+                style={{ padding: 16 }}
+                onPress={() => this.handleSwapPress(item)}
             >
-                <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                    Swap ID:
-                </Text>
-                <Text
-                    style={{ color: themeColor('secondaryText'), fontSize: 16 }}
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5
+                    }}
                 >
-                    {item.id}
-                </Text>
-            </View>
-
-            <View
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginBottom: 5
-                }}
-            >
-                <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                    Expected Amount:
-                </Text>
-                <Amount sats={item.expectedAmount} sensitive toggleable />
-            </View>
-
-            <View
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginBottom: 5
-                }}
-            >
-                <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                    Address:
-                </Text>
-                <Text
-                    style={{ color: themeColor('secondaryText'), fontSize: 16 }}
+                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                        Status:
+                    </Text>
+                    <Text style={{ color: stateColor, fontSize: 16 }}>
+                        {item.status}
+                    </Text>
+                </View>
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5
+                    }}
                 >
-                    {`${item.address.slice(0, 6)}...${item.address.slice(-6)}`}
-                </Text>
-            </View>
-        </TouchableOpacity>
-    );
+                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                        Swap ID:
+                    </Text>
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontSize: 16
+                        }}
+                    >
+                        {item.id}
+                    </Text>
+                </View>
+
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5
+                    }}
+                >
+                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                        Expected Amount:
+                    </Text>
+                    <Amount sats={item.expectedAmount} sensitive toggleable />
+                </View>
+
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5
+                    }}
+                >
+                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                        Address:
+                    </Text>
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontSize: 16
+                        }}
+                    >
+                        {`${item.address.slice(0, 6)}...${item.address.slice(
+                            -6
+                        )}`}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     render() {
         const { navigation } = this.props;
