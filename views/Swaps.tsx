@@ -6,6 +6,7 @@ import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
@@ -23,15 +24,15 @@ import {
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-
-import SwapStore from '../stores/SwapStore';
-import UnitsStore from '../stores/UnitsStore';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+
+import SwapStore, { HOST } from '../stores/SwapStore';
+import UnitsStore from '../stores/UnitsStore';
 
 import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
-import QR from '../assets/images/SVG/QR.svg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
+import OrderList from '../assets/images/SVG/order-list.svg';
 
 interface SwapPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -101,16 +102,33 @@ export default class SwapPane extends React.PureComponent<
             return big.integerValue(BigNumber.ROUND_FLOOR);
         };
 
-        const keys: any = ECPairFactory(ecc).makeRandom();
-
-        const endpoint = 'https://api.testnet.boltz.exchange/v2';
+        const SwapsPaneBtn = () => (
+            <TouchableOpacity
+                style={{ marginTop: -10 }}
+                onPress={() => {
+                    navigation.navigate('SwapsPane');
+                    // EncryptedStorage.setItem('swaps', JSON.stringify([]));
+                }}
+                accessibilityLabel={localeString('general.add')}
+            >
+                <OrderList
+                    fill={themeColor('text')}
+                    width="40"
+                    height="40"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
+        );
 
         const createSubmarineSwap = async (invoice: any) => {
             try {
                 console.log('Creating submarine swap...');
+
+                const keys: any = ECPairFactory(ecc).makeRandom();
+
                 const response = await ReactNativeBlobUtil.fetch(
                     'POST',
-                    `${endpoint}/swap/submarine`,
+                    `${HOST}/swap/submarine`,
                     {
                         'Content-Type': 'application/json'
                     },
@@ -134,13 +152,15 @@ export default class SwapPane extends React.PureComponent<
                     return; // Stop further execution
                 }
 
+                await saveSwapToStorage(responseData, keys, invoice);
+
                 // No errors, proceed with setting the response and navigating
                 this.setState({ response: responseData }, () => {
                     console.log('Navigating to SwapDetails...');
                     navigation.navigate('SwapDetails', {
                         swapData: responseData,
                         keys,
-                        endpoint,
+                        endpoint: HOST,
                         invoice
                     });
                 });
@@ -150,6 +170,35 @@ export default class SwapPane extends React.PureComponent<
                     apiError: error.message || 'An unknown error occurred'
                 });
                 console.error('Error creating Submarine Swap:', error);
+            }
+        };
+
+        const saveSwapToStorage = async (
+            newSwap: any,
+            keys: any,
+            invoice: any
+        ) => {
+            try {
+                // Retrieve existing swaps
+                const storedSwaps = await EncryptedStorage.getItem('swaps');
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+                // Adding the new properties to the swap
+                const enrichedSwap = {
+                    ...newSwap,
+                    keys,
+                    invoice
+                };
+
+                // Add the enriched swap to the array
+                swaps.push(enrichedSwap);
+
+                // Save the updated swaps array back to Encrypted Storage
+                await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
+                console.log('Swap saved successfully to Encrypted Storage.');
+            } catch (error) {
+                console.error('Error saving swap to storage:', error);
+                throw error;
             }
         };
 
@@ -246,27 +295,6 @@ export default class SwapPane extends React.PureComponent<
         const errorOutput = outputSats < 0;
         const error = errorInput || errorOutput;
 
-        const QRButton = () => {
-            if (!this.state.response?.bip21) {
-                return null;
-            }
-
-            return (
-                <TouchableOpacity
-                    onPress={() =>
-                        navigation.navigate('QR', {
-                            value: this.state.response?.bip21
-                        })
-                    }
-                >
-                    <QR
-                        fill={themeColor('text')}
-                        style={{ alignSelf: 'center' }}
-                    />
-                </TouchableOpacity>
-            );
-        };
-
         return (
             <Screen>
                 <Header
@@ -278,7 +306,7 @@ export default class SwapPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<QRButton />}
+                    rightComponent={<SwapsPaneBtn />}
                     navigation={navigation}
                 />
                 <View style={{ flex: 1, margin: 10 }}>

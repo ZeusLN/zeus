@@ -1,0 +1,164 @@
+import React from 'react';
+import { Text, TouchableOpacity, View, FlatList } from 'react-native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import EncryptedStorage from 'react-native-encrypted-storage';
+
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../components/SuccessErrorMessage';
+import Screen from '../components/Screen';
+import Header from '../components/Header';
+import Amount from '../components/Amount';
+
+import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+
+import { HOST } from '../stores/SwapStore';
+
+interface SwapsPaneProps {
+    navigation: StackNavigationProp<any, any>;
+}
+
+interface SwapsPaneState {
+    swaps: Array<any>;
+    error: string | null;
+}
+
+export default class SwapsPane extends React.Component<
+    SwapsPaneProps,
+    SwapsPaneState
+> {
+    constructor(props: SwapsPaneProps) {
+        super(props);
+        this.state = {
+            swaps: [],
+            error: null
+        };
+    }
+
+    componentDidMount() {
+        this.fetchSwaps();
+    }
+
+    fetchSwaps = async () => {
+        try {
+            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+            this.setState({ swaps });
+            console.log(swaps);
+        } catch (error) {
+            this.setState({ error: 'Failed to load swaps' });
+            console.error('Error retrieving swaps:', error);
+        }
+    };
+
+    handleSwapPress = (swap: any) => {
+        const { navigation } = this.props;
+        const { keys, invoice } = swap;
+        navigation.navigate('SwapDetails', {
+            swapData: swap,
+            keys,
+            endpoint: HOST,
+            invoice
+        });
+    };
+
+    renderSeparator = () => (
+        <View
+            style={{
+                height: 0.4,
+                backgroundColor: themeColor('separator')
+            }}
+        />
+    );
+
+    renderSwap = ({ item }: { item: any }) => (
+        <TouchableOpacity
+            key={item.id}
+            style={{ padding: 16 }}
+            onPress={() => this.handleSwapPress(item)}
+        >
+            <View
+                style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginBottom: 5
+                }}
+            >
+                <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    Swap ID:
+                </Text>
+                <Text
+                    style={{ color: themeColor('secondaryText'), fontSize: 16 }}
+                >
+                    {item.id}
+                </Text>
+            </View>
+
+            <View
+                style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginBottom: 5
+                }}
+            >
+                <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    Expected Amount:
+                </Text>
+                <Amount sats={item.expectedAmount} sensitive toggleable />
+            </View>
+
+            <View
+                style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginBottom: 5
+                }}
+            >
+                <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    Address:
+                </Text>
+                <Text
+                    style={{ color: themeColor('secondaryText'), fontSize: 16 }}
+                >
+                    {`${item.address.slice(0, 6)}...${item.address.slice(-6)}`}
+                </Text>
+            </View>
+        </TouchableOpacity>
+    );
+
+    render() {
+        const { navigation } = this.props;
+        const { swaps, error } = this.state;
+
+        return (
+            <Screen>
+                <Header
+                    leftComponent="Back"
+                    centerComponent={{
+                        text: localeString('views.Swaps.title'),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }
+                    }}
+                    navigation={navigation}
+                />
+
+                {error && <ErrorMessage message={error} />}
+                {swaps.length === 0 && !error && (
+                    <View style={{ paddingHorizontal: 15 }}>
+                        <WarningMessage message="No Swaps Available" />
+                    </View>
+                )}
+                <FlatList
+                    data={swaps}
+                    keyExtractor={(item) => item.id}
+                    renderItem={this.renderSwap}
+                    ItemSeparatorComponent={this.renderSeparator}
+                />
+            </Screen>
+        );
+    }
+}

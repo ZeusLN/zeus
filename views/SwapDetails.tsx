@@ -16,6 +16,7 @@ import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -323,6 +324,11 @@ export default class SwapDetails extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView style={{ marginHorizontal: 20 }}>
+                    {error && (
+                        <ErrorMessage
+                            message={error?.message || String(error)}
+                        />
+                    )}
                     {updates && (
                         <KeyValue
                             keyValue={localeString('views.Channel.status')}
@@ -369,6 +375,7 @@ export default class SwapDetails extends React.Component<
                         keyValue={localeString('general.address')}
                         value={swapData.address}
                     />
+
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData.swapTree)}
                     <KeyValue
@@ -383,14 +390,6 @@ export default class SwapDetails extends React.Component<
                         )}
                         value={swapData.claimPublicKey}
                     />
-
-                    {error && (
-                        <KeyValue
-                            keyValue={localeString('general.error')}
-                            value={error?.message || String(error)}
-                            color="red"
-                        />
-                    )}
                 </ScrollView>
                 <Button
                     title={localeString('views.PaymentRequest.payInvoice')}
