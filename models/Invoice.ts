@@ -264,8 +264,7 @@ export default class Invoice extends BaseModel {
 
     @computed public get getKeysendMessage(): string {
         if (
-            this.htlcs &&
-            this.htlcs[0] &&
+            this.htlcs?.length > 0 &&
             this.htlcs[0].custom_records &&
             this.htlcs[0].custom_records[keySendMessageType]
         ) {
