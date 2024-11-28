@@ -1313,8 +1313,6 @@ PODS:
     - React-Core
   - RNVectorIcons (7.1.0):
     - React
-  - secp256k1-zkp-react (0.0.13):
-    - React-Core
   - SocketRocket (0.7.0)
   - SwiftProtobuf (1.26.0)
   - TcpSockets (4.0.0):
@@ -1417,7 +1415,6 @@ DEPENDENCIES:
   - RNSecureRandom (from `../node_modules/react-native-securerandom`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
-  - "secp256k1-zkp-react (from `../node_modules/@nicolasflamel/secp256k1-zkp-react`)"
   - SwiftProtobuf (~> 1.0)
   - TcpSockets (from `../node_modules/react-native-tcp`)
   - VisionCamera (from `../node_modules/react-native-vision-camera`)
@@ -1606,8 +1603,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
     :path: "../node_modules/react-native-vector-icons"
-  secp256k1-zkp-react:
-    :path: "../node_modules/@nicolasflamel/secp256k1-zkp-react"
   TcpSockets:
     :path: "../node_modules/react-native-tcp"
   VisionCamera:
@@ -1705,7 +1700,6 @@ SPEC CHECKSUMS:
   RNSecureRandom: 07efbdf2cd99efe13497433668e54acd7df49fef
   RNSVG: a48668fd382115bc89761ce291a81c4ca5f2fd2e
   RNVectorIcons: bc69e6a278b14842063605de32bec61f0b251a59
-  secp256k1-zkp-react: a0cb6c2717cb62845c19624d22e04f09b11e8aad
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
   SwiftProtobuf: 5e8349171e7c2f88f5b9e683cb3cb79d1dc780b3
   TcpSockets: 4ef55305239923b343ed0a378b1fac188b1373b0
