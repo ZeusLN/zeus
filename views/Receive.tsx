@@ -1953,7 +1953,8 @@ export default class Receive extends React.Component<
                                             )}
                                         {!(
                                             selectedIndex === 3 &&
-                                            !lightningAddress
+                                            (!lightningAddress ||
+                                                lightningAddressLoading)
                                         ) &&
                                             nfcSupported && (
                                                 <View
