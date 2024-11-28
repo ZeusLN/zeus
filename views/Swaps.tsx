@@ -25,6 +25,7 @@ import {
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import AddressUtils from '../utils/AddressUtils';
 
 import SwapStore, { HOST } from '../stores/SwapStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -46,6 +47,7 @@ interface SwapPaneState {
     inputSats: number | any;
     outputSats: number | any;
     invoice: string;
+    isValidLightningInvoice: boolean;
     apiError: any;
     apiUpdates: any;
     response: any;
@@ -63,6 +65,7 @@ export default class SwapPane extends React.PureComponent<
         inputSats: 0,
         outputSats: 0,
         invoice: '',
+        isValidLightningInvoice: false,
         apiUpdates: '',
         apiError: null,
         response: null
@@ -81,7 +84,8 @@ export default class SwapPane extends React.PureComponent<
             outputSats,
             apiError,
             apiUpdates,
-            invoice
+            invoice,
+            isValidLightningInvoice
         } = this.state;
         const { subInfo, reverseInfo, loading } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
@@ -151,6 +155,10 @@ export default class SwapPane extends React.PureComponent<
                     console.error('Error in API response:', responseData.error);
                     return; // Stop further execution
                 }
+
+                // Add the creation date to the response
+                const createdAt = new Date().toISOString();
+                responseData.createdAt = createdAt;
 
                 await saveSwapToStorage(responseData, keys, invoice);
 
@@ -336,25 +344,121 @@ export default class SwapPane extends React.PureComponent<
                                     {localeString('views.Swaps.create')}
                                 </Text>
                             </View>
+
                             <View style={{ flex: 1 }}>
-                                <View style={{ flex: 1 }}>
+                                <Row
+                                    style={{
+                                        position: 'absolute',
+                                        zIndex: 1
+                                    }}
+                                >
+                                    <AmountInput
+                                        prefix={
+                                            <View style={{ marginLeft: -10 }}>
+                                                {reverse ? (
+                                                    <LightningSvg width={60} />
+                                                ) : (
+                                                    <OnChainSvg width={60} />
+                                                )}
+                                            </View>
+                                        }
+                                        onAmountChange={(
+                                            _,
+                                            satAmount: string | number
+                                        ) => {
+                                            if (
+                                                !satAmount ||
+                                                satAmount === '0'
+                                            ) {
+                                                this.setState({
+                                                    serviceFeeSats: 0,
+                                                    outputSats: 0
+                                                });
+                                            }
+
+                                            const satAmountNew = new BigNumber(
+                                                satAmount || 0
+                                            );
+
+                                            const outputSats =
+                                                calculateReceiveAmount(
+                                                    satAmountNew,
+                                                    serviceFeePct,
+                                                    networkFee
+                                                );
+
+                                            this.setState({
+                                                serviceFeeSats:
+                                                    calculateServiceFeeOnSend(
+                                                        satAmountNew,
+                                                        serviceFeePct,
+                                                        networkFee
+                                                    ),
+                                                inputSats: Number(satAmount),
+                                                outputSats
+                                            });
+                                        }}
+                                        sats={
+                                            inputSats
+                                                ? inputSats.toString()
+                                                : ''
+                                        }
+                                        hideConversion
+                                        error={errorInput}
+                                    />
+                                </Row>
+                                <TouchableOpacity
+                                    style={{
+                                        alignSelf: 'center',
+                                        position: 'absolute',
+                                        zIndex: 100,
+                                        top: 50
+                                    }}
+                                    onPress={() => {
+                                        this.setState({
+                                            reverse: !reverse,
+                                            inputSats: 0,
+                                            outputSats: 0,
+                                            serviceFeeSats: 0
+                                        });
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            backgroundColor:
+                                                themeColor('background'),
+                                            borderRadius: 30,
+                                            padding: 10
+                                        }}
+                                    >
+                                        <ArrowDown
+                                            fill={themeColor('text')}
+                                            height="30"
+                                            width="30"
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                                <View style={{ zIndex: 2 }}>
                                     <Row
                                         style={{
                                             position: 'absolute',
-                                            zIndex: 1
+                                            zIndex: 1,
+                                            top: 70
                                         }}
                                     >
                                         <AmountInput
                                             prefix={
                                                 <View
-                                                    style={{ marginLeft: -10 }}
+                                                    style={{
+                                                        marginLeft: -10
+                                                    }}
                                                 >
                                                     {reverse ? (
-                                                        <LightningSvg
+                                                        <OnChainSvg
                                                             width={60}
                                                         />
                                                     ) : (
-                                                        <OnChainSvg
+                                                        <LightningSvg
                                                             width={60}
                                                         />
                                                     )}
@@ -370,7 +474,7 @@ export default class SwapPane extends React.PureComponent<
                                                 ) {
                                                     this.setState({
                                                         serviceFeeSats: 0,
-                                                        outputSats: 0
+                                                        inputSats: 0
                                                     });
                                                 }
 
@@ -379,227 +483,148 @@ export default class SwapPane extends React.PureComponent<
                                                         satAmount || 0
                                                     );
 
-                                                const outputSats =
-                                                    calculateReceiveAmount(
+                                                let input: any;
+                                                if (satAmountNew.isEqualTo(0)) {
+                                                    input = 0;
+                                                } else
+                                                    input = calculateSendAmount(
                                                         satAmountNew,
                                                         serviceFeePct,
                                                         networkFee
                                                     );
 
+                                                const serviceFeeSats =
+                                                    reverse && input
+                                                        ? input
+                                                              .times(
+                                                                  serviceFeePct
+                                                              )
+                                                              .div(100)
+                                                        : satAmountNew
+                                                              .times(
+                                                                  serviceFeePct
+                                                              )
+                                                              .div(100);
+
                                                 this.setState({
                                                     serviceFeeSats:
-                                                        calculateServiceFeeOnSend(
-                                                            satAmountNew,
-                                                            serviceFeePct,
-                                                            networkFee
-                                                        ),
-                                                    inputSats:
-                                                        Number(satAmount),
-                                                    outputSats
+                                                        bigCeil(serviceFeeSats),
+                                                    inputSats: input,
+                                                    outputSats:
+                                                        Number(satAmount)
                                                 });
                                             }}
+                                            hideConversion
                                             sats={
-                                                inputSats
-                                                    ? inputSats.toString()
+                                                outputSats
+                                                    ? outputSats.toString()
                                                     : ''
                                             }
-                                            hideConversion
-                                            error={errorInput}
+                                            error={errorOutput}
                                         />
                                     </Row>
-                                    <TouchableOpacity
-                                        style={{
-                                            alignSelf: 'center',
-                                            position: 'absolute',
-                                            zIndex: 100,
-                                            top: 50
-                                        }}
-                                        onPress={() => {
-                                            this.setState({
-                                                reverse: !reverse,
-                                                inputSats: 0,
-                                                outputSats: 0,
-                                                serviceFeeSats: 0
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                backgroundColor:
-                                                    themeColor('background'),
-                                                borderRadius: 30,
-                                                padding: 10
-                                            }}
-                                        >
-                                            <ArrowDown
-                                                fill={themeColor('text')}
-                                                height="30"
-                                                width="30"
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                    <View style={{ zIndex: 2 }}>
-                                        <Row
-                                            style={{
-                                                position: 'absolute',
-                                                zIndex: 1,
-                                                top: 70
-                                            }}
-                                        >
-                                            <AmountInput
-                                                prefix={
-                                                    <View
-                                                        style={{
-                                                            marginLeft: -10
-                                                        }}
-                                                    >
-                                                        {reverse ? (
-                                                            <OnChainSvg
-                                                                width={60}
-                                                            />
-                                                        ) : (
-                                                            <LightningSvg
-                                                                width={60}
-                                                            />
-                                                        )}
-                                                    </View>
-                                                }
-                                                onAmountChange={(
-                                                    _,
-                                                    satAmount: string | number
-                                                ) => {
-                                                    if (
-                                                        !satAmount ||
-                                                        satAmount === '0'
-                                                    ) {
-                                                        this.setState({
-                                                            serviceFeeSats: 0,
-                                                            inputSats: 0
-                                                        });
-                                                    }
-
-                                                    const satAmountNew =
-                                                        new BigNumber(
-                                                            satAmount || 0
-                                                        );
-
-                                                    let input: any;
-                                                    if (
-                                                        satAmountNew.isEqualTo(
-                                                            0
-                                                        )
-                                                    ) {
-                                                        input = 0;
-                                                    } else
-                                                        input =
-                                                            calculateSendAmount(
-                                                                satAmountNew,
-                                                                serviceFeePct,
-                                                                networkFee
-                                                            );
-
-                                                    const serviceFeeSats =
-                                                        reverse && input
-                                                            ? input
-                                                                  .times(
-                                                                      serviceFeePct
-                                                                  )
-                                                                  .div(100)
-                                                            : satAmountNew
-                                                                  .times(
-                                                                      serviceFeePct
-                                                                  )
-                                                                  .div(100);
-
-                                                    this.setState({
-                                                        serviceFeeSats:
-                                                            bigCeil(
-                                                                serviceFeeSats
-                                                            ),
-                                                        inputSats: input,
-                                                        outputSats:
-                                                            Number(satAmount)
-                                                    });
+                                </View>
+                                <Row justify="space-between">
+                                    <View style={{ top: 165 }}>
+                                        <Row>
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
                                                 }}
-                                                hideConversion
-                                                sats={
-                                                    outputSats
-                                                        ? outputSats.toString()
-                                                        : ''
-                                                }
-                                                error={errorOutput}
-                                            />
+                                            >
+                                                Network fee:{' '}
+                                            </Text>
+                                            <Amount sats={networkFee} />
+                                        </Row>
+                                        <Row>
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                Service fee:{' '}
+                                            </Text>
+                                            <Amount sats={serviceFeeSats} />
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {' '}
+                                                ({serviceFeePct}%)
+                                            </Text>
                                         </Row>
                                     </View>
-                                    <Row justify="space-between">
-                                        <View style={{ top: 165 }}>
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    Network fee:{' '}
-                                                </Text>
-                                                <Amount sats={networkFee} />
-                                            </Row>
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    Service fee:{' '}
-                                                </Text>
-                                                <Amount sats={serviceFeeSats} />
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {' '}
-                                                    ({serviceFeePct}%)
-                                                </Text>
-                                            </Row>
-                                        </View>
-                                        <View style={{ top: 165 }}>
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    Min:{' '}
-                                                </Text>
-                                                <Amount sats={min} />
-                                            </Row>
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    Max:{' '}
-                                                </Text>
-                                                <Amount sats={max} />
-                                            </Row>
-                                        </View>
-                                    </Row>
-                                </View>
+                                    <View style={{ top: 165 }}>
+                                        <Row>
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                Min:{' '}
+                                            </Text>
+                                            <Amount sats={min} />
+                                        </Row>
+                                        <Row>
+                                            <Text
+                                                style={{
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                Max:{' '}
+                                            </Text>
+                                            <Amount sats={max} />
+                                        </Row>
+                                    </View>
+                                </Row>
                             </View>
+                            <TextInput
+                                onChangeText={(text: string) => {
+                                    const isValidLightningInvoice = text
+                                        ? AddressUtils.isValidLightningPaymentRequest(
+                                              text
+                                          )
+                                        : false;
 
-                            <View>
+                                    this.setState({
+                                        invoice: text,
+                                        apiError: '',
+                                        apiUpdates: '',
+                                        isValidLightningInvoice
+                                    });
+                                }}
+                                placeholder={
+                                    reverse
+                                        ? `${localeString(
+                                              'general.enter'
+                                          )} ${localeString(
+                                              'views.Settings.AddContact.onchainAddress'
+                                          )}`
+                                        : `${localeString(
+                                              'general.enter'
+                                          )} ${localeString(
+                                              'views.PaymentRequest.title'
+                                          )}`
+                                }
+                                style={{
+                                    marginHorizontal: 20
+                                }}
+                                value={invoice}
+                            />
+
+                            <View
+                                style={{
+                                    marginVertical: 5
+                                }}
+                            >
                                 <Button
                                     onPress={() => {
-                                        console.log(
-                                            outputSats,
-                                            outputSats.toString()
-                                        );
                                         navigation.navigate('Receive', {
                                             amount:
                                                 units === 'sats'
@@ -624,44 +649,20 @@ export default class SwapPane extends React.PureComponent<
                                                   'views.Settings.AddContact.onchainAddress'
                                               )}`
                                     }
+                                    secondary
                                 />
                             </View>
-                            <TextInput
-                                onChangeText={(text: string) => {
-                                    this.setState({
-                                        invoice: text,
-                                        apiError: '',
-                                        apiUpdates: ''
-                                    });
-                                }}
-                                placeholder={
-                                    reverse
-                                        ? `${localeString(
-                                              'general.enter'
-                                          )} ${localeString(
-                                              'views.Settings.AddContact.onchainAddress'
-                                          )}`
-                                        : `${localeString(
-                                              'general.enter'
-                                          )} ${localeString(
-                                              'views.PaymentRequest.title'
-                                          )}`
-                                }
-                                style={{
-                                    marginHorizontal: 20,
-                                    marginVertical: 10
-                                }}
-                                value={invoice}
-                            />
+
                             <View>
                                 <Button
                                     title={localeString('views.Swaps.initiate')}
                                     onPress={() => {
                                         createSubmarineSwap(invoice);
                                     }}
-                                    secondary
-                                    containerStyle={{ marginTop: 10 }}
-                                    disabled={invoice === ''}
+                                    containerStyle={{
+                                        marginTop: 10
+                                    }}
+                                    disabled={!isValidLightningInvoice}
                                 />
                             </View>
                         </>
