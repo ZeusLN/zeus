@@ -2,6 +2,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View, FlatList } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import moment from 'moment';
 
 import {
     ErrorMessage,
@@ -50,7 +51,7 @@ export default class SwapsPane extends React.Component<
             const storedSwaps = await EncryptedStorage.getItem('swaps');
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
             this.setState({ swaps });
-            console.log(swaps);
+            console.log('All Swaps:', swaps);
         } catch (error) {
             this.setState({ error: 'Failed to load swaps' });
             console.error('Error retrieving swaps:', error);
@@ -139,28 +140,31 @@ export default class SwapsPane extends React.Component<
                     </Text>
                     <Amount sats={item.expectedAmount} sensitive toggleable />
                 </View>
-
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        marginBottom: 5
-                    }}
-                >
-                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        Address:
-                    </Text>
-                    <Text
+                {item?.createdAt && (
+                    <View
                         style={{
-                            color: themeColor('secondaryText'),
-                            fontSize: 16
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            marginBottom: 5
                         }}
                     >
-                        {`${item.address.slice(0, 6)}...${item.address.slice(
-                            -6
-                        )}`}
-                    </Text>
-                </View>
+                        <Text
+                            style={{ color: themeColor('text'), fontSize: 16 }}
+                        >
+                            {`${localeString('general.createdAt')}:`}
+                        </Text>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontSize: 16
+                            }}
+                        >
+                            {moment(item.createdAt).format(
+                                'MMM Do YYYY, h:mm:ss a'
+                            )}
+                        </Text>
+                    </View>
+                )}
             </TouchableOpacity>
         );
     };
