@@ -7,7 +7,7 @@ import { crypto } from 'bitcoinjs-lib';
 import bolt11 from 'bolt11';
 import { randomBytes } from 'crypto';
 import { Musig, SwapTreeSerializer, TaprootUtils } from 'boltz-core';
-import zkpInit from '@nicolasflamel/secp256k1-zkp-react';
+import zkpInit from '@vulpemventures/secp256k1-zkp';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -353,7 +353,9 @@ export default class SwapDetails extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<QRButton />}
+                    rightComponent={
+                        updates === 'invoice.set' ? <QRButton /> : <></>
+                    }
                     navigation={navigation}
                 />
                 <ScrollView style={{ marginHorizontal: 20 }}>
@@ -424,18 +426,20 @@ export default class SwapDetails extends React.Component<
                         value={swapData.claimPublicKey}
                     />
                 </ScrollView>
-                <Button
-                    title={localeString('views.PaymentRequest.payInvoice')}
-                    containerStyle={{
-                        paddingVertical: 10
-                    }}
-                    onPress={() => {
-                        console.log(swapData?.bip21);
-                        // TransactionsStore?.sendCoins(swapData?.bip21);
-                        // navigation.navigate('SendingOnChain');
-                    }}
-                    secondary
-                />
+                {updates === 'invoice.set' && (
+                    <Button
+                        title={localeString('views.PaymentRequest.payInvoice')}
+                        containerStyle={{
+                            paddingVertical: 10
+                        }}
+                        onPress={() => {
+                            console.log(swapData?.bip21);
+                            // TransactionsStore?.sendCoins(swapData?.bip21);
+                            // navigation.navigate('SendingOnChain');
+                        }}
+                        secondary
+                    />
+                )}
             </Screen>
         );
     }
