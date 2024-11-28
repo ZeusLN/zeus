@@ -102,7 +102,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        Status:
+                        {`${localeString('views.Channel.status')}:`}
                     </Text>
                     <Text style={{ color: stateColor, fontSize: 16 }}>
                         {item.status}
@@ -116,7 +116,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        Swap ID:
+                        {`${localeString('views.SwapDetails.swapId')}:`}
                     </Text>
                     <Text
                         style={{
@@ -136,7 +136,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        Expected Amount:
+                        {`${localeString('views.SwapDetails.expectedAmount')}:`}
                     </Text>
                     <Amount sats={item.expectedAmount} sensitive toggleable />
                 </View>
