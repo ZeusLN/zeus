@@ -16,6 +16,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
+import ModalStore from '../../stores/ModalStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
@@ -64,6 +65,7 @@ import {
 interface WalletConfigurationProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    ModalStore: ModalStore;
     route: Route<
         'WalletConfiguration',
         {
@@ -129,7 +131,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'ModalStore')
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -325,6 +327,12 @@ export default class WalletConfiguration extends React.Component<
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         this.initFromProps(nextProps);
+    }
+
+    componentWillUnmount() {
+        const { SettingsStore } = this.props;
+        SettingsStore.createAccountError = '';
+        SettingsStore.createAccountSuccess = '';
     }
 
     async initFromProps(props: WalletConfigurationProps) {
@@ -1238,6 +1246,7 @@ export default class WalletConfiguration extends React.Component<
                                     }
                                     locked={loading}
                                     autoCorrect={false}
+                                    autoCapitalize="none"
                                 />
 
                                 {implementation === 'spark' && (
@@ -1263,6 +1272,8 @@ export default class WalletConfiguration extends React.Component<
                                                 });
                                             }}
                                             locked={loading}
+                                            autoCorrect={false}
+                                            autoCapitalize="none"
                                         />
                                     </>
                                 )}
@@ -1300,6 +1311,7 @@ export default class WalletConfiguration extends React.Component<
                                                 secureTextEntry={
                                                     this.state.hidden
                                                 }
+                                                autoCorrect={false}
                                                 autoCapitalize="none"
                                                 style={{
                                                     flex: 1,
@@ -1333,15 +1345,57 @@ export default class WalletConfiguration extends React.Component<
                                 <TextInput
                                     placeholder={'https://'}
                                     value={lndhubUrl}
-                                    autoCapitalize="none"
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            lndhubUrl: text.trim(),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
                                     autoCorrect={false}
+                                    autoCapitalize="none"
+                                    onChangeText={(text: string) => {
+                                        const validHostChars =
+                                            /^[a-zA-Z0-9-.:]+$/;
+
+                                        // Allow backspace/delete operations without validation
+                                        if (
+                                            text.length <
+                                            (lndhubUrl?.length || 0)
+                                        ) {
+                                            this.setState({
+                                                lndhubUrl: text,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For single character additions
+                                        if (
+                                            text.length ===
+                                            (lndhubUrl?.length || 0) + 1
+                                        ) {
+                                            const cleanedText = text.replace(
+                                                /[^a-zA-Z0-9-.:]/g,
+                                                ''
+                                            );
+                                            this.setState({
+                                                lndhubUrl: cleanedText,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For pasted content
+                                        const trimmedText = text.trim();
+                                        if (!validHostChars.test(trimmedText)) {
+                                            this.props.ModalStore.toggleInfoModal(
+                                                localeString(
+                                                    'general.pastedInvalidData'
+                                                )
+                                            );
+                                            return;
+                                        }
+
+                                        this.setState({
+                                            lndhubUrl: trimmedText,
+                                            saved: false
+                                        });
+                                    }}
+                                    locked={loading}
                                 />
 
                                 <>
@@ -1382,13 +1436,51 @@ export default class WalletConfiguration extends React.Component<
                                         <TextInput
                                             placeholder={'...'}
                                             value={username}
-                                            onChangeText={(text: string) =>
+                                            onChangeText={(text: string) => {
+                                                // Allow backspace/delete operations without validation
+                                                if (
+                                                    text.length <
+                                                    (username?.length || 0)
+                                                ) {
+                                                    this.setState({
+                                                        username: text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For single character additions
+                                                if (
+                                                    text.length ===
+                                                    (username?.length || 0) + 1
+                                                ) {
+                                                    const cleanedText =
+                                                        text.trim();
+                                                    this.setState({
+                                                        username: cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For pasted content
+                                                const trimmedText = text.trim();
+                                                if (/\s/.test(trimmedText)) {
+                                                    this.props.ModalStore.toggleInfoModal(
+                                                        localeString(
+                                                            'general.pastedInvalidData'
+                                                        )
+                                                    );
+                                                    return;
+                                                }
+
                                                 this.setState({
-                                                    username: text.trim(),
+                                                    username: trimmedText,
                                                     saved: false
-                                                })
-                                            }
+                                                });
+                                            }}
                                             locked={loading}
+                                            autoCorrect={false}
                                             autoCapitalize="none"
                                         />
 
@@ -1422,6 +1514,7 @@ export default class WalletConfiguration extends React.Component<
                                                 secureTextEntry={
                                                     this.state.hidden
                                                 }
+                                                autoCorrect={false}
                                                 autoCapitalize="none"
                                                 style={{
                                                     flex: 1,
@@ -1457,76 +1550,8 @@ export default class WalletConfiguration extends React.Component<
                                 )}
                             </>
                         )}
-                        {implementation === 'cln-rest' && (
-                            <>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.host'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'localhost'}
-                                    autoCapitalize="none"
-                                    value={host}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            host: text.trim(),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                />
-
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.rune'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'Lt1c...'}
-                                    value={rune}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            rune: text.trim(),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                />
-
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.restPort'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'443/8080'}
-                                    value={port}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            port: text.trim(),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                />
-                            </>
-                        )}
-
                         {(implementation === 'lnd' ||
+                            implementation === 'cln-rest' ||
                             implementation === 'c-lightning-REST') && (
                             <>
                                 <Text
@@ -1540,40 +1565,204 @@ export default class WalletConfiguration extends React.Component<
                                 </Text>
                                 <TextInput
                                     placeholder={'localhost'}
+                                    autoCorrect={false}
                                     autoCapitalize="none"
                                     value={host}
-                                    onChangeText={(text: string) =>
+                                    onChangeText={(text: string) => {
+                                        // Allow backspace/delete operations without validation
+                                        if (text.length < (host?.length || 0)) {
+                                            this.setState({
+                                                host: text,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For single character additions
+                                        if (
+                                            text.length ===
+                                            (host?.length || 0) + 1
+                                        ) {
+                                            const cleanedText = text.replace(
+                                                /[^a-zA-Z0-9-.]/g,
+                                                ''
+                                            );
+
+                                            this.setState({
+                                                host: cleanedText,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For pasted content
+                                        const trimmedText = text.trim();
+                                        if (
+                                            !/^[a-zA-Z0-9-.]+$/.test(
+                                                trimmedText
+                                            )
+                                        ) {
+                                            this.props.ModalStore.toggleInfoModal(
+                                                localeString(
+                                                    'general.pastedInvalidData'
+                                                )
+                                            );
+                                            return;
+                                        }
+
                                         this.setState({
-                                            host: text.trim(),
+                                            host: trimmedText,
                                             saved: false
-                                        })
-                                    }
+                                        });
+                                    }}
                                     locked={loading}
                                 />
 
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.macaroon'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'0A...'}
-                                    value={macaroonHex}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            macaroonHex: text.replace(
-                                                /\s+/g,
-                                                ''
-                                            ),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                />
+                                {implementation === 'cln-rest' ? (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.rune'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'Lt1c...'}
+                                            autoCorrect={false}
+                                            autoCapitalize="none"
+                                            value={rune}
+                                            onChangeText={(text: string) => {
+                                                // Allow backspace/delete operations without validation
+                                                if (
+                                                    text.length <
+                                                    (rune?.length || 0)
+                                                ) {
+                                                    this.setState({
+                                                        rune: text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For single character additions
+                                                if (
+                                                    text.length ===
+                                                    (rune?.length || 0) + 1
+                                                ) {
+                                                    const cleanedText =
+                                                        text.replace(
+                                                            /[^A-Za-z0-9\-_=]/g,
+                                                            ''
+                                                        );
+                                                    this.setState({
+                                                        rune: cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For pasted content
+                                                const trimmedText = text.trim();
+                                                if (
+                                                    !/^[A-Za-z0-9\-_=]+$/.test(
+                                                        trimmedText
+                                                    )
+                                                ) {
+                                                    this.props.ModalStore.toggleInfoModal(
+                                                        localeString(
+                                                            'general.pastedInvalidData'
+                                                        )
+                                                    );
+                                                    return;
+                                                }
+
+                                                this.setState({
+                                                    rune: trimmedText,
+                                                    saved: false
+                                                });
+                                            }}
+                                            locked={loading}
+                                        />
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.AddEditNode.macaroon'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'0A...'}
+                                            autoCorrect={false}
+                                            autoCapitalize="none"
+                                            value={macaroonHex}
+                                            onChangeText={(text: string) => {
+                                                // Allow backspace/delete operations without validation
+                                                if (
+                                                    text.length <
+                                                    (macaroonHex?.length || 0)
+                                                ) {
+                                                    this.setState({
+                                                        macaroonHex: text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For single character additions
+                                                if (
+                                                    text.length ===
+                                                    (macaroonHex?.length || 0) +
+                                                        1
+                                                ) {
+                                                    const cleanedText =
+                                                        text.replace(
+                                                            /[^0-9a-fA-F]/g,
+                                                            ''
+                                                        );
+                                                    this.setState({
+                                                        macaroonHex:
+                                                            cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For pasted content
+                                                const trimmedText = text.trim();
+                                                if (
+                                                    !/^[0-9a-fA-F]+$/.test(
+                                                        trimmedText
+                                                    )
+                                                ) {
+                                                    this.props.ModalStore.toggleInfoModal(
+                                                        localeString(
+                                                            'general.pastedInvalidData'
+                                                        )
+                                                    );
+                                                    return;
+                                                }
+
+                                                this.setState({
+                                                    macaroonHex: trimmedText,
+                                                    saved: false
+                                                });
+                                            }}
+                                            locked={loading}
+                                        />
+                                    </>
+                                )}
 
                                 <Text
                                     style={{
@@ -1619,14 +1808,82 @@ export default class WalletConfiguration extends React.Component<
                                             placeholder={
                                                 'my-custom.lnc.server:443'
                                             }
+                                            autoCorrect={false}
+                                            autoCapitalize="none"
                                             value={customMailboxServer}
-                                            onChangeText={(text: string) =>
+                                            onChangeText={(text: string) => {
+                                                // Allow backspace/delete operations without validation
+                                                if (
+                                                    text.length <
+                                                    (customMailboxServer?.length ||
+                                                        0)
+                                                ) {
+                                                    this.setState({
+                                                        customMailboxServer:
+                                                            text,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For single character additions
+                                                if (
+                                                    text.length ===
+                                                    (customMailboxServer?.length ||
+                                                        0) +
+                                                        1
+                                                ) {
+                                                    if (text.includes('::'))
+                                                        return;
+
+                                                    const cleanedText =
+                                                        text.replace(
+                                                            /[^a-zA-Z0-9-.:]/g,
+                                                            ''
+                                                        );
+                                                    this.setState({
+                                                        customMailboxServer:
+                                                            cleanedText,
+                                                        saved: false
+                                                    });
+                                                    return;
+                                                }
+
+                                                // For pasted content
+                                                const trimmedText = text.trim();
+                                                if (
+                                                    !/^[a-zA-Z0-9-.:]+$/.test(
+                                                        trimmedText
+                                                    )
+                                                ) {
+                                                    this.props.ModalStore.toggleInfoModal(
+                                                        localeString(
+                                                            'general.pastedInvalidData'
+                                                        )
+                                                    );
+                                                    return;
+                                                }
+
                                                 this.setState({
                                                     customMailboxServer:
-                                                        text.trim(),
+                                                        trimmedText,
                                                     saved: false
-                                                })
-                                            }
+                                                });
+                                            }}
+                                            onBlur={() => {
+                                                if (
+                                                    customMailboxServer &&
+                                                    !/^[a-zA-Z0-9-.]+(:\d+)?$/.test(
+                                                        customMailboxServer
+                                                    )
+                                                ) {
+                                                    this.props.ModalStore.toggleInfoModal(
+                                                        localeString(
+                                                            'general.invalidHost'
+                                                        )
+                                                    );
+                                                }
+                                            }}
                                             locked={loading}
                                         />
                                     </>
@@ -1644,13 +1901,86 @@ export default class WalletConfiguration extends React.Component<
                                     placeholder={
                                         'cherry truth mask employ box silver mass bunker fiscal vote'
                                     }
+                                    autoCapitalize="none"
                                     value={pairingPhrase}
-                                    onChangeText={(text: string) =>
+                                    onChangeText={(text: string) => {
+                                        // Allow backspace/delete operations without validation
+                                        if (
+                                            text.length <
+                                            (pairingPhrase?.length || 0)
+                                        ) {
+                                            this.setState({
+                                                pairingPhrase: text,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For single character additions
+                                        if (
+                                            text.length ===
+                                            (pairingPhrase?.length || 0) + 1
+                                        ) {
+                                            if (text === ' ') return;
+                                            if (text.includes('  ')) return;
+
+                                            const cleanedText = text.replace(
+                                                /[^a-zA-Z\s]/g,
+                                                ''
+                                            );
+                                            this.setState({
+                                                pairingPhrase: cleanedText,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For pasted content
+                                        const normalizedPhrase = text
+                                            .trim()
+                                            .replace(/\s+/g, ' ');
+                                        if (
+                                            !/^[a-zA-Z\s]+$/.test(
+                                                normalizedPhrase
+                                            )
+                                        ) {
+                                            this.props.ModalStore.toggleInfoModal(
+                                                localeString(
+                                                    'general.pastedInvalidData'
+                                                )
+                                            );
+                                            return;
+                                        }
+
                                         this.setState({
-                                            pairingPhrase: text,
+                                            pairingPhrase: normalizedPhrase,
                                             saved: false
-                                        })
-                                    }
+                                        });
+                                    }}
+                                    onBlur={() => {
+                                        const normalizedPhrase = pairingPhrase
+                                            ?.trim()
+                                            .replace(/\s+/g, ' ');
+                                        const wordCount =
+                                            normalizedPhrase?.split(' ')
+                                                .length || 0;
+
+                                        if (
+                                            normalizedPhrase &&
+                                            wordCount !== 10
+                                        ) {
+                                            this.props.ModalStore.toggleInfoModal(
+                                                localeString(
+                                                    'views.Settings.AddEditNode.wrongLncPairingPhraseLength'
+                                                )
+                                            );
+                                        }
+
+                                        this.setState({
+                                            pairingPhrase: normalizedPhrase,
+                                            saved: false
+                                        });
+                                    }}
                                     locked={loading}
                                 />
                                 {!!localKey && (
@@ -1773,7 +2103,7 @@ export default class WalletConfiguration extends React.Component<
                                         });
                                     }
                                 }}
-                                disabled={loading}
+                                disabled={loading || !lndhubUrl}
                             />
                         </View>
                     )}
@@ -1897,11 +2227,37 @@ export default class WalletConfiguration extends React.Component<
                                             this.saveWalletConfiguration();
                                         }
                                     }}
-                                    // disable save button if no creds passed
+                                    // disable save button if no host and creds passed
                                     disabled={
                                         loading ||
                                         (implementation === 'lndhub' &&
-                                            !(username && password))
+                                            !(
+                                                lndhubUrl &&
+                                                username &&
+                                                password
+                                            )) ||
+                                        (implementation ===
+                                            'lightning-node-connect' &&
+                                            (!pairingPhrase ||
+                                                pairingPhrase
+                                                    .trim()
+                                                    .replace(/\s+/g, ' ')
+                                                    .split(' ').length !== 10 ||
+                                                (mailboxServer ===
+                                                    'custom-defined' &&
+                                                    !/^[a-zA-Z0-9-.]+(:\d+)?$/.test(
+                                                        customMailboxServer
+                                                    )))) ||
+                                        ((implementation === 'lnd' ||
+                                            implementation === 'cln-rest' ||
+                                            implementation ===
+                                                'c-lightning-REST') &&
+                                            !(
+                                                host &&
+                                                (implementation === 'cln-rest'
+                                                    ? rune
+                                                    : macaroonHex)
+                                            ))
                                     }
                                 />
                             </View>
