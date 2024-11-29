@@ -1,5 +1,7 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+
+import { themeColor } from '../utils/ThemeUtils';
 // import BigNumber from 'bignumber.js';
 
 // import SettingsStore from './SettingsStore';
@@ -11,6 +13,37 @@ export default class SwapStore {
     @observable public subInfo = {};
     @observable public reverseInfo = {};
     @observable public loading = true;
+
+    @action
+    public statusColor = (status: string) => {
+        let stateColor;
+        switch (status) {
+            case 'transaction.claimed':
+                stateColor = 'green';
+                break;
+            case 'invoice.failedToPay':
+            case 'swap.expired':
+            case 'transaction.lockupFailed':
+                stateColor = themeColor('error');
+                break;
+            default:
+                stateColor = 'orange';
+                break;
+        }
+
+        return stateColor;
+    };
+
+    @action
+    public formatStatus = (status: string): string => {
+        if (!status) return '';
+
+        return status
+            .replace(/\./g, ' ') // Replace dots with spaces
+            .replace(/([a-z])([A-Z])/g, '$1 $2') // Add space between camelCase
+            .toLowerCase() // Convert to lowercase
+            .replace(/\b[a-z]/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
+    };
 
     @action
     public getSwapFees = async () => {
