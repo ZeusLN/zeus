@@ -24,7 +24,7 @@ import {
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { SATS_PER_BTC, numberWithCommas } from '../utils/UnitsUtils';
 import AddressUtils from '../utils/AddressUtils';
 
 import SwapStore, { HOST } from '../stores/SwapStore';
@@ -198,8 +198,8 @@ export default class SwapPane extends React.PureComponent<
                     invoice
                 };
 
-                // Add the enriched swap to the array
-                swaps.push(enrichedSwap);
+                // Add the enriched swap to the beginning of array
+                swaps.unshift(enrichedSwap);
 
                 // Save the updated swaps array back to Encrypted Storage
                 await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
@@ -366,9 +366,15 @@ export default class SwapPane extends React.PureComponent<
                                             _,
                                             satAmount: string | number
                                         ) => {
+                                            // remove commas
+                                            const sanitizedSatAmount = String(
+                                                satAmount
+                                            )
+                                                .replace(/,/g, '')
+                                                .trim();
                                             if (
-                                                !satAmount ||
-                                                satAmount === '0'
+                                                !sanitizedSatAmount ||
+                                                sanitizedSatAmount === '0'
                                             ) {
                                                 this.setState({
                                                     serviceFeeSats: 0,
@@ -377,7 +383,7 @@ export default class SwapPane extends React.PureComponent<
                                             }
 
                                             const satAmountNew = new BigNumber(
-                                                satAmount || 0
+                                                sanitizedSatAmount || 0
                                             );
 
                                             const outputSats =
@@ -394,13 +400,16 @@ export default class SwapPane extends React.PureComponent<
                                                         serviceFeePct,
                                                         networkFee
                                                     ),
-                                                inputSats: Number(satAmount),
+                                                inputSats:
+                                                    Number(sanitizedSatAmount),
                                                 outputSats
                                             });
                                         }}
                                         sats={
                                             inputSats
-                                                ? inputSats.toString()
+                                                ? numberWithCommas(
+                                                      inputSats.toString()
+                                                  )
                                                 : ''
                                         }
                                         hideConversion
@@ -449,9 +458,7 @@ export default class SwapPane extends React.PureComponent<
                                         <AmountInput
                                             prefix={
                                                 <View
-                                                    style={{
-                                                        marginLeft: -10
-                                                    }}
+                                                    style={{ marginLeft: -10 }}
                                                 >
                                                     {reverse ? (
                                                         <OnChainSvg
@@ -468,9 +475,14 @@ export default class SwapPane extends React.PureComponent<
                                                 _,
                                                 satAmount: string | number
                                             ) => {
+                                                // remove commas
+                                                const sanitizedSatAmount =
+                                                    String(satAmount)
+                                                        .replace(/,/g, '')
+                                                        .trim();
                                                 if (
-                                                    !satAmount ||
-                                                    satAmount === '0'
+                                                    !sanitizedSatAmount ||
+                                                    sanitizedSatAmount === '0'
                                                 ) {
                                                     this.setState({
                                                         serviceFeeSats: 0,
@@ -480,7 +492,7 @@ export default class SwapPane extends React.PureComponent<
 
                                                 const satAmountNew =
                                                     new BigNumber(
-                                                        satAmount || 0
+                                                        sanitizedSatAmount || 0
                                                     );
 
                                                 let input: any;
@@ -511,13 +523,17 @@ export default class SwapPane extends React.PureComponent<
                                                         bigCeil(serviceFeeSats),
                                                     inputSats: input,
                                                     outputSats:
-                                                        Number(satAmount)
+                                                        Number(
+                                                            sanitizedSatAmount
+                                                        )
                                                 });
                                             }}
                                             hideConversion
                                             sats={
                                                 outputSats
-                                                    ? outputSats.toString()
+                                                    ? numberWithCommas(
+                                                          outputSats.toString()
+                                                      )
                                                     : ''
                                             }
                                             error={errorOutput}
@@ -650,6 +666,7 @@ export default class SwapPane extends React.PureComponent<
                                               )}`
                                     }
                                     secondary
+                                    disabled={error}
                                 />
                             </View>
 

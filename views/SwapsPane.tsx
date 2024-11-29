@@ -1,5 +1,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View, FlatList } from 'react-native';
+
+import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import moment from 'moment';
@@ -15,10 +17,11 @@ import Amount from '../components/Amount';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 
-import { HOST } from '../stores/SwapStore';
+import SwapStore, { HOST } from '../stores/SwapStore';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
+    SwapStore?: SwapStore;
 }
 
 interface SwapsPaneState {
@@ -26,6 +29,8 @@ interface SwapsPaneState {
     error: string | null;
 }
 
+@inject('TransactionsStore', 'SwapStore')
+@observer
 export default class SwapsPane extends React.Component<
     SwapsPaneProps,
     SwapsPaneState
@@ -79,15 +84,8 @@ export default class SwapsPane extends React.Component<
     );
 
     renderSwap = ({ item }: { item: any }) => {
-        let stateColor;
-        switch (item.status) {
-            case 'transaction.claimed':
-                stateColor = 'green';
-                break;
-            default:
-                stateColor = 'orange';
-                break;
-        }
+        const { SwapStore } = this.props;
+
         return (
             <TouchableOpacity
                 key={item.id}
@@ -104,8 +102,13 @@ export default class SwapsPane extends React.Component<
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
                         {`${localeString('views.Channel.status')}:`}
                     </Text>
-                    <Text style={{ color: stateColor, fontSize: 16 }}>
-                        {item.status}
+                    <Text
+                        style={{
+                            color: SwapStore?.statusColor(item.status),
+                            fontSize: 16
+                        }}
+                    >
+                        {SwapStore?.formatStatus(item.status)}
                     </Text>
                 </View>
                 <View
