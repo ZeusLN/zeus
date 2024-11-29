@@ -91,7 +91,7 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                             >
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -274,6 +274,22 @@ export default class EmbeddedNodeTroubleshooting extends React.Component<
                                         restartNeeded();
                                     }}
                                 />
+                            </View>
+                            <View
+                                style={{
+                                    margin: 10,
+                                    marginTop: 15
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
+                                    )}
+                                </Text>
                             </View>
                         </>
                     </ScrollView>
