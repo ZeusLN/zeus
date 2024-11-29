@@ -22,6 +22,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import SwapStore from '../stores/SwapStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 import QR from '../assets/images/SVG/QR.svg';
@@ -33,6 +34,7 @@ interface SwapDetailsProps {
         { swapData: any; keys: any; endpoint: any; invoice: any }
     >;
     TransactionsStore?: TransactionsStore;
+    SwapStore?: SwapStore;
 }
 
 interface SwapDetailsState {
@@ -40,7 +42,7 @@ interface SwapDetailsState {
     error: any;
 }
 
-@inject('TransactionsStore')
+@inject('TransactionsStore', 'SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
@@ -158,9 +160,11 @@ export default class SwapDetails extends React.Component<
                         keys,
                         endpoint
                     );
-                } else if (data.status === 'transaction.claimed') {
-                    console.log('Swap successful');
-                    this.stopPolling(); // Stop polling when the swap is complete
+                } else if (
+                    data.status === 'transaction.claimed' ||
+                    data.status === 'invoice.failedToPay'
+                ) {
+                    this.stopPolling(); // Stop polling
                 } else {
                     console.log('Unhandled status:', data.status);
                 }
@@ -316,7 +320,7 @@ export default class SwapDetails extends React.Component<
     };
 
     render() {
-        const { navigation, TransactionsStore } = this.props;
+        const { navigation, TransactionsStore, SwapStore } = this.props;
 
         const { updates, error } = this.state;
         const swapData = this.props.route.params?.swapData ?? '';
@@ -367,12 +371,8 @@ export default class SwapDetails extends React.Component<
                     {updates && (
                         <KeyValue
                             keyValue={localeString('views.Channel.status')}
-                            value={updates}
-                            color={
-                                updates === 'transaction.claimed'
-                                    ? 'green'
-                                    : 'orange'
-                            }
+                            value={SwapStore?.formatStatus(updates)}
+                            color={SwapStore?.statusColor(updates)}
                         />
                     )}
                     <KeyValue
@@ -434,8 +434,8 @@ export default class SwapDetails extends React.Component<
                         }}
                         onPress={() => {
                             console.log(swapData?.bip21);
-                            // TransactionsStore?.sendCoins(swapData?.bip21);
-                            // navigation.navigate('SendingOnChain');
+                            TransactionsStore?.sendCoins(swapData?.bip21);
+                            navigation.navigate('SendingOnChain');
                         }}
                         secondary
                     />
