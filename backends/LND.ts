@@ -52,54 +52,60 @@ export default class LND {
                 })
             );
         } else {
-            calls.set(
-                id,
-                ReactNativeBlobUtil.config({
-                    trusty: !certVerification
-                })
-                    .fetch(
-                        method,
-                        url,
-                        headers,
-                        data ? JSON.stringify(data) : data
-                    )
-                    .then((response: any) => {
-                        calls.delete(id);
-                        if (response.info().status < 300) {
-                            // handle ws responses
-                            if (response.data.includes('\n')) {
-                                const split = response.data.split('\n');
-                                const length = split.length;
-                                // last instance is empty
-                                return JSON.parse(split[length - 2]);
-                            }
-                            return response.json();
-                        } else {
-                            try {
-                                const errorInfo = response.json();
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout')), 30000);
+            });
+
+            const fetchPromise = ReactNativeBlobUtil.config({
+                trusty: !certVerification
+            })
+                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
+                .then((response: any) => {
+                    calls.delete(id);
+                    if (response.info().status < 300) {
+                        // handle ws responses
+                        if (response.data.includes('\n')) {
+                            const split = response.data.split('\n');
+                            const length = split.length;
+                            // last instance is empty
+                            return JSON.parse(split[length - 2]);
+                        }
+                        return response.json();
+                    } else {
+                        try {
+                            const errorInfo = response.json();
+                            throw new Error(
+                                (errorInfo.error && errorInfo.error.message) ||
+                                    errorInfo.message ||
+                                    errorInfo.error
+                            );
+                        } catch (e) {
+                            if (
+                                response.data &&
+                                typeof response.data === 'string'
+                            ) {
+                                throw new Error(response.data);
+                            } else {
                                 throw new Error(
-                                    (errorInfo.error &&
-                                        errorInfo.error.message) ||
-                                        errorInfo.message ||
-                                        errorInfo.error
+                                    localeString(
+                                        'backends.LND.restReq.connectionError'
+                                    )
                                 );
-                            } catch (e) {
-                                if (
-                                    response.data &&
-                                    typeof response.data === 'string'
-                                ) {
-                                    throw new Error(response.data);
-                                } else {
-                                    throw new Error(
-                                        localeString(
-                                            'backends.LND.restReq.connectionError'
-                                        )
-                                    );
-                                }
                             }
                         }
-                    })
-            );
+                    }
+                });
+
+            const racePromise = Promise.race([
+                fetchPromise,
+                timeoutPromise
+            ]).catch((error) => {
+                calls.delete(id);
+                console.log('Request timed out for:', url);
+                throw error;
+            });
+
+            calls.set(id, racePromise);
         }
 
         return await calls.get(id);
