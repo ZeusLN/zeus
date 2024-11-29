@@ -922,6 +922,7 @@
     "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
     "views.Settings.EmbeddedNode.speedloader": "Express Graph Sync server",
     "views.Settings.EmbeddedNode.customSpeedloader": "Custom Express Graph Sync server",
+    "views.Settings.EmbeddedNode.Troubleshooting.title": "Troubleshooting",
     "views.Settings.LSP.enableLSP": "Enable Lightning Service Provider (LSP)",
     "views.Settings.LSP.enableLSP.subtitle": "The LSP will get you connected to the Lightning network by opening up payment channels for you.",
     "views.Settings.LSP.requestSimpleTaproot": "Request Simple Taproot Channels",
