@@ -8,7 +8,12 @@ import 'react-native-gesture-handler';
 // polyfills
 import 'react-native-get-random-values';
 import { TextDecoder } from 'text-encoding';
+import Long from 'long';
+import protobuf from 'protobufjs';
 global.TextDecoder = TextDecoder;
+
+protobuf.util.Long = Long;
+protobuf.configure();
 
 import {AppRegistry} from 'react-native';
 import './shim.js'
