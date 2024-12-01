@@ -37,6 +37,7 @@ interface InvoicesSettingsState {
     ampInvoice: boolean;
     blindedPaths: boolean;
     showCustomPreimageField: boolean;
+    displayAmountOnInvoice: boolean;
 }
 
 @inject('SettingsStore')
@@ -54,7 +55,8 @@ export default class InvoicesSettings extends React.Component<
         routeHints: false,
         ampInvoice: false,
         blindedPaths: false,
-        showCustomPreimageField: false
+        showCustomPreimageField: false,
+        displayAmountOnInvoice: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -72,7 +74,9 @@ export default class InvoicesSettings extends React.Component<
             ampInvoice: settings?.invoices?.ampInvoice || false,
             blindedPaths: settings?.invoices?.blindedPaths || false,
             showCustomPreimageField:
-                settings?.invoices?.showCustomPreimageField || false
+                settings?.invoices?.showCustomPreimageField || false,
+            displayAmountOnInvoice:
+                settings?.invoices?.displayAmountOnInvoice || false
         });
     }
 
@@ -98,7 +102,8 @@ export default class InvoicesSettings extends React.Component<
             routeHints,
             ampInvoice,
             blindedPaths,
-            showCustomPreimageField
+            showCustomPreimageField,
+            displayAmountOnInvoice
         } = this.state;
         const { implementation, updateSettings }: any = SettingsStore;
 
@@ -506,6 +511,44 @@ export default class InvoicesSettings extends React.Component<
                             />
                         </>
                     )}
+
+                    <>
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText'),
+                                top: 20
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Invoices.displayAmountOnInvoice'
+                            )}
+                            {}
+                        </Text>
+                        <Switch
+                            value={displayAmountOnInvoice}
+                            onValueChange={async () => {
+                                this.setState({
+                                    displayAmountOnInvoice:
+                                        !displayAmountOnInvoice
+                                });
+                                await updateSettings({
+                                    invoices: {
+                                        addressType,
+                                        memo,
+                                        expiry,
+                                        timePeriod,
+                                        expirySeconds,
+                                        routeHints,
+                                        ampInvoice,
+                                        showCustomPreimageField,
+                                        displayAmountOnInvoice:
+                                            !displayAmountOnInvoice
+                                    }
+                                });
+                            }}
+                        />
+                    </>
                 </View>
                 <ModalBox
                     style={{
