@@ -427,7 +427,8 @@ export default class PaymentRequest extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: `lightning:${paymentRequest}`
+                        value: `lightning:${paymentRequest}`,
+                        satAmount: requestAmount
                     })
                 }
             >
