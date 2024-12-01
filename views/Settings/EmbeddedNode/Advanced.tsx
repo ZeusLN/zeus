@@ -490,6 +490,22 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                     }}
                                 />
                             </View>
+                            <View
+                                style={{
+                                    margin: 10,
+                                    marginTop: 15
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.stopLndDeleteNeutrino.subtitle'
+                                    )}
+                                </Text>
+                            </View>
                         </>
                         {false && persistentMode && (
                             <View style={{ margin: 15 }}>
