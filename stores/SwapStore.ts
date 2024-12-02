@@ -36,7 +36,7 @@ export default class SwapStore {
 
     @action
     public formatStatus = (status: string): string => {
-        if (!status) return '';
+        if (!status) return 'No updates found!';
 
         return status
             .replace(/\./g, ' ') // Replace dots with spaces
