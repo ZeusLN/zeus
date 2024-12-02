@@ -367,11 +367,12 @@ export default class SwapPane extends React.PureComponent<
                                             satAmount: string | number
                                         ) => {
                                             // remove commas
-                                            const sanitizedSatAmount = String(
-                                                satAmount
-                                            )
-                                                .replace(/,/g, '')
-                                                .trim();
+                                            const sanitizedSatAmount =
+                                                units !== 'BTC'
+                                                    ? String(satAmount)
+                                                          .replace(/,/g, '')
+                                                          .trim()
+                                                    : satAmount;
                                             if (
                                                 !sanitizedSatAmount ||
                                                 sanitizedSatAmount === '0'
@@ -407,9 +408,11 @@ export default class SwapPane extends React.PureComponent<
                                         }}
                                         sats={
                                             inputSats
-                                                ? numberWithCommas(
-                                                      inputSats.toString()
-                                                  )
+                                                ? units !== 'BTC'
+                                                    ? numberWithCommas(
+                                                          inputSats.toString()
+                                                      )
+                                                    : inputSats.toString()
                                                 : ''
                                         }
                                         hideConversion
@@ -477,9 +480,11 @@ export default class SwapPane extends React.PureComponent<
                                             ) => {
                                                 // remove commas
                                                 const sanitizedSatAmount =
-                                                    String(satAmount)
-                                                        .replace(/,/g, '')
-                                                        .trim();
+                                                    units !== 'BTC'
+                                                        ? String(satAmount)
+                                                              .replace(/,/g, '')
+                                                              .trim()
+                                                        : satAmount;
                                                 if (
                                                     !sanitizedSatAmount ||
                                                     sanitizedSatAmount === '0'
@@ -531,9 +536,11 @@ export default class SwapPane extends React.PureComponent<
                                             hideConversion
                                             sats={
                                                 outputSats
-                                                    ? numberWithCommas(
-                                                          outputSats.toString()
-                                                      )
+                                                    ? units !== 'BTC'
+                                                        ? numberWithCommas(
+                                                              outputSats.toString()
+                                                          )
+                                                        : outputSats.toString()
                                                     : ''
                                             }
                                             error={errorOutput}
