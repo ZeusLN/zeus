@@ -72,14 +72,12 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
 
                 <FlatList
                     data={NETWORK_INFO}
-                    renderItem={({ item }) => {
-                        return (
-                            <KeyValue
-                                keyValue={localeString(item.label)}
-                                value={item.value}
-                            />
-                        );
-                    }}
+                    renderItem={({ item }) => (
+                        <KeyValue
+                            keyValue={localeString(item.label)}
+                            value={item.value}
+                        />
+                    )}
                     onRefresh={() => getNetworkInfo}
                     refreshing={loading}
                     style={styles.content}
