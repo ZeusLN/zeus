@@ -190,8 +190,9 @@ export default class OnchainSwipeableRow extends Component<
                         )
                     }
                     activeOpacity={1}
+                    style={{ width: '100%' }}
                 >
-                    <View style={{ width: '100%', opacity: hidden ? 0.25 : 1 }}>
+                    <View style={{ opacity: hidden ? 0.25 : 1 }}>
                         {children}
                     </View>
                 </TouchableOpacity>
