@@ -118,6 +118,25 @@ export default class SwapDetails extends React.Component<
                 );
                 const data = await response.json();
 
+                // Check for API errors
+                if (data?.error) {
+                    console.error(`Error from API: ${data.error}`);
+
+                    if (data.error === 'Operation timeout') {
+                        this.setState({
+                            error: 'The operation timed out.'
+                        });
+                        this.stopPolling(); // Stop polling
+                        return;
+                    }
+
+                    this.setState({
+                        error: data.error
+                    });
+                    this.stopPolling(); // Stop polling
+                    return;
+                }
+
                 // Update the status in the component state
                 this.setState({ updates: data.status });
 
@@ -168,13 +187,19 @@ export default class SwapDetails extends React.Component<
                 } else {
                     console.log('Unhandled status:', data.status);
                 }
-            } catch (error) {
-                this.setState({ error: error });
+            } catch (error: any) {
+                this.setState({
+                    error: error.message || error || 'An unknown error occurred'
+                });
                 console.error('Error while polling for updates:', error);
             }
         };
 
         this.pollingTimer = setInterval(pollForUpdates, pollingInterval);
+
+        this.componentWillUnmount = () => {
+            this.stopPolling();
+        };
     };
 
     stopPolling = () => {
