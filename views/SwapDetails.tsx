@@ -17,6 +17,7 @@ import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
 import Button from '../components/Button';
+import LoadingIndicator from '../components/LoadingIndicator';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -40,6 +41,7 @@ interface SwapDetailsProps {
 interface SwapDetailsState {
     updates: any;
     error: any;
+    loading: boolean;
 }
 
 @inject('TransactionsStore', 'SwapStore')
@@ -54,7 +56,8 @@ export default class SwapDetails extends React.Component<
         super(props);
         this.state = {
             updates: null,
-            error: null
+            error: null,
+            loading: true
         };
     }
 
@@ -104,6 +107,7 @@ export default class SwapDetails extends React.Component<
         }
 
         console.log('Starting polling for updates...');
+        this.setState({ loading: true });
 
         const pollForUpdates = async () => {
             try {
@@ -120,11 +124,10 @@ export default class SwapDetails extends React.Component<
 
                 // Check for API errors
                 if (data?.error) {
-                    console.error(`Error from API: ${data.error}`);
-
                     if (data.error === 'Operation timeout') {
                         this.setState({
-                            error: 'The operation timed out.'
+                            error: 'The operation timed out.',
+                            loading: false
                         });
                         this.stopPolling(); // Stop polling
                         return;
@@ -138,7 +141,7 @@ export default class SwapDetails extends React.Component<
                 }
 
                 // Update the status in the component state
-                this.setState({ updates: data.status });
+                this.setState({ updates: data.status, loading: false });
 
                 // Update the status in Encrypted Storage
                 await this.updateSwapStatusInStorage(
@@ -388,6 +391,7 @@ export default class SwapDetails extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView style={{ marginHorizontal: 20 }}>
+                    {this.state.loading && <LoadingIndicator />}
                     {error && (
                         <ErrorMessage
                             message={error?.message || String(error)}
