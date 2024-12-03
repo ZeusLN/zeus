@@ -781,7 +781,7 @@ export default class WalletConfiguration extends React.Component<
                             <Row>
                                 {loading && (
                                     <View style={{ paddingRight: 15 }}>
-                                        <LoadingIndicator size={35} />
+                                        <LoadingIndicator size={30} />
                                     </View>
                                 )}
                                 <ScanBadge
