@@ -4,6 +4,7 @@ export default class BaseModel {
         Object.keys(data).forEach((field: any) => {
             // Handle Longs
             if (
+                data[field] &&
                 data[field].high !== undefined &&
                 data[field].low !== undefined
             ) {
