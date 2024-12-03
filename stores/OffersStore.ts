@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -10,26 +10,23 @@ export default class OffersStore {
     @observable public error_msg: string;
 
     @action
-    public reset = () => {
-        this.offers = [];
-        this.loading = false;
-        this.error = false;
-    };
-
-    @action
     public listOffers = async () => {
         this.loading = true;
         this.error = false;
 
         await BackendUtils.listOffers()
             .then((data: any) => {
-                this.offers = data.offers;
-                this.loading = false;
+                runInAction(() => {
+                    this.offers = data.offers;
+                    this.loading = false;
+                });
             })
             .catch(() => {
-                this.offers = [];
-                this.error = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.offers = [];
+                    this.error = true;
+                    this.loading = false;
+                });
             });
     };
 
@@ -45,9 +42,11 @@ export default class OffersStore {
                 return data;
             })
             .catch((e: any) => {
-                this.error = true;
-                this.error_msg = errorToUserFriendly(e);
-                this.loading = false;
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = errorToUserFriendly(e);
+                    this.loading = false;
+                });
             });
     };
 
@@ -63,9 +62,11 @@ export default class OffersStore {
                 return data;
             })
             .catch((e: any) => {
-                this.error = true;
-                this.error_msg = errorToUserFriendly(e);
-                this.loading = false;
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = errorToUserFriendly(e);
+                    this.loading = false;
+                });
             });
     };
 }

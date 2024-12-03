@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
@@ -543,7 +543,7 @@ export default class FiatStore {
         }
     };
 
-    @action getSymbol = () => {
+    public getSymbol = () => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
         if (fiat) {
@@ -558,7 +558,6 @@ export default class FiatStore {
         }
     };
 
-    @action
     public getRate = (sats: boolean = false) => {
         const { settings } = this.settingsStore;
         const { fiat } = settings;
@@ -724,16 +723,18 @@ export default class FiatStore {
                     settings.fiat
                 );
 
-                if (this.fiatRates) {
-                    this.fiatRates = this.fiatRates.filter(
-                        (r) => r.code !== settings.fiat
-                    );
-                    if (rate != null) {
-                        this.fiatRates = this.fiatRates.concat([rate]);
+                runInAction(() => {
+                    if (this.fiatRates) {
+                        this.fiatRates = this.fiatRates.filter(
+                            (r) => r.code !== settings.fiat
+                        );
+                        if (rate != null) {
+                            this.fiatRates = this.fiatRates.concat([rate]);
+                        }
+                    } else if (rate) {
+                        this.fiatRates = [rate];
                     }
-                } else if (rate) {
-                    this.fiatRates = [rate];
-                }
+                });
             }
 
             this.sourceOfCurrentFiatRates = settings.fiatRatesSource;
@@ -742,7 +743,6 @@ export default class FiatStore {
         }
     };
 
-    @action
     public formatAmountForDisplay = (input: string | number) => {
         const { symbol, space, rtl, separatorSwap } = this.getSymbol();
         const amount = separatorSwap
@@ -768,7 +768,9 @@ export default class FiatStore {
                     currencyPair: `BTC_${code}`
                 };
             }
-        } catch {}
+        } catch (error) {
+            console.error('Error fetching fiat rates from yadio', error);
+        }
 
         return undefined;
     };
@@ -783,7 +785,9 @@ export default class FiatStore {
             if (status == 200) {
                 return response.json();
             }
-        } catch {}
+        } catch (error) {
+            console.error('Error fetching fiat rates from zeus', error);
+        }
 
         return undefined;
     };

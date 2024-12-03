@@ -1,6 +1,6 @@
 const bitcoin = require('bitcoinjs-lib');
 
-import { action, reaction, observable } from 'mobx';
+import { action, reaction, observable, runInAction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -87,7 +87,8 @@ export default class TransactionsStore {
         );
     }
 
-    reset = () => {
+    @action
+    public reset = () => {
         this.loading = false;
         this.error = false;
         this.error_msg = null;
@@ -107,21 +108,23 @@ export default class TransactionsStore {
         this.funded_psbt = '';
     };
 
-    @action
     public getTransactions = async () => {
         this.loading = true;
         await BackendUtils.getTransactions()
             .then((data: any) => {
-                this.transactions = data.transactions
-                    .slice()
-                    .reverse()
-                    .map((tx: any) => new Transaction(tx));
-                this.loading = false;
+                runInAction(() => {
+                    this.transactions = data.transactions
+                        .slice()
+                        .reverse()
+                        .map((tx: any) => new Transaction(tx));
+                    this.loading = false;
+                });
             })
             .catch(() => {
-                // handle error
-                this.transactions = [];
-                this.loading = false;
+                runInAction(() => {
+                    this.transactions = [];
+                    this.loading = false;
+                });
             });
     };
 
@@ -145,24 +148,29 @@ export default class TransactionsStore {
             tx_hex
         })
             .then((data: any) => {
-                if (data.publish_error) {
-                    this.error_msg = errorToUserFriendly(data.publish_error);
-                    this.error = true;
-                    this.loading = false;
-                } else {
-                    this.txid = txid;
-                    this.publishSuccess = true;
-                    this.loading = false;
-                    this.channelsStore.resetOpenChannel();
-                }
+                runInAction(() => {
+                    if (data.publish_error) {
+                        this.error_msg = errorToUserFriendly(
+                            data.publish_error
+                        );
+                        this.error = true;
+                        this.loading = false;
+                    } else {
+                        this.txid = txid;
+                        this.publishSuccess = true;
+                        this.loading = false;
+                        this.channelsStore.resetOpenChannel();
+                    }
+                });
             })
             .catch((error: any) => {
-                // handle error
-                this.error_msg = errorToUserFriendly(
-                    error.publish_error || error.message
-                );
-                this.error = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.error_msg = errorToUserFriendly(
+                        error.publish_error || error.message
+                    );
+                    this.error = true;
+                    this.loading = false;
+                });
             });
     };
 
@@ -176,16 +184,13 @@ export default class TransactionsStore {
 
         if (defaultAccount) {
             return BackendUtils.finalizePsbt({ funded_psbt })
-                .then((data: any) => {
-                    const raw_final_tx = data.raw_final_tx;
-
-                    this.broadcast(raw_final_tx);
-                })
+                .then((data: any) => this.broadcast(data.raw_final_tx))
                 .catch((error: any) => {
-                    // handle error
-                    this.error_msg = errorToUserFriendly(error.message);
-                    this.error = true;
-                    this.loading = false;
+                    runInAction(() => {
+                        this.error_msg = errorToUserFriendly(error.message);
+                        this.error = true;
+                        this.loading = false;
+                    });
                 });
         } else {
             return new Promise((resolve) => {
@@ -209,12 +214,13 @@ export default class TransactionsStore {
 
                     resolve(true);
                 } catch (error: any) {
-                    // handle error
-                    this.error_msg = errorToUserFriendly(
-                        error?.message || error
-                    );
-                    this.error = true;
-                    this.loading = false;
+                    runInAction(() => {
+                        this.error_msg = errorToUserFriendly(
+                            error?.message || error
+                        );
+                        this.error = true;
+                        this.loading = false;
+                    });
 
                     resolve(true);
                 }
@@ -222,7 +228,6 @@ export default class TransactionsStore {
         }
     };
 
-    @action
     public finalizePsbtAndBroadcastChannel = async (
         signed_psbt: string,
         pending_chan_ids: Array<string>
@@ -236,36 +241,40 @@ export default class TransactionsStore {
             }
         })
             .then((data: any) => {
-                if (data.publish_error) {
-                    this.error_msg = errorToUserFriendly(data.publish_error);
-                    this.error = true;
-                    this.loading = false;
-                } else {
-                    try {
-                        // Parse the PSBT
-                        const psbt = bitcoin.Psbt.fromBase64(signed_psbt);
+                runInAction(() => {
+                    if (data.publish_error) {
+                        this.error_msg = errorToUserFriendly(
+                            data.publish_error
+                        );
+                        this.error = true;
+                        this.loading = false;
+                    } else {
+                        try {
+                            // Parse the PSBT
+                            const psbt = bitcoin.Psbt.fromBase64(signed_psbt);
 
-                        // Extract the finalized transaction from the PSBT
-                        const finalizedTx = psbt.extractTransaction();
+                            // Extract the finalized transaction from the PSBT
+                            const finalizedTx = psbt.extractTransaction();
 
-                        // Serialize the transaction and calculate its hash to obtain the txid
-                        const txid = finalizedTx.getId();
-                        this.txid = txid;
-                    } catch (e) {}
-                    this.publishSuccess = true;
-                    this.loading = false;
-                    this.channelsStore.resetOpenChannel();
-                }
+                            // Serialize the transaction and calculate its hash to obtain the txid
+                            const txid = finalizedTx.getId();
+                            this.txid = txid;
+                        } catch (e) {}
+                        this.publishSuccess = true;
+                        this.loading = false;
+                        this.channelsStore.resetOpenChannel();
+                    }
+                });
             })
             .catch((error: any) => {
-                // handle error
-                this.error_msg = errorToUserFriendly(error.message);
-                this.error = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error = true;
+                    this.loading = false;
+                });
             });
     };
 
-    @action
     public finalizeTxHexAndBroadcastChannel = async (
         tx_hex: string,
         pending_chan_ids: Array<string>
@@ -279,33 +288,38 @@ export default class TransactionsStore {
             }
         })
             .then((data: any) => {
-                if (data.publish_error) {
-                    this.error_msg = errorToUserFriendly(data.publish_error);
-                    this.error = true;
-                    this.loading = false;
-                } else {
-                    try {
-                        // Parse the tx
-                        const tx = bitcoin.Transaction.fromHex(tx_hex);
+                runInAction(() => {
+                    if (data.publish_error) {
+                        this.error_msg = errorToUserFriendly(
+                            data.publish_error
+                        );
+                        this.error = true;
+                        this.loading = false;
+                    } else {
+                        try {
+                            // Parse the tx
+                            const tx = bitcoin.Transaction.fromHex(tx_hex);
 
-                        // Serialize the transaction and calculate its hash
-                        const txid = tx.getId();
-                        this.txid = txid;
-                    } catch (e) {}
-                    this.publishSuccess = true;
-                    this.loading = false;
-                    this.channelsStore.resetOpenChannel();
-                }
+                            // Serialize the transaction and calculate its hash
+                            const txid = tx.getId();
+                            this.txid = txid;
+                        } catch (e) {}
+                        this.publishSuccess = true;
+                        this.loading = false;
+                        this.channelsStore.resetOpenChannel();
+                    }
+                });
             })
             .catch((error: any) => {
-                // handle error
-                this.error_msg = errorToUserFriendly(error.message);
-                this.error = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error = true;
+                    this.loading = false;
+                });
             });
     };
 
-    public sendCoinsLNDCoinControl = (
+    private sendCoinsLNDCoinControl = (
         transactionRequest: TransactionRequest,
         defaultAccount?: boolean
     ) => {
@@ -349,24 +363,30 @@ export default class TransactionsStore {
 
         BackendUtils.fundPsbt(fundPsbtRequest)
             .then((data: any) => {
-                this.crafting = false;
-                const funded_psbt: string = new FundedPsbt(
-                    data.funded_psbt
-                ).getFormatted();
+                runInAction(() => {
+                    this.crafting = false;
+                    const funded_psbt: string = new FundedPsbt(
+                        data.funded_psbt
+                    ).getFormatted();
 
-                if (account !== 'default') {
-                    this.funded_psbt = funded_psbt;
-                    this.loading = false;
-                } else {
-                    this.finalizePsbtAndBroadcast(funded_psbt, defaultAccount);
-                }
+                    if (account !== 'default') {
+                        this.funded_psbt = funded_psbt;
+                        this.loading = false;
+                    } else {
+                        this.finalizePsbtAndBroadcast(
+                            funded_psbt,
+                            defaultAccount
+                        );
+                    }
+                });
             })
             .catch((error: any) => {
-                // handle error
-                this.error_msg = errorToUserFriendly(error.message);
-                this.error = true;
-                this.crafting = false;
-                this.loading = false;
+                runInAction(() => {
+                    this.error_msg = errorToUserFriendly(error.message);
+                    this.error = true;
+                    this.crafting = false;
+                    this.loading = false;
+                });
             });
     };
 
@@ -417,15 +437,18 @@ export default class TransactionsStore {
 
         BackendUtils.sendCoins(transactionRequest)
             .then((data: any) => {
-                this.txid = data.txid;
-                this.publishSuccess = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.txid = data.txid;
+                    this.publishSuccess = true;
+                    this.loading = false;
+                });
             })
             .catch((error: Error) => {
-                // handle error
-                this.error_msg = errorToUserFriendly(error);
-                this.error = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.error_msg = errorToUserFriendly(error);
+                    this.error = true;
+                    this.loading = false;
+                });
             });
     };
 
@@ -614,14 +637,14 @@ export default class TransactionsStore {
             errorToUserFriendly(err) || localeString('error.sendingPayment');
     };
 
-    @action resetBroadcast = () => {
+    @action
+    public resetBroadcast = () => {
         this.error = true;
         this.loading = false;
         this.broadcast_txid = '';
         this.broadcast_err = null;
     };
 
-    @action
     public broadcastRawTxToMempoolSpace = (raw_tx_hex: string) => {
         this.resetBroadcast();
         const headers = {
@@ -638,21 +661,26 @@ export default class TransactionsStore {
         )
             .then((response: any) => {
                 const status = response.info().status;
+                const data = response.data;
                 if (status == 200) {
-                    const data = response.data;
-                    this.loading = false;
-                    this.broadcast_txid = data;
+                    runInAction(() => {
+                        this.loading = false;
+                        this.broadcast_txid = data;
+                    });
                     return data;
                 } else {
-                    const data = response.data;
-                    this.broadcast_err = data;
-                    this.loading = false;
-                    this.error = true;
+                    runInAction(() => {
+                        this.broadcast_err = data;
+                        this.loading = false;
+                        this.error = true;
+                    });
                 }
             })
             .catch((err) => {
-                this.broadcast_err = err.error || err.toString();
-                this.loading = false;
+                runInAction(() => {
+                    this.broadcast_err = err.error || err.toString();
+                    this.loading = false;
+                });
             });
     };
 }
