@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
@@ -61,24 +61,31 @@ export default class FeeStore {
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
-                    this.loading = false;
-                    this.recommendedFees = response.json();
+                    runInAction(() => {
+                        this.loading = false;
+                        this.recommendedFees = response.json();
+                    });
                     return this.recommendedFees;
                 } else {
-                    this.recommendedFees = {};
-                    this.loading = false;
-                    this.error = true;
+                    runInAction(() => {
+                        this.recommendedFees = {};
+                        this.loading = false;
+                        this.error = true;
+                    });
                 }
             })
             .catch((error: any) => {
                 console.error('Error fetching fees:', error);
-                this.recommendedFees = {};
-                this.loading = false;
-                this.error = true;
+                runInAction(() => {
+                    this.recommendedFees = {};
+                    this.loading = false;
+                    this.error = true;
+                });
             });
     };
 
-    resetFees = () => {
+    @action
+    public resetFees = () => {
         this.fees = {};
         this.loadingFees = false;
         this.bumpFeeSuccess = false;
@@ -95,22 +102,24 @@ export default class FeeStore {
         this.loadingFees = true;
         BackendUtils.getFees()
             .then((data: any) => {
-                if (data.channel_fees) {
-                    const channelFees: any = {};
-                    data.channel_fees.forEach((channelFee: any) => {
-                        channelFees[channelFee.chan_point] = channelFee;
-                    });
+                runInAction(() => {
+                    if (data.channel_fees) {
+                        const channelFees: any = {};
+                        data.channel_fees.forEach((channelFee: any) => {
+                            channelFees[channelFee.chan_point] = channelFee;
+                        });
 
-                    this.channelFees = channelFees;
-                }
+                        this.channelFees = channelFees;
+                    }
 
-                this.dayEarned = data.day_fee_sum || 0;
-                this.weekEarned = data.week_fee_sum || 0;
-                this.monthEarned = data.month_fee_sum || 0;
-                // Deprecated in LND
-                // Used in c-lightning-REST
-                this.totalEarned = data.total_fee_sum || 0;
-                this.loadingFees = false;
+                    this.dayEarned = data.day_fee_sum || 0;
+                    this.weekEarned = data.week_fee_sum || 0;
+                    this.monthEarned = data.month_fee_sum || 0;
+                    // Deprecated in LND
+                    // Used in c-lightning-REST
+                    this.totalEarned = data.total_fee_sum || 0;
+                    this.loadingFees = false;
+                });
             })
             .catch((err: any) => {
                 console.log('error getting fee report', err);
@@ -174,13 +183,17 @@ export default class FeeStore {
 
         return BackendUtils.setFees(data)
             .then(() => {
-                this.loading = false;
-                this.setFeesSuccess = true;
+                runInAction(() => {
+                    this.loading = false;
+                    this.setFeesSuccess = true;
+                });
             })
             .catch((err: any) => {
-                this.setFeesErrorMsg = errorToUserFriendly(err);
-                this.loading = false;
-                this.setFeesError = true;
+                runInAction(() => {
+                    this.setFeesErrorMsg = errorToUserFriendly(err);
+                    this.loading = false;
+                    this.setFeesError = true;
+                });
             });
     };
 
@@ -188,7 +201,8 @@ export default class FeeStore {
         this.tempFee = fee;
     };
 
-    forwardingError = () => {
+    @action
+    private forwardingError = () => {
         this.forwardingEvents = [];
         this.forwardingHistoryError = true;
         this.loading = false;
@@ -203,50 +217,26 @@ export default class FeeStore {
         this.earnedDuringTimeframe = new BigNumber(0);
         BackendUtils.getForwardingHistory(params)
             .then((data: any) => {
-                this.forwardingEvents = data.forwarding_events
-                    .map((event: any) => new ForwardEvent(event))
-                    .reverse();
+                runInAction(() => {
+                    this.forwardingEvents = data.forwarding_events
+                        .map((event: any) => new ForwardEvent(event))
+                        .reverse();
 
-                // Add up fees earned for this timeframe
-                // Uses BigNumber to prevent rounding errors in the add operation
-                this.forwardingEvents.map(
-                    (event: ForwardEvent) =>
-                        (this.earnedDuringTimeframe =
-                            this.earnedDuringTimeframe.plus(
-                                Number(event.fee_msat) / 1000
-                            ))
-                );
+                    // Add up fees earned for this timeframe
+                    // Uses BigNumber to prevent rounding errors in the add operation
+                    this.forwardingEvents.forEach(
+                        (event: ForwardEvent) =>
+                            (this.earnedDuringTimeframe =
+                                this.earnedDuringTimeframe.plus(
+                                    Number(event.fee_msat) / 1000
+                                ))
+                    );
 
-                this.lastOffsetIndex = data.last_offset_index;
-                this.loading = false;
+                    this.lastOffsetIndex = data.last_offset_index;
+                    this.loading = false;
+                });
             })
-            .catch(() => {
-                this.forwardingError();
-            });
-    };
-
-    @action
-    public bumpFee = (params?: any) => {
-        this.loading = true;
-        this.bumpFeeSuccess = false;
-        this.bumpFeeError = false;
-        const [txid_str, output_index] = params.outpoint.split(':');
-        BackendUtils.bumpFee({
-            ...params,
-            outpoint: {
-                txid_str,
-                output_index: Number(output_index) || 0
-            }
-        })
-            .then(() => {
-                this.bumpFeeSuccess = true;
-                this.loading = false;
-            })
-            .catch((err: Error) => {
-                this.bumpFeeError = true;
-                this.bumpFeeErrorMsg = errorToUserFriendly(err);
-                this.loading = false;
-            });
+            .catch(() => this.forwardingError());
     };
 
     @action
@@ -287,8 +277,10 @@ export default class FeeStore {
             }
         })
             .then(() => {
-                this.bumpFeeSuccess = true;
-                this.loading = false;
+                runInAction(() => {
+                    this.bumpFeeSuccess = true;
+                    this.loading = false;
+                });
             })
             .catch((err: Error) => {
                 // if output isn't correct (it'll be index 0 or 1), try alternate input
@@ -310,19 +302,25 @@ export default class FeeStore {
                         }
                     })
                         .then(() => {
-                            this.bumpFeeError = false;
-                            this.bumpFeeSuccess = true;
-                            this.loading = false;
+                            runInAction(() => {
+                                this.bumpFeeError = false;
+                                this.bumpFeeSuccess = true;
+                                this.loading = false;
+                            });
                         })
                         .catch((err: Error) => {
-                            this.bumpFeeError = true;
-                            this.bumpFeeErrorMsg = errorToUserFriendly(err);
-                            this.loading = false;
+                            runInAction(() => {
+                                this.bumpFeeError = true;
+                                this.bumpFeeErrorMsg = errorToUserFriendly(err);
+                                this.loading = false;
+                            });
                         });
                 } else {
-                    this.bumpFeeError = true;
-                    this.bumpFeeErrorMsg = errorToUserFriendly(err);
-                    this.loading = false;
+                    runInAction(() => {
+                        this.bumpFeeError = true;
+                        this.bumpFeeErrorMsg = errorToUserFriendly(err);
+                        this.loading = false;
+                    });
                 }
             });
     };
