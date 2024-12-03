@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
@@ -45,7 +45,7 @@ export default class LightningAddressStore {
     @observable public redeeming: boolean = false;
     @observable public redeemingAll: boolean = false;
     @observable public error: boolean = false;
-    @observable public error_msg: string = '';
+    @observable public error_msg: string | undefined;
     @observable public availableHashes: number = 0; // on server
     @observable public localHashes: number = 0; // on device
     @observable public paid: any = [];
@@ -66,14 +66,12 @@ export default class LightningAddressStore {
         this.settingsStore = settingsStore;
     }
 
-    @action
     public deleteAndGenerateNewPreimages = async () => {
         this.loading = true;
         await Storage.setItem(HASHES_STORAGE_STRING, '');
         this.generatePreimages(true);
     };
 
-    @action
     public DEV_deleteLocalHashes = async () => {
         this.loading = true;
         await Storage.setItem(HASHES_STORAGE_STRING, '');
@@ -81,45 +79,32 @@ export default class LightningAddressStore {
         this.loading = false;
     };
 
-    @action
-    public getPreimageMap = async () => {
+    private getPreimageMap = async () => {
         this.loading = true;
         const map = await Storage.getItem(HASHES_STORAGE_STRING);
 
-        if (map) {
-            this.preimageMap = JSON.parse(map);
-            this.localHashes = Object.keys(this.preimageMap).length;
-        }
+        runInAction(() => {
+            if (map) {
+                this.preimageMap = JSON.parse(map);
+                this.localHashes = Object.keys(this.preimageMap).length;
+            }
 
-        this.loading = false;
+            this.loading = false;
+        });
         return this.preimageMap;
     };
 
-    @action
-    public getLightningAddressActivated = async () => {
-        this.loading = true;
-        const lightningAddressActivated = await Storage.getItem(
-            ADDRESS_ACTIVATED_STRING
-        );
-
-        if (lightningAddressActivated) {
-            this.lightningAddressActivated = Boolean(lightningAddressActivated);
-            this.loading = false;
-            return this.lightningAddressActivated;
-        } else {
-            this.loading = false;
-        }
-    };
-
-    setLightningAddress = async (handle: string, domain: string) => {
+    private setLightningAddress = async (handle: string, domain: string) => {
         await Storage.setItem(ADDRESS_ACTIVATED_STRING, true);
-        this.lightningAddressActivated = true;
-        this.lightningAddressHandle = handle;
-        this.lightningAddressDomain = domain;
-        this.lightningAddress = `${handle}@${domain}`;
+        runInAction(() => {
+            this.lightningAddressActivated = true;
+            this.lightningAddressHandle = handle;
+            this.lightningAddressDomain = domain;
+            this.lightningAddress = `${handle}@${domain}`;
+        });
     };
 
-    deleteHash = async (hash: string) => {
+    private deleteHash = async (hash: string) => {
         const hashesString =
             (await Storage.getItem(HASHES_STORAGE_STRING)) || '{}';
 
@@ -131,7 +116,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public generatePreimages = async (newDevice?: boolean) => {
+    private generatePreimages = async (newDevice?: boolean) => {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
@@ -184,8 +169,8 @@ export default class LightningAddressStore {
 
         await Storage.setItem(HASHES_STORAGE_STRING, newHashes);
 
-        return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/lnurl/auth`,
                 {
@@ -194,89 +179,47 @@ export default class LightningAddressStore {
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
-            )
-                .then((response: any) => {
-                    const status = response.info().status;
-                    const data = response.json();
-                    if (status == 200) {
-                        const { verification } = data;
-                        BackendUtils.signMessage(verification)
-                            .then((data: any) => {
-                                const signature = data.zbase || data.signature;
-                                ReactNativeBlobUtil.fetch(
-                                    'POST',
-                                    `${LNURL_HOST}/lnurl/submitHashes`,
-                                    {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    JSON.stringify(
-                                        nostrSignatures.length > 0
-                                            ? {
-                                                  pubkey: this.nodeInfoStore
-                                                      .nodeInfo.identity_pubkey,
-                                                  message: verification,
-                                                  signature,
-                                                  hashes,
-                                                  nostrSignatures,
-                                                  newDevice
-                                              }
-                                            : {
-                                                  pubkey: this.nodeInfoStore
-                                                      .nodeInfo.identity_pubkey,
-                                                  message: verification,
-                                                  signature,
-                                                  hashes,
-                                                  newDevice
-                                              }
-                                    )
-                                )
-                                    .then(async (response: any) => {
-                                        const data = response.json();
-                                        const { created_at, success } = data;
+            );
 
-                                        if (status === 200 && success) {
-                                            this.loading = false;
-                                            resolve({
-                                                created_at
-                                            });
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
 
-                                            this.status();
-                                        } else {
-                                            this.loading = false;
-                                            this.error = true;
-                                            this.error_msg =
-                                                data?.error?.toString();
-                                            reject(data.error);
-                                        }
-                                    })
-                                    .catch((error: any) => {
-                                        this.loading = false;
-                                        this.error = true;
-                                        this.error_msg =
-                                            error && error.toString();
-                                        reject(error);
-                                    });
-                            })
-                            .catch((error: any) => {
-                                this.loading = false;
-                                this.error = true;
-                                this.error_msg = error && error.toString();
-                                reject(error);
-                            });
-                    } else {
-                        this.loading = false;
-                        this.error = true;
-                        this.error_msg = data?.error?.toString();
-                        reject(data.error);
-                    }
-                })
-                .catch((error: any) => {
-                    this.loading = false;
-                    this.error = true;
-                    this.error_msg = error && error.toString();
-                    reject(error);
-                });
-        });
+            const { verification } = authData;
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            const payload = {
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                message: verification,
+                signature,
+                hashes,
+                newDevice,
+                ...(nostrSignatures.length > 0 && { nostrSignatures })
+            };
+
+            const submitResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/submitHashes`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify(payload)
+            );
+
+            const submitData = submitResponse.json();
+            if (!submitData.success) throw submitData.error;
+
+            this.loading = false;
+            await this.status();
+            return { created_at: submitData.created_at };
+        } catch (error) {
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = error?.toString();
+            });
+            throw error;
+        }
     };
 
     @action
@@ -289,233 +232,151 @@ export default class LightningAddressStore {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
-        return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
+
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/lnurl/auth`,
-                {
-                    'Content-Type': 'application/json'
-                },
+                { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
-            )
-                .then((response: any) => {
-                    const status = response.info().status;
-                    const data = response.json();
-                    if (status == 200) {
-                        const { verification } = data;
-                        const relays_sig = bytesToHex(
-                            schnorr.sign(
-                                hashjs
-                                    .sha256()
-                                    .update(JSON.stringify(relays))
-                                    .digest('hex'),
-                                nostrPrivateKey
-                            )
-                        );
+            );
 
-                        BackendUtils.signMessage(verification)
-                            .then((data: any) => {
-                                const signature = data.zbase || data.signature;
-                                ReactNativeBlobUtil.fetch(
-                                    'POST',
-                                    `${LNURL_HOST}/lnurl/create`,
-                                    {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    JSON.stringify({
-                                        pubkey: this.nodeInfoStore.nodeInfo
-                                            .identity_pubkey,
-                                        message: verification,
-                                        signature,
-                                        handle,
-                                        domain: 'zeuspay.com',
-                                        nostr_pk,
-                                        relays,
-                                        relays_sig,
-                                        request_channels: false // deprecated
-                                    })
-                                )
-                                    .then(async (response: any) => {
-                                        const data = response.json();
-                                        const status = response.info().status;
-                                        const {
-                                            handle,
-                                            domain,
-                                            created_at,
-                                            success
-                                        } = data;
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
 
-                                        if (status === 200 && success) {
-                                            if (handle) {
-                                                this.setLightningAddress(
-                                                    handle,
-                                                    domain
-                                                );
-                                            }
+            const { verification } = authData;
+            const relays_sig = bytesToHex(
+                schnorr.sign(
+                    hashjs
+                        .sha256()
+                        .update(JSON.stringify(relays))
+                        .digest('hex'),
+                    nostrPrivateKey
+                )
+            );
 
-                                            await this.settingsStore.updateSettings(
-                                                {
-                                                    lightningAddress: {
-                                                        enabled: true,
-                                                        automaticallyAccept:
-                                                            true,
-                                                        automaticallyRequestOlympusChannels:
-                                                            false, // deprecated
-                                                        allowComments: true,
-                                                        nostrPrivateKey,
-                                                        nostrRelays: relays,
-                                                        notifications: 1
-                                                    }
-                                                }
-                                            );
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
 
-                                            // ensure push credentials are in place
-                                            // right after creation
-                                            this.updatePushCredentials();
-
-                                            this.loading = false;
-                                            resolve({
-                                                created_at
-                                            });
-                                        } else {
-                                            this.loading = false;
-                                            this.error = true;
-                                            this.error_msg =
-                                                data?.error?.toString();
-                                            reject(data.error);
-                                        }
-                                    })
-                                    .catch((error: any) => {
-                                        this.loading = false;
-                                        this.error = true;
-                                        this.error_msg =
-                                            error && error.toString();
-                                        reject(error);
-                                    });
-                            })
-                            .catch((error: any) => {
-                                this.loading = false;
-                                this.error = true;
-                                this.error_msg = error && error.toString();
-                                reject(error);
-                            });
-                    } else {
-                        this.loading = false;
-                        this.error = true;
-                        this.error_msg = data?.error?.toString();
-                        reject(data.error);
-                    }
+            const createResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/create`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature,
+                    handle,
+                    domain: 'zeuspay.com',
+                    nostr_pk,
+                    relays,
+                    relays_sig,
+                    request_channels: false // deprecated
                 })
-                .catch((error: any) => {
-                    this.loading = false;
-                    this.error = true;
-                    this.error_msg = error && error.toString();
-                    reject(error);
-                });
-        });
+            );
+
+            const createData = createResponse.json();
+            if (createResponse.info().status !== 200 || !createData.success) {
+                throw createData.error;
+            }
+
+            const { handle: responseHandle, domain, created_at } = createData;
+
+            if (responseHandle) {
+                this.setLightningAddress(responseHandle, domain);
+            }
+
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    enabled: true,
+                    automaticallyAccept: true,
+                    automaticallyRequestOlympusChannels: false, // deprecated
+                    allowComments: true,
+                    nostrPrivateKey,
+                    nostrRelays: relays,
+                    notifications: 1
+                }
+            });
+
+            runInAction(() => {
+                // ensure push credentials are in place
+                // right after creation
+                this.updatePushCredentials();
+                this.loading = false;
+            });
+
+            return { created_at };
+        } catch (error) {
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = error?.toString();
+            });
+            throw error;
+        }
     };
 
     @action
-    public update = (updates: any) => {
+    public update = async (updates: any) => {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
-        return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
+
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/lnurl/auth`,
-                {
-                    'Content-Type': 'application/json'
-                },
+                { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
-            )
-                .then((response: any) => {
-                    const status = response.info().status;
-                    const data = response.json();
-                    if (status == 200) {
-                        const { verification } = data;
-                        BackendUtils.signMessage(verification)
-                            .then((data: any) => {
-                                const signature = data.zbase || data.signature;
-                                ReactNativeBlobUtil.fetch(
-                                    'POST',
-                                    `${LNURL_HOST}/lnurl/update`,
-                                    {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    JSON.stringify({
-                                        pubkey: this.nodeInfoStore.nodeInfo
-                                            .identity_pubkey,
-                                        message: verification,
-                                        signature,
-                                        updates
-                                    })
-                                )
-                                    .then((response: any) => {
-                                        const data = response.json();
-                                        const status = response.info().status;
-                                        const {
-                                            handle,
-                                            domain,
-                                            created_at,
-                                            success
-                                        } = data;
+            );
 
-                                        if (status === 200 && success) {
-                                            if (handle) {
-                                                this.setLightningAddress(
-                                                    handle,
-                                                    domain || 'zeuspay.com'
-                                                );
-                                            }
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
 
-                                            this.loading = false;
-                                            resolve({
-                                                created_at
-                                            });
-                                        } else {
-                                            this.loading = false;
-                                            this.error = true;
-                                            this.error_msg =
-                                                data?.error?.toString();
-                                            reject(data.error);
-                                        }
-                                    })
-                                    .catch((error: any) => {
-                                        this.loading = false;
-                                        this.error = true;
-                                        this.error_msg =
-                                            error && error.toString();
-                                        reject(error);
-                                    });
-                            })
-                            .catch((error: any) => {
-                                this.loading = false;
-                                this.error = true;
-                                this.error_msg = error && error.toString();
-                                reject(error);
-                            });
-                    } else {
-                        this.loading = false;
-                        this.error = true;
-                        this.error_msg = data?.error?.toString();
-                        reject(data.error);
-                    }
+            const { verification } = authData;
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            const updateResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/update`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature,
+                    updates
                 })
-                .catch((error: any) => {
-                    this.loading = false;
-                    this.error = true;
-                    this.error_msg = error && error.toString();
-                    reject(error);
-                });
-        });
+            );
+
+            const updateData = updateResponse.json();
+            if (updateResponse.info().status !== 200 || !updateData.success) {
+                throw updateData.error;
+            }
+
+            const { handle, domain, created_at } = updateData;
+
+            if (handle) {
+                this.setLightningAddress(handle, domain || 'zeuspay.com');
+            }
+
+            this.loading = false;
+            return { created_at };
+        } catch (error) {
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = error?.toString();
+            });
+            throw error;
+        }
     };
 
-    enhanceWithFee = (paymentArray: Array<any>) =>
+    private enhanceWithFee = (paymentArray: Array<any>) =>
         paymentArray.map((item: any) => {
             let fee;
             try {
@@ -533,126 +394,87 @@ export default class LightningAddressStore {
     @action
     public status = async (isRedeem?: boolean) => {
         this.loading = true;
-        return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
+
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/lnurl/auth`,
-                {
-                    'Content-Type': 'application/json'
-                },
+                { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
-            )
-                .then((response: any) => {
-                    const status = response.info().status;
-                    const data = response.json();
-                    if (status == 200) {
-                        const { verification } = data;
-                        BackendUtils.signMessage(verification)
-                            .then((data: any) => {
-                                const signature = data.zbase || data.signature;
-                                ReactNativeBlobUtil.fetch(
-                                    'POST',
-                                    `${LNURL_HOST}/lnurl/status`,
-                                    {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    JSON.stringify({
-                                        pubkey: this.nodeInfoStore.nodeInfo
-                                            .identity_pubkey,
-                                        message: verification,
-                                        signature
-                                    })
-                                )
-                                    .then(async (response: any) => {
-                                        const data = response.json();
-                                        const {
-                                            results,
-                                            success,
-                                            paid,
-                                            fees,
-                                            minimumSats,
-                                            handle,
-                                            domain
-                                        } = data;
+            );
 
-                                        if (status === 200 && success) {
-                                            if (!isRedeem) {
-                                                this.error = false;
-                                                this.error_msg = '';
-                                            }
-                                            this.loading = false;
-                                            this.availableHashes = results || 0;
-                                            await this.getPreimageMap();
-                                            this.paid =
-                                                this.enhanceWithFee(paid);
-                                            this.fees = fees;
-                                            this.minimumSats = minimumSats;
-                                            this.lightningAddressHandle =
-                                                handle;
-                                            this.lightningAddressDomain =
-                                                domain;
-                                            if (handle && domain) {
-                                                this.lightningAddress = `${handle}@${domain}`;
-                                            }
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
 
-                                            if (
-                                                this.lightningAddress &&
-                                                this.localHashes === 0
-                                            ) {
-                                                this.generatePreimages(true);
-                                            } else if (
-                                                this.lightningAddress &&
-                                                new BigNumber(
-                                                    this.availableHashes
-                                                ).lt(50)
-                                            ) {
-                                                this.generatePreimages();
-                                            }
-                                            resolve({
-                                                results
-                                            });
-                                        } else {
-                                            this.loading = false;
-                                            this.error = true;
-                                            this.error_msg =
-                                                data?.error?.toString();
-                                            reject(data.error);
-                                        }
-                                    })
-                                    .catch((error: any) => {
-                                        this.loading = false;
-                                        this.error = true;
-                                        this.error_msg =
-                                            error && error.toString();
-                                        reject(error);
-                                    });
-                            })
-                            .catch((error: any) => {
-                                this.loading = false;
-                                this.error = true;
-                                this.error_msg = error && error.toString();
-                                reject(error);
-                            });
-                    } else {
-                        this.loading = false;
-                        this.error = true;
-                        this.error_msg = data?.error?.toString();
-                        reject(data.error);
-                    }
+            const { verification } = authData;
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            const statusResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/status`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature
                 })
-                .catch((error: any) => {
-                    this.loading = false;
-                    this.error = true;
-                    this.error_msg = error && error.toString();
-                    reject(error);
-                });
-        });
+            );
+
+            const statusData = statusResponse.json();
+            if (statusResponse.info().status !== 200 || !statusData.success) {
+                throw statusData.error;
+            }
+
+            const { results, paid, fees, minimumSats, handle, domain } =
+                statusData;
+
+            runInAction(() => {
+                if (!isRedeem) {
+                    this.error = false;
+                    this.error_msg = '';
+                }
+                this.loading = false;
+                this.availableHashes = results || 0;
+            });
+
+            await this.getPreimageMap();
+
+            runInAction(() => {
+                this.paid = this.enhanceWithFee(paid);
+                this.fees = fees;
+                this.minimumSats = minimumSats;
+                this.lightningAddressHandle = handle;
+                this.lightningAddressDomain = domain;
+                if (handle && domain) {
+                    this.lightningAddress = `${handle}@${domain}`;
+                }
+
+                if (this.lightningAddress && this.localHashes === 0) {
+                    this.generatePreimages(true);
+                } else if (
+                    this.lightningAddress &&
+                    new BigNumber(this.availableHashes).lt(50)
+                ) {
+                    this.generatePreimages();
+                }
+            });
+
+            return { results };
+        } catch (error) {
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = error?.toString();
+            });
+            throw error;
+        }
     };
 
     @action
-    public redeem = async (
+    private redeem = async (
         hash: string,
         payReq?: string,
         preimageNotFound?: boolean
@@ -664,90 +486,57 @@ export default class LightningAddressStore {
             );
             return;
         }
+
         this.error = false;
         this.error_msg = '';
         this.redeeming = true;
-        return await new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
+
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${LNURL_HOST}/lnurl/auth`,
-                {
-                    'Content-Type': 'application/json'
-                },
+                { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
-            )
-                .then((response: any) => {
-                    const status = response.info().status;
-                    const data = response.json();
-                    if (status == 200) {
-                        const { verification } = data;
+            );
 
-                        BackendUtils.signMessage(verification)
-                            .then((data: any) => {
-                                const signature = data.zbase || data.signature;
-                                ReactNativeBlobUtil.fetch(
-                                    'POST',
-                                    `${LNURL_HOST}/lnurl/redeem`,
-                                    {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    JSON.stringify({
-                                        pubkey: this.nodeInfoStore.nodeInfo
-                                            .identity_pubkey,
-                                        message: verification,
-                                        signature,
-                                        hash,
-                                        payReq
-                                    })
-                                )
-                                    .then(async (response: any) => {
-                                        const data = response.json();
-                                        const { success } = data;
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
 
-                                        if (status === 200 && success) {
-                                            this.redeeming = false;
-                                            await this.deleteHash(hash);
-                                            resolve({
-                                                success
-                                            });
-                                        } else {
-                                            this.redeeming = false;
-                                            this.error = true;
-                                            this.error_msg =
-                                                data?.error?.toString();
-                                            reject(data.error);
-                                        }
-                                    })
-                                    .catch((error: any) => {
-                                        this.redeeming = false;
-                                        this.error = true;
-                                        this.error_msg =
-                                            error && error.toString();
-                                        reject(error);
-                                    });
-                            })
-                            .catch((error: any) => {
-                                this.redeeming = false;
-                                this.error = true;
-                                this.error_msg = error && error.toString();
-                                reject(error);
-                            });
-                    } else {
-                        this.redeeming = false;
-                        this.error = true;
-                        this.error_msg = data?.error?.toString();
-                        reject(data.error);
-                    }
+            const { verification } = authData;
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            const redeemResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/redeem`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature,
+                    hash,
+                    payReq
                 })
-                .catch((error: any) => {
-                    this.redeeming = false;
-                    this.error = true;
-                    this.error_msg = error && error.toString();
-                    reject(error);
-                });
-        });
+            );
+
+            const redeemData = redeemResponse.json();
+            if (redeemResponse.info().status !== 200 || !redeemData.success) {
+                throw redeemData.error;
+            }
+
+            this.redeeming = false;
+            await this.deleteHash(hash);
+            return { success: redeemData.success };
+        } catch (error) {
+            runInAction(() => {
+                this.redeeming = false;
+                this.error = true;
+                this.error_msg = error?.toString();
+            });
+            throw error;
+        }
     };
 
     @action
@@ -818,7 +607,7 @@ export default class LightningAddressStore {
         };
     };
 
-    calculateFeeMsat = (amountMsat: string | number) => {
+    private calculateFeeMsat = (amountMsat: string | number) => {
         let feeMsat;
         for (let i = this.fees.length - 1; i >= 0; i--) {
             const feeItem = this.fees[i];
@@ -854,7 +643,7 @@ export default class LightningAddressStore {
         }
     };
 
-    analyzeAttestation = (
+    private analyzeAttestation = (
         attestation: any,
         hash: string,
         amountMsat: string | number
@@ -913,12 +702,8 @@ export default class LightningAddressStore {
         return attestation;
     };
 
-    @action
-    public setDeviceToken = (token: string) => {
-        this.deviceToken = token;
-    };
+    public setDeviceToken = (token: string) => (this.deviceToken = token);
 
-    @action
     public updatePushCredentials = async () => {
         const DEVICE_TOKEN_KEY = 'zeus-notification-device-token';
         const token = await Storage.getItem(DEVICE_TOKEN_KEY);
@@ -988,7 +773,8 @@ export default class LightningAddressStore {
                             result.payment_request,
                             preimageNotFound
                         ).then((success) => {
-                            if (success === true) fireLocalNotification();
+                            if (success?.success === true)
+                                fireLocalNotification();
                             if (!skipStatus) this.status(true);
                             return;
                         });
@@ -1006,7 +792,7 @@ export default class LightningAddressStore {
                                     result.payment_request,
                                     preimageNotFound
                                 ).then((success) => {
-                                    if (success === true)
+                                    if (success?.success === true)
                                         fireLocalNotification();
                                     if (!skipStatus) this.status(true);
                                     return;
@@ -1020,7 +806,8 @@ export default class LightningAddressStore {
                             undefined,
                             preimageNotFound
                         ).then((success) => {
-                            if (success === true) fireLocalNotification();
+                            if (success?.success === true)
+                                fireLocalNotification();
                             if (!skipStatus) this.status(true);
                             return;
                         });
@@ -1069,12 +856,13 @@ export default class LightningAddressStore {
                     });
             }
         }
-        this.status(true);
-        this.redeemingAll = false;
+        runInAction(() => {
+            this.status(true);
+            this.redeemingAll = false;
+        });
     };
 
-    @action
-    public subscribeUpdates = () => {
+    private subscribeUpdates = () => {
         if (this.socket) return;
         ReactNativeBlobUtil.fetch(
             'POST',
@@ -1135,12 +923,12 @@ export default class LightningAddressStore {
                                         comment
                                     );
                                 })
-                                .catch((e) => {
+                                .catch((e) =>
                                     console.log(
                                         'Error looking up attestation',
                                         e
-                                    );
-                                });
+                                    )
+                                );
                         }
                     });
                 });
@@ -1148,7 +936,6 @@ export default class LightningAddressStore {
         });
     };
 
-    @action
     public prepareToAutomaticallyAccept = async () => {
         this.prepareToAutomaticallyAcceptStart = true;
 
@@ -1156,9 +943,11 @@ export default class LightningAddressStore {
             const isReady =
                 await this.nodeInfoStore.isLightningReadyToReceive();
             if (isReady) {
-                this.readyToAutomaticallyAccept = true;
-                this.redeemAllOpenPayments();
-                this.subscribeUpdates();
+                runInAction(() => {
+                    this.readyToAutomaticallyAccept = true;
+                    this.redeemAllOpenPayments();
+                    this.subscribeUpdates();
+                });
             }
             await sleep(3000);
         }

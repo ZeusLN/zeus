@@ -1,4 +1,4 @@
-import { action, observable, reaction } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 import _ from 'lodash';
 import { randomBytes } from 'react-native-randombytes';
@@ -153,7 +153,7 @@ export default class ChannelsStore {
     }
 
     @action
-    resetOpenChannel = (silent?: boolean) => {
+    public resetOpenChannel = (silent?: boolean) => {
         this.loading = false;
         this.error = false;
         if (!silent) {
@@ -173,13 +173,12 @@ export default class ChannelsStore {
         this.pending_chan_ids = [];
     };
 
-    @action
-    clearCloseChannelErr = () => {
+    public clearCloseChannelErr = () => {
         this.closeChannelErr = null;
     };
 
     @action
-    reset = () => {
+    public reset = () => {
         this.resetOpenChannel();
         this.haveAnnouncedChannels = false;
         this.nodes = {};
@@ -201,7 +200,7 @@ export default class ChannelsStore {
     };
 
     @action
-    setSearch = (query: string) => {
+    public setSearch = (query: string) => {
         this.search = query;
         this.filterChannels();
         this.filterPendingChannels();
@@ -209,7 +208,7 @@ export default class ChannelsStore {
     };
 
     @action
-    setSort = (value: any) => {
+    public setSort = (value: any) => {
         this.sort = value;
         this.filterChannels();
         this.filterPendingChannels();
@@ -217,15 +216,14 @@ export default class ChannelsStore {
     };
 
     @action
-    setFilterOptions = (options: string[]) => {
+    public setFilterOptions = (options: string[]) => {
         this.filterOptions = options;
         this.filterChannels();
         this.filterPendingChannels();
         this.filterClosedChannels();
     };
 
-    @action
-    filter = (channels: Array<Channel>) => {
+    private filter = (channels: Array<Channel>) => {
         const query = this.search;
         const filtered = channels
             ?.filter(
@@ -273,30 +271,21 @@ export default class ChannelsStore {
         return this.sort.dir === 'DESC' ? sorted : sorted?.reverse();
     };
 
-    @action
-    filterChannels = () => {
+    private filterChannels = () => {
         this.filteredChannels = this.filter(this.enrichedChannels);
     };
 
-    @action
-    filterPendingChannels = () => {
+    private filterPendingChannels = () => {
         this.filteredPendingChannels = this.filter(
             this.enrichedPendingChannels
         );
     };
 
-    @action
-    filterClosedChannels = () => {
+    private filterClosedChannels = () => {
         this.filteredClosedChannels = this.filter(this.enrichedClosedChannels);
     };
 
-    @action
-    setLoading = (state: boolean) => {
-        this.loading = state;
-    };
-
-    @action
-    getNodeInfo = (pubkey: string) => {
+    public getNodeInfo = (pubkey: string) => {
         this.loading = true;
 
         const timeoutPromise = new Promise((_, reject) => {
@@ -308,9 +297,11 @@ export default class ChannelsStore {
             BackendUtils.getNodeInfo([pubkey])
         ])
             .then((data: any) => {
-                this.loading = false;
-                if (data?.node?.alias)
-                    this.aliasMap.set(pubkey, data.node.alias);
+                runInAction(() => {
+                    this.loading = false;
+                    if (data?.node?.alias)
+                        this.aliasMap.set(pubkey, data.node.alias);
+                });
                 return data.node;
             })
             .catch(() => {
@@ -319,8 +310,7 @@ export default class ChannelsStore {
             });
     };
 
-    @action
-    enrichChannels = async (
+    private enrichChannels = async (
         channels: Array<Channel>,
         setPendingHtlcs?: boolean
     ): Promise<Channel[]> => {
@@ -356,53 +346,57 @@ export default class ChannelsStore {
             )
         );
 
-        for (const channel of channelsWithMissingAliases) {
-            const nodeInfo = this.nodes[channel.remotePubkey];
-            const alias = nodeInfo?.alias || fixedAliases[channel.remotePubkey];
-            if (alias) this.aliasesById[channel.channelId!] = alias;
-        }
-
-        if (setPendingHtlcs) this.pendingHTLCs = [];
-
-        let haveAnnouncedChannels = false;
-        for (const channel of channels) {
-            if (
-                !haveAnnouncedChannels &&
-                !channel.private &&
-                channel.isActive
-            ) {
-                haveAnnouncedChannels = true;
+        runInAction(() => {
+            for (const channel of channelsWithMissingAliases) {
+                const nodeInfo = this.nodes[channel.remotePubkey];
+                const alias =
+                    nodeInfo?.alias || fixedAliases[channel.remotePubkey];
+                if (alias) this.aliasesById[channel.channelId!] = alias;
             }
-            if (channel.alias == null) {
-                channel.alias =
-                    this.nodes[channel.remotePubkey]?.alias ||
-                    this.aliasesById[channel.channelId!];
+
+            if (setPendingHtlcs) this.pendingHTLCs = [];
+
+            let haveAnnouncedChannels = false;
+            for (const channel of channels) {
+                if (
+                    !haveAnnouncedChannels &&
+                    !channel.private &&
+                    channel.isActive
+                ) {
+                    haveAnnouncedChannels = true;
+                }
+                if (channel.alias == null) {
+                    channel.alias =
+                        this.nodes[channel.remotePubkey]?.alias ||
+                        this.aliasesById[channel.channelId!];
+                }
+                channel.displayName =
+                    channel.alias ||
+                    channel.remotePubkey ||
+                    channel.channelId ||
+                    localeString('models.Channel.unknownId');
+
+                if (BackendUtils.isLNDBased() && setPendingHtlcs) {
+                    channel.pending_htlcs?.forEach((htlc: any) => {
+                        htlc.channelDisplayName = channel.displayName;
+                    });
+
+                    this.pendingHTLCs.push(...channel.pending_htlcs);
+                }
             }
-            channel.displayName =
-                channel.alias ||
-                channel.remotePubkey ||
-                channel.channelId ||
-                localeString('models.Channel.unknownId');
+            this.haveAnnouncedChannels = haveAnnouncedChannels;
 
-            if (BackendUtils.isLNDBased() && setPendingHtlcs) {
-                channel.pending_htlcs?.forEach((htlc: any) => {
-                    htlc.channelDisplayName = channel.displayName;
-                });
-
-                this.pendingHTLCs.push(...channel.pending_htlcs);
+            if (this.pendingHTLCs.length > 0) {
+                console.log('Pending HTLCs', this.pendingHTLCs);
             }
-        }
-        this.haveAnnouncedChannels = haveAnnouncedChannels;
 
-        if (this.pendingHTLCs.length > 0) {
-            console.log('Pending HTLCs', this.pendingHTLCs);
-        }
-
-        this.loading = false;
+            this.loading = false;
+        });
         return channels;
     };
 
-    getChannelsError = () => {
+    @action
+    private getChannelsError = () => {
         this.channels = [];
         this.error = true;
         this.loading = false;
@@ -502,8 +496,10 @@ export default class ChannelsStore {
 
         return Promise.all(loadPromises)
             .then(() => {
-                this.loading = false;
-                this.error = false;
+                runInAction(() => {
+                    this.loading = false;
+                    this.error = false;
+                });
                 return;
             })
             .catch(() => this.getChannelsError());
@@ -628,48 +624,53 @@ export default class ChannelsStore {
                 perm
             })
                 .then(async () => {
-                    if (!silent) {
-                        this.errorPeerConnect = false;
-                        this.connectingToPeer = false;
-                        this.errorMsgPeer = null;
-                        this.peerSuccess = true;
-                    }
-                    if (!connectPeerOnly) this.channelRequest = request;
+                    runInAction(() => {
+                        if (!silent) {
+                            this.errorPeerConnect = false;
+                            this.connectingToPeer = false;
+                            this.errorMsgPeer = null;
+                            this.peerSuccess = true;
+                        }
+                        if (!connectPeerOnly) this.channelRequest = request;
+                    });
                     resolve(true);
                 })
                 .catch((error: Error) => {
-                    if (!silent) {
-                        this.connectingToPeer = false;
-                        this.peerSuccess = false;
-                    }
-                    this.channelSuccess = false;
-                    // handle error
-                    if (
-                        error &&
-                        error.toString() &&
-                        error.toString().includes('already')
-                    ) {
-                        if (!connectPeerOnly) {
-                            this.channelRequest = request;
+                    runInAction(() => {
+                        if (!silent) {
+                            this.connectingToPeer = false;
+                            this.peerSuccess = false;
+                        }
+                        this.channelSuccess = false;
+                        // handle error
+                        if (
+                            error &&
+                            error.toString() &&
+                            error.toString().includes('already')
+                        ) {
+                            if (!connectPeerOnly) {
+                                this.channelRequest = request;
+                            } else {
+                                if (!silent) {
+                                    this.errorMsgPeer =
+                                        errorToUserFriendly(error);
+                                    this.errorPeerConnect = true;
+                                }
+                            }
+                            resolve(true);
                         } else {
                             if (!silent) {
                                 this.errorMsgPeer = errorToUserFriendly(error);
                                 this.errorPeerConnect = true;
                             }
+                            reject(this.errorMsgPeer);
                         }
-                        resolve(true);
-                    } else {
-                        if (!silent) {
-                            this.errorMsgPeer = errorToUserFriendly(error);
-                            this.errorPeerConnect = true;
-                        }
-                        reject(this.errorMsgPeer);
-                    }
+                    });
                 });
         });
     };
 
-    handleChannelOpen = (request: any, outputs?: any) => {
+    private handleChannelOpen = (request: any, outputs?: any) => {
         const { account, sat_per_vbyte, utxos } = request;
 
         const inputs: any = [];
@@ -740,16 +741,18 @@ export default class ChannelsStore {
                 })
                     .then((data: any) => {
                         if (data.publish_error) {
-                            this.errorMsgChannel = errorToUserFriendly(
-                                data.publish_error
-                            );
-                            this.output_index = null;
-                            this.funding_txid_str = null;
-                            this.errorOpenChannel = true;
-                            this.openingChannel = false;
-                            this.channelRequest = null;
-                            this.peerSuccess = false;
-                            this.channelSuccess = false;
+                            runInAction(() => {
+                                this.errorMsgChannel = errorToUserFriendly(
+                                    data.publish_error
+                                );
+                                this.output_index = null;
+                                this.funding_txid_str = null;
+                                this.errorOpenChannel = true;
+                                this.openingChannel = false;
+                                this.channelRequest = null;
+                                this.peerSuccess = false;
+                                this.channelSuccess = false;
+                            });
                         } else {
                             const formattedPsbt = new FundedPsbt(
                                 funded_psbt
@@ -766,7 +769,28 @@ export default class ChannelsStore {
                                 }
                             })
                                 .then((data: any) => {
-                                    if (data.publish_error) {
+                                    runInAction(() => {
+                                        if (data.publish_error) {
+                                            this.funded_psbt = formattedPsbt;
+                                            this.output_index = null;
+                                            this.funding_txid_str = null;
+                                            this.errorOpenChannel = true;
+                                            this.openingChannel = false;
+                                            this.channelRequest = null;
+                                            this.peerSuccess = false;
+                                            this.channelSuccess = false;
+                                        } else {
+                                            // success case
+                                            this.errorOpenChannel = false;
+                                            this.openingChannel = false;
+                                            this.errorMsgChannel = null;
+                                            this.channelRequest = null;
+                                            this.channelSuccess = true;
+                                        }
+                                    });
+                                })
+                                .catch(() =>
+                                    runInAction(() => {
                                         this.funded_psbt = formattedPsbt;
                                         this.output_index = null;
                                         this.funding_txid_str = null;
@@ -775,54 +799,39 @@ export default class ChannelsStore {
                                         this.channelRequest = null;
                                         this.peerSuccess = false;
                                         this.channelSuccess = false;
-                                    } else {
-                                        // success case
-                                        this.errorOpenChannel = false;
-                                        this.openingChannel = false;
-                                        this.errorMsgChannel = null;
-                                        this.channelRequest = null;
-                                        this.channelSuccess = true;
-                                    }
-                                })
-                                .catch(() => {
-                                    // handle error
-                                    this.funded_psbt = formattedPsbt;
-                                    this.output_index = null;
-                                    this.funding_txid_str = null;
-                                    this.errorOpenChannel = true;
-                                    this.openingChannel = false;
-                                    this.channelRequest = null;
-                                    this.peerSuccess = false;
-                                    this.channelSuccess = false;
-                                });
+                                    })
+                                );
                         }
                     })
-                    .catch((error: any) => {
-                        // handle error
-                        this.errorMsgChannel = errorToUserFriendly(error);
-                        this.output_index = null;
-                        this.funding_txid_str = null;
-                        this.errorOpenChannel = true;
-                        this.openingChannel = false;
-                        this.channelRequest = null;
-                        this.peerSuccess = false;
-                        this.channelSuccess = false;
-                    });
+                    .catch((error: any) =>
+                        runInAction(() => {
+                            this.errorMsgChannel = errorToUserFriendly(error);
+                            this.output_index = null;
+                            this.funding_txid_str = null;
+                            this.errorOpenChannel = true;
+                            this.openingChannel = false;
+                            this.channelRequest = null;
+                            this.peerSuccess = false;
+                            this.channelSuccess = false;
+                        })
+                    );
             })
-            .catch((error: any) => {
-                // handle error
-                this.errorMsgChannel = errorToUserFriendly(error);
-                this.output_index = null;
-                this.funding_txid_str = null;
-                this.errorOpenChannel = true;
-                this.openingChannel = false;
-                this.channelRequest = null;
-                this.peerSuccess = false;
-                this.channelSuccess = false;
-            });
+            .catch((error: any) =>
+                runInAction(() => {
+                    this.errorMsgChannel = errorToUserFriendly(error);
+                    this.output_index = null;
+                    this.funding_txid_str = null;
+                    this.errorOpenChannel = true;
+                    this.openingChannel = false;
+                    this.channelRequest = null;
+                    this.peerSuccess = false;
+                    this.channelSuccess = false;
+                })
+            );
     };
 
-    handleChannelOpenError = (error: Error) => {
+    @action
+    private handleChannelOpenError = (error: Error) => {
         this.errorMsgChannel = errorToUserFriendly(error);
         this.output_index = null;
         this.funding_txid_str = null;
@@ -833,7 +842,8 @@ export default class ChannelsStore {
         this.channelSuccess = false;
     };
 
-    openChannel = (request: OpenChannelRequest) => {
+    @action
+    private openChannel = (request: OpenChannelRequest) => {
         const multipleChans =
             request?.additionalChannels &&
             request.additionalChannels?.length > 0;
@@ -970,25 +980,29 @@ export default class ChannelsStore {
             }
         } else {
             BackendUtils.openChannelSync(request)
-                .then((data: any) => {
-                    this.output_index = data.output_index;
-                    this.funding_txid_str = data.funding_txid_str;
-                    this.errorOpenChannel = false;
-                    this.openingChannel = false;
-                    this.errorMsgChannel = null;
-                    this.channelRequest = null;
-                    this.channelSuccess = true;
-                })
-                .catch((error: Error) => {
-                    this.errorMsgChannel = errorToUserFriendly(error);
-                    this.output_index = null;
-                    this.funding_txid_str = null;
-                    this.errorOpenChannel = true;
-                    this.openingChannel = false;
-                    this.channelRequest = null;
-                    this.peerSuccess = false;
-                    this.channelSuccess = false;
-                });
+                .then((data: any) =>
+                    runInAction(() => {
+                        this.output_index = data.output_index;
+                        this.funding_txid_str = data.funding_txid_str;
+                        this.errorOpenChannel = false;
+                        this.openingChannel = false;
+                        this.errorMsgChannel = null;
+                        this.channelRequest = null;
+                        this.channelSuccess = true;
+                    })
+                )
+                .catch((error: Error) =>
+                    runInAction(() => {
+                        this.errorMsgChannel = errorToUserFriendly(error);
+                        this.output_index = null;
+                        this.funding_txid_str = null;
+                        this.errorOpenChannel = true;
+                        this.openingChannel = false;
+                        this.channelRequest = null;
+                        this.peerSuccess = false;
+                        this.channelSuccess = false;
+                    })
+                );
         }
     };
 
@@ -1001,24 +1015,25 @@ export default class ChannelsStore {
         }
 
         BackendUtils.getChannelInfo(chanId)
-            .then((data: any) => {
-                this.chanInfo[chanId] = new ChannelInfo(data);
-                this.loading = false;
-            })
+            .then((data: any) =>
+                runInAction(() => {
+                    this.chanInfo[chanId] = new ChannelInfo(data);
+                    this.loading = false;
+                })
+            )
             .catch((error: any) => {
-                // handle error
-                this.errorMsgPeer = error.toString();
-                if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
-                this.loading = false;
+                runInAction(() => {
+                    this.errorMsgPeer = error.toString();
+                    if (this.chanInfo[chanId]) delete this.chanInfo[chanId];
+                    this.loading = false;
+                });
             });
     };
 
-    @action
     public setChannelsType = (type: ChannelsType) => {
         this.channelsType = type;
     };
 
-    @action
     public toggleSearch = () => {
         this.showSearch = !this.showSearch;
     };

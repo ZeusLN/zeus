@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -75,7 +75,6 @@ export default class PosStore {
         );
     };
 
-    @action
     public recordPayment = ({
         orderId,
         orderTotal,
@@ -97,29 +96,20 @@ export default class PosStore {
             preimage
         });
 
-    @action
     public clearCurrentOrder = () => (this.currentOrder = null);
 
-    @action
     public createCurrentOrder = (currency: string) => {
         this.currentOrder = new Order({
             id: uuidv4(),
             created_at: new Date(Date.now()).toISOString(),
             updated_at: new Date(Date.now()).toISOString(),
             line_items: [],
-            total_tax_money: {
-                amount: 0,
-                currency
-            },
-            total_money: {
-                amount: 0,
-                currency
-            }
+            total_tax_money: { amount: 0, currency },
+            total_money: { amount: 0, currency }
         });
     };
 
-    @action
-    calcFiatAmountFromSats = (amount: string | number) => {
+    private calcFiatAmountFromSats = (amount: string | number) => {
         const { fiatRates } = this.fiatStore;
         const { settings } = this.settingsStore;
         const { fiat } = settings;
@@ -146,7 +136,7 @@ export default class PosStore {
         return fiatAmount;
     };
 
-    calcSatsAmountFromFiat = (amount: string | number) => {
+    private calcSatsAmountFromFiat = (amount: string | number) => {
         const { fiatRates } = this.fiatStore;
         const { settings } = this.settingsStore;
         const { fiat } = settings;
@@ -172,7 +162,8 @@ export default class PosStore {
         return satsAmount;
     };
 
-    @action recalculateCurrentOrder = () => {
+    @action
+    public recalculateCurrentOrder = () => {
         if (this.currentOrder) {
             let totalFiat = new BigNumber(0);
             let totalSats = new BigNumber(0);
@@ -226,7 +217,6 @@ export default class PosStore {
         }
     };
 
-    @action
     public saveStandaloneOrder = async (updateOrder: Order) => {
         const order = this.openOrders.find((o) => o.id === updateOrder.id);
 
@@ -246,16 +236,13 @@ export default class PosStore {
         this.clearCurrentOrder();
     };
 
-    @action
     public getOrders = async () => {
         switch (this.settingsStore.settings.pos.posEnabled) {
             case PosEnabled.Square:
-                this.getSquareOrders();
-                break;
+                return this.getSquareOrders();
 
             case PosEnabled.Standalone:
-                this.getStandaloneOrders();
-                break;
+                return this.getStandaloneOrders();
 
             default:
                 this.resetOrders();
@@ -264,7 +251,7 @@ export default class PosStore {
     };
 
     @action
-    public getStandaloneOrders = async () => {
+    private getStandaloneOrders = async () => {
         this.loading = true;
         this.error = false;
 
@@ -298,16 +285,18 @@ export default class PosStore {
             return order.payment;
         });
 
-        this.openOrders = openOrders;
-        this.filteredOpenOrders = openOrders;
-        this.paidOrders = paidOrders;
-        this.filteredPaidOrders = paidOrders;
+        runInAction(() => {
+            this.openOrders = openOrders;
+            this.filteredOpenOrders = openOrders;
+            this.paidOrders = paidOrders;
+            this.filteredPaidOrders = paidOrders;
 
-        this.loading = false;
+            this.loading = false;
+        });
     };
 
     @action
-    public getSquareOrders = async () => {
+    private getSquareOrders = async () => {
         const { squareAccessToken, squareLocationId, squareDevMode } =
             this.settingsStore.settings.pos;
         this.loading = true;
@@ -383,22 +372,29 @@ export default class PosStore {
                         return order.payment;
                     });
 
-                    this.openOrders = openOrders;
-                    this.filteredOpenOrders = openOrders;
-                    this.paidOrders = paidOrders;
-                    this.filteredPaidOrders = paidOrders;
+                    runInAction(() => {
+                        this.openOrders = openOrders;
+                        this.filteredOpenOrders = openOrders;
+                        this.paidOrders = paidOrders;
+                        this.filteredPaidOrders = paidOrders;
+                    });
                 } else {
-                    this.openOrders = [];
-                    this.paidOrders = [];
-                    this.loading = false;
-                    this.error = true;
+                    runInAction(() => {
+                        this.openOrders = [];
+                        this.paidOrders = [];
+                        this.loading = false;
+                        this.error = true;
+                    });
                 }
             })
             .catch((err) => {
                 console.error('POS get orders err', err);
-                this.openOrders = [];
-                this.paidOrders = [];
-                this.loading = false;
+                runInAction(() => {
+                    this.openOrders = [];
+                    this.paidOrders = [];
+                    this.loading = false;
+                    this.error = true;
+                });
             });
     };
 
@@ -527,21 +523,28 @@ export default class PosStore {
                         })
                     );
 
-                    this.completedOrders = enrichedOrders;
-                    this.reconTotal = total.toFixed(2);
-                    this.reconTax = tax.toFixed(2);
-                    this.reconTips = tips.toFixed(2);
-                    this.reconExport = exportString;
+                    runInAction(() => {
+                        this.completedOrders = enrichedOrders;
+                        this.reconTotal = total.toFixed(2);
+                        this.reconTax = tax.toFixed(2);
+                        this.reconTips = tips.toFixed(2);
+                        this.reconExport = exportString;
+                    });
                 } else {
-                    this.completedOrders = [];
-                    this.loading = false;
-                    this.error = true;
+                    runInAction(() => {
+                        this.completedOrders = [];
+                        this.loading = false;
+                        this.error = true;
+                    });
                 }
             })
             .catch((err) => {
                 console.error('POS get historical orders err', err);
-                this.completedOrders = [];
-                this.loading = false;
+                runInAction(() => {
+                    this.completedOrders = [];
+                    this.loading = false;
+                    this.error = true;
+                });
             });
     };
 
@@ -556,7 +559,8 @@ export default class PosStore {
         }
     };
 
-    resetOrders = () => {
+    @action
+    private resetOrders = () => {
         this.openOrders = [];
         this.paidOrders = [];
         this.loading = false;
