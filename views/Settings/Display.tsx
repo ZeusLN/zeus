@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
@@ -12,6 +11,7 @@ import SettingsStore, {
 import { localeString } from '../../utils/LocaleUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
+import Text from '../../components/Text';
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -115,7 +115,7 @@ export default class Display extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView
-                    style={{ flex: 1, padding: 15 }}
+                    style={{ flex: 1, paddingHorizontal: 15, marginTop: 5 }}
                     keyboardShouldPersistTaps="handled"
                 >
                     <DropdownSetting
@@ -171,30 +171,21 @@ export default class Display extends React.Component<
                         values={DEFAULT_VIEW_KEYS}
                     />
 
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Display.displayNickname'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.displayNickname'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={displayNickname}
                                 onValueChange={async () => {
@@ -215,32 +206,23 @@ export default class Display extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
+                    </View>
 
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Display.bigKeypadButtons'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.bigKeypadButtons'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={bigKeypadButtons}
                                 onValueChange={async () => {
@@ -261,32 +243,23 @@ export default class Display extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
+                    </View>
 
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Display.showAllDecimalPlaces'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.showAllDecimalPlaces'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={showAllDecimalPlaces}
                                 onValueChange={async () => {
@@ -309,32 +282,23 @@ export default class Display extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
+                    </View>
 
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Display.removeDecimalSpaces'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.removeDecimalSpaces'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={removeDecimalSpaces}
                                 onValueChange={async () => {
@@ -357,32 +321,23 @@ export default class Display extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
+                    </View>
 
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Display.showMillisatoshiAmounts'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.showMillisatoshiAmounts'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={showMillisatoshiAmounts}
                                 onValueChange={async () => {
@@ -405,31 +360,23 @@ export default class Display extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                    >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Display.selectNodeOnStartup'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                    </View>
+
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.selectNodeOnStartup'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={selectNodeOnStartup}
                                 onValueChange={async () => {
@@ -444,7 +391,7 @@ export default class Display extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
+                    </View>
                 </ScrollView>
             </Screen>
         );

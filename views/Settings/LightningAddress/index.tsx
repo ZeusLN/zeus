@@ -381,41 +381,43 @@ export default class LightningAddress extends React.Component<
                             !lightningAddressHandle &&
                             hasChannels && (
                                 <>
-                                    <View style={{ flex: 1 }}>
-                                        <View style={styles.wrapper}>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
+                                    <View
+                                        style={{ flex: 1, ...styles.wrapper }}
+                                    >
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddress.chooseHandle'
+                                            )}
+                                        </Text>
+                                        <View
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'row'
+                                            }}
+                                        >
+                                            <TextInput
+                                                value={newLightningAddress}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        newLightningAddress:
+                                                            text
+                                                    });
                                                 }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.chooseHandle'
-                                                )}
-                                            </Text>
-                                            <View
+                                                autoCapitalize="none"
+                                                autoCorrect={false}
                                                 style={{
-                                                    display: 'flex',
+                                                    flex: 1,
                                                     flexDirection: 'row'
                                                 }}
-                                            >
-                                                <TextInput
-                                                    value={newLightningAddress}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) => {
-                                                        this.setState({
-                                                            newLightningAddress:
-                                                                text
-                                                        });
-                                                    }}
-                                                    autoCapitalize="none"
-                                                    autoCorrect={false}
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row'
-                                                    }}
-                                                />
+                                            />
+                                            <Row>
                                                 <Text
                                                     style={{
                                                         ...styles.text,
@@ -428,7 +430,7 @@ export default class LightningAddress extends React.Component<
                                                 >
                                                     @zeuspay.com
                                                 </Text>
-                                            </View>
+                                            </Row>
                                         </View>
 
                                         <>
@@ -537,30 +539,26 @@ export default class LightningAddress extends React.Component<
                                             </ListItem>
                                         </>
                                     </View>
-                                    <View>
-                                        <View
-                                            style={{ bottom: 15, margin: 10 }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    'views.Settings.LightningAddress.create'
-                                                )}
-                                                onPress={() =>
-                                                    create(
-                                                        newLightningAddress,
-                                                        nostrPublicKey,
-                                                        nostrPrivateKey,
-                                                        nostrRelays
-                                                    ).then(() => status())
-                                                }
-                                                disabled={
-                                                    !nostrPublicKey ||
-                                                    !nostrNpub ||
-                                                    !nostrRelays ||
-                                                    nostrRelays.length === 0
-                                                }
-                                            />
-                                        </View>
+                                    <View style={{ bottom: 15, margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Settings.LightningAddress.create'
+                                            )}
+                                            onPress={() =>
+                                                create(
+                                                    newLightningAddress,
+                                                    nostrPublicKey,
+                                                    nostrPrivateKey,
+                                                    nostrRelays
+                                                ).then(() => status())
+                                            }
+                                            disabled={
+                                                !nostrPublicKey ||
+                                                !nostrNpub ||
+                                                !nostrRelays ||
+                                                nostrRelays.length === 0
+                                            }
+                                        />
                                     </View>
                                 </>
                             )}

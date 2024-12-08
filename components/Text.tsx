@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { Text, TextStyle, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Row } from './layout/Row';
 
 import { themeColor } from './../utils/ThemeUtils';
 
@@ -34,16 +33,14 @@ export default class ZeusText extends React.Component<TextProps, {}> {
         const { toggleInfoModal } = ModalStore!;
 
         const CoreText = () => (
-            <Row>
-                <Text
-                    style={{
-                        fontFamily: 'PPNeueMontreal-Book',
-                        color: themeColor('text'),
-                        ...style
-                    }}
-                >
-                    {children}
-                </Text>
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color: themeColor('text'),
+                    ...style
+                }}
+            >
+                {children}
                 {infoModalText && (
                     <Text
                         style={{
@@ -55,7 +52,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
                         {'  ⓘ'}
                     </Text>
                 )}
-            </Row>
+            </Text>
         );
 
         if (infoModalText) {

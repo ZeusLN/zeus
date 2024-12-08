@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Text, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -105,8 +104,8 @@ export default class PaymentsSettings extends React.Component<
                 />
                 <View
                     style={{
-                        paddingLeft: 15,
-                        paddingRight: 15
+                        paddingHorizontal: 15,
+                        marginTop: 5
                     }}
                 >
                     {BackendUtils.isLNDBased() && (
@@ -114,7 +113,6 @@ export default class PaymentsSettings extends React.Component<
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    paddingTop: 5,
                                     color: themeColor('secondaryText')
                                 }}
                             >
@@ -162,7 +160,7 @@ export default class PaymentsSettings extends React.Component<
                                         paddingTop: 5,
                                         color: themeColor('text'),
                                         top: 28,
-                                        right: 30
+                                        right: 35
                                     }}
                                 >
                                     {localeString('general.sats')}
@@ -220,7 +218,6 @@ export default class PaymentsSettings extends React.Component<
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    paddingTop: 5,
                                     color: themeColor('secondaryText')
                                 }}
                             >
@@ -345,30 +342,24 @@ export default class PaymentsSettings extends React.Component<
                             />
                         </>
                     )}
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
                         }}
                     >
-                        <ListItem.Title
+                        <Text
                             style={{
-                                color: themeColor('secondaryText'),
                                 fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
+                                color: themeColor('secondaryText'),
+                                flex: 1
                             }}
                         >
                             {localeString(
                                 'views.Settings.Privacy.enableMempoolRates'
                             )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                right: 10
-                            }}
-                        >
+                        </Text>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
                                 onValueChange={async () => {
@@ -394,29 +385,31 @@ export default class PaymentsSettings extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
-                    <DropdownSetting
-                        title={localeString(
-                            'views.Settings.Payments.preferredMempoolRate'
-                        )}
-                        selectedValue={preferredMempoolRate}
-                        onValueChange={async (value: string) => {
-                            this.setState({
-                                preferredMempoolRate: value
-                            });
-                            await updateSettings({
-                                payments: {
-                                    defaultFeeMethod: feeLimitMethod,
-                                    defaultFeePercentage: feePercentage,
-                                    defaultFeeFixed: feeLimit,
-                                    timeoutSeconds,
+                    </View>
+                    <View style={{ marginTop: 20 }}>
+                        <DropdownSetting
+                            title={localeString(
+                                'views.Settings.Payments.preferredMempoolRate'
+                            )}
+                            selectedValue={preferredMempoolRate}
+                            onValueChange={async (value: string) => {
+                                this.setState({
                                     preferredMempoolRate: value
-                                }
-                            });
-                        }}
-                        values={MEMPOOL_RATES_KEYS}
-                        disabled={!enableMempoolRates}
-                    />
+                                });
+                                await updateSettings({
+                                    payments: {
+                                        defaultFeeMethod: feeLimitMethod,
+                                        defaultFeePercentage: feePercentage,
+                                        defaultFeeFixed: feeLimit,
+                                        timeoutSeconds,
+                                        preferredMempoolRate: value
+                                    }
+                                });
+                            }}
+                            values={MEMPOOL_RATES_KEYS}
+                            disabled={!enableMempoolRates}
+                        />
+                    </View>
                 </View>
             </Screen>
         );
