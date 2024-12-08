@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -100,9 +100,11 @@ export default class ChannelsSettings extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <View
+                <ScrollView
                     style={{
-                        padding: 20
+                        flex: 1,
+                        paddingHorizontal: 15,
+                        marginTop: 5
                     }}
                 >
                     <Text
@@ -133,136 +135,162 @@ export default class ChannelsSettings extends React.Component<
                         }}
                     />
 
-                    <>
-                        <Text
-                            style={{
-                                top: 20,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString('views.OpenChannel.announceChannel')}
-                        </Text>
-                        <Switch
-                            value={!privateChannel}
-                            onValueChange={async () => {
-                                this.setState({
-                                    privateChannel: !privateChannel
-                                });
-                                await updateSettings({
-                                    channels: {
-                                        min_confs,
-                                        privateChannel: !privateChannel,
-                                        scidAlias,
-                                        simpleTaprootChannel
-                                    }
-                                });
-                            }}
-                            disabled={simpleTaprootChannel}
-                        />
-                    </>
-
-                    {BackendUtils.isLNDBased() && (
-                        <>
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
                             <Text
                                 style={{
-                                    top: 20,
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17
                                 }}
                             >
-                                {localeString('views.OpenChannel.scidAlias')}
+                                {localeString(
+                                    'views.OpenChannel.announceChannel'
+                                )}
                             </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
-                                value={scidAlias}
+                                value={!privateChannel}
                                 onValueChange={async () => {
                                     this.setState({
-                                        scidAlias: !scidAlias
+                                        privateChannel: !privateChannel
                                     });
                                     await updateSettings({
                                         channels: {
                                             min_confs,
-                                            privateChannel,
-                                            scidAlias: !scidAlias,
+                                            privateChannel: !privateChannel,
+                                            scidAlias,
                                             simpleTaprootChannel
                                         }
                                     });
                                 }}
+                                disabled={simpleTaprootChannel}
                             />
-                        </>
+                        </View>
+                    </View>
+
+                    {BackendUtils.isLNDBased() && (
+                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.OpenChannel.scidAlias'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={scidAlias}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            scidAlias: !scidAlias
+                                        });
+                                        await updateSettings({
+                                            channels: {
+                                                min_confs,
+                                                privateChannel,
+                                                scidAlias: !scidAlias,
+                                                simpleTaprootChannel
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
                     )}
 
                     {BackendUtils.supportsSimpleTaprootChannels() && (
-                        <>
-                            <Text
-                                style={{
-                                    top: 20,
-                                    color: themeColor('secondaryText')
-                                }}
+                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.OpenChannel.simpleTaprootChannel'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
-                                {localeString(
-                                    'views.OpenChannel.simpleTaprootChannel'
-                                )}
-                            </Text>
-                            <Switch
-                                value={simpleTaprootChannel}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        simpleTaprootChannel:
-                                            !simpleTaprootChannel
-                                    });
-
-                                    if (!simpleTaprootChannel) {
+                                <Switch
+                                    value={simpleTaprootChannel}
+                                    onValueChange={async () => {
                                         this.setState({
-                                            privateChannel: true
-                                        });
-                                    }
-
-                                    await updateSettings({
-                                        channels: {
-                                            min_confs,
-                                            privateChannel:
-                                                !simpleTaprootChannel
-                                                    ? true
-                                                    : privateChannel,
-                                            scidAlias,
                                             simpleTaprootChannel:
                                                 !simpleTaprootChannel
+                                        });
+
+                                        if (!simpleTaprootChannel) {
+                                            this.setState({
+                                                privateChannel: true
+                                            });
                                         }
-                                    });
-                                }}
-                            />
-                        </>
+
+                                        await updateSettings({
+                                            channels: {
+                                                min_confs,
+                                                privateChannel:
+                                                    !simpleTaprootChannel
+                                                        ? true
+                                                        : privateChannel,
+                                                scidAlias,
+                                                simpleTaprootChannel:
+                                                    !simpleTaprootChannel
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
                     )}
 
                     {(BackendUtils.supportsLSPS1customMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
-                        <>
-                            <Text
-                                style={{
-                                    top: 20,
-                                    color: themeColor('secondaryText')
-                                }}
+                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Channels.lsps1ShowPurchaseButton'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
-                                {localeString(
-                                    'views.Settings.Channels.lsps1ShowPurchaseButton'
-                                )}
-                            </Text>
-                            <Switch
-                                value={lsps1ShowPurchaseButton}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        lsps1ShowPurchaseButton:
-                                            !lsps1ShowPurchaseButton
-                                    });
+                                <Switch
+                                    value={lsps1ShowPurchaseButton}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            lsps1ShowPurchaseButton:
+                                                !lsps1ShowPurchaseButton
+                                        });
 
-                                    await updateSettings({
-                                        lsps1ShowPurchaseButton:
-                                            !lsps1ShowPurchaseButton
-                                    });
-                                }}
-                            />
-                        </>
+                                        await updateSettings({
+                                            lsps1ShowPurchaseButton:
+                                                !lsps1ShowPurchaseButton
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
                     )}
-                </View>
+                </ScrollView>
             </Screen>
         );
     }
