@@ -108,6 +108,7 @@ import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
 import Advanced from './views/Settings/EmbeddedNode/Advanced';
 import AdvancedRescan from './views/Settings/EmbeddedNode/AdvancedRescan';
+import Troubleshooting from './views/Settings/EmbeddedNode/Troubleshooting';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -720,6 +721,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="EmbeddedNodeSettingsAdvanced" // @ts-ignore:next-line
                                                         component={Advanced}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="EmbeddedNodeTroubleshooting" // @ts-ignore:next-line
+                                                        component={
+                                                            Troubleshooting
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="AdvancedRescan" // @ts-ignore:next-line

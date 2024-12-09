@@ -575,9 +575,13 @@ export default class TransactionsStore {
             this.payment_error =
                 (implementation === 'embedded-lnd'
                     ? errorToUserFriendly(
-                          new Error(
-                              lnrpc.PaymentFailureReason[result.failure_reason]
-                          )
+                          lnrpc.PaymentFailureReason[result.failure_reason]
+                              ? new Error(
+                                    lnrpc.PaymentFailureReason[
+                                        result.failure_reason
+                                    ]
+                                )
+                              : result.payment_error
                       )
                     : errorToUserFriendly(result.failure_reason)) ||
                 errorToUserFriendly(result.payment_error);

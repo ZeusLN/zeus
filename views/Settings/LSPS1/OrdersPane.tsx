@@ -102,9 +102,7 @@ export default class OrdersPane extends React.Component<
                     }
 
                     const decodedResponses = responseArray.map(
-                        (response: any) => {
-                            JSON.parse(response);
-                        }
+                        (response: any) => JSON.parse(response)
                     );
 
                     let selectedOrders;

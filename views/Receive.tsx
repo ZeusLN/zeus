@@ -1786,7 +1786,7 @@ export default class Receive extends React.Component<
                                         </TouchableOpacity>
                                     )}
                                 {haveInvoice && !creatingInvoiceError && (
-                                    <View style={{ marginTop: 10 }}>
+                                    <View>
                                         {selectedIndex == 0 &&
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
@@ -1806,6 +1806,12 @@ export default class Receive extends React.Component<
                                                             : ZIcon
                                                     }
                                                     nfcSupported={nfcSupported}
+                                                    satAmount={satAmount}
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
@@ -1830,6 +1836,12 @@ export default class Receive extends React.Component<
                                                             : LightningIcon
                                                     }
                                                     nfcSupported={nfcSupported}
+                                                    satAmount={satAmount}
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 2 &&
@@ -1854,6 +1866,16 @@ export default class Receive extends React.Component<
                                                             : OnChainIcon
                                                     }
                                                     nfcSupported={nfcSupported}
+                                                    satAmount={
+                                                        satAmount === '0'
+                                                            ? undefined
+                                                            : satAmount
+                                                    }
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
+                                                    }
                                                 />
                                             )}
 
@@ -1949,11 +1971,18 @@ export default class Receive extends React.Component<
                                                     textBottom
                                                     truncateLongValue
                                                     nfcSupported={nfcSupported}
+                                                    satAmount={satAmount}
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
+                                                    }
                                                 />
                                             )}
                                         {!(
                                             selectedIndex === 3 &&
-                                            !lightningAddress
+                                            (!lightningAddress ||
+                                                lightningAddressLoading)
                                         ) &&
                                             nfcSupported && (
                                                 <View

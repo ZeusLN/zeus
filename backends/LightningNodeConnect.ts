@@ -527,8 +527,8 @@ export default class LightningNodeConnect {
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
-    supportsLSPS1customMessage = () => true;
-    supportsLSPS1rest = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
     supportsOffers = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
