@@ -217,7 +217,13 @@ export default class AmountInput extends React.Component<
                     <TextInput
                         keyboardType="numeric"
                         placeholder={'0'}
-                        value={amount || sats ? getAmount(sats) : undefined}
+                        value={
+                            amount !== undefined
+                                ? amount
+                                : sats
+                                ? getAmount(sats)
+                                : undefined
+                        }
                         onChangeText={(text: string) => {
                             // remove spaces and non-numeric chars
                             const formatted = text.replace(/[^\d.,-]/g, '');
