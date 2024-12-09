@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { FlatList, TouchableHighlight, View } from 'react-native';
+import { inject, observer } from 'mobx-react';
+
 import { themeColor } from '../../utils/ThemeUtils';
 import ChannelsStore from '../../stores/ChannelsStore';
 import { Body } from '../text/Body';
@@ -7,21 +9,27 @@ import { Row } from '../layout/Row';
 import { Spacer } from '../layout/Spacer';
 import { localeString } from '../../utils/LocaleUtils';
 
+interface FilterOptionsProps {
+    ChannelsStore?: ChannelsStore;
+}
+
 interface FilterOption {
     name: string;
     value: boolean;
 }
 
-export function FilterOptions(props: { ChannelsStore: ChannelsStore }) {
-    const getFilterOptions = (): FilterOption[] => {
-        const { ChannelsStore } = props;
+@inject('ChannelsStore')
+@observer
+export class FilterOptions extends React.PureComponent<FilterOptionsProps> {
+    getFilterOptions = (): FilterOption[] => {
+        const { ChannelsStore } = this.props;
         const options: { [key: string]: any } = {
             online: false,
             offline: false,
             announced: false,
             unannounced: false
         };
-        for (const option of ChannelsStore.filterOptions) {
+        for (const option of ChannelsStore!.filterOptions) {
             options[option] = true;
         }
         return Object.entries(options).map(([name, value]) => ({
@@ -30,22 +38,23 @@ export function FilterOptions(props: { ChannelsStore: ChannelsStore }) {
         }));
     };
 
-    const updateFilter = (option: FilterOption) => {
-        const { ChannelsStore } = props;
-        const { filterOptions: currentOptions } = ChannelsStore;
+    updateFilter = (option: FilterOption) => {
+        const { ChannelsStore } = this.props;
+        const { filterOptions: currentOptions } = ChannelsStore!;
 
         if (!option.value) {
             // enable option
-            ChannelsStore.setFilterOptions([...currentOptions, option.name]);
+            ChannelsStore!.setFilterOptions([...currentOptions, option.name]);
         } else {
             // disable option
             const selectedOptions = currentOptions.filter(
                 (item) => item !== option.name
             );
-            ChannelsStore.setFilterOptions(selectedOptions);
+            ChannelsStore!.setFilterOptions(selectedOptions);
         }
     };
-    const renderItem = ({ item }: { item: FilterOption }) => (
+
+    renderItem = ({ item }: { item: FilterOption }) => (
         <TouchableHighlight
             activeOpacity={0.7}
             style={{
@@ -59,7 +68,7 @@ export function FilterOptions(props: { ChannelsStore: ChannelsStore }) {
                 borderRadius: 20
             }}
             underlayColor={themeColor('disabled')}
-            onPress={() => updateFilter(item)}
+            onPress={() => this.updateFilter(item)}
         >
             <View>
                 <Body small bold color={item.value ? 'highlight' : 'text'}>
@@ -69,21 +78,23 @@ export function FilterOptions(props: { ChannelsStore: ChannelsStore }) {
         </TouchableHighlight>
     );
 
-    return (
-        <View style={{ marginLeft: 10, marginBottom: 10 }}>
-            <Row>
-                <Body color={'secondaryText'}>
-                    {`${localeString('views.Wallet.Channels.filters')}:`}
-                </Body>
-                <FlatList
-                    style={{ marginLeft: 5 }}
-                    horizontal={true}
-                    data={getFilterOptions()}
-                    renderItem={renderItem}
-                    ListFooterComponent={<Spacer height={5} />}
-                    keyExtractor={(item) => `${item.name}`}
-                />
-            </Row>
-        </View>
-    );
+    render() {
+        return (
+            <View style={{ marginLeft: 10, marginBottom: 10 }}>
+                <Row>
+                    <Body color={'secondaryText'}>
+                        {`${localeString('views.Wallet.Channels.filters')}:`}
+                    </Body>
+                    <FlatList
+                        style={{ marginLeft: 5 }}
+                        horizontal={true}
+                        data={this.getFilterOptions()}
+                        renderItem={this.renderItem}
+                        ListFooterComponent={<Spacer height={5} />}
+                        keyExtractor={(item) => `${item.name}`}
+                    />
+                </Row>
+            </View>
+        );
+    }
 }
