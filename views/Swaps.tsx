@@ -172,7 +172,7 @@ export default class SwapPane extends React.PureComponent<
                         invoice
                     });
                 });
-            } catch (error) {
+            } catch (error: any) {
                 // Handle errors during API call
                 this.setState({
                     apiError: error.message || 'An unknown error occurred'
@@ -204,7 +204,7 @@ export default class SwapPane extends React.PureComponent<
                 // Save the updated swaps array back to Encrypted Storage
                 await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
                 console.log('Swap saved successfully to Encrypted Storage.');
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Error saving swap to storage:', error);
                 throw error;
             }
