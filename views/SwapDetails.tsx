@@ -24,7 +24,6 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import SwapStore from '../stores/SwapStore';
-import TransactionsStore from '../stores/TransactionsStore';
 
 import QR from '../assets/images/SVG/QR.svg';
 
@@ -34,7 +33,6 @@ interface SwapDetailsProps {
         'SwapDetails',
         { swapData: any; keys: any; endpoint: any; invoice: any }
     >;
-    TransactionsStore?: TransactionsStore;
     SwapStore?: SwapStore;
 }
 
@@ -44,13 +42,13 @@ interface SwapDetailsState {
     loading: boolean;
 }
 
-@inject('TransactionsStore', 'SwapStore')
+@inject('SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
     SwapDetailsState
 > {
-    pollingTimer: NodeJS.Timeout | null = null;
+    pollingTimer: any = null;
 
     constructor(props: SwapDetailsProps) {
         super(props);
@@ -184,7 +182,8 @@ export default class SwapDetails extends React.Component<
                     );
                 } else if (
                     data.status === 'transaction.claimed' ||
-                    data.status === 'invoice.failedToPay'
+                    data.status === 'invoice.failedToPay' ||
+                    data.status === 'swap.expired'
                 ) {
                     this.stopPolling(); // Stop polling
                 } else {
@@ -348,7 +347,7 @@ export default class SwapDetails extends React.Component<
     };
 
     render() {
-        const { navigation, TransactionsStore, SwapStore } = this.props;
+        const { navigation, SwapStore } = this.props;
 
         const { updates, error } = this.state;
         const swapData = this.props.route.params?.swapData ?? '';
@@ -462,9 +461,10 @@ export default class SwapDetails extends React.Component<
                             paddingVertical: 10
                         }}
                         onPress={() => {
-                            console.log(swapData?.bip21);
-                            TransactionsStore?.sendCoins(swapData?.bip21);
-                            navigation.navigate('SendingOnChain');
+                            navigation.navigate('Send', {
+                                destination: swapData?.bip21,
+                                transactionType: 'On-chain'
+                            });
                         }}
                         secondary
                     />
