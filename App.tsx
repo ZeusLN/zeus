@@ -131,6 +131,9 @@ import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 import CurrencyConverter from './views/Settings/CurrencyConverter';
 import PendingHTLCs from './views/PendingHTLCs';
+import Swaps from './views/Swaps';
+import SwapDetails from './views/SwapDetails';
+import SwapsPane from './views/SwapsPane';
 
 // POS
 import Order from './views/Order';
@@ -224,6 +227,7 @@ export default class App extends React.PureComponent {
                 LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
+                SwapStore={Stores.swapStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -897,6 +901,18 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             OnChainAddresses
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Swaps" // @ts-ignore:next-line
+                                                        component={Swaps}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapDetails" // @ts-ignore:next-line
+                                                        component={SwapDetails}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapsPane" // @ts-ignore:next-line
+                                                        component={SwapsPane}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
