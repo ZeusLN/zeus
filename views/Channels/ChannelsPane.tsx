@@ -186,7 +186,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             filteredChannels,
             filteredPendingChannels,
             filteredClosedChannels,
-            showSearch
+            showSearch,
+            setChannelsType
         } = ChannelsStore!;
 
         const { settings } = SettingsStore!;
@@ -329,14 +330,28 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                 <Tab.Screen
                                     name={openChannelsTabName}
                                     component={OpenChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(ChannelsType.Open)
+                                    }}
                                 />
                                 <Tab.Screen
                                     name={pendingChannelsTabName}
                                     component={PendingChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(
+                                                ChannelsType.Pending
+                                            )
+                                    }}
                                 />
                                 <Tab.Screen
                                     name={closedChannelsTabName}
                                     component={ClosedChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(ChannelsType.Closed)
+                                    }}
                                 />
                             </Tab.Navigator>
                         </NavigationContainer>
