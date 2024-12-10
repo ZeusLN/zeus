@@ -324,7 +324,15 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
+    getPayments = (data?: { maxPayments?: any }) =>
+        this.getRequest(
+            `/v1/payments?include_incomplete=true${
+                data && data?.maxPayments
+                    ? `&max_payments=${data.maxPayments}`
+                    : ''
+            }`
+        );
+
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     getNewChangeAddress = (data: any) =>
         this.postRequest('/v2/wallet/address/next', data);

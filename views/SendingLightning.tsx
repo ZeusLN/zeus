@@ -98,7 +98,7 @@ export default class SendingLightning extends React.Component<
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
         try {
-            const payments = await PaymentsStore.getPayments();
+            const payments = await PaymentsStore.getPayments(5); // fetch only last 5 payments
             const matchingPayment = payments.find(
                 (payment: any) =>
                     payment.payment_preimage ===
