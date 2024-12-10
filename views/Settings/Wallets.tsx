@@ -233,17 +233,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         onPress={async () => {
                                             const currentImplementation =
                                                 implementation;
+                                            if (
+                                                currentImplementation ===
+                                                'lightning-node-connect'
+                                            ) {
+                                                BackendUtils.disconnect();
+                                            }
                                             await updateSettings({
                                                 nodes,
                                                 selectedNode: index
                                             }).then(() => {
-                                                if (
-                                                    currentImplementation &&
-                                                    currentImplementation ===
-                                                        'lightning-node-connect'
-                                                ) {
-                                                    BackendUtils.disconnect();
-                                                }
                                                 BalanceStore.reset();
                                                 NodeInfoStore.reset();
                                                 ChannelsStore.reset();
