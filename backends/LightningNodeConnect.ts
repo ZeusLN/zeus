@@ -170,10 +170,11 @@ export default class LightningNodeConnect {
                 route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
-    getPayments = async () =>
+    getPayments = async (data: any) =>
         await this.lnc.lnd.lightning
             .listPayments({
-                include_incomplete: true
+                include_incomplete: true,
+                max_payment: data && data?.maxPayments
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
