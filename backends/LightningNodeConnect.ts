@@ -174,7 +174,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .listPayments({
                 include_incomplete: true,
-                max_payment: data && data?.maxPayments
+                ...(data &&
+                    data?.indexOffSet && {
+                        index_offset: data.indexOffSet
+                    })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>

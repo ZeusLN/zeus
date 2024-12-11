@@ -324,11 +324,11 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = (data?: { maxPayments?: any }) =>
+    getPayments = (data?: any) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
-                data && data?.maxPayments
-                    ? `&max_payments=${data.maxPayments}`
+                data && data?.indexOffSet
+                    ? `&index_offset=${data?.indexOffSet}`
                     : ''
             }`
         );
