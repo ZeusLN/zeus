@@ -1,4 +1,6 @@
+import React from 'react';
 import { Dimensions, View } from 'react-native';
+import { inject, observer } from 'mobx-react';
 import { SearchBar } from 'react-native-elements';
 
 import { Row } from '../../components/layout/Row';
@@ -8,8 +10,7 @@ import SortButton from '../../components/Channels/SortButton';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import stores from '../../stores/Stores';
-import { ChannelsType } from '../../stores/ChannelsStore';
+import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
 
 const getChannelsSortKeys = (closed?: boolean) => {
     const sortKeys: any = [];
@@ -103,67 +104,72 @@ const getChannelsSortKeys = (closed?: boolean) => {
 
 interface ChannelsFilterProps {
     width?: number;
+    ChannelsStore?: ChannelsStore;
 }
 
-const ChannelsFilter = (props: ChannelsFilterProps) => {
-    const { channelsStore } = stores;
-    const { search, setSort, channelsType } = channelsStore;
-    const windowWidth = Dimensions.get('window').width;
+@inject('ChannelsStore')
+@observer
+class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
+    render() {
+        const { ChannelsStore } = this.props;
+        const { search, setSort, channelsType } = ChannelsStore!;
+        const windowWidth = Dimensions.get('window').width;
 
-    return (
-        <View>
-            <Row>
-                <SearchBar
-                    placeholder={localeString('general.search')}
-                    onChangeText={(value?: string) =>
-                        channelsStore!.setSearch(value ?? '')
-                    }
-                    value={search}
-                    inputStyle={{
-                        color: themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
-                    }}
-                    placeholderTextColor={themeColor('secondaryText')}
-                    containerStyle={{
-                        backgroundColor: 'transparent',
-                        borderTopWidth: 0,
-                        borderBottomWidth: 0,
-                        width: props.width || windowWidth - 55
-                    }}
-                    inputContainerStyle={{
-                        borderRadius: 15,
-                        backgroundColor: themeColor('secondary')
-                    }}
-                    autoCapitalize="none"
-                    platform="default"
-                    showLoading={false}
-                    round={false}
-                    lightTheme={false}
-                    loadingProps={{}}
-                    onClear={() => channelsStore!.setSearch('')}
-                    onFocus={() => {}}
-                    onBlur={() => {}}
-                    onCancel={() => {
-                        channelsStore!.setSearch('');
-                    }}
-                    cancelButtonTitle="Cancel"
-                    cancelButtonProps={{}}
-                    searchIcon={{ name: 'search', type: 'font-awesome' }}
-                    clearIcon={{ name: 'close', type: 'font-awesome' }}
-                    showCancel={true}
-                />
-                <SortButton
-                    onValueChange={(value: any) => {
-                        setSort(value);
-                    }}
-                    values={getChannelsSortKeys(
-                        channelsType === ChannelsType.Closed
-                    )}
-                />
-            </Row>
-            <FilterOptions ChannelsStore={channelsStore!} />
-        </View>
-    );
-};
+        return (
+            <View>
+                <Row>
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        onChangeText={(value?: string) =>
+                            ChannelsStore!.setSearch(value ?? '')
+                        }
+                        value={search}
+                        inputStyle={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0,
+                            width: this.props.width || windowWidth - 55
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                        autoCapitalize="none"
+                        platform="default"
+                        showLoading={false}
+                        round={false}
+                        lightTheme={false}
+                        loadingProps={{}}
+                        onClear={() => ChannelsStore!.setSearch('')}
+                        onFocus={() => {}}
+                        onBlur={() => {}}
+                        onCancel={() => {
+                            ChannelsStore!.setSearch('');
+                        }}
+                        cancelButtonTitle="Cancel"
+                        cancelButtonProps={{}}
+                        searchIcon={{ name: 'search', type: 'font-awesome' }}
+                        clearIcon={{ name: 'close', type: 'font-awesome' }}
+                        showCancel={true}
+                    />
+                    <SortButton
+                        onValueChange={(value: any) => {
+                            setSort(value);
+                        }}
+                        values={getChannelsSortKeys(
+                            channelsType === ChannelsType.Closed
+                        )}
+                    />
+                </Row>
+                <FilterOptions />
+            </View>
+        );
+    }
+}
 
 export default ChannelsFilter;
