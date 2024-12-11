@@ -174,9 +174,15 @@ export default class PointOfSale extends React.Component<
                             title={localeString('views.Settings.POS.enablePos')}
                             selectedValue={posEnabled}
                             onValueChange={async (value: PosEnabled) => {
+                                const { SettingsStore } = this.props;
+                                const { setPosStatus } = SettingsStore;
+
                                 this.setState({
                                     posEnabled: value
                                 });
+                                if (value === PosEnabled.Disabled) {
+                                    setPosStatus('unselected');
+                                }
                                 await updateSettings({
                                     pos: {
                                         posEnabled: value,
