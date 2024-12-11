@@ -71,6 +71,7 @@ import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
+import PaymentsStore from '../../stores/PaymentsStore';
 import NotesStore from '../../stores/NotesStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
@@ -96,6 +97,7 @@ interface WalletProps {
     PosStore: PosStore;
     UTXOsStore: UTXOsStore;
     ContactStore: ContactStore;
+    PaymentsStore: PaymentsStore;
     ModalStore: ModalStore;
     SyncStore: SyncStore;
     LSPStore: LSPStore;
@@ -121,6 +123,7 @@ interface WalletState {
     'PosStore',
     'UTXOsStore',
     'ContactStore',
+    'PaymentsStore',
     'ModalStore',
     'SyncStore',
     'LSPStore',
@@ -302,6 +305,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelsStore,
             UTXOsStore,
             ContactStore,
+            PaymentsStore,
             SettingsStore,
             PosStore,
             FiatStore,
@@ -353,6 +357,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelBackupStore.reset();
             UTXOsStore.reset();
             ContactStore.loadContacts();
+            PaymentsStore.getPayments();
             NotesStore.loadNoteKeys();
         }
 
