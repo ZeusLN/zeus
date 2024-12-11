@@ -10,7 +10,6 @@ export default class PaymentsStore {
     @observable error = false;
     @observable error_msg: string;
     @observable payments: Array<Payment | any> = [];
-    @observable last_index_offset: number;
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
 
@@ -31,15 +30,15 @@ export default class PaymentsStore {
     };
 
     @action
-    public getPayments = async (indexOffSet: any = undefined) => {
+    public getPayments = async (
+        maxPayments: any = undefined,
+        reversed: boolean = false
+    ) => {
         this.loading = true;
         try {
-            if (!indexOffSet) {
-                console.log('Fetching all payments..');
-            } else console.log('Fetching the last payment', indexOffSet);
-
             const data = await BackendUtils.getPayments({
-                indexOffSet
+                maxPayments,
+                reversed
             });
             const payments = data.payments;
             this.payments = payments
@@ -49,7 +48,6 @@ export default class PaymentsStore {
                     (payment: any) =>
                         new Payment(payment, this.channelsStore.nodes)
                 );
-            this.last_index_offset = data.last_index_offset;
             this.loading = false;
             return this.payments;
         } catch (error) {
