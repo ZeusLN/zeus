@@ -97,9 +97,8 @@ export default class SendingLightning extends React.Component<
 
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
-        const { last_index_offset } = PaymentsStore;
         try {
-            const payments = await PaymentsStore.getPayments(last_index_offset);
+            const payments = await PaymentsStore.getPayments(5, true);
             const matchingPayment = payments.find(
                 (payment: any) =>
                     payment.payment_preimage ===

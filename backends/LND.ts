@@ -327,10 +327,10 @@ export default class LND {
     getPayments = (data?: any) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
-                data && data?.indexOffSet
-                    ? `&index_offset=${data?.indexOffSet}`
+                data && data?.maxPayments
+                    ? `&max_payments=${data.maxPayments}`
                     : ''
-            }`
+            }${data?.reversed ? `&reversed=${data.reversed}` : ''}`
         );
 
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);

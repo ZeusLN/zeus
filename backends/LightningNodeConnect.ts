@@ -175,9 +175,10 @@ export default class LightningNodeConnect {
             .listPayments({
                 include_incomplete: true,
                 ...(data &&
-                    data?.indexOffSet && {
-                        index_offset: data.indexOffSet
-                    })
+                    data?.maxPayments && {
+                        max_payments: data.maxPayments
+                    }),
+                ...(data && data?.reversed && { reversed: data?.reversed })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
