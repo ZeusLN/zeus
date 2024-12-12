@@ -510,12 +510,6 @@ export default class Send extends React.Component<SendProps, SendState> {
         navigation.navigate('SendingLightning');
     };
 
-    handleOnNavigateBack = (fee: string) => {
-        this.setState({
-            fee
-        });
-    };
-
     displayAddress = (item: any) => {
         const contact = new Contact(item);
         const {

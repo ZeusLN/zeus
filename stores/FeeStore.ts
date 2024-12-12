@@ -22,6 +22,7 @@ export default class FeeStore {
     @observable public setFeesError = false;
     @observable public setFeesErrorMsg: string;
     @observable public setFeesSuccess = false;
+    @observable public tempFee: string = '';
 
     @observable public dayEarned: string | number;
     @observable public weekEarned: string | number;
@@ -176,6 +177,10 @@ export default class FeeStore {
                 this.loading = false;
                 this.setFeesError = true;
             });
+    };
+
+    @action setTempFee = (fee: string) => {
+        this.tempFee = fee;
     };
 
     forwardingError = () => {
