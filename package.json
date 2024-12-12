@@ -8,7 +8,7 @@
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|dateformat)/)"
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts"
