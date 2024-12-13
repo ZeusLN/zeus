@@ -125,6 +125,7 @@ export default class SwapPane extends React.PureComponent<
         );
 
         const createSubmarineSwap = async (invoice: any) => {
+            const { SwapStore } = this.props;
             try {
                 console.log('Creating submarine swap...');
 
@@ -151,6 +152,7 @@ export default class SwapPane extends React.PureComponent<
 
                 // Check for errors in the response
                 if (responseData?.error) {
+                    SwapStore.loading = false;
                     this.setState({ apiError: responseData.error });
                     console.error('Error in API response:', responseData.error);
                     return; // Stop further execution
@@ -164,6 +166,7 @@ export default class SwapPane extends React.PureComponent<
 
                 // No errors, proceed with setting the response and navigating
                 this.setState({ response: responseData }, () => {
+                    SwapStore.loading = false;
                     console.log('Navigating to SwapDetails...');
                     navigation.navigate('SwapDetails', {
                         swapData: responseData,
@@ -681,6 +684,7 @@ export default class SwapPane extends React.PureComponent<
                                 <Button
                                     title={localeString('views.Swaps.initiate')}
                                     onPress={() => {
+                                        this.props.SwapStore.loading = true;
                                         createSubmarineSwap(invoice);
                                     }}
                                     containerStyle={{
