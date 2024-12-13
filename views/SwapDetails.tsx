@@ -186,6 +186,9 @@ export default class SwapDetails extends React.Component<
                     data.status === 'swap.expired'
                 ) {
                     this.stopPolling(); // Stop polling
+
+                    data?.failureReason &&
+                        this.setState({ error: data?.failureReason });
                 } else {
                     console.log('Unhandled status:', data.status);
                 }

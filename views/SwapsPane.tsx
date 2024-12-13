@@ -13,6 +13,7 @@ import {
 import Screen from '../components/Screen';
 import Header from '../components/Header';
 import Amount from '../components/Amount';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -27,6 +28,7 @@ interface SwapsPaneProps {
 interface SwapsPaneState {
     swaps: Array<any>;
     error: string | null;
+    loading: boolean;
 }
 
 @inject('TransactionsStore', 'SwapStore')
@@ -39,7 +41,8 @@ export default class SwapsPane extends React.Component<
         super(props);
         this.state = {
             swaps: [],
-            error: null
+            error: null,
+            loading: false
         };
     }
 
@@ -52,10 +55,11 @@ export default class SwapsPane extends React.Component<
     }
 
     fetchSwaps = async () => {
+        this.setState({ loading: true });
         try {
             const storedSwaps = await EncryptedStorage.getItem('swaps');
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-            this.setState({ swaps });
+            this.setState({ swaps, loading: false });
             console.log('All Swaps:', swaps);
         } catch (error) {
             this.setState({ error: 'Failed to load swaps' });
@@ -174,7 +178,7 @@ export default class SwapsPane extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { swaps, error } = this.state;
+        const { swaps, error, loading } = this.state;
 
         return (
             <Screen>
@@ -191,17 +195,20 @@ export default class SwapsPane extends React.Component<
                 />
 
                 {error && <ErrorMessage message={error} />}
-                {swaps.length === 0 && !error && (
+                {loading ? (
+                    <LoadingIndicator />
+                ) : swaps.length === 0 && !error ? (
                     <View style={{ paddingHorizontal: 15 }}>
                         <WarningMessage message="No Swaps Available" />
                     </View>
+                ) : (
+                    <FlatList
+                        data={swaps}
+                        keyExtractor={(item) => item.id}
+                        renderItem={this.renderSwap}
+                        ItemSeparatorComponent={this.renderSeparator}
+                    />
                 )}
-                <FlatList
-                    data={swaps}
-                    keyExtractor={(item) => item.id}
-                    renderItem={this.renderSwap}
-                    ItemSeparatorComponent={this.renderSeparator}
-                />
             </Screen>
         );
     }
