@@ -324,13 +324,11 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = (data?: any) =>
+    getPayments = (params?: { maxPayments?: number; reversed?: boolean }) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
-                data && data?.maxPayments
-                    ? `&max_payments=${data.maxPayments}`
-                    : ''
-            }${data?.reversed ? `&reversed=${data.reversed}` : ''}`
+                params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
+            }${params?.reversed ? `&reversed=${params.reversed}` : ''}`
         );
 
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);

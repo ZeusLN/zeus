@@ -30,16 +30,13 @@ export default class PaymentsStore {
     };
 
     @action
-    public getPayments = async (
-        maxPayments: any = undefined,
-        reversed: boolean = false
-    ) => {
+    public getPayments = async (params?: {
+        maxPayments?: number;
+        reversed?: boolean;
+    }) => {
         this.loading = true;
         try {
-            const data = await BackendUtils.getPayments({
-                maxPayments,
-                reversed
-            });
+            const data = await BackendUtils.getPayments(params);
             const payments = data.payments;
             this.payments = payments
                 .slice()
