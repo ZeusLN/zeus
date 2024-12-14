@@ -170,15 +170,17 @@ export default class LightningNodeConnect {
                 route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
-    getPayments = async (data: any) =>
+    getPayments = async (params?: {
+        maxPayments?: number;
+        reversed?: boolean;
+    }) =>
         await this.lnc.lnd.lightning
             .listPayments({
                 include_incomplete: true,
-                ...(data &&
-                    data?.maxPayments && {
-                        max_payments: data.maxPayments
-                    }),
-                ...(data && data?.reversed && { reversed: data?.reversed })
+                ...(params?.maxPayments && {
+                    max_payments: params.maxPayments
+                }),
+                ...(params?.reversed && { reversed: params.reversed })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
