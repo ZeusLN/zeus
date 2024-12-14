@@ -8,6 +8,7 @@ import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
+import Long from 'long';
 
 const {
     addInvoice,
@@ -21,7 +22,6 @@ const {
     sendKeysendPaymentV2,
     listPayments,
     getNetworkInfo,
-    getRecoveryInfo,
     queryRoutes,
     lookupInvoice,
     fundingStateStep,
@@ -84,7 +84,6 @@ export default class EmbeddedLND extends LND {
     subscribeCustomMessages = async () => await subscribeCustomMessages();
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
-    getRecoveryInfo = async () => await getRecoveryInfo();
     getInvoices = async () => await listInvoices();
     createInvoice = async (data: any) =>
         await addInvoice({
@@ -105,13 +104,13 @@ export default class EmbeddedLND extends LND {
         await newChangeAddress(data.type, data.account);
     openChannelSync = async (data: OpenChannelRequest) =>
         await openChannelSync(
-            data.node_pubkey_string,
-            Number(data.local_funding_amount),
+            data.nodePubkeyString,
+            Number(data.localFundingAmount),
             data.privateChannel || false,
-            data.sat_per_vbyte ? Number(data.sat_per_vbyte) : undefined,
+            data.satPerVbyte ? Number(data.satPerVbyte) : undefined,
             data.scidAlias,
-            data.min_confs,
-            data.spend_unconfirmed,
+            data.minConfs,
+            data.spendUnconfirmed,
             data.simpleTaprootChannel,
             data.fundMax,
             data.utxos
@@ -139,24 +138,26 @@ export default class EmbeddedLND extends LND {
             });
 
             openChannel(
-                data.node_pubkey_string,
-                Number(data.local_funding_amount),
+                data.nodePubkeyString,
+                Number(data.localFundingAmount),
                 data.privateChannel || false,
-                data.sat_per_vbyte && !data.funding_shim
-                    ? Number(data.sat_per_vbyte)
+                data.satPerVbyte && !data.fundingShim
+                    ? Number(data.satPerVbyte)
                     : undefined,
                 data.scidAlias,
-                data.min_confs,
-                data.spend_unconfirmed,
+                data.minConfs,
+                data.spendUnconfirmed,
                 data.simpleTaprootChannel,
                 data.fundMax,
                 data.utxos,
-                data.funding_shim
+                data.fundingShim
             );
         });
     };
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
+    decodePaymentRequest = async (urlParams: Array<string>) =>
+        await decodePayReq(urlParams && urlParams[0]);
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq((urlParams && urlParams[0]) || '');
     payLightningInvoice = async (data: any) => {
@@ -215,9 +216,13 @@ export default class EmbeddedLND extends LND {
         );
     };
 
+    getNodeInfo = async (urlParams: Array<string>) =>
+        await getNodeInfo(urlParams[0]);
+    signMessage = async (msg: string) => {
     getNodeInfo = async (urlParams?: Array<string>) =>
         await getNodeInfo((urlParams && urlParams[0]) || '');
     signMessage = async (msg: any) => {
+ 
         return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
     };
     verifyMessage = async (data: any) => {
@@ -230,6 +235,9 @@ export default class EmbeddedLND extends LND {
 
     // getFees = () => N/A;
     // setFees = () => N/A;
+    getRoutes = async (urlParams: Array<string | Long>) =>
+        urlParams &&
+        (await queryRoutes(urlParams[0] as string, urlParams[1] as Long));
     getRoutes = async (urlParams?: Array<any>) =>
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
@@ -312,6 +320,7 @@ export default class EmbeddedLND extends LND {
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
+    isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;

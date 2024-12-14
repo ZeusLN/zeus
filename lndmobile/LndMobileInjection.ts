@@ -565,4 +565,4 @@ export default {
     scheduledSync: {
         checkScheduledSyncWorkStatus
     }
-} as ILndMobileInjections;
+} as unknown as ILndMobileInjections;
