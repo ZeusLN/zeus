@@ -35,7 +35,7 @@ interface SeedState {
     showModal: boolean;
 }
 
-const MnemonicWord = ({ index, word }) => {
+const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
     const [isRevealed, setRevealed] = useState(false);
     return (
         <TouchableOpacity
@@ -121,9 +121,9 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         }
                     }}
                     rightComponent={
-                        understood && seedPhrase
-                            ? DangerouslyCopySeed
-                            : undefined
+                        understood && seedPhrase ? (
+                            <DangerouslyCopySeed />
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
@@ -177,7 +177,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                                 name: 'warning',
                                                 size: 40
                                             }}
-                                            containerStyle={{ color: 'red' }}
                                         />
                                     </View>
                                     <View style={styles.button}>
@@ -190,7 +189,6 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                                     showModal: false
                                                 })
                                             }
-                                            primary
                                         />
                                     </View>
                                 </View>

@@ -1,6 +1,6 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import querystring from 'querystring-es3';
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -68,6 +68,8 @@ export default class Eclair {
     }
     api = (method: string, params: any = {}) => {
         const id = this.generateCallId(method, params);
+        const { password, certVerification, enableTor } = settingsStore;
+        let { url } = settingsStore;
 
         if (this.calls.has(id)) {
             return this.calls.get(id)!;
@@ -103,7 +105,7 @@ export default class Eclair {
             }))
         }));
     getChannels = () =>
-        this.api('channels').then((channels: any) => ({
+        this.api('channels')?.then((channels: any) => ({
             channels: channels.map((chan: any) => {
                 return {
                     active: chan.state === 'NORMAL',
@@ -135,7 +137,7 @@ export default class Eclair {
             })
         }));
     getBlockchainBalance = () =>
-        this.api('onchainbalance').then(({ confirmed, unconfirmed }: any) => {
+        this.api('onchainbalance')?.then(({ confirmed, unconfirmed }: any) => {
             return {
                 total_balance: confirmed + unconfirmed,
                 confirmed_balance: confirmed,
@@ -143,7 +145,7 @@ export default class Eclair {
             };
         });
     getLightningBalance = () =>
-        this.api('channels').then((channels: any) => ({
+        this.api('channels')?.then((channels: any) => ({
             balance: Math.round(
                 channels
                     .filter(
@@ -174,9 +176,9 @@ export default class Eclair {
             address: data.addr,
             confirmationTarget: data.conf_target,
             amountSatoshis: data.amount
-        }).then((txid: any) => ({ txid }));
+        })?.then((txid: any) => ({ txid }));
     getMyNodeInfo = () =>
-        this.api('getinfo').then(
+        this.api('getinfo')?.then(
             ({
                 version,
                 nodeId,
@@ -220,9 +222,9 @@ export default class Eclair {
             description: data.memo,
             amountMsat: Number(data.value) * 1000,
             expireIn: data.expiry
-        }).then(mapInvoice(null));
+        })?.then(mapInvoice(null));
     getPayments = () =>
-        this.api('audit').then(({ sent }: any) => ({
+        this.api('audit')?.then(({ sent }: any) => ({
             payments: sent.map(
                 ({
                     paymentHash,
@@ -253,18 +255,20 @@ export default class Eclair {
             )
         }));
     getNewAddress = () =>
-        this.api('getnewaddress').then((address: any) => ({ address }));
+        this.api('getnewaddress')?.then((address: any) => ({ address }));
     openChannelSync = (data: OpenChannelRequest) =>
         this.api('open', {
             nodeId: data.nodePubkeyString,
             fundingSatoshis: data.satoshis,
             fundingFeerateSatByte: data.satPerVbyte,
             channelFlags: data.privateChannel ? 0 : 1
-        }).then(() => ({}));
+        })?.then(() => ({}));
     connectPeer = (data: any) =>
         this.api('connect', { uri: data.addr.pubkey + '@' + data.addr.host });
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.api('parseinvoice', { invoice: [urlParams && urlParams[0]] }).then(
+        this.api('parseinvoice', {
+            invoice: [urlParams && urlParams[0]]
+        })?.then(
             ({
                 serialized,
                 description,
@@ -290,7 +294,7 @@ export default class Eclair {
             params.amountMsat = Number(data.amt * 1000);
         }
         return this.api('payinvoice', params)
-            .then((payId: any) => this.api('getsentinfo', { id: payId }))
+            ?.then((payId: any) => this.api('getsentinfo', { id: payId }))
             .then((attempts: any) => {
                 if (attempts.length === 0) {
                     return {
@@ -324,10 +328,10 @@ export default class Eclair {
         }
         return this.api(method, {
             channelId: [urlParams && urlParams[0]]
-        }).then(() => ({ chan_close: { success: true } }));
+        })?.then(() => ({ chan_close: { success: true } }));
     };
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.api('nodes', { nodeIds: urlParams && urlParams[0] }).then(
+        this.api('nodes', { nodeIds: urlParams && urlParams[0] })?.then(
             (nodes: any) => {
                 const node = nodes[0];
                 return {
@@ -394,7 +398,7 @@ export default class Eclair {
         const params: any = {};
         if (data.global) {
             params.channelIds = (
-                await this.api('channels').then((channels: any) =>
+                await this.api('channels')?.then((channels: any) =>
                     channels.map((channel: any) => channel.channelId)
                 )
             ).join(',');
@@ -412,7 +416,7 @@ export default class Eclair {
             nodeId: urlParams && urlParams[0],
             amountMsat: urlParams && urlParams[1]
         })
-            .then((nodeIds: any) =>
+            ?.then((nodeIds: any) =>
                 Promise.all(
                     nodeIds
                         .slice(1) // discard ourselves since our channel will be free
@@ -514,12 +518,16 @@ export default class Eclair {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
+    supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }
 
 const mapInvoice =

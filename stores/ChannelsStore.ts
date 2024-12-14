@@ -23,12 +23,12 @@ interface ChannelInfoIndex {
 
 interface PendingHTLC {
     incoming: boolean;
-    amount: number;
+    amount: number | string;
     hash_lock: string;
     expiration_height: number;
-    htlc_index: number;
-    forwarding_channel: number;
-    forwarding_htlc_index: number;
+    htlc_index?: number;
+    forwarding_channel?: number;
+    forwarding_htlc_index?: number;
 }
 
 export enum ChannelsType {
@@ -36,6 +36,15 @@ export enum ChannelsType {
     Pending = 1,
     Closed = 2
 }
+
+interface aliases {
+    [index: string]: string;
+}
+
+const fixedAliases: aliases = {
+    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581':
+        'Olympus by ZEUS'
+};
 
 export default class ChannelsStore {
     @observable public loading = false;
@@ -303,8 +312,8 @@ export default class ChannelsStore {
     enrichChannels = async (
         channels: Array<Channel>,
         setPendingHtlcs?: boolean
-    ) => {
-        if (channels.length === 0) return;
+    ): Promise<Channel[]> => {
+        if (channels.length === 0) return [];
 
         const channelsWithMissingAliases = channels?.filter(
             (c) => c.channelId != null && this.aliasesById[c.channelId] == null
@@ -338,15 +347,17 @@ export default class ChannelsStore {
 
         for (const channel of channelsWithMissingAliases) {
             const nodeInfo = this.nodes[channel.remotePubkey];
-            if (!nodeInfo) continue;
-            this.aliasesById[channel.channelId!] = nodeInfo.alias;
+            const alias = nodeInfo?.alias || fixedAliases[channel.remotePubkey];
+            if (alias) this.aliasesById[channel.channelId!] = alias;
         }
 
         if (setPendingHtlcs) this.pendingHTLCs = [];
 
         for (const channel of channels) {
             if (channel.alias == null) {
-                channel.alias = this.nodes[channel.remotePubkey]?.alias;
+                channel.alias =
+                    this.nodes[channel.remotePubkey]?.alias ||
+                    this.aliasesById[channel.channelId!];
             }
             channel.displayName =
                 channel.alias ||
@@ -363,7 +374,9 @@ export default class ChannelsStore {
             }
         }
 
-        console.log('Pending HTLCs', this.pendingHTLCs);
+        if (this.pendingHTLCs.length > 0) {
+            console.log('Pending HTLCs', this.pendingHTLCs);
+        }
 
         this.loading = false;
         return channels;
@@ -392,10 +405,10 @@ export default class ChannelsStore {
                 );
                 channels.forEach((channel: Channel) => {
                     const channelRemoteBalance = new BigNumber(
-                        channel.remoteBalance
+                        channel.receivingCapacity
                     );
                     const channelLocalBalance = new BigNumber(
-                        channel.localBalance
+                        channel.sendingCapacity
                     );
                     const channelTotal =
                         channelRemoteBalance.plus(channelLocalBalance);
@@ -478,11 +491,11 @@ export default class ChannelsStore {
 
     @action
     public closeChannel = async (
-        channelPoint?: CloseChannelRequest | null,
-        channelId?: string | null,
-        satPerVbyte?: string | null,
-        forceClose?: boolean | string | null,
-        deliveryAddress?: string | null
+        channelPoint?: CloseChannelRequest,
+        channelId?: string,
+        satPerVbyte?: string,
+        forceClose?: boolean | string,
+        deliveryAddress?: string
     ) => {
         this.closeChannelErr = null;
         this.closingChannel = true;
@@ -498,7 +511,7 @@ export default class ChannelsStore {
         ) {
             // c-lightning, eclair
             urlParams = [channelId, forceClose];
-        } else {
+        } else if (channelPoint) {
             // lnd
             const { funding_txid_str, output_index } = channelPoint;
 
@@ -923,9 +936,13 @@ export default class ChannelsStore {
                 };
                 BackendUtils.openChannelStream(request)
                     .then((data: any) => {
-                        const { pending_chan_id } = data.result;
+                        const { psbt_fund, pending_chan_id } = data.result;
                         this.pending_chan_ids.push(pending_chan_id);
-                        this.handleChannelOpen(request);
+                        if (psbt_fund?.funding_address) {
+                            outputs[psbt_fund.funding_address] =
+                                psbt_fund.funding_amount;
+                        }
+                        this.handleChannelOpen(request, outputs);
                     })
                     .catch((error: Error) => {
                         this.handleChannelOpenError(error);

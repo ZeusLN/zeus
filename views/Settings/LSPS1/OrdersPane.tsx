@@ -30,6 +30,42 @@ interface OrdersPaneState {
     isLoading: boolean;
 }
 
+interface Bolt11 {
+    order_total_sat: string;
+    fee_total_sat: string;
+    invoice: string;
+    expires_at: string;
+    state: string;
+}
+
+interface Payment {
+    bolt11: Bolt11;
+}
+
+export interface Order {
+    announce_channel: boolean;
+    channel?: string;
+    channel_expiry_blocks: number;
+    required_channel_confirmations: number;
+    funding_confirms_within_blocks: number;
+    created_at: string;
+    lsp_balance_sat: string;
+    client_balance_sat: string;
+    order_id: string;
+    order_state: string;
+    payment: Payment;
+    token: string;
+    result?: Order | any;
+}
+
+export interface LSPS1OrderResponse {
+    order: Order;
+    clientPubkey: string;
+    endpoint: string;
+    uri?: string;
+    peer?: string;
+}
+
 @inject('LSPStore', 'NodeInfoStore')
 @observer
 export default class OrdersPane extends React.Component<
@@ -65,38 +101,40 @@ export default class OrdersPane extends React.Component<
                         return;
                     }
 
-                    const decodedResponses = responseArray.map((response) =>
-                        JSON.parse(response)
+                    const decodedResponses = responseArray.map(
+                        (response: any) => JSON.parse(response)
                     );
 
                     let selectedOrders;
                     if (BackendUtils.supportsLSPS1customMessage()) {
                         selectedOrders = decodedResponses.filter(
-                            (response) =>
+                            (response: LSPS1OrderResponse) =>
                                 response?.uri &&
                                 response.clientPubkey ===
                                     this.props.NodeInfoStore.nodeInfo.nodeId
                         );
                     } else if (BackendUtils.supportsLSPS1rest()) {
                         selectedOrders = decodedResponses.filter(
-                            (response) =>
+                            (response: LSPS1OrderResponse) =>
                                 response?.endpoint &&
                                 response.clientPubkey ===
                                     this.props.NodeInfoStore.nodeInfo.nodeId
                         );
                     }
 
-                    const orders = selectedOrders.map((response) => {
-                        const order =
-                            response?.order?.result || response?.order;
-                        return {
-                            orderId: order?.order_id,
-                            state: order?.order_state,
-                            createdAt: order?.created_at,
-                            fundedAt: order?.channel?.funded_at,
-                            lspBalanceSat: order?.lsp_balance_sat
-                        };
-                    });
+                    const orders = selectedOrders.map(
+                        (response: LSPS1OrderResponse) => {
+                            const order =
+                                response?.order?.result || response?.order;
+                            return {
+                                orderId: order?.order_id,
+                                state: order?.order_state,
+                                createdAt: order?.created_at,
+                                fundedAt: order?.channel?.funded_at,
+                                lspBalanceSat: order?.lsp_balance_sat
+                            };
+                        }
+                    );
 
                     const reversedOrders = orders.reverse();
 

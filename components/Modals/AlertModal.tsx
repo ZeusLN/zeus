@@ -41,7 +41,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
             );
         });
 
-        const ref = createRef();
+        const ref = createRef<ModalBox>();
 
         return (
             <ModalBox
@@ -110,12 +110,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                     )}
                                 </Text>
 
-                                <View
-                                    style={{
-                                        ...styles.button,
-                                        marginBottom: 25
-                                    }}
-                                >
+                                <View style={styles.button}>
                                     <Button
                                         title={localeString(
                                             'components.AlertModal.resetEGS'
@@ -129,7 +124,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                             restartNeeded();
                                         }}
                                         tertiary
-                                    ></Button>
+                                    />
                                 </View>
                             </>
                         )}
@@ -170,12 +165,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                     {peers.join(', ')}
                                 </Text>
 
-                                <View
-                                    style={{
-                                        ...styles.button,
-                                        marginBottom: 25
-                                    }}
-                                >
+                                <View style={styles.button}>
                                     <Button
                                         title={localeString(
                                             'components.AlertModal.reviewPeers'
@@ -187,7 +177,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                             );
                                         }}
                                         tertiary
-                                    ></Button>
+                                    />
                                 </View>
                             </>
                         )}
@@ -196,7 +186,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                             title={localeString('general.close')}
                             onPress={() => toggleAlertModal(false)}
                             secondary
-                        ></Button>
+                        />
                     </View>
                 </View>
             </ModalBox>
@@ -216,11 +206,9 @@ const styles = StyleSheet.create({
         fontSize: 20,
         marginBottom: 10
     },
-    buttons: {
-        width: '100%'
-    },
     button: {
-        marginTop: 20,
-        width: 350
+        width: '100%',
+        alignItems: 'center',
+        marginVertical: 20
     }
 });

@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { nodeInfoStore } from '../stores/storeInstances';
 import LND from './LND';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -20,7 +20,7 @@ export default class CLightningREST extends LND {
         eosVersion?: string,
         minApiVersion?: string
     ) => {
-        const { nodeInfo } = stores.nodeInfoStore;
+        const { nodeInfo } = nodeInfoStore;
         const { version, api_version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         if (minApiVersion) {
@@ -169,6 +169,7 @@ export default class CLightningREST extends LND {
         let request: any;
         const satPerVbyte = data.satPerVbyte ?? '0'; // Default to '0' if undefined
         const feeRate = `${new BigNumber(satPerVbyte)
+        const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
             .times(1000)
             .toString()}perkb`;
         if (data.utxos && data.utxos.length > 0) {
@@ -301,10 +302,13 @@ export default class CLightningREST extends LND {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = async () => {
         const res = await this.getRequest('/v1/utility/listConfigs');
         const supportsOffers: boolean = res['experimental-offers'] || false;

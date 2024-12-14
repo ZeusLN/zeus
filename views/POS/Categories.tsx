@@ -127,6 +127,7 @@ export default class ProductCategories extends React.Component<
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
                         value={search}
                         inputStyle={{

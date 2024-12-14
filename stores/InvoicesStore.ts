@@ -120,31 +120,45 @@ export default class InvoicesStore {
     };
 
     @action
-    public createUnifiedInvoice = (
-        memo: string,
-        value: string,
+    public createUnifiedInvoice = ({
+        memo,
+        value,
         expiry = '3600',
-        lnurl?: LNURLWithdrawParams,
-        ampInvoice?: boolean,
-        routeHints?: boolean,
-        routeHintChannels?: Channel[],
-        addressType?: string,
-        customPreimage?: string,
-        noLsp?: boolean
-    ) => {
+        lnurl,
+        ampInvoice,
+        blindedPaths,
+        routeHints,
+        routeHintChannels,
+        addressType,
+        customPreimage,
+        noLsp
+    }: {
+        memo: string;
+        value: string;
+        expiry: string;
+        lnurl?: LNURLWithdrawParams;
+        ampInvoice?: boolean;
+        blindedPaths?: boolean;
+        routeHints?: boolean;
+        routeHintChannels?: Channel[];
+        addressType?: string;
+        customPreimage?: string;
+        noLsp?: boolean;
+    }) => {
         this.creatingInvoice = true;
-        return this.createInvoice(
+        return this.createInvoice({
             memo,
             value,
             expiry,
             lnurl,
             ampInvoice,
+            blindedPaths,
             routeHints,
             routeHintChannels,
-            true,
+            unified: true,
             customPreimage,
             noLsp
-        ).then(
+        }).then(
             ({
                 rHash,
                 paymentRequest
@@ -179,18 +193,31 @@ export default class InvoicesStore {
     };
 
     @action
-    public createInvoice = async (
-        memo: string,
-        value: string,
+    public createInvoice = async ({
+        memo,
+        value,
         expiry = '3600',
-        lnurl?: LNURLWithdrawParams,
-        ampInvoice?: boolean,
-        routeHints?: boolean,
-        routeHintChannels?: Channel[],
-        unified?: boolean,
-        customPreimage?: string,
-        noLsp?: boolean
-    ) => {
+        lnurl,
+        ampInvoice,
+        blindedPaths,
+        routeHints,
+        routeHintChannels,
+        unified,
+        customPreimage,
+        noLsp
+    }: {
+        memo: string;
+        value: string;
+        expiry: string;
+        lnurl?: LNURLWithdrawParams;
+        ampInvoice?: boolean;
+        blindedPaths?: boolean;
+        routeHints?: boolean;
+        routeHintChannels?: Channel[];
+        unified?: boolean;
+        customPreimage?: string;
+        noLsp?: boolean;
+    }) => {
         this.lspStore?.resetFee();
         this.payment_request = null;
         this.payment_request_amt = null;
@@ -205,6 +232,7 @@ export default class InvoicesStore {
         };
 
         if (ampInvoice) req.is_amp = true;
+        if (blindedPaths) req.is_blinded = true;
         if (routeHints) {
             if (routeHintChannels?.length) {
                 const routeHints = [];
@@ -408,11 +436,42 @@ export default class InvoicesStore {
             this.creatingInvoice = true;
             this.error_msg = null;
         }
+        // ZEUS-2396
+        // https://github.com/ZeusLN/zeus/issues/2396
+        if (params.account && params.account !== 'default') {
+            delete params.type;
+        }
         this.onChainAddress = null;
         return BackendUtils.getNewAddress(params)
             .then((data: any) => {
                 const address =
                     data.address || data.bech32 || (data[0] && data[0].address);
+                if (!params.unified) this.onChainAddress = address;
+                if (!params.unified) this.creatingInvoice = false;
+                return address;
+            })
+            .catch((error: any) => {
+                // handle error
+                this.error_msg =
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorGeneratingAddress');
+                this.creatingInvoice = false;
+            });
+    };
+
+    @action
+    public getNewChangeAddress = (params: any) => {
+        if (!params.unified) {
+            this.creatingInvoice = true;
+            this.error_msg = null;
+        }
+
+        params.change = true;
+
+        this.onChainAddress = null;
+        return BackendUtils.getNewChangeAddress(params)
+            .then((data: any) => {
+                const address = data.addr;
                 if (!params.unified) this.onChainAddress = address;
                 if (!params.unified) this.creatingInvoice = false;
                 return address;

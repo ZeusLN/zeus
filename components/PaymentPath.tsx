@@ -161,17 +161,34 @@ const ExpandedHop = (props: any) => {
                                     ? PrivacyUtils.sensitiveValue(
                                           aliasMap.get(hop.pubKey)
                                       )
-                                    : hop.node.length >= 66
+                                    : typeof hop.node === 'string' &&
+                                      hop.node.length >= 66
                                     ? `${
-                                          PrivacyUtils.sensitiveValue(
+                                          typeof PrivacyUtils.sensitiveValue(
                                               hop.node
-                                          ).slice(0, 14) +
-                                          '...' +
-                                          PrivacyUtils.sensitiveValue(
+                                          ) === 'string'
+                                              ? (
+                                                    PrivacyUtils.sensitiveValue(
+                                                        hop.node
+                                                    ) as string
+                                                ).slice(0, 14)
+                                              : ''
+                                      }...${
+                                          typeof PrivacyUtils.sensitiveValue(
                                               hop.node
-                                          ).slice(-14)
+                                          ) === 'string'
+                                              ? (
+                                                    PrivacyUtils.sensitiveValue(
+                                                        hop.node
+                                                    ) as string
+                                                ).slice(-14)
+                                              : ''
                                       }`
-                                    : PrivacyUtils.sensitiveValue(hop.node)
+                                    : typeof PrivacyUtils.sensitiveValue(
+                                          hop.node
+                                      ) === 'string'
+                                    ? PrivacyUtils.sensitiveValue(hop.node)
+                                    : ''
                             }`}
                         </Text>
                     )}
@@ -247,17 +264,18 @@ export default class PaymentPath extends React.Component<
             path.forEach((hop) => {
                 const displayName = aliasMap.get(hop.pubKey) || hop.node;
                 title += ', ';
+                const sensitiveDisplayName =
+                    PrivacyUtils.sensitiveValue(displayName);
                 title +=
-                    displayName.length >= 66
-                        ? `${PrivacyUtils.sensitiveValue(displayName).slice(
-                              0,
-                              6
-                          )}...`
-                        : PrivacyUtils.sensitiveValue(displayName);
+                    typeof sensitiveDisplayName === 'string' &&
+                    sensitiveDisplayName.length >= 66
+                        ? `${(sensitiveDisplayName as string).slice(0, 6)}...`
+                        : sensitiveDisplayName ?? '';
             });
             if (enhancedPath.length > 1) {
                 hops.push(
                     <Hop
+                        key={`hop-${index}`}
                         index={index}
                         title={title}
                         path={path}
@@ -273,6 +291,7 @@ export default class PaymentPath extends React.Component<
             if (expanded.get(index) || enhancedPath.length === 1) {
                 hops.push(
                     <ExpandedHop
+                        key={`origin-${index}`}
                         pathIndex={0}
                         path={path}
                         hop={origin}
@@ -291,6 +310,7 @@ export default class PaymentPath extends React.Component<
                 (expanded.get(index) || enhancedPath.length === 1) &&
                     hops.push(
                         <ExpandedHop
+                            key={`hop-${index}-${pathIndex}`}
                             pathIndex={pathIndex + 1}
                             path={path}
                             hop={hop}

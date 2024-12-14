@@ -25,12 +25,13 @@ import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
-import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
+import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 
 import { version } from './../../package.json';
 
@@ -88,15 +89,19 @@ export default class SquarePosPane extends React.PureComponent<
         ).start();
     }
 
-    renderItem = ({ item, index }, onClickPaid, onClickHide) => {
+    renderItem = (
+        { item, index }: { item: { [key: string]: any }; index: number },
+        onClickPaid: any,
+        onClickHide: any
+    ) => {
         const { navigation, FiatStore } = this.props;
         const { getRate, getSymbol } = FiatStore!;
         const isPaid: boolean = item && item.payment;
 
         let row: Array<any> = [];
-        let prevOpenedRow;
+        let prevOpenedRow: any;
 
-        const closeRow = (index) => {
+        const closeRow = (index: any) => {
             if (prevOpenedRow && prevOpenedRow !== row[index]) {
                 prevOpenedRow.close();
             }
@@ -104,10 +109,10 @@ export default class SquarePosPane extends React.PureComponent<
         };
 
         const renderRightActions = (
-            progress,
-            dragX,
-            onClickPaid,
-            onClickHide
+            _progress: any,
+            _dragX: any,
+            onClickPaid: any,
+            onClickHide: any
         ) => {
             return (
                 <View
@@ -254,6 +259,8 @@ export default class SquarePosPane extends React.PureComponent<
             { element: paidOrdersButton }
         ];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         if (error) {
             return (
                 <View
@@ -289,8 +296,7 @@ export default class SquarePosPane extends React.PureComponent<
                             'views.Wallet.MainPane.goToSettings'
                         )}
                         buttonStyle={{
-                            backgroundColor: 'gray',
-                            borderRadius: 30
+                            backgroundColor: 'gray'
                         }}
                         containerStyle={{
                             alignItems: 'center'
@@ -362,7 +368,7 @@ export default class SquarePosPane extends React.PureComponent<
                             this.setState({ selectedIndex });
                         }}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={buttonElements}
                         selectedButtonStyle={{
                             backgroundColor: themeColor('highlight'),
                             borderRadius: 12
@@ -387,6 +393,7 @@ export default class SquarePosPane extends React.PureComponent<
                 {!loading && (
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={(value: string) => {
                             updateSearch(value);
                             this.setState({

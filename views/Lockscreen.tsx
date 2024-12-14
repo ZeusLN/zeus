@@ -92,7 +92,7 @@ export default class Lockscreen extends React.Component<
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
-            navigation.navigate('Nodes');
+            navigation.navigate('Wallets');
         } else {
             navigation.pop();
         }
@@ -313,12 +313,14 @@ export default class Lockscreen extends React.Component<
         const { updateSettings } = SettingsStore;
 
         // duress pin is also deleted when pin is deleted
+        // biometry is also disabled when pin is deleted
         updateSettings({
             pin: '',
             duressPin: '',
-            authenticationAttempts: 0
+            authenticationAttempts: 0,
+            isBiometryEnabled: false
         }).then(() => {
-            navigation.navigate('Settings');
+            navigation.popTo('Security');
         });
     };
 
@@ -330,7 +332,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             authenticationAttempts: 0
         }).then(() => {
-            navigation.navigate('Settings');
+            navigation.popTo('Security');
         });
     };
 
@@ -391,7 +393,7 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
         const { settings } = SettingsStore;
         const {
             passphrase,
@@ -404,20 +406,29 @@ export default class Lockscreen extends React.Component<
             deleteDuressPin
         } = this.state;
 
+        const { attemptAdminLogin } = route.params ?? {};
+
         return (
             <Screen>
-                {(!!modifySecurityScreen || deletePin || deleteDuressPin) && (
+                {(!!modifySecurityScreen ||
+                    deletePin ||
+                    deleteDuressPin ||
+                    attemptAdminLogin) && (
                     <Header
                         leftComponent="Back"
-                        centerComponent={{
-                            text: localeString(
-                                'views.Lockscreen.enterPassphrase'
-                            ),
-                            style: {
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }
-                        }}
+                        centerComponent={
+                            passphrase
+                                ? {
+                                      text: localeString(
+                                          'views.Lockscreen.enterPassphrase'
+                                      ),
+                                      style: {
+                                          color: themeColor('text'),
+                                          fontFamily: 'PPNeueMontreal-Book'
+                                      }
+                                  }
+                                : undefined
+                        }
                         navigation={navigation}
                     />
                 )}

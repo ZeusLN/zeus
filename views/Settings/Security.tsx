@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
 import SettingsStore from '../../stores/SettingsStore';
+import ModalStore from '../../stores/ModalStore';
 
 import { verifyBiometry } from '../../utils/BiometricUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -18,6 +19,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface SecurityProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    ModalStore: ModalStore;
 }
 
 interface SecurityState {
@@ -28,6 +30,7 @@ interface SecurityState {
     passphraseExists: boolean;
     supportedBiometryType: BiometryType | undefined;
     isBiometryEnabled: boolean | undefined;
+    pendingBiometricsEnable: boolean;
 }
 
 const possibleSecurityItems = [
@@ -57,7 +60,7 @@ const possibleSecurityItems = [
     }
 ];
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'ModalStore')
 @observer
 export default class Security extends React.Component<
     SecurityProps,
@@ -65,9 +68,6 @@ export default class Security extends React.Component<
 > {
     constructor(props: SecurityProps) {
         super(props);
-
-        this.handleBiometricsSwitchChange =
-            this.handleBiometricsSwitchChange.bind(this);
     }
 
     state = {
@@ -77,19 +77,30 @@ export default class Security extends React.Component<
         pinExists: false,
         passphraseExists: false,
         supportedBiometryType: undefined,
-        isBiometryEnabled: undefined
+        isBiometryEnabled: undefined,
+        pendingBiometricsEnable: false
     };
 
-    async componentDidMount() {
+    componentDidMount() {
+        this.checkSettings();
+        this.props.navigation.addListener('focus', this.checkSettings);
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('focus', this.checkSettings);
+    }
+
+    checkSettings = async () => {
         const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const biometricsStatus = await SettingsStore.checkBiometricsStatus();
+        const settings = await SettingsStore.getSettings();
 
         this.setState({
             scramblePin: settings.scramblePin ?? true,
             loginBackground: settings.loginBackground ?? false,
-            isBiometryEnabled: settings.isBiometryEnabled,
-            supportedBiometryType: settings.supportedBiometryType
+            isBiometryEnabled: biometricsStatus.isBiometryEnabled,
+            supportedBiometryType: biometricsStatus.supportedBiometryType
         });
 
         if (settings.pin) {
@@ -135,25 +146,73 @@ export default class Security extends React.Component<
                 displaySecurityItems: minPinItems
             });
         }
-    }
+
+        // If user tried to enable biometrics, but was forced to first set up pin or password,
+        // call handleBiometricsSwitchChange again
+        if (
+            this.state.pendingBiometricsEnable &&
+            (settings.pin || settings.passphrase)
+        ) {
+            this.handleBiometricsSwitchChange(true);
+        }
+    };
 
     async handleBiometricsSwitchChange(value: boolean): Promise<void> {
-        const isVerified = await verifyBiometry(
-            localeString(`views.Settings.Security.Biometrics.prompt`)
-        );
+        const { SettingsStore, ModalStore, navigation } = this.props;
 
-        if (isVerified) {
-            const {
-                SettingsStore: { updateSettings }
-            } = this.props;
+        if (value) {
+            const settings = SettingsStore.settings;
+            if (!settings.pin && !settings.passphrase) {
+                this.setState({ pendingBiometricsEnable: true });
+                ModalStore.toggleInfoModal(
+                    localeString(
+                        'views.Settings.Security.BiometryRequiresPinOrPassword'
+                    ),
+                    undefined,
+                    [
+                        {
+                            title: localeString(
+                                'views.Settings.createYourPassword'
+                            ),
+                            callback: () => navigation.navigate('SetPassword')
+                        },
+                        {
+                            title: localeString('views.Settings.newPin'),
+                            callback: () => navigation.navigate('SetPin')
+                        }
+                    ]
+                );
+                return;
+            }
 
-            this.setState({
-                isBiometryEnabled: value
-            });
+            const isVerified = await verifyBiometry(
+                localeString('views.Settings.Security.Biometrics.prompt')
+            );
 
-            updateSettings({
-                isBiometryEnabled: value
-            });
+            if (isVerified) {
+                this.setState({
+                    isBiometryEnabled: value,
+                    pendingBiometricsEnable: false
+                });
+
+                SettingsStore.updateSettings({
+                    isBiometryEnabled: value
+                });
+            }
+        } else {
+            const isVerified = await verifyBiometry(
+                localeString(`views.Settings.Security.Biometrics.prompt`)
+            );
+
+            if (isVerified) {
+                this.setState({
+                    isBiometryEnabled: value
+                });
+
+                SettingsStore.updateSettings({
+                    isBiometryEnabled: value
+                });
+            }
         }
     }
 
@@ -167,11 +226,31 @@ export default class Security extends React.Component<
     );
 
     navigateSecurity = (item: any) => {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, ModalStore } = this.props;
         const { settings }: any = SettingsStore;
+        const { isBiometryEnabled } = this.state;
 
         if (!(settings.passphrase || settings.pin)) {
             navigation.navigate(item.screen);
+        } else if (item.action === 'DeletePin' && isBiometryEnabled) {
+            ModalStore.toggleInfoModal(
+                [
+                    localeString(
+                        'views.Settings.Security.biometricsWillBeDisabled'
+                    ),
+                    localeString('general.continueQuestion')
+                ],
+                undefined,
+                [
+                    {
+                        title: localeString('general.ok'),
+                        callback: () =>
+                            navigation.navigate('Lockscreen', {
+                                deletePin: true
+                            })
+                    }
+                ]
+            );
         } else if (item.action === 'DeletePin') {
             navigation.navigate('Lockscreen', {
                 deletePin: true
@@ -188,7 +267,7 @@ export default class Security extends React.Component<
         }
     };
 
-    renderItem = ({ item }) => {
+    renderItem = ({ item }: { item: any }) => {
         return (
             <ListItem
                 containerStyle={{
@@ -244,7 +323,7 @@ export default class Security extends React.Component<
                     <FlatList
                         data={displaySecurityItems}
                         renderItem={this.renderItem}
-                        keyExtractor={(item, index) =>
+                        keyExtractor={(item: any, index) =>
                             `${item.translateKey}-${index}`
                         }
                         ItemSeparatorComponent={this.renderSeparator}
@@ -271,8 +350,8 @@ export default class Security extends React.Component<
 
                             <Switch
                                 value={isBiometryEnabled}
-                                onValueChange={
-                                    this.handleBiometricsSwitchChange
+                                onValueChange={(value: boolean) =>
+                                    this.handleBiometricsSwitchChange(value)
                                 }
                             />
                         </ListItem>

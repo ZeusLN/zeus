@@ -1,5 +1,5 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import TransactionRequest from './../models/TransactionRequest';
 import OpenChannelRequest from './../models/OpenChannelRequest';
@@ -31,6 +31,15 @@ export default class Spark {
                         `HTTP ${status}: ${(error as Error).message}`
                     );
                 });
+    clearCachedCalls = () => calls.clear();
+
+    rpc = (rpcmethod: string, param = {}, range: any = null) => {
+        const { accessKey, certVerification, enableTor } = settingsStore;
+        let { url } = settingsStore;
+
+        const id = rpcmethod + JSON.stringify(param) + JSON.stringify(range);
+        if (calls.has(id)) {
+            return calls.get(id);
         }
     }
     rpc = (
@@ -76,11 +85,11 @@ export default class Spark {
     };
 
     getTransactions = () =>
-        this.rpc('listfunds').then(({ outputs }: any) => ({
+        this.rpc('listfunds')?.then(({ outputs }: any) => ({
             transactions: outputs
         }));
     getChannels = () =>
-        this.rpc('listpeers').then(({ peers }: any) => {
+        this.rpc('listpeers')?.then(({ peers }: any) => {
             const formattedChannels: any[] = [];
             peers
                 .filter((peer: any) => peer.channels.length)
@@ -164,7 +173,7 @@ export default class Spark {
             };
         });
     getBlockchainBalance = () =>
-        this.rpc('listfunds').then(({ outputs }: any) => {
+        this.rpc('listfunds')?.then(({ outputs }: any) => {
             const unconf = outputs
                 .filter((o: any) => o.status !== 'confirmed')
                 .reduce((acc: any, o: any) => acc + o.value, 0);
@@ -179,7 +188,7 @@ export default class Spark {
             };
         });
     getLightningBalance = () =>
-        this.rpc('listfunds').then(({ channels }: any) => ({
+        this.rpc('listfunds')?.then(({ channels }: any) => ({
             balance: channels
                 .filter((o: any) => o.state === 'CHANNELD_NORMAL')
                 .reduce((acc: any, o: any) => acc + o.channel_sat, 0),
@@ -195,7 +204,7 @@ export default class Spark {
         });
     getMyNodeInfo = () => this.rpc('getinfo');
     getInvoices = () =>
-        this.rpc('listinvoices', {}, { unit: 'invoices', slice: '-100' }).then(
+        this.rpc('listinvoices', {}, { unit: 'invoices', slice: '-100' })?.then(
             ({ invoices }: any) => ({
                 invoices: invoices.map((inv: any) => ({
                     memo: inv.description,
@@ -223,7 +232,7 @@ export default class Spark {
             exposeprivatechannels: true
         });
     getPayments = () =>
-        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' }).then(
+        this.rpc('listsendpays', {}, { unit: 'payments', slice: '-100' })?.then(
             ({ pays }: any) => ({
                 payments: pays
             })
@@ -235,7 +244,7 @@ export default class Spark {
             amount: data.satoshis,
             feerate: `${Number(data.satPerVbyte) * 1000}perkb`,
             announce: !data.privateChannel
-        }).then(({ txid }: any) => ({ funding_txid_str: txid }));
+        })?.then(({ txid }: any) => ({ funding_txid_str: txid }));
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
     decodePaymentRequest = (urlParams?: Array<string>) =>
@@ -249,9 +258,9 @@ export default class Spark {
         this.rpc('close', {
             id: urlParams && urlParams[0],
             unilateraltimeout: urlParams && urlParams[1] ? 60 : 0
-        }).then(() => ({ chan_close: { success: true } }));
+        })?.then(() => ({ chan_close: { success: true } }));
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.rpc('listnodes', [urlParams && urlParams[0]]).then(
+        this.rpc('listnodes', [urlParams && urlParams[0]])?.then(
             ({ nodes }: any) => {
                 const node = nodes[0];
                 return {
@@ -391,10 +400,14 @@ export default class Spark {
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
+    supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
+    supportsBolt11BlindedRoutes = () => false;
+    supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportInboundFees = () => false;
 }

@@ -1,10 +1,28 @@
 syntax = "proto3";
 
-import "lightning.proto";
-
 package routerrpc;
 
+import "lightning.proto";
+
 option go_package = "github.com/lightningnetwork/lnd/lnrpc/routerrpc";
+
+/*
+ * Comments in this file will be directly parsed into the API
+ * Documentation as descriptions of the associated method, message, or field.
+ * These descriptions should go right above the definition of the object, and
+ * can be in either block or // comment format.
+ *
+ * An RPC method can be matched to an lncli command by placing a line in the
+ * beginning of the description in exactly the following format:
+ * lncli: `methodname`
+ *
+ * Failure to specify the exact name of the command will cause documentation
+ * generation to fail.
+ *
+ * More information on how exactly the gRPC documentation is generated from
+ * this proto file can be found here:
+ * https://github.com/lightninglabs/lightning-api
+ */
 
 // Router is a service that offers advanced interaction with the router
 // subsystem of the daemon.
@@ -12,11 +30,14 @@ service Router {
     /*
     SendPaymentV2 attempts to route a payment described by the passed
     PaymentRequest to the final destination. The call returns a stream of
-    payment updates.
+    payment updates. When using this RPC, make sure to set a fee limit, as the
+    default routing fee limit is 0 sats. Without a non-zero fee limit only
+    routes without fees will be attempted which often fails with
+    FAILURE_REASON_NO_ROUTE.
     */
     rpc SendPaymentV2 (SendPaymentRequest) returns (stream lnrpc.Payment);
 
-    /*
+    /* lncli: `trackpayment`
     TrackPaymentV2 returns an update stream for the payment identified by the
     payment hash.
     */
@@ -57,21 +78,21 @@ service Router {
     */
     rpc SendToRouteV2 (SendToRouteRequest) returns (lnrpc.HTLCAttempt);
 
-    /*
+    /* lncli: `resetmc`
     ResetMissionControl clears all mission control state and starts with a clean
     slate.
     */
     rpc ResetMissionControl (ResetMissionControlRequest)
         returns (ResetMissionControlResponse);
 
-    /*
+    /* lncli: `querymc`
     QueryMissionControl exposes the internal mission control state to callers.
     It is a development feature.
     */
     rpc QueryMissionControl (QueryMissionControlRequest)
         returns (QueryMissionControlResponse);
 
-    /*
+    /* lncli: `importmc`
     XImportMissionControl is an experimental API that imports the state provided
     to the internal mission control's state, using all results which are more
     recent than our existing values. These values will only be imported
@@ -80,20 +101,20 @@ service Router {
     rpc XImportMissionControl (XImportMissionControlRequest)
         returns (XImportMissionControlResponse);
 
-    /*
+    /* lncli: `getmccfg`
     GetMissionControlConfig returns mission control's current config.
     */
     rpc GetMissionControlConfig (GetMissionControlConfigRequest)
         returns (GetMissionControlConfigResponse);
 
-    /*
+    /* lncli: `setmccfg`
     SetMissionControlConfig will set mission control's config, if the config
     provided is valid.
     */
     rpc SetMissionControlConfig (SetMissionControlConfigRequest)
         returns (SetMissionControlConfigResponse);
 
-    /*
+    /* lncli: `queryprob`
     Deprecated. QueryProbability returns the current success probability
     estimate for a given node pair and amount. The call returns a zero success
     probability if no channel is available or if the amount violates min/max
@@ -102,10 +123,14 @@ service Router {
     rpc QueryProbability (QueryProbabilityRequest)
         returns (QueryProbabilityResponse);
 
-    /*
+    /* lncli: `buildroute`
     BuildRoute builds a fully specified route based on a list of hop public
     keys. It retrieves the relevant channel policies from the graph in order to
     calculate the correct fees and time locks.
+    Note that LND will use its default final_cltv_delta if no value is supplied.
+    Make sure to add the correct final_cltv_delta depending on the invoice
+    restriction. Moreover the caller has to make sure to provide the
+    payment_addr if the route is paying an invoice which signaled it.
     */
     rpc BuildRoute (BuildRouteRequest) returns (BuildRouteResponse);
 
@@ -143,7 +168,7 @@ service Router {
     rpc HtlcInterceptor (stream ForwardHtlcInterceptResponse)
         returns (stream ForwardHtlcInterceptRequest);
 
-    /*
+    /* lncli: `updatechanstatus`
     UpdateChanStatus attempts to manually set the state of a channel
     (enabled, disabled, or auto). A manual "disable" request will cause the
     channel to stay disabled until a subsequent manual request of either
@@ -164,13 +189,6 @@ message SendPaymentRequest {
     */
     int64 amt = 2;
 
-    /*
-    Number of millisatoshis to send.
-
-    The fields amt and amt_msat are mutually exclusive.
-    */
-    int64 amt_msat = 12;
-
     // The hash to use within the payment's HTLC
     bytes payment_hash = 3;
 
@@ -179,9 +197,6 @@ message SendPaymentRequest {
     timelock for the final hop.
     */
     int32 final_cltv_delta = 4;
-
-    // An optional payment addr to be included within the last hop of the route.
-    bytes payment_addr = 20;
 
     /*
     A bare-bones invoice for a payment within the Lightning Network.  With the
@@ -211,17 +226,6 @@ message SendPaymentRequest {
     int64 fee_limit_sat = 7;
 
     /*
-    The maximum number of millisatoshis that will be paid as a fee of the
-    payment. If this field is left to the default value of 0, only zero-fee
-    routes will be considered. This usually means single hop routes connecting
-    directly to the destination. To send the payment without a fee limit, use
-    max int here.
-
-    The fields fee_limit_sat and fee_limit_msat are mutually exclusive.
-    */
-    int64 fee_limit_msat = 13;
-
-    /*
     Deprecated, use outgoing_chan_ids. The channel id of the channel that must
     be taken to the first hop. If zero, any channel may be used (unless
     outgoing_chan_ids are set).
@@ -229,19 +233,8 @@ message SendPaymentRequest {
     uint64 outgoing_chan_id = 8 [jstype = JS_STRING, deprecated = true];
 
     /*
-    The channel ids of the channels are allowed for the first hop. If empty,
-    any channel may be used.
-    */
-    repeated uint64 outgoing_chan_ids = 19;
-
-    /*
-    The pubkey of the last hop of the route. If empty, any hop may be used.
-    */
-    bytes last_hop_pubkey = 14;
-
-    /*
-    An optional maximum total time lock for the route. This should not exceed
-    lnd's `--max-cltv-expiry` setting. If zero, then the value of
+    An optional maximum total time lock for the route. This should not
+    exceed lnd's `--max-cltv-expiry` setting. If zero, then the value of
     `--max-cltv-expiry` is enforced.
     */
     int32 cltv_limit = 9;
@@ -259,6 +252,29 @@ message SendPaymentRequest {
     must be encoded as base64.
     */
     map<uint64, bytes> dest_custom_records = 11;
+
+    /*
+    Number of millisatoshis to send.
+
+    The fields amt and amt_msat are mutually exclusive.
+    */
+    int64 amt_msat = 12;
+
+    /*
+    The maximum number of millisatoshis that will be paid as a fee of the
+    payment. If this field is left to the default value of 0, only zero-fee
+    routes will be considered. This usually means single hop routes connecting
+    directly to the destination. To send the payment without a fee limit, use
+    max int here.
+
+    The fields fee_limit_sat and fee_limit_msat are mutually exclusive.
+    */
+    int64 fee_limit_msat = 13;
+
+    /*
+    The pubkey of the last hop of the route. If empty, any hop may be used.
+    */
+    bytes last_hop_pubkey = 14;
 
     // If set, circular payments to self are permitted.
     bool allow_self_payment = 15;
@@ -283,6 +299,18 @@ message SendPaymentRequest {
     that show which htlcs are still in flight are suppressed.
     */
     bool no_inflight_updates = 18;
+
+    /*
+    The channel ids of the channels are allowed for the first hop. If empty,
+    any channel may be used.
+    */
+    repeated uint64 outgoing_chan_ids = 19;
+
+    /*
+    An optional payment addr to be included within the last hop of the route.
+    This is also called payment secret in specifications (e.g. BOLT 11).
+    */
+    bytes payment_addr = 20;
 
     /*
     The largest payment split that should be attempted when making a payment if
@@ -325,14 +353,39 @@ message TrackPaymentsRequest {
 
 message RouteFeeRequest {
     /*
-    The destination once wishes to obtain a routing fee quote to.
+    The destination one wishes to obtain a routing fee quote to. If set, this
+    parameter requires the amt_sat parameter also to be set. This parameter
+    combination triggers a graph based routing fee estimation as opposed to a
+    payment probe based estimate in case a payment request is provided. The
+    graph based estimation is an algorithm that is executed on the in memory
+    graph. Hence its runtime is significantly shorter than a payment probe
+    estimation that sends out actual payments to the network.
     */
     bytes dest = 1;
 
     /*
-    The amount one wishes to send to the target destination.
+    The amount one wishes to send to the target destination. It is only to be
+    used in combination with the dest parameter.
     */
     int64 amt_sat = 2;
+
+    /*
+    A payment request of the target node that the route fee request is intended
+    for. Its parameters are input to probe payments that estimate routing fees.
+    The timeout parameter can be specified to set a maximum time on the probing
+    attempt. Cannot be used in combination with dest and amt_sat.
+    */
+    string payment_request = 3;
+
+    /*
+    A user preference of how long a probe payment should maximally be allowed to
+    take, denoted in seconds. The probing payment loop is aborted if this
+    timeout is reached. Note that the probing process itself can take longer
+    than the timeout if the HTLC becomes delayed or stuck. Canceling the context
+    of this call will not cancel the payment loop, the duration is only
+    controlled by the timeout parameter.
+    */
+    uint32 timeout = 4;
 }
 
 message RouteFeeResponse {
@@ -348,6 +401,12 @@ message RouteFeeResponse {
     value.
     */
     int64 time_lock_delay = 2;
+
+    /*
+    An indication whether a probing payment succeeded or whether and why it
+    failed. FAILURE_REASON_NONE indicates success.
+    */
+    lnrpc.PaymentFailureReason failure_reason = 5;
 }
 
 message SendToRouteRequest {
@@ -634,7 +693,10 @@ message BuildRouteRequest {
     */
     repeated bytes hop_pubkeys = 4;
 
-    // An optional payment addr to be included within the last hop of the route.
+    /*
+    An optional payment addr to be included within the last hop of the route.
+    This is also called payment secret in specifications (e.g. BOLT 11).
+    */
     bytes payment_addr = 5;
 }
 

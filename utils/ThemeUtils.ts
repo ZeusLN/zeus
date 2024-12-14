@@ -11,8 +11,11 @@ const Kyriaki: { [key: string]: any } = {
     separator: '#31363F',
     outbound: '#FFA900',
     inbound: '#FFF0CA',
+    outboundReserve: '#B7B7B7',
+    inboundReserve: '#636569',
     success: '#46BE43',
     warning: '#E14C4C',
+    warningReserve: '#EA8181',
     bitcoin: '#FFB040',
     delete: '#992600',
     bolt: '#FFF',
@@ -41,8 +44,11 @@ const Light: { [key: string]: any } = {
     separator: '#CED0CE',
     outbound: '#FFD93F',
     inbound: '#FFF0CA',
+    outboundReserve: '#B7B7B7',
+    inboundReserve: '#636569',
     success: '#46BE43',
     warning: '#E14C4C',
+    warningReserve: '#EA8181',
     bitcoin: '#FFB040',
     delete: '#cc3300',
     qrFrame: '#FFD93F',
@@ -64,8 +70,11 @@ const Dark: { [key: string]: any } = {
     separator: '#31363F',
     outbound: '#FFD93F',
     inbound: '#FFF0CA',
+    outboundReserve: '#B7B7B7',
+    inboundReserve: '#636569',
     success: '#46BE43',
     warning: '#E14C4C',
+    warningReserve: '#EA8181',
     bitcoin: '#FFB040',
     delete: '#992600',
     qrFrame: '#FFD93F',
@@ -105,15 +114,33 @@ const BPM: { [key: string]: any } = {
     outbound: '#2b74b4'
 };
 
-const Orange: { [key: string]: any } = {
-    generalStyle: 'light',
-    background: 'orange',
-    secondary: 'darkorange',
+const Spooky: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#000',
+    gradientBackground: ['#1E2022', '#000000', '#000000', '#000000'],
+    secondary: '#31363F',
     text: 'white',
-    secondaryText: 'lightgray',
-    highlight: 'black',
-    error: '#cc3300',
-    separator: '#CED0CE'
+    secondaryText: '#A7A9AC',
+    highlight: '#eb6123',
+    error: '#992600',
+    separator: '#31363F',
+    outbound: '#eb6123',
+    inbound: '#ffc680',
+    success: '#46BE43',
+    warning: '#E14C4C',
+    bitcoin: '#FFB040',
+    delete: '#992600',
+    qr: '#eb6123',
+    qrBackground: '#000',
+    qrLogoBackground: '#eb6123',
+    invertQrIcons: false,
+    qrFrame: '#eb6123',
+    bolt: '#FFF',
+    chain: '#FFF',
+    disabled: '#767577',
+    buttonBackground: '#eb6123',
+    buttonText: '#000',
+    action: '#FFF'
 };
 
 const BlackedOut: { [key: string]: any } = {
@@ -355,7 +382,7 @@ export function themeColor(themeString: string): any {
         case 'bpm':
             return BPM[themeString] || Light[themeString];
         case 'orange':
-            return Orange[themeString] || Light[themeString];
+            return Spooky[themeString] || Light[themeString];
         case 'blacked-out':
             return BlackedOut[themeString] || Dark[themeString];
         case 'scarlet':

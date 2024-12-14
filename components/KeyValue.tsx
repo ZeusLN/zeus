@@ -14,19 +14,29 @@ import { Row } from './layout/Row';
 
 import { themeColor } from '../utils/ThemeUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
+
+import ModalStore from '../stores/ModalStore';
 import SettingsStore from '../stores/SettingsStore';
 
 interface KeyValueProps {
     keyValue: string;
     value?: any;
     color?: string;
+    indicatorColor?: string;
     sensitive?: boolean;
+    infoModalText?: string | Array<string>;
+    infoModalLink?: string;
+    infoModalAdditionalButtons?: Array<{
+        title: string;
+        callback?: () => void;
+    }>;
     mempoolLink?: () => void;
     disableCopy?: boolean;
+    ModalStore?: ModalStore;
     SettingsStore?: SettingsStore;
 }
 
-@inject('SettingsStore')
+@inject('ModalStore', 'SettingsStore')
 @observer
 export default class KeyValue extends React.Component<KeyValueProps, {}> {
     render() {
@@ -34,11 +44,17 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             keyValue,
             value,
             color,
+            indicatorColor,
             sensitive,
+            infoModalText,
+            infoModalLink,
+            infoModalAdditionalButtons,
             mempoolLink,
             disableCopy,
+            ModalStore,
             SettingsStore
         } = this.props;
+        const { toggleInfoModal } = ModalStore!;
 
         const lurkerMode: boolean =
             SettingsStore?.settings?.privacy?.lurkerMode || false;
@@ -50,8 +66,19 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             ? false
             : typeof value === 'string' || typeof value === 'number';
         const rtl = false;
-        const Key = (
+        const KeyBase = (
             <Body>
+                {indicatorColor && (
+                    <View
+                        style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: 12 / 2,
+                            backgroundColor: indicatorColor,
+                            marginRight: 7
+                        }}
+                    ></View>
+                )}
                 <Text
                     style={{
                         color:
@@ -62,24 +89,68 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                 >
                     {keyValue}
                 </Text>
+                {infoModalText && (
+                    <Text
+                        style={{
+                            color:
+                                value !== undefined
+                                    ? themeColor('secondaryText')
+                                    : themeColor('text'),
+                            fontWeight: 'bold'
+                        }}
+                    >
+                        {'  ⓘ'}
+                    </Text>
+                )}
             </Body>
         );
-        const Value =
-            typeof value === 'object' ? (
-                value
-            ) : (
-                <Text
-                    style={{
-                        color: color || themeColor('text'),
-                        fontFamily: 'PPNeueMontreal-Book'
-                    }}
+
+        let Key: any;
+        if (infoModalText) {
+            Key = (
+                <TouchableOpacity
+                    onPress={() =>
+                        toggleInfoModal(
+                            infoModalText,
+                            infoModalLink,
+                            infoModalAdditionalButtons
+                        )
+                    }
                 >
-                    {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
-                </Text>
+                    {KeyBase}
+                </TouchableOpacity>
             );
+        } else {
+            Key = KeyBase;
+        }
+
+        const ValueBase = (
+            <Text
+                style={{
+                    color: color || themeColor('text'),
+                    fontFamily: 'PPNeueMontreal-Book'
+                }}
+            >
+                {sensitive ? PrivacyUtils.sensitiveValue(value) : value}
+            </Text>
+        );
+
+        let Value: any;
+        if (!lurkerMode && isCopyable) {
+            Value = (
+                <TouchableOpacity
+                    onLongPress={() => copyText()}
+                    onPress={mempoolLink}
+                >
+                    {ValueBase}
+                </TouchableOpacity>
+            );
+        } else {
+            Value = typeof value === 'object' ? value : ValueBase;
+        }
 
         const copyText = () => {
-            Clipboard.setString(value);
+            Clipboard.setString(value.toString());
             Vibration.vibrate(50);
         };
 
@@ -96,21 +167,9 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             </Row>
         );
 
-        const InteractiveKeyValueRow = () =>
-            !lurkerMode && isCopyable ? (
-                <TouchableOpacity
-                    onLongPress={() => copyText()}
-                    onPress={mempoolLink}
-                >
-                    <KeyValueRow />
-                </TouchableOpacity>
-            ) : (
-                <KeyValueRow />
-            );
-
         return (
             <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                <InteractiveKeyValueRow />
+                <KeyValueRow />
             </View>
         );
     }

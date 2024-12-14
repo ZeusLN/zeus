@@ -63,7 +63,9 @@ import Scan from '../assets/images/SVG/Scan.svg';
 import Sweep from '../assets/images/SVG/Sweep.svg';
 
 import Contact from '../models/Contact';
-import { AdditionalOutput } from '../models/TransactionRequest';
+import TransactionRequest, {
+    AdditionalOutput
+} from '../models/TransactionRequest';
 
 interface SendProps {
     exitSetup: any;
@@ -114,6 +116,7 @@ interface SendState {
     clearOnBackPress: boolean;
     account: string;
     additionalOutputs: Array<AdditionalOutput>;
+    fundMax: boolean;
 }
 
 @inject(
@@ -155,7 +158,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             destination: destination || '',
             amount: amount || '',
             satAmount: '',
-            fee: '2',
+            fee: '',
             utxos: [],
             utxoBalance: 0,
             confirmationTarget: '60',
@@ -171,7 +174,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             contactName,
             clearOnBackPress,
             account: 'default',
-            additionalOutputs: []
+            additionalOutputs: [],
+            fundMax: false
         };
     }
 
@@ -316,17 +320,11 @@ export default class Send extends React.Component<SendProps, SendState> {
         utxoBalance: number,
         account: string
     ) => {
-        const { SettingsStore } = this.props;
-        const { implementation } = SettingsStore;
         this.setState((prevState) => ({
             utxos,
             utxoBalance,
-            amount:
-                implementation === 'c-lightning-REST' ||
-                implementation === 'cln-rest'
-                    ? 'all'
-                    : prevState.amount,
-            account
+            account,
+            fundMax: account === 'default' ? prevState.fundMax : false
         }));
     };
 
@@ -420,17 +418,19 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     sendCoins = (satAmount: string | number) => {
-        const { TransactionsStore, navigation } = this.props;
+        const { TransactionsStore, SettingsStore, navigation } = this.props;
+        const { implementation } = SettingsStore;
         const {
             destination,
             fee,
             utxos,
             confirmationTarget,
             account,
-            additionalOutputs
+            additionalOutputs,
+            fundMax
         } = this.state;
 
-        let request;
+        let request: TransactionRequest;
         if (utxos && utxos.length > 0) {
             request = {
                 addr: destination,
@@ -452,6 +452,18 @@ export default class Send extends React.Component<SendProps, SendState> {
                 additional_outputs: additionalOutputs,
                 account
             };
+        }
+
+        if (fundMax) {
+            if (
+                implementation === 'c-lightning-REST' ||
+                implementation === 'cln-rest'
+            ) {
+                request.amount = 'all';
+            } else {
+                if (request.amount) delete request.amount;
+                request.send_all = true;
+            }
         }
         TransactionsStore.sendCoins(request);
         navigation.navigate('SendingOnChain');
@@ -670,7 +682,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             clipboard,
             loading,
             contactName,
-            additionalOutputs
+            additionalOutputs,
+            fundMax,
+            account
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -714,7 +728,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                         }
                     }}
                     rightComponent={
-                        <View style={{ flex: 1, flexDirection: 'row' }}>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                marginTop: 3
+                            }}
+                        >
                             {loading && (
                                 <View style={{ paddingRight: 15 }}>
                                     <LoadingIndicator size={30} />
@@ -726,7 +746,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 additionalOutputs.length === 0 && (
                                     <View
                                         style={{
-                                            marginTop: 3,
                                             marginRight: 20
                                         }}
                                     >
@@ -746,7 +765,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </TouchableOpacity>
                                     </View>
                                 )}
-                            <View style={{ marginTop: 3, marginRight: 15 }}>
+                            <View style={{ marginRight: 15 }}>
                                 <TouchableOpacity
                                     onPress={() => this.enableNfc()}
                                 >
@@ -757,7 +776,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     />
                                 </TouchableOpacity>
                             </View>
-                            <View style={{ marginTop: 3 }}>
+                            <View>
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
@@ -886,6 +905,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 backgroundColor:
                                                     themeColor('chain')
                                             }}
+                                            // @ts-ignore:next-line
                                             type="inline"
                                             containerStyle={{
                                                 backgroundColor:
@@ -973,23 +993,27 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                <AmountInput
-                                    amount={amount}
-                                    title={localeString('views.Send.amount')}
-                                    onAmountChange={(
-                                        amount: string,
-                                        satAmount: string | number
-                                    ) => {
-                                        this.setState({
-                                            amount,
-                                            satAmount
-                                        });
-                                    }}
-                                    hideConversion={amount === 'all'}
-                                />
+                                {!fundMax && (
+                                    <AmountInput
+                                        amount={amount}
+                                        title={localeString(
+                                            'views.Send.amount'
+                                        )}
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                amount,
+                                                satAmount
+                                            });
+                                        }}
+                                        hideConversion={amount === 'all'}
+                                    />
+                                )}
 
                                 <View style={{ paddingBottom: 15 }}>
-                                    {amount === 'all' && (
+                                    {fundMax && (
                                         <>
                                             <Amount
                                                 sats={
@@ -1010,6 +1034,44 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </>
                                     )}
                                 </View>
+
+                                {BackendUtils.supportsOnchainSendMax() &&
+                                    additionalOutputs.length === 0 &&
+                                    account === 'default' && (
+                                        <View style={{ marginBottom: 18 }}>
+                                            <Text
+                                                style={{
+                                                    marginTop: -20,
+                                                    top: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.fundMax'
+                                                )}
+                                            </Text>
+                                            <Switch
+                                                value={fundMax}
+                                                onValueChange={() => {
+                                                    const newValue: boolean =
+                                                        !fundMax;
+                                                    this.setState({
+                                                        fundMax: newValue,
+                                                        amount:
+                                                            newValue &&
+                                                            (implementation ===
+                                                                'c-lightning-REST' ||
+                                                                implementation ===
+                                                                    'cln-rest')
+                                                                ? 'all'
+                                                                : ''
+                                                    });
+                                                }}
+                                            />
+                                        </View>
+                                    )}
 
                                 {additionalOutputs.map((output, index) => {
                                     return (
@@ -1114,7 +1176,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 })}
 
                                 {transactionType === 'On-chain' &&
-                                    BackendUtils.supportsOnchainBatching() && (
+                                    BackendUtils.supportsOnchainBatching() &&
+                                    !fundMax && (
                                         <View
                                             style={{
                                                 marginTop: 0,
@@ -1192,7 +1255,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             size: 25,
                                             color:
                                                 totalBlockchainBalanceAccounts ===
-                                                0
+                                                    0 ||
+                                                fee === '0' ||
+                                                !fee
                                                     ? themeColor(
                                                           'secondaryText'
                                                       )
@@ -1202,7 +1267,10 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             this.sendCoins(satAmount)
                                         }
                                         disabled={
-                                            totalBlockchainBalanceAccounts === 0
+                                            totalBlockchainBalanceAccounts ===
+                                                0 ||
+                                            fee === '0' ||
+                                            !fee
                                         }
                                     />
                                 </View>
@@ -1225,6 +1293,20 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
                             </React.Fragment>
+                        )}
+                    {transactionType === 'BOLT 12' &&
+                        !BackendUtils.supportsOffers() && (
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    marginTop: 10,
+                                    color: themeColor('error')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Send.payBolt12.offersNotSupported'
+                                )}
+                            </Text>
                         )}
                     {transactionType === 'Keysend' &&
                         BackendUtils.supportsKeysend() && (
@@ -1456,6 +1538,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}
+                                disabled={!BackendUtils.supportsOffers()}
                             />
                         </View>
                     )}

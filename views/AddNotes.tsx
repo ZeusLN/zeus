@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Keyboard, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity, View } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -20,16 +20,11 @@ import SaveIcon from '../assets/images/SVG/Save.svg';
 interface AddNotesProps {
     navigation: StackNavigationProp<any, any>;
     NotesStore: NotesStore;
-    route: Route<
-        'AddNotes',
-        { payment_hash: string; txid: string; getRPreimage: string }
-    >;
+    route: Route<'AddNotes', { noteKey: string }>;
 }
 interface AddNotesState {
     notes?: string;
-    payment_hash?: string;
-    txid?: string;
-    getRPreimage?: string;
+    noteKey?: string;
     isNoteStored?: boolean;
 }
 
@@ -41,24 +36,17 @@ export default class AddNotes extends React.Component<
 > {
     constructor(props: any) {
         super(props);
-        const { payment_hash, txid, getRPreimage } =
-            this.props.route.params ?? {};
+        const { noteKey } = this.props.route.params ?? {};
 
         this.state = {
             notes: '',
-            payment_hash,
-            txid,
-            getRPreimage,
+            noteKey,
             isNoteStored: false
         };
     }
     async componentDidMount() {
-        const key: string =
-            'note-' +
-            (this.state.txid ||
-                this.state.payment_hash ||
-                this.state.getRPreimage);
-        const storedNotes = await EncryptedStorage.getItem(key);
+        const { noteKey } = this.state;
+        const storedNotes = await EncryptedStorage.getItem(noteKey!);
         if (storedNotes) {
             this.setState({ notes: storedNotes, isNoteStored: true });
         }
@@ -67,18 +55,19 @@ export default class AddNotes extends React.Component<
     render() {
         const { navigation, NotesStore } = this.props;
         const { storeNoteKeys, removeNoteKeys } = NotesStore;
-        const { payment_hash, txid, getRPreimage, isNoteStored } = this.state;
+        const { noteKey, isNoteStored } = this.state;
         const { notes } = this.state;
 
         const saveNote = async () => {
-            const key: string =
-                'note-' + (payment_hash || txid || getRPreimage);
-            EncryptedStorage.setItem(key, notes);
-            await storeNoteKeys(key, notes);
+            if (noteKey) {
+                EncryptedStorage.setItem(noteKey, notes || '');
+                await storeNoteKeys(noteKey, notes || '');
+            }
+
             navigation.goBack();
         };
 
-        const SaveButton = () => (
+        const saveButton = () => (
             <TouchableOpacity onPress={() => saveNote()}>
                 <SaveIcon
                     stroke={themeColor('text')}
@@ -112,17 +101,14 @@ export default class AddNotes extends React.Component<
                                 fontSize: 20
                             }
                         }}
-                        rightComponent={SaveButton}
+                        rightComponent={saveButton()}
                         navigation={navigation}
                     />
                     <TextInput
                         onChangeText={(text: string) => {
                             this.setState({ notes: text });
                             if (!text) {
-                                const key: string =
-                                    'note-' +
-                                    (payment_hash || txid || getRPreimage);
-                                removeNoteKeys(key);
+                                removeNoteKeys(noteKey!);
                             }
                         }}
                         multiline
@@ -140,7 +126,6 @@ export default class AddNotes extends React.Component<
                         }}
                         value={notes}
                         placeholder={localeString('views.Payment.writeNote')}
-                        onSubmitEditing={() => Keyboard.dismiss()}
                     />
                     <View
                         style={{

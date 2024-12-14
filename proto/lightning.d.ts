@@ -334,6 +334,25 @@ export namespace lnrpc {
         ): Promise<lnrpc.GetInfoResponse>;
 
         /**
+         * Calls GetDebugInfo.
+         * @param request GetDebugInfoRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and GetDebugInfoResponse
+         */
+        public getDebugInfo(
+            request: lnrpc.IGetDebugInfoRequest,
+            callback: lnrpc.Lightning.GetDebugInfoCallback
+        ): void;
+
+        /**
+         * Calls GetDebugInfo.
+         * @param request GetDebugInfoRequest message or plain object
+         * @returns Promise
+         */
+        public getDebugInfo(
+            request: lnrpc.IGetDebugInfoRequest
+        ): Promise<lnrpc.GetDebugInfoResponse>;
+
+        /**
          * lncli: `getrecoveryinfo`
          * GetRecoveryInfo returns information concerning the recovery mode including
          * whether it's in a recovery mode, whether the recovery is finished, and the
@@ -1468,6 +1487,16 @@ export namespace lnrpc {
         type GetInfoCallback = (
             error: Error | null,
             response?: lnrpc.GetInfoResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link lnrpc.Lightning#getDebugInfo}.
+         * @param error Error, if any
+         * @param [response] GetDebugInfoResponse
+         */
+        type GetDebugInfoCallback = (
+            error: Error | null,
+            response?: lnrpc.GetDebugInfoResponse
         ) => void;
 
         /**
@@ -4846,6 +4875,13 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** CoinSelectionStrategy enum. */
+    enum CoinSelectionStrategy {
+        STRATEGY_USE_GLOBAL_CONFIG = 0,
+        STRATEGY_LARGEST = 1,
+        STRATEGY_RANDOM = 2
+    }
+
     /** Properties of an EstimateFeeRequest. */
     interface IEstimateFeeRequest {
         /** EstimateFeeRequest AddrToAmount */
@@ -4859,6 +4895,9 @@ export namespace lnrpc {
 
         /** EstimateFeeRequest spend_unconfirmed */
         spend_unconfirmed?: boolean | null;
+
+        /** EstimateFeeRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents an EstimateFeeRequest. */
@@ -4880,6 +4919,9 @@ export namespace lnrpc {
 
         /** EstimateFeeRequest spend_unconfirmed. */
         public spend_unconfirmed: boolean;
+
+        /** EstimateFeeRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
         /**
          * Creates a new EstimateFeeRequest instance using the specified properties.
@@ -5124,6 +5166,9 @@ export namespace lnrpc {
 
         /** SendManyRequest spend_unconfirmed */
         spend_unconfirmed?: boolean | null;
+
+        /** SendManyRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents a SendManyRequest. */
@@ -5154,6 +5199,9 @@ export namespace lnrpc {
 
         /** SendManyRequest spend_unconfirmed. */
         public spend_unconfirmed: boolean;
+
+        /** SendManyRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
         /**
          * Creates a new SendManyRequest instance using the specified properties.
@@ -5392,6 +5440,12 @@ export namespace lnrpc {
 
         /** SendCoinsRequest spend_unconfirmed */
         spend_unconfirmed?: boolean | null;
+
+        /** SendCoinsRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
+
+        /** SendCoinsRequest outpoints */
+        outpoints?: lnrpc.IOutPoint[] | null;
     }
 
     /** Represents a SendCoinsRequest. */
@@ -5428,6 +5482,12 @@ export namespace lnrpc {
 
         /** SendCoinsRequest spend_unconfirmed. */
         public spend_unconfirmed: boolean;
+
+        /** SendCoinsRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
+
+        /** SendCoinsRequest outpoints. */
+        public outpoints: lnrpc.IOutPoint[];
 
         /**
          * Creates a new SendCoinsRequest instance using the specified properties.
@@ -9981,6 +10041,232 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a GetDebugInfoRequest. */
+    interface IGetDebugInfoRequest {}
+
+    /** Represents a GetDebugInfoRequest. */
+    class GetDebugInfoRequest implements IGetDebugInfoRequest {
+        /**
+         * Constructs a new GetDebugInfoRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IGetDebugInfoRequest);
+
+        /**
+         * Creates a new GetDebugInfoRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetDebugInfoRequest instance
+         */
+        public static create(
+            properties?: lnrpc.IGetDebugInfoRequest
+        ): lnrpc.GetDebugInfoRequest;
+
+        /**
+         * Encodes the specified GetDebugInfoRequest message. Does not implicitly {@link lnrpc.GetDebugInfoRequest.verify|verify} messages.
+         * @param message GetDebugInfoRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IGetDebugInfoRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetDebugInfoRequest message, length delimited. Does not implicitly {@link lnrpc.GetDebugInfoRequest.verify|verify} messages.
+         * @param message GetDebugInfoRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IGetDebugInfoRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a GetDebugInfoRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetDebugInfoRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.GetDebugInfoRequest;
+
+        /**
+         * Decodes a GetDebugInfoRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetDebugInfoRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.GetDebugInfoRequest;
+
+        /**
+         * Verifies a GetDebugInfoRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a GetDebugInfoRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetDebugInfoRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.GetDebugInfoRequest;
+
+        /**
+         * Creates a plain object from a GetDebugInfoRequest message. Also converts values to other types if specified.
+         * @param message GetDebugInfoRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.GetDebugInfoRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this GetDebugInfoRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for GetDebugInfoRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a GetDebugInfoResponse. */
+    interface IGetDebugInfoResponse {
+        /** GetDebugInfoResponse config */
+        config?: { [k: string]: string } | null;
+
+        /** GetDebugInfoResponse log */
+        log?: string[] | null;
+    }
+
+    /** Represents a GetDebugInfoResponse. */
+    class GetDebugInfoResponse implements IGetDebugInfoResponse {
+        /**
+         * Constructs a new GetDebugInfoResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IGetDebugInfoResponse);
+
+        /** GetDebugInfoResponse config. */
+        public config: { [k: string]: string };
+
+        /** GetDebugInfoResponse log. */
+        public log: string[];
+
+        /**
+         * Creates a new GetDebugInfoResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetDebugInfoResponse instance
+         */
+        public static create(
+            properties?: lnrpc.IGetDebugInfoResponse
+        ): lnrpc.GetDebugInfoResponse;
+
+        /**
+         * Encodes the specified GetDebugInfoResponse message. Does not implicitly {@link lnrpc.GetDebugInfoResponse.verify|verify} messages.
+         * @param message GetDebugInfoResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IGetDebugInfoResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetDebugInfoResponse message, length delimited. Does not implicitly {@link lnrpc.GetDebugInfoResponse.verify|verify} messages.
+         * @param message GetDebugInfoResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IGetDebugInfoResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a GetDebugInfoResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetDebugInfoResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.GetDebugInfoResponse;
+
+        /**
+         * Decodes a GetDebugInfoResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetDebugInfoResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.GetDebugInfoResponse;
+
+        /**
+         * Verifies a GetDebugInfoResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a GetDebugInfoResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetDebugInfoResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.GetDebugInfoResponse;
+
+        /**
+         * Creates a plain object from a GetDebugInfoResponse message. Also converts values to other types if specified.
+         * @param message GetDebugInfoResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.GetDebugInfoResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this GetDebugInfoResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for GetDebugInfoResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a GetRecoveryInfoRequest. */
     interface IGetRecoveryInfoRequest {}
 
@@ -10707,6 +10993,9 @@ export namespace lnrpc {
 
         /** CloseChannelRequest max_fee_per_vbyte */
         max_fee_per_vbyte?: Long | null;
+
+        /** CloseChannelRequest no_wait */
+        no_wait?: boolean | null;
     }
 
     /** Represents a CloseChannelRequest. */
@@ -10737,6 +11026,9 @@ export namespace lnrpc {
 
         /** CloseChannelRequest max_fee_per_vbyte. */
         public max_fee_per_vbyte: Long;
+
+        /** CloseChannelRequest no_wait. */
+        public no_wait: boolean;
 
         /**
          * Creates a new CloseChannelRequest instance using the specified properties.
@@ -10841,6 +11133,9 @@ export namespace lnrpc {
 
         /** CloseStatusUpdate chan_close */
         chan_close?: lnrpc.IChannelCloseUpdate | null;
+
+        /** CloseStatusUpdate close_instant */
+        close_instant?: lnrpc.IInstantUpdate | null;
     }
 
     /** Represents a CloseStatusUpdate. */
@@ -10857,8 +11152,11 @@ export namespace lnrpc {
         /** CloseStatusUpdate chan_close. */
         public chan_close?: lnrpc.IChannelCloseUpdate | null;
 
+        /** CloseStatusUpdate close_instant. */
+        public close_instant?: lnrpc.IInstantUpdate | null;
+
         /** CloseStatusUpdate update. */
-        public update?: 'close_pending' | 'chan_close';
+        public update?: 'close_pending' | 'chan_close' | 'close_instant';
 
         /**
          * Creates a new CloseStatusUpdate instance using the specified properties.
@@ -11075,6 +11373,113 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of an InstantUpdate. */
+    interface IInstantUpdate {}
+
+    /** Represents an InstantUpdate. */
+    class InstantUpdate implements IInstantUpdate {
+        /**
+         * Constructs a new InstantUpdate.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IInstantUpdate);
+
+        /**
+         * Creates a new InstantUpdate instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns InstantUpdate instance
+         */
+        public static create(
+            properties?: lnrpc.IInstantUpdate
+        ): lnrpc.InstantUpdate;
+
+        /**
+         * Encodes the specified InstantUpdate message. Does not implicitly {@link lnrpc.InstantUpdate.verify|verify} messages.
+         * @param message InstantUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IInstantUpdate,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified InstantUpdate message, length delimited. Does not implicitly {@link lnrpc.InstantUpdate.verify|verify} messages.
+         * @param message InstantUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IInstantUpdate,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an InstantUpdate message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns InstantUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.InstantUpdate;
+
+        /**
+         * Decodes an InstantUpdate message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns InstantUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.InstantUpdate;
+
+        /**
+         * Verifies an InstantUpdate message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an InstantUpdate message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns InstantUpdate
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.InstantUpdate;
+
+        /**
+         * Creates a plain object from an InstantUpdate message. Also converts values to other types if specified.
+         * @param message InstantUpdate
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.InstantUpdate,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this InstantUpdate to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for InstantUpdate
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a ReadyForPsbtFunding. */
     interface IReadyForPsbtFunding {
         /** ReadyForPsbtFunding funding_address */
@@ -11219,6 +11624,9 @@ export namespace lnrpc {
 
         /** BatchOpenChannelRequest label */
         label?: string | null;
+
+        /** BatchOpenChannelRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents a BatchOpenChannelRequest. */
@@ -11246,6 +11654,9 @@ export namespace lnrpc {
 
         /** BatchOpenChannelRequest label. */
         public label: string;
+
+        /** BatchOpenChannelRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
         /**
          * Creates a new BatchOpenChannelRequest instance using the specified properties.
@@ -12347,6 +12758,9 @@ export namespace lnrpc {
 
         /** ChanPointShim thaw_height */
         thaw_height?: number | null;
+
+        /** ChanPointShim musig2 */
+        musig2?: boolean | null;
     }
 
     /** Represents a ChanPointShim. */
@@ -12374,6 +12788,9 @@ export namespace lnrpc {
 
         /** ChanPointShim thaw_height. */
         public thaw_height: number;
+
+        /** ChanPointShim musig2. */
+        public musig2: boolean;
 
         /**
          * Creates a new ChanPointShim instance using the specified properties.
@@ -13466,7 +13883,10 @@ export namespace lnrpc {
     }
 
     /** Properties of a PendingChannelsRequest. */
-    interface IPendingChannelsRequest {}
+    interface IPendingChannelsRequest {
+        /** PendingChannelsRequest include_raw_tx */
+        include_raw_tx?: boolean | null;
+    }
 
     /** Represents a PendingChannelsRequest. */
     class PendingChannelsRequest implements IPendingChannelsRequest {
@@ -13475,6 +13895,9 @@ export namespace lnrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: lnrpc.IPendingChannelsRequest);
+
+        /** PendingChannelsRequest include_raw_tx. */
+        public include_raw_tx: boolean;
 
         /**
          * Creates a new PendingChannelsRequest instance using the specified properties.
@@ -14057,6 +14480,9 @@ export namespace lnrpc {
 
             /** WaitingCloseChannel closing_txid */
             closing_txid?: string | null;
+
+            /** WaitingCloseChannel closing_tx_hex */
+            closing_tx_hex?: string | null;
         }
 
         /** Represents a WaitingCloseChannel. */
@@ -14080,6 +14506,9 @@ export namespace lnrpc {
 
             /** WaitingCloseChannel closing_txid. */
             public closing_txid: string;
+
+            /** WaitingCloseChannel closing_tx_hex. */
+            public closing_tx_hex: string;
 
             /**
              * Creates a new WaitingCloseChannel instance using the specified properties.
@@ -15010,6 +15439,9 @@ export namespace lnrpc {
     interface IWalletBalanceRequest {
         /** WalletBalanceRequest account */
         account?: string | null;
+
+        /** WalletBalanceRequest min_confs */
+        min_confs?: number | null;
     }
 
     /** Represents a WalletBalanceRequest. */
@@ -15022,6 +15454,9 @@ export namespace lnrpc {
 
         /** WalletBalanceRequest account. */
         public account: string;
+
+        /** WalletBalanceRequest min_confs. */
+        public min_confs: number;
 
         /**
          * Creates a new WalletBalanceRequest instance using the specified properties.
@@ -15686,6 +16121,9 @@ export namespace lnrpc {
         /** QueryRoutesRequest route_hints */
         route_hints?: lnrpc.IRouteHint[] | null;
 
+        /** QueryRoutesRequest blinded_payment_paths */
+        blinded_payment_paths?: lnrpc.IBlindedPaymentPath[] | null;
+
         /** QueryRoutesRequest dest_features */
         dest_features?: lnrpc.FeatureBit[] | null;
 
@@ -15745,6 +16183,9 @@ export namespace lnrpc {
 
         /** QueryRoutesRequest route_hints. */
         public route_hints: lnrpc.IRouteHint[];
+
+        /** QueryRoutesRequest blinded_payment_paths. */
+        public blinded_payment_paths: lnrpc.IBlindedPaymentPath[];
 
         /** QueryRoutesRequest dest_features. */
         public dest_features: lnrpc.FeatureBit[];
@@ -16241,6 +16682,15 @@ export namespace lnrpc {
 
         /** Hop metadata */
         metadata?: Uint8Array | null;
+
+        /** Hop blinding_point */
+        blinding_point?: Uint8Array | null;
+
+        /** Hop encrypted_data */
+        encrypted_data?: Uint8Array | null;
+
+        /** Hop total_amt_msat */
+        total_amt_msat?: Long | null;
     }
 
     /** Represents a Hop. */
@@ -16289,6 +16739,15 @@ export namespace lnrpc {
 
         /** Hop metadata. */
         public metadata: Uint8Array;
+
+        /** Hop blinding_point. */
+        public blinding_point: Uint8Array;
+
+        /** Hop encrypted_data. */
+        public encrypted_data: Uint8Array;
+
+        /** Hop total_amt_msat. */
+        public total_amt_msat: Long;
 
         /**
          * Creates a new Hop instance using the specified properties.
@@ -17296,6 +17755,12 @@ export namespace lnrpc {
 
         /** RoutingPolicy custom_records */
         custom_records?: { [k: string]: Uint8Array } | null;
+
+        /** RoutingPolicy inbound_fee_base_msat */
+        inbound_fee_base_msat?: number | null;
+
+        /** RoutingPolicy inbound_fee_rate_milli_msat */
+        inbound_fee_rate_milli_msat?: number | null;
     }
 
     /** Represents a RoutingPolicy. */
@@ -17329,6 +17794,12 @@ export namespace lnrpc {
 
         /** RoutingPolicy custom_records. */
         public custom_records: { [k: string]: Uint8Array };
+
+        /** RoutingPolicy inbound_fee_base_msat. */
+        public inbound_fee_base_msat: number;
+
+        /** RoutingPolicy inbound_fee_rate_milli_msat. */
+        public inbound_fee_rate_milli_msat: number;
 
         /**
          * Creates a new RoutingPolicy instance using the specified properties.
@@ -18174,6 +18645,9 @@ export namespace lnrpc {
     interface IChanInfoRequest {
         /** ChanInfoRequest chan_id */
         chan_id?: Long | null;
+
+        /** ChanInfoRequest chan_point */
+        chan_point?: string | null;
     }
 
     /** Represents a ChanInfoRequest. */
@@ -18186,6 +18660,9 @@ export namespace lnrpc {
 
         /** ChanInfoRequest chan_id. */
         public chan_id: Long;
+
+        /** ChanInfoRequest chan_point. */
+        public chan_point: string;
 
         /**
          * Creates a new ChanInfoRequest instance using the specified properties.
@@ -19781,6 +20258,397 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a BlindedPaymentPath. */
+    interface IBlindedPaymentPath {
+        /** BlindedPaymentPath blinded_path */
+        blinded_path?: lnrpc.IBlindedPath | null;
+
+        /** BlindedPaymentPath base_fee_msat */
+        base_fee_msat?: Long | null;
+
+        /** BlindedPaymentPath proportional_fee_rate */
+        proportional_fee_rate?: number | null;
+
+        /** BlindedPaymentPath total_cltv_delta */
+        total_cltv_delta?: number | null;
+
+        /** BlindedPaymentPath htlc_min_msat */
+        htlc_min_msat?: Long | null;
+
+        /** BlindedPaymentPath htlc_max_msat */
+        htlc_max_msat?: Long | null;
+
+        /** BlindedPaymentPath features */
+        features?: lnrpc.FeatureBit[] | null;
+    }
+
+    /** Represents a BlindedPaymentPath. */
+    class BlindedPaymentPath implements IBlindedPaymentPath {
+        /**
+         * Constructs a new BlindedPaymentPath.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IBlindedPaymentPath);
+
+        /** BlindedPaymentPath blinded_path. */
+        public blinded_path?: lnrpc.IBlindedPath | null;
+
+        /** BlindedPaymentPath base_fee_msat. */
+        public base_fee_msat: Long;
+
+        /** BlindedPaymentPath proportional_fee_rate. */
+        public proportional_fee_rate: number;
+
+        /** BlindedPaymentPath total_cltv_delta. */
+        public total_cltv_delta: number;
+
+        /** BlindedPaymentPath htlc_min_msat. */
+        public htlc_min_msat: Long;
+
+        /** BlindedPaymentPath htlc_max_msat. */
+        public htlc_max_msat: Long;
+
+        /** BlindedPaymentPath features. */
+        public features: lnrpc.FeatureBit[];
+
+        /**
+         * Creates a new BlindedPaymentPath instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BlindedPaymentPath instance
+         */
+        public static create(
+            properties?: lnrpc.IBlindedPaymentPath
+        ): lnrpc.BlindedPaymentPath;
+
+        /**
+         * Encodes the specified BlindedPaymentPath message. Does not implicitly {@link lnrpc.BlindedPaymentPath.verify|verify} messages.
+         * @param message BlindedPaymentPath message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IBlindedPaymentPath,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BlindedPaymentPath message, length delimited. Does not implicitly {@link lnrpc.BlindedPaymentPath.verify|verify} messages.
+         * @param message BlindedPaymentPath message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IBlindedPaymentPath,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BlindedPaymentPath message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BlindedPaymentPath
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.BlindedPaymentPath;
+
+        /**
+         * Decodes a BlindedPaymentPath message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BlindedPaymentPath
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.BlindedPaymentPath;
+
+        /**
+         * Verifies a BlindedPaymentPath message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BlindedPaymentPath message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BlindedPaymentPath
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.BlindedPaymentPath;
+
+        /**
+         * Creates a plain object from a BlindedPaymentPath message. Also converts values to other types if specified.
+         * @param message BlindedPaymentPath
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.BlindedPaymentPath,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BlindedPaymentPath to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BlindedPaymentPath
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a BlindedPath. */
+    interface IBlindedPath {
+        /** BlindedPath introduction_node */
+        introduction_node?: Uint8Array | null;
+
+        /** BlindedPath blinding_point */
+        blinding_point?: Uint8Array | null;
+
+        /** BlindedPath blinded_hops */
+        blinded_hops?: lnrpc.IBlindedHop[] | null;
+    }
+
+    /** Represents a BlindedPath. */
+    class BlindedPath implements IBlindedPath {
+        /**
+         * Constructs a new BlindedPath.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IBlindedPath);
+
+        /** BlindedPath introduction_node. */
+        public introduction_node: Uint8Array;
+
+        /** BlindedPath blinding_point. */
+        public blinding_point: Uint8Array;
+
+        /** BlindedPath blinded_hops. */
+        public blinded_hops: lnrpc.IBlindedHop[];
+
+        /**
+         * Creates a new BlindedPath instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BlindedPath instance
+         */
+        public static create(
+            properties?: lnrpc.IBlindedPath
+        ): lnrpc.BlindedPath;
+
+        /**
+         * Encodes the specified BlindedPath message. Does not implicitly {@link lnrpc.BlindedPath.verify|verify} messages.
+         * @param message BlindedPath message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IBlindedPath,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BlindedPath message, length delimited. Does not implicitly {@link lnrpc.BlindedPath.verify|verify} messages.
+         * @param message BlindedPath message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IBlindedPath,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BlindedPath message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BlindedPath
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.BlindedPath;
+
+        /**
+         * Decodes a BlindedPath message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BlindedPath
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.BlindedPath;
+
+        /**
+         * Verifies a BlindedPath message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BlindedPath message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BlindedPath
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.BlindedPath;
+
+        /**
+         * Creates a plain object from a BlindedPath message. Also converts values to other types if specified.
+         * @param message BlindedPath
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.BlindedPath,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BlindedPath to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BlindedPath
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a BlindedHop. */
+    interface IBlindedHop {
+        /** BlindedHop blinded_node */
+        blinded_node?: Uint8Array | null;
+
+        /** BlindedHop encrypted_data */
+        encrypted_data?: Uint8Array | null;
+    }
+
+    /** Represents a BlindedHop. */
+    class BlindedHop implements IBlindedHop {
+        /**
+         * Constructs a new BlindedHop.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IBlindedHop);
+
+        /** BlindedHop blinded_node. */
+        public blinded_node: Uint8Array;
+
+        /** BlindedHop encrypted_data. */
+        public encrypted_data: Uint8Array;
+
+        /**
+         * Creates a new BlindedHop instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BlindedHop instance
+         */
+        public static create(properties?: lnrpc.IBlindedHop): lnrpc.BlindedHop;
+
+        /**
+         * Encodes the specified BlindedHop message. Does not implicitly {@link lnrpc.BlindedHop.verify|verify} messages.
+         * @param message BlindedHop message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IBlindedHop,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BlindedHop message, length delimited. Does not implicitly {@link lnrpc.BlindedHop.verify|verify} messages.
+         * @param message BlindedHop message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IBlindedHop,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BlindedHop message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BlindedHop
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.BlindedHop;
+
+        /**
+         * Decodes a BlindedHop message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BlindedHop
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.BlindedHop;
+
+        /**
+         * Verifies a BlindedHop message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BlindedHop message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BlindedHop
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.BlindedHop;
+
+        /**
+         * Creates a plain object from a BlindedHop message. Also converts values to other types if specified.
+         * @param message BlindedHop
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.BlindedHop,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BlindedHop to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BlindedHop
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a AMPInvoiceState. */
     interface IAMPInvoiceState {
         /** AMPInvoiceState state */
@@ -19995,6 +20863,12 @@ export namespace lnrpc {
         /** Invoice amp_invoice_state */
         amp_invoice_state?: { [k: string]: lnrpc.IAMPInvoiceState } | null;
 
+        /** Invoice is_blinded */
+        is_blinded?: boolean | null;
+
+        /** Invoice blinded_path_config */
+        blinded_path_config?: lnrpc.IBlindedPathConfig | null;
+
         /** Invoice min_hop_hints */
         min_hop_hints?: number | null;
     }
@@ -20087,6 +20961,12 @@ export namespace lnrpc {
 
         /** Invoice amp_invoice_state. */
         public amp_invoice_state: { [k: string]: lnrpc.IAMPInvoiceState };
+
+        /** Invoice is_blinded. */
+        public is_blinded: boolean;
+
+        /** Invoice blinded_path_config. */
+        public blinded_path_config?: lnrpc.IBlindedPathConfig | null;
 
         /** Invoice min_hop_hints. */
         public min_hop_hints: number;
@@ -20191,6 +21071,146 @@ export namespace lnrpc {
             CANCELED = 2,
             ACCEPTED = 3
         }
+    }
+
+    /** Properties of a BlindedPathConfig. */
+    interface IBlindedPathConfig {
+        /** BlindedPathConfig min_num_real_hops */
+        min_num_real_hops?: number | null;
+
+        /** BlindedPathConfig num_hops */
+        num_hops?: number | null;
+
+        /** BlindedPathConfig max_num_paths */
+        max_num_paths?: number | null;
+
+        /** BlindedPathConfig node_omission_list */
+        node_omission_list?: Uint8Array[] | null;
+    }
+
+    /** Represents a BlindedPathConfig. */
+    class BlindedPathConfig implements IBlindedPathConfig {
+        /**
+         * Constructs a new BlindedPathConfig.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IBlindedPathConfig);
+
+        /** BlindedPathConfig min_num_real_hops. */
+        public min_num_real_hops?: number | null;
+
+        /** BlindedPathConfig num_hops. */
+        public num_hops?: number | null;
+
+        /** BlindedPathConfig max_num_paths. */
+        public max_num_paths?: number | null;
+
+        /** BlindedPathConfig node_omission_list. */
+        public node_omission_list: Uint8Array[];
+
+        /** BlindedPathConfig _min_num_real_hops. */
+        public _min_num_real_hops?: 'min_num_real_hops';
+
+        /** BlindedPathConfig _num_hops. */
+        public _num_hops?: 'num_hops';
+
+        /** BlindedPathConfig _max_num_paths. */
+        public _max_num_paths?: 'max_num_paths';
+
+        /**
+         * Creates a new BlindedPathConfig instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BlindedPathConfig instance
+         */
+        public static create(
+            properties?: lnrpc.IBlindedPathConfig
+        ): lnrpc.BlindedPathConfig;
+
+        /**
+         * Encodes the specified BlindedPathConfig message. Does not implicitly {@link lnrpc.BlindedPathConfig.verify|verify} messages.
+         * @param message BlindedPathConfig message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IBlindedPathConfig,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BlindedPathConfig message, length delimited. Does not implicitly {@link lnrpc.BlindedPathConfig.verify|verify} messages.
+         * @param message BlindedPathConfig message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IBlindedPathConfig,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BlindedPathConfig message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BlindedPathConfig
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.BlindedPathConfig;
+
+        /**
+         * Decodes a BlindedPathConfig message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BlindedPathConfig
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.BlindedPathConfig;
+
+        /**
+         * Verifies a BlindedPathConfig message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BlindedPathConfig message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BlindedPathConfig
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.BlindedPathConfig;
+
+        /**
+         * Creates a plain object from a BlindedPathConfig message. Also converts values to other types if specified.
+         * @param message BlindedPathConfig
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.BlindedPathConfig,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BlindedPathConfig to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BlindedPathConfig
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
     /** InvoiceHTLCState enum. */
@@ -21150,7 +22170,8 @@ export namespace lnrpc {
         FAILURE_REASON_NO_ROUTE = 2,
         FAILURE_REASON_ERROR = 3,
         FAILURE_REASON_INCORRECT_PAYMENT_DETAILS = 4,
-        FAILURE_REASON_INSUFFICIENT_BALANCE = 5
+        FAILURE_REASON_INSUFFICIENT_BALANCE = 5,
+        FAILURE_REASON_CANCELED = 6
     }
 
     /** Properties of a Payment. */
@@ -21352,7 +22373,8 @@ export namespace lnrpc {
             UNKNOWN = 0,
             IN_FLIGHT = 1,
             SUCCEEDED = 2,
-            FAILED = 3
+            FAILED = 3,
+            INITIATED = 4
         }
     }
 
@@ -21920,6 +22942,9 @@ export namespace lnrpc {
 
         /** DeleteAllPaymentsRequest failed_htlcs_only */
         failed_htlcs_only?: boolean | null;
+
+        /** DeleteAllPaymentsRequest all_payments */
+        all_payments?: boolean | null;
     }
 
     /** Represents a DeleteAllPaymentsRequest. */
@@ -21935,6 +22960,9 @@ export namespace lnrpc {
 
         /** DeleteAllPaymentsRequest failed_htlcs_only. */
         public failed_htlcs_only: boolean;
+
+        /** DeleteAllPaymentsRequest all_payments. */
+        public all_payments: boolean;
 
         /**
          * Creates a new DeleteAllPaymentsRequest instance using the specified properties.
@@ -22863,6 +23891,9 @@ export namespace lnrpc {
 
         /** PayReq features */
         features?: { [k: string]: lnrpc.IFeature } | null;
+
+        /** PayReq blinded_paths */
+        blinded_paths?: lnrpc.IBlindedPaymentPath[] | null;
     }
 
     /** Represents a PayReq. */
@@ -22911,6 +23942,9 @@ export namespace lnrpc {
 
         /** PayReq features. */
         public features: { [k: string]: lnrpc.IFeature };
+
+        /** PayReq blinded_paths. */
+        public blinded_paths: lnrpc.IBlindedPaymentPath[];
 
         /**
          * Creates a new PayReq instance using the specified properties.
@@ -23029,6 +24063,8 @@ export namespace lnrpc {
         ANCHORS_OPT = 21,
         ANCHORS_ZERO_FEE_HTLC_REQ = 22,
         ANCHORS_ZERO_FEE_HTLC_OPT = 23,
+        ROUTE_BLINDING_REQUIRED = 24,
+        ROUTE_BLINDING_OPTIONAL = 25,
         AMP_REQ = 30,
         AMP_OPT = 31
     }
@@ -23277,6 +24313,12 @@ export namespace lnrpc {
 
         /** ChannelFeeReport fee_rate */
         fee_rate?: number | null;
+
+        /** ChannelFeeReport inbound_base_fee_msat */
+        inbound_base_fee_msat?: number | null;
+
+        /** ChannelFeeReport inbound_fee_per_mil */
+        inbound_fee_per_mil?: number | null;
     }
 
     /** Represents a ChannelFeeReport. */
@@ -23301,6 +24343,12 @@ export namespace lnrpc {
 
         /** ChannelFeeReport fee_rate. */
         public fee_rate: number;
+
+        /** ChannelFeeReport inbound_base_fee_msat. */
+        public inbound_base_fee_msat: number;
+
+        /** ChannelFeeReport inbound_fee_per_mil. */
+        public inbound_fee_per_mil: number;
 
         /**
          * Creates a new ChannelFeeReport instance using the specified properties.
@@ -23529,6 +24577,123 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of an InboundFee. */
+    interface IInboundFee {
+        /** InboundFee base_fee_msat */
+        base_fee_msat?: number | null;
+
+        /** InboundFee fee_rate_ppm */
+        fee_rate_ppm?: number | null;
+    }
+
+    /** Represents an InboundFee. */
+    class InboundFee implements IInboundFee {
+        /**
+         * Constructs a new InboundFee.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.IInboundFee);
+
+        /** InboundFee base_fee_msat. */
+        public base_fee_msat: number;
+
+        /** InboundFee fee_rate_ppm. */
+        public fee_rate_ppm: number;
+
+        /**
+         * Creates a new InboundFee instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns InboundFee instance
+         */
+        public static create(properties?: lnrpc.IInboundFee): lnrpc.InboundFee;
+
+        /**
+         * Encodes the specified InboundFee message. Does not implicitly {@link lnrpc.InboundFee.verify|verify} messages.
+         * @param message InboundFee message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.IInboundFee,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified InboundFee message, length delimited. Does not implicitly {@link lnrpc.InboundFee.verify|verify} messages.
+         * @param message InboundFee message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.IInboundFee,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an InboundFee message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns InboundFee
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.InboundFee;
+
+        /**
+         * Decodes an InboundFee message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns InboundFee
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.InboundFee;
+
+        /**
+         * Verifies an InboundFee message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an InboundFee message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns InboundFee
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.InboundFee;
+
+        /**
+         * Creates a plain object from an InboundFee message. Also converts values to other types if specified.
+         * @param message InboundFee
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.InboundFee,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this InboundFee to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for InboundFee
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a PolicyUpdateRequest. */
     interface IPolicyUpdateRequest {
         /** PolicyUpdateRequest global */
@@ -23557,6 +24722,9 @@ export namespace lnrpc {
 
         /** PolicyUpdateRequest min_htlc_msat_specified */
         min_htlc_msat_specified?: boolean | null;
+
+        /** PolicyUpdateRequest inbound_fee */
+        inbound_fee?: lnrpc.IInboundFee | null;
     }
 
     /** Represents a PolicyUpdateRequest. */
@@ -23593,6 +24761,9 @@ export namespace lnrpc {
 
         /** PolicyUpdateRequest min_htlc_msat_specified. */
         public min_htlc_msat_specified: boolean;
+
+        /** PolicyUpdateRequest inbound_fee. */
+        public inbound_fee?: lnrpc.IInboundFee | null;
 
         /** PolicyUpdateRequest scope. */
         public scope?: 'global' | 'chan_point';
@@ -26827,6 +27998,7 @@ export namespace lnrpc {
             EXPIRY_TOO_FAR = 22,
             MPP_TIMEOUT = 23,
             INVALID_ONION_PAYLOAD = 24,
+            INVALID_ONION_BLINDING = 25,
             INTERNAL_FAILURE = 997,
             UNKNOWN_FAILURE = 998,
             UNREADABLE_FAILURE = 999
@@ -36611,17 +37783,11 @@ export namespace routerrpc {
         /** SendPaymentRequest amt */
         amt?: Long | null;
 
-        /** SendPaymentRequest amt_msat */
-        amt_msat?: Long | null;
-
         /** SendPaymentRequest payment_hash */
         payment_hash?: Uint8Array | null;
 
         /** SendPaymentRequest final_cltv_delta */
         final_cltv_delta?: number | null;
-
-        /** SendPaymentRequest payment_addr */
-        payment_addr?: Uint8Array | null;
 
         /** SendPaymentRequest payment_request */
         payment_request?: string | null;
@@ -36632,17 +37798,8 @@ export namespace routerrpc {
         /** SendPaymentRequest fee_limit_sat */
         fee_limit_sat?: Long | null;
 
-        /** SendPaymentRequest fee_limit_msat */
-        fee_limit_msat?: Long | null;
-
         /** SendPaymentRequest outgoing_chan_id */
         outgoing_chan_id?: Long | null;
-
-        /** SendPaymentRequest outgoing_chan_ids */
-        outgoing_chan_ids?: Long[] | null;
-
-        /** SendPaymentRequest last_hop_pubkey */
-        last_hop_pubkey?: Uint8Array | null;
 
         /** SendPaymentRequest cltv_limit */
         cltv_limit?: number | null;
@@ -36652,6 +37809,15 @@ export namespace routerrpc {
 
         /** SendPaymentRequest dest_custom_records */
         dest_custom_records?: { [k: string]: Uint8Array } | null;
+
+        /** SendPaymentRequest amt_msat */
+        amt_msat?: Long | null;
+
+        /** SendPaymentRequest fee_limit_msat */
+        fee_limit_msat?: Long | null;
+
+        /** SendPaymentRequest last_hop_pubkey */
+        last_hop_pubkey?: Uint8Array | null;
 
         /** SendPaymentRequest allow_self_payment */
         allow_self_payment?: boolean | null;
@@ -36664,6 +37830,12 @@ export namespace routerrpc {
 
         /** SendPaymentRequest no_inflight_updates */
         no_inflight_updates?: boolean | null;
+
+        /** SendPaymentRequest outgoing_chan_ids */
+        outgoing_chan_ids?: Long[] | null;
+
+        /** SendPaymentRequest payment_addr */
+        payment_addr?: Uint8Array | null;
 
         /** SendPaymentRequest max_shard_size_msat */
         max_shard_size_msat?: Long | null;
@@ -36689,17 +37861,11 @@ export namespace routerrpc {
         /** SendPaymentRequest amt. */
         public amt: Long;
 
-        /** SendPaymentRequest amt_msat. */
-        public amt_msat: Long;
-
         /** SendPaymentRequest payment_hash. */
         public payment_hash: Uint8Array;
 
         /** SendPaymentRequest final_cltv_delta. */
         public final_cltv_delta: number;
-
-        /** SendPaymentRequest payment_addr. */
-        public payment_addr: Uint8Array;
 
         /** SendPaymentRequest payment_request. */
         public payment_request: string;
@@ -36710,17 +37876,8 @@ export namespace routerrpc {
         /** SendPaymentRequest fee_limit_sat. */
         public fee_limit_sat: Long;
 
-        /** SendPaymentRequest fee_limit_msat. */
-        public fee_limit_msat: Long;
-
         /** SendPaymentRequest outgoing_chan_id. */
         public outgoing_chan_id: Long;
-
-        /** SendPaymentRequest outgoing_chan_ids. */
-        public outgoing_chan_ids: Long[];
-
-        /** SendPaymentRequest last_hop_pubkey. */
-        public last_hop_pubkey: Uint8Array;
 
         /** SendPaymentRequest cltv_limit. */
         public cltv_limit: number;
@@ -36730,6 +37887,15 @@ export namespace routerrpc {
 
         /** SendPaymentRequest dest_custom_records. */
         public dest_custom_records: { [k: string]: Uint8Array };
+
+        /** SendPaymentRequest amt_msat. */
+        public amt_msat: Long;
+
+        /** SendPaymentRequest fee_limit_msat. */
+        public fee_limit_msat: Long;
+
+        /** SendPaymentRequest last_hop_pubkey. */
+        public last_hop_pubkey: Uint8Array;
 
         /** SendPaymentRequest allow_self_payment. */
         public allow_self_payment: boolean;
@@ -36742,6 +37908,12 @@ export namespace routerrpc {
 
         /** SendPaymentRequest no_inflight_updates. */
         public no_inflight_updates: boolean;
+
+        /** SendPaymentRequest outgoing_chan_ids. */
+        public outgoing_chan_ids: Long[];
+
+        /** SendPaymentRequest payment_addr. */
+        public payment_addr: Uint8Array;
 
         /** SendPaymentRequest max_shard_size_msat. */
         public max_shard_size_msat: Long;
@@ -37087,6 +38259,12 @@ export namespace routerrpc {
 
         /** RouteFeeRequest amt_sat */
         amt_sat?: Long | null;
+
+        /** RouteFeeRequest payment_request */
+        payment_request?: string | null;
+
+        /** RouteFeeRequest timeout */
+        timeout?: number | null;
     }
 
     /** Represents a RouteFeeRequest. */
@@ -37102,6 +38280,12 @@ export namespace routerrpc {
 
         /** RouteFeeRequest amt_sat. */
         public amt_sat: Long;
+
+        /** RouteFeeRequest payment_request. */
+        public payment_request: string;
+
+        /** RouteFeeRequest timeout. */
+        public timeout: number;
 
         /**
          * Creates a new RouteFeeRequest instance using the specified properties.
@@ -37206,6 +38390,9 @@ export namespace routerrpc {
 
         /** RouteFeeResponse time_lock_delay */
         time_lock_delay?: Long | null;
+
+        /** RouteFeeResponse failure_reason */
+        failure_reason?: lnrpc.PaymentFailureReason | null;
     }
 
     /** Represents a RouteFeeResponse. */
@@ -37221,6 +38408,9 @@ export namespace routerrpc {
 
         /** RouteFeeResponse time_lock_delay. */
         public time_lock_delay: Long;
+
+        /** RouteFeeResponse failure_reason. */
+        public failure_reason: lnrpc.PaymentFailureReason;
 
         /**
          * Creates a new RouteFeeResponse instance using the specified properties.
@@ -43181,6 +44371,9 @@ export namespace signrpc {
 
         /** SignMessageReq schnorr_sig_tap_tweak */
         schnorr_sig_tap_tweak?: Uint8Array | null;
+
+        /** SignMessageReq tag */
+        tag?: Uint8Array | null;
     }
 
     /** Represents a SignMessageReq. */
@@ -43208,6 +44401,9 @@ export namespace signrpc {
 
         /** SignMessageReq schnorr_sig_tap_tweak. */
         public schnorr_sig_tap_tweak: Uint8Array;
+
+        /** SignMessageReq tag. */
+        public tag: Uint8Array;
 
         /**
          * Creates a new SignMessageReq instance using the specified properties.
@@ -43431,6 +44627,9 @@ export namespace signrpc {
 
         /** VerifyMessageReq is_schnorr_sig */
         is_schnorr_sig?: boolean | null;
+
+        /** VerifyMessageReq tag */
+        tag?: Uint8Array | null;
     }
 
     /** Represents a VerifyMessageReq. */
@@ -43452,6 +44651,9 @@ export namespace signrpc {
 
         /** VerifyMessageReq is_schnorr_sig. */
         public is_schnorr_sig: boolean;
+
+        /** VerifyMessageReq tag. */
+        public tag: Uint8Array;
 
         /**
          * Creates a new VerifyMessageReq instance using the specified properties.
@@ -44420,6 +45622,9 @@ export namespace signrpc {
 
         /** MuSig2SessionRequest version */
         version?: signrpc.MuSig2Version | null;
+
+        /** MuSig2SessionRequest pregenerated_local_nonce */
+        pregenerated_local_nonce?: Uint8Array | null;
     }
 
     /** Represents a MuSig2SessionRequest. */
@@ -44447,6 +45652,9 @@ export namespace signrpc {
 
         /** MuSig2SessionRequest version. */
         public version: signrpc.MuSig2Version;
+
+        /** MuSig2SessionRequest pregenerated_local_nonce. */
+        public pregenerated_local_nonce: Uint8Array;
 
         /**
          * Creates a new MuSig2SessionRequest instance using the specified properties.
@@ -45781,6 +46989,25 @@ export namespace walletrpc {
         ): Promise<walletrpc.AddrResponse>;
 
         /**
+         * Calls GetTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and Transaction
+         */
+        public getTransaction(
+            request: walletrpc.IGetTransactionRequest,
+            callback: walletrpc.WalletKit.GetTransactionCallback
+        ): void;
+
+        /**
+         * Calls GetTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @returns Promise
+         */
+        public getTransaction(
+            request: walletrpc.IGetTransactionRequest
+        ): Promise<lnrpc.Transaction>;
+
+        /**
          * Calls ListAccounts.
          * @param request ListAccountsRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and ListAccountsResponse
@@ -45952,6 +47179,25 @@ export namespace walletrpc {
         ): Promise<walletrpc.PublishResponse>;
 
         /**
+         * Calls RemoveTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and RemoveTransactionResponse
+         */
+        public removeTransaction(
+            request: walletrpc.IGetTransactionRequest,
+            callback: walletrpc.WalletKit.RemoveTransactionCallback
+        ): void;
+
+        /**
+         * Calls RemoveTransaction.
+         * @param request GetTransactionRequest message or plain object
+         * @returns Promise
+         */
+        public removeTransaction(
+            request: walletrpc.IGetTransactionRequest
+        ): Promise<walletrpc.RemoveTransactionResponse>;
+
+        /**
          * Calls SendOutputs.
          * @param request SendOutputsRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and SendOutputsResponse
@@ -46121,6 +47367,25 @@ export namespace walletrpc {
         public finalizePsbt(
             request: walletrpc.IFinalizePsbtRequest
         ): Promise<walletrpc.FinalizePsbtResponse>;
+
+        /**
+         * Calls Rescan.
+         * @param request RescanRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and RescanResponse
+         */
+        public rescan(
+            request: walletrpc.IRescanRequest,
+            callback: walletrpc.WalletKit.RescanCallback
+        ): void;
+
+        /**
+         * Calls Rescan.
+         * @param request RescanRequest message or plain object
+         * @returns Promise
+         */
+        public rescan(
+            request: walletrpc.IRescanRequest
+        ): Promise<walletrpc.RescanResponse>;
     }
 
     namespace WalletKit {
@@ -46192,6 +47457,16 @@ export namespace walletrpc {
         type NextAddrCallback = (
             error: Error | null,
             response?: walletrpc.AddrResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#getTransaction}.
+         * @param error Error, if any
+         * @param [response] Transaction
+         */
+        type GetTransactionCallback = (
+            error: Error | null,
+            response?: lnrpc.Transaction
         ) => void;
 
         /**
@@ -46285,6 +47560,16 @@ export namespace walletrpc {
         ) => void;
 
         /**
+         * Callback as used by {@link walletrpc.WalletKit#removeTransaction}.
+         * @param error Error, if any
+         * @param [response] RemoveTransactionResponse
+         */
+        type RemoveTransactionCallback = (
+            error: Error | null,
+            response?: walletrpc.RemoveTransactionResponse
+        ) => void;
+
+        /**
          * Callback as used by {@link walletrpc.WalletKit#sendOutputs}.
          * @param error Error, if any
          * @param [response] SendOutputsResponse
@@ -46372,6 +47657,16 @@ export namespace walletrpc {
         type FinalizePsbtCallback = (
             error: Error | null,
             response?: walletrpc.FinalizePsbtResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#rescan}.
+         * @param error Error, if any
+         * @param [response] RescanResponse
+         */
+        type RescanCallback = (
+            error: Error | null,
+            response?: walletrpc.RescanResponse
         ) => void;
     }
 
@@ -47612,6 +48907,12 @@ export namespace walletrpc {
 
         /** AddressProperty balance */
         balance?: Long | null;
+
+        /** AddressProperty derivation_path */
+        derivation_path?: string | null;
+
+        /** AddressProperty public_key */
+        public_key?: Uint8Array | null;
     }
 
     /** Represents an AddressProperty. */
@@ -47630,6 +48931,12 @@ export namespace walletrpc {
 
         /** AddressProperty balance. */
         public balance: Long;
+
+        /** AddressProperty derivation_path. */
+        public derivation_path: string;
+
+        /** AddressProperty public_key. */
+        public public_key: Uint8Array;
 
         /**
          * Creates a new AddressProperty instance using the specified properties.
@@ -48548,6 +49855,119 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a GetTransactionRequest. */
+    interface IGetTransactionRequest {
+        /** GetTransactionRequest txid */
+        txid?: string | null;
+    }
+
+    /** Represents a GetTransactionRequest. */
+    class GetTransactionRequest implements IGetTransactionRequest {
+        /**
+         * Constructs a new GetTransactionRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IGetTransactionRequest);
+
+        /** GetTransactionRequest txid. */
+        public txid: string;
+
+        /**
+         * Creates a new GetTransactionRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetTransactionRequest instance
+         */
+        public static create(
+            properties?: walletrpc.IGetTransactionRequest
+        ): walletrpc.GetTransactionRequest;
+
+        /**
+         * Encodes the specified GetTransactionRequest message. Does not implicitly {@link walletrpc.GetTransactionRequest.verify|verify} messages.
+         * @param message GetTransactionRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IGetTransactionRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetTransactionRequest message, length delimited. Does not implicitly {@link walletrpc.GetTransactionRequest.verify|verify} messages.
+         * @param message GetTransactionRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IGetTransactionRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a GetTransactionRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetTransactionRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.GetTransactionRequest;
+
+        /**
+         * Decodes a GetTransactionRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetTransactionRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.GetTransactionRequest;
+
+        /**
+         * Verifies a GetTransactionRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a GetTransactionRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetTransactionRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.GetTransactionRequest;
+
+        /**
+         * Creates a plain object from a GetTransactionRequest message. Also converts values to other types if specified.
+         * @param message GetTransactionRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.GetTransactionRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this GetTransactionRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for GetTransactionRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a SignMessageWithAddrRequest. */
     interface ISignMessageWithAddrRequest {
         /** SignMessageWithAddrRequest msg */
@@ -49044,6 +50464,9 @@ export namespace walletrpc {
 
         /** ImportAccountRequest dry_run */
         dry_run?: boolean | null;
+
+        /** ImportAccountRequest birthday_height */
+        birthday_height?: number | null;
     }
 
     /** Represents an ImportAccountRequest. */
@@ -49068,6 +50491,9 @@ export namespace walletrpc {
 
         /** ImportAccountRequest dry_run. */
         public dry_run: boolean;
+
+        /** ImportAccountRequest birthday_height. */
+        public birthday_height: number;
 
         /**
          * Creates a new ImportAccountRequest instance using the specified properties.
@@ -49290,6 +50716,232 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a RescanRequest. */
+    interface IRescanRequest {
+        /** RescanRequest start_height */
+        start_height?: number | null;
+    }
+
+    /** Represents a RescanRequest. */
+    class RescanRequest implements IRescanRequest {
+        /**
+         * Constructs a new RescanRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IRescanRequest);
+
+        /** RescanRequest start_height. */
+        public start_height: number;
+
+        /**
+         * Creates a new RescanRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RescanRequest instance
+         */
+        public static create(
+            properties?: walletrpc.IRescanRequest
+        ): walletrpc.RescanRequest;
+
+        /**
+         * Encodes the specified RescanRequest message. Does not implicitly {@link walletrpc.RescanRequest.verify|verify} messages.
+         * @param message RescanRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IRescanRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RescanRequest message, length delimited. Does not implicitly {@link walletrpc.RescanRequest.verify|verify} messages.
+         * @param message RescanRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IRescanRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RescanRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RescanRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.RescanRequest;
+
+        /**
+         * Decodes a RescanRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RescanRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.RescanRequest;
+
+        /**
+         * Verifies a RescanRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RescanRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RescanRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.RescanRequest;
+
+        /**
+         * Creates a plain object from a RescanRequest message. Also converts values to other types if specified.
+         * @param message RescanRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.RescanRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RescanRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RescanRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a RescanResponse. */
+    interface IRescanResponse {
+        /** RescanResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a RescanResponse. */
+    class RescanResponse implements IRescanResponse {
+        /**
+         * Constructs a new RescanResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IRescanResponse);
+
+        /** RescanResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new RescanResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RescanResponse instance
+         */
+        public static create(
+            properties?: walletrpc.IRescanResponse
+        ): walletrpc.RescanResponse;
+
+        /**
+         * Encodes the specified RescanResponse message. Does not implicitly {@link walletrpc.RescanResponse.verify|verify} messages.
+         * @param message RescanResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IRescanResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RescanResponse message, length delimited. Does not implicitly {@link walletrpc.RescanResponse.verify|verify} messages.
+         * @param message RescanResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IRescanResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RescanResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RescanResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.RescanResponse;
+
+        /**
+         * Decodes a RescanResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RescanResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.RescanResponse;
+
+        /**
+         * Verifies a RescanResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RescanResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RescanResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.RescanResponse;
+
+        /**
+         * Creates a plain object from a RescanResponse message. Also converts values to other types if specified.
+         * @param message RescanResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.RescanResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RescanResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RescanResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of an ImportPublicKeyRequest. */
     interface IImportPublicKeyRequest {
         /** ImportPublicKeyRequest public_key */
@@ -49297,6 +50949,12 @@ export namespace walletrpc {
 
         /** ImportPublicKeyRequest address_type */
         address_type?: walletrpc.AddressType | null;
+
+        /** ImportPublicKeyRequest rescan */
+        rescan?: boolean | null;
+
+        /** ImportPublicKeyRequest birthday_height */
+        birthday_height?: number | null;
     }
 
     /** Represents an ImportPublicKeyRequest. */
@@ -49312,6 +50970,12 @@ export namespace walletrpc {
 
         /** ImportPublicKeyRequest address_type. */
         public address_type: walletrpc.AddressType;
+
+        /** ImportPublicKeyRequest rescan. */
+        public rescan: boolean;
+
+        /** ImportPublicKeyRequest birthday_height. */
+        public birthday_height: number;
 
         /**
          * Creates a new ImportPublicKeyRequest instance using the specified properties.
@@ -50356,6 +52020,119 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a RemoveTransactionResponse. */
+    interface IRemoveTransactionResponse {
+        /** RemoveTransactionResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a RemoveTransactionResponse. */
+    class RemoveTransactionResponse implements IRemoveTransactionResponse {
+        /**
+         * Constructs a new RemoveTransactionResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IRemoveTransactionResponse);
+
+        /** RemoveTransactionResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new RemoveTransactionResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RemoveTransactionResponse instance
+         */
+        public static create(
+            properties?: walletrpc.IRemoveTransactionResponse
+        ): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Encodes the specified RemoveTransactionResponse message. Does not implicitly {@link walletrpc.RemoveTransactionResponse.verify|verify} messages.
+         * @param message RemoveTransactionResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IRemoveTransactionResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RemoveTransactionResponse message, length delimited. Does not implicitly {@link walletrpc.RemoveTransactionResponse.verify|verify} messages.
+         * @param message RemoveTransactionResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IRemoveTransactionResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RemoveTransactionResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RemoveTransactionResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Decodes a RemoveTransactionResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RemoveTransactionResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Verifies a RemoveTransactionResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RemoveTransactionResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RemoveTransactionResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.RemoveTransactionResponse;
+
+        /**
+         * Creates a plain object from a RemoveTransactionResponse message. Also converts values to other types if specified.
+         * @param message RemoveTransactionResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.RemoveTransactionResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RemoveTransactionResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RemoveTransactionResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a SendOutputsRequest. */
     interface ISendOutputsRequest {
         /** SendOutputsRequest sat_per_kw */
@@ -50372,6 +52149,9 @@ export namespace walletrpc {
 
         /** SendOutputsRequest spend_unconfirmed */
         spend_unconfirmed?: boolean | null;
+
+        /** SendOutputsRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents a SendOutputsRequest. */
@@ -50396,6 +52176,9 @@ export namespace walletrpc {
 
         /** SendOutputsRequest spend_unconfirmed. */
         public spend_unconfirmed: boolean;
+
+        /** SendOutputsRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
         /**
          * Creates a new SendOutputsRequest instance using the specified properties.
@@ -50856,7 +52639,20 @@ export namespace walletrpc {
         LEASE_COMMITMENT_TO_REMOTE_CONFIRMED = 19,
         LEASE_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 20,
         LEASE_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 21,
-        TAPROOT_PUB_KEY_SPEND = 22
+        TAPROOT_PUB_KEY_SPEND = 22,
+        TAPROOT_LOCAL_COMMIT_SPEND = 23,
+        TAPROOT_REMOTE_COMMIT_SPEND = 24,
+        TAPROOT_ANCHOR_SWEEP_SPEND = 25,
+        TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL = 26,
+        TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL = 27,
+        TAPROOT_HTLC_SECOND_LEVEL_REVOKE = 28,
+        TAPROOT_HTLC_ACCEPTED_REVOKE = 29,
+        TAPROOT_HTLC_OFFERED_REVOKE = 30,
+        TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT = 31,
+        TAPROOT_HTLC_LOCAL_OFFERED_TIMEOUT = 32,
+        TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS = 33,
+        TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS = 34,
+        TAPROOT_COMMITMENT_REVOKE = 35
     }
 
     /** Properties of a PendingSweep. */
@@ -50879,6 +52675,9 @@ export namespace walletrpc {
         /** PendingSweep next_broadcast_height */
         next_broadcast_height?: number | null;
 
+        /** PendingSweep force */
+        force?: boolean | null;
+
         /** PendingSweep requested_conf_target */
         requested_conf_target?: number | null;
 
@@ -50891,8 +52690,14 @@ export namespace walletrpc {
         /** PendingSweep requested_sat_per_vbyte */
         requested_sat_per_vbyte?: Long | null;
 
-        /** PendingSweep force */
-        force?: boolean | null;
+        /** PendingSweep immediate */
+        immediate?: boolean | null;
+
+        /** PendingSweep budget */
+        budget?: Long | null;
+
+        /** PendingSweep deadline_height */
+        deadline_height?: number | null;
     }
 
     /** Represents a PendingSweep. */
@@ -50921,6 +52726,9 @@ export namespace walletrpc {
         /** PendingSweep next_broadcast_height. */
         public next_broadcast_height: number;
 
+        /** PendingSweep force. */
+        public force: boolean;
+
         /** PendingSweep requested_conf_target. */
         public requested_conf_target: number;
 
@@ -50933,8 +52741,14 @@ export namespace walletrpc {
         /** PendingSweep requested_sat_per_vbyte. */
         public requested_sat_per_vbyte: Long;
 
-        /** PendingSweep force. */
-        public force: boolean;
+        /** PendingSweep immediate. */
+        public immediate: boolean;
+
+        /** PendingSweep budget. */
+        public budget: Long;
+
+        /** PendingSweep deadline_height. */
+        public deadline_height: number;
 
         /**
          * Creates a new PendingSweep instance using the specified properties.
@@ -51268,6 +53082,12 @@ export namespace walletrpc {
 
         /** BumpFeeRequest sat_per_vbyte */
         sat_per_vbyte?: Long | null;
+
+        /** BumpFeeRequest immediate */
+        immediate?: boolean | null;
+
+        /** BumpFeeRequest budget */
+        budget?: Long | null;
     }
 
     /** Represents a BumpFeeRequest. */
@@ -51292,6 +53112,12 @@ export namespace walletrpc {
 
         /** BumpFeeRequest sat_per_vbyte. */
         public sat_per_vbyte: Long;
+
+        /** BumpFeeRequest immediate. */
+        public immediate: boolean;
+
+        /** BumpFeeRequest budget. */
+        public budget: Long;
 
         /**
          * Creates a new BumpFeeRequest instance using the specified properties.
@@ -51390,7 +53216,10 @@ export namespace walletrpc {
     }
 
     /** Properties of a BumpFeeResponse. */
-    interface IBumpFeeResponse {}
+    interface IBumpFeeResponse {
+        /** BumpFeeResponse status */
+        status?: string | null;
+    }
 
     /** Represents a BumpFeeResponse. */
     class BumpFeeResponse implements IBumpFeeResponse {
@@ -51399,6 +53228,9 @@ export namespace walletrpc {
          * @param [properties] Properties to set
          */
         constructor(properties?: walletrpc.IBumpFeeResponse);
+
+        /** BumpFeeResponse status. */
+        public status: string;
 
         /**
          * Creates a new BumpFeeResponse instance using the specified properties.
@@ -51500,6 +53332,9 @@ export namespace walletrpc {
     interface IListSweepsRequest {
         /** ListSweepsRequest verbose */
         verbose?: boolean | null;
+
+        /** ListSweepsRequest start_height */
+        start_height?: number | null;
     }
 
     /** Represents a ListSweepsRequest. */
@@ -51512,6 +53347,9 @@ export namespace walletrpc {
 
         /** ListSweepsRequest verbose. */
         public verbose: boolean;
+
+        /** ListSweepsRequest start_height. */
+        public start_height: number;
 
         /**
          * Creates a new ListSweepsRequest instance using the specified properties.
@@ -52094,6 +53932,9 @@ export namespace walletrpc {
         /** FundPsbtRequest raw */
         raw?: walletrpc.ITxTemplate | null;
 
+        /** FundPsbtRequest coin_select */
+        coin_select?: walletrpc.IPsbtCoinSelect | null;
+
         /** FundPsbtRequest target_conf */
         target_conf?: number | null;
 
@@ -52111,6 +53952,9 @@ export namespace walletrpc {
 
         /** FundPsbtRequest change_type */
         change_type?: walletrpc.ChangeAddressType | null;
+
+        /** FundPsbtRequest coin_selection_strategy */
+        coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
     }
 
     /** Represents a FundPsbtRequest. */
@@ -52126,6 +53970,9 @@ export namespace walletrpc {
 
         /** FundPsbtRequest raw. */
         public raw?: walletrpc.ITxTemplate | null;
+
+        /** FundPsbtRequest coin_select. */
+        public coin_select?: walletrpc.IPsbtCoinSelect | null;
 
         /** FundPsbtRequest target_conf. */
         public target_conf?: number | null;
@@ -52145,8 +53992,11 @@ export namespace walletrpc {
         /** FundPsbtRequest change_type. */
         public change_type: walletrpc.ChangeAddressType;
 
+        /** FundPsbtRequest coin_selection_strategy. */
+        public coin_selection_strategy: lnrpc.CoinSelectionStrategy;
+
         /** FundPsbtRequest template. */
-        public template?: 'psbt' | 'raw';
+        public template?: 'psbt' | 'raw' | 'coin_select';
 
         /** FundPsbtRequest fees. */
         public fees?: 'target_conf' | 'sat_per_vbyte';
@@ -52485,6 +54335,134 @@ export namespace walletrpc {
 
         /**
          * Gets the default type url for TxTemplate
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a PsbtCoinSelect. */
+    interface IPsbtCoinSelect {
+        /** PsbtCoinSelect psbt */
+        psbt?: Uint8Array | null;
+
+        /** PsbtCoinSelect existing_output_index */
+        existing_output_index?: number | null;
+
+        /** PsbtCoinSelect add */
+        add?: boolean | null;
+    }
+
+    /** Represents a PsbtCoinSelect. */
+    class PsbtCoinSelect implements IPsbtCoinSelect {
+        /**
+         * Constructs a new PsbtCoinSelect.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IPsbtCoinSelect);
+
+        /** PsbtCoinSelect psbt. */
+        public psbt: Uint8Array;
+
+        /** PsbtCoinSelect existing_output_index. */
+        public existing_output_index?: number | null;
+
+        /** PsbtCoinSelect add. */
+        public add?: boolean | null;
+
+        /** PsbtCoinSelect change_output. */
+        public change_output?: 'existing_output_index' | 'add';
+
+        /**
+         * Creates a new PsbtCoinSelect instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PsbtCoinSelect instance
+         */
+        public static create(
+            properties?: walletrpc.IPsbtCoinSelect
+        ): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Encodes the specified PsbtCoinSelect message. Does not implicitly {@link walletrpc.PsbtCoinSelect.verify|verify} messages.
+         * @param message PsbtCoinSelect message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IPsbtCoinSelect,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PsbtCoinSelect message, length delimited. Does not implicitly {@link walletrpc.PsbtCoinSelect.verify|verify} messages.
+         * @param message PsbtCoinSelect message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IPsbtCoinSelect,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a PsbtCoinSelect message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PsbtCoinSelect
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Decodes a PsbtCoinSelect message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PsbtCoinSelect
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Verifies a PsbtCoinSelect message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a PsbtCoinSelect message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PsbtCoinSelect
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.PsbtCoinSelect;
+
+        /**
+         * Creates a plain object from a PsbtCoinSelect message. Also converts values to other types if specified.
+         * @param message PsbtCoinSelect
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.PsbtCoinSelect,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this PsbtCoinSelect to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PsbtCoinSelect
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */

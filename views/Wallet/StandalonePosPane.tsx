@@ -28,25 +28,26 @@ import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
-import UnitsStore, { SATS_PER_BTC } from '../../stores/UnitsStore';
+import UnitsStore from '../../stores/UnitsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import InventoryStore from '../../stores/InventoryStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 
 import { version } from './../../package.json';
 
 interface StandalonePosPaneProps {
     navigation: StackNavigationProp<any, any>;
-    ActivityStore: ActivityStore;
-    FiatStore: FiatStore;
-    NodeInfoStore: NodeInfoStore;
-    PosStore: PosStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
-    InventoryStore: InventoryStore;
+    ActivityStore?: ActivityStore;
+    FiatStore?: FiatStore;
+    NodeInfoStore?: NodeInfoStore;
+    PosStore?: PosStore;
+    UnitsStore?: UnitsStore;
+    SettingsStore?: SettingsStore;
+    InventoryStore?: InventoryStore;
 }
 
 interface ProductDataItems {
@@ -116,15 +117,15 @@ export default class StandalonePosPane extends React.PureComponent<
 
     loadCurrentOrder = async () => {
         const { PosStore } = this.props;
-        if (PosStore.currentOrder) {
-            const { currentOrder } = PosStore;
+        if (PosStore!.currentOrder) {
+            const { currentOrder } = PosStore!;
             this.setState({
                 itemQty:
                     currentOrder?.line_items.reduce(
                         (n, { quantity }) => n + quantity,
                         0
                     ) ?? 0,
-                totalMoneyDisplay: currentOrder.getTotalMoneyDisplay
+                totalMoneyDisplay: currentOrder!.getTotalMoneyDisplay
             });
         }
     };
@@ -132,7 +133,7 @@ export default class StandalonePosPane extends React.PureComponent<
     fetchProducts = async () => {
         try {
             const { InventoryStore } = this.props;
-            const { getInventory } = InventoryStore;
+            const { getInventory } = InventoryStore!;
             const { products } = await getInventory();
 
             const uncategorized: Array<Product> = [];
@@ -183,15 +184,19 @@ export default class StandalonePosPane extends React.PureComponent<
         }
     };
 
-    renderItem = ({ item, index }, onClickPaid, onClickHide) => {
+    renderItem = (
+        { item, index }: { item: { [key: string]: any }; index: number },
+        onClickPaid: any,
+        onClickHide: any
+    ) => {
         const { navigation, FiatStore } = this.props;
-        const { getRate, getSymbol } = FiatStore;
+        const { getRate, getSymbol } = FiatStore!;
         const isPaid: boolean = item && item.payment;
 
         let row: Array<any> = [];
-        let prevOpenedRow;
+        let prevOpenedRow: any;
 
-        const closeRow = (index) => {
+        const closeRow = (index: any) => {
             if (prevOpenedRow && prevOpenedRow !== row[index]) {
                 prevOpenedRow.close();
             }
@@ -199,10 +204,10 @@ export default class StandalonePosPane extends React.PureComponent<
         };
 
         const renderRightActions = (
-            progress,
-            dragX,
-            onClickPaid,
-            onClickHide
+            _progress: any,
+            _dragX: any,
+            onClickPaid: any,
+            onClickHide: any
         ) => {
             return (
                 <View
@@ -289,10 +294,11 @@ export default class StandalonePosPane extends React.PureComponent<
 
     addProductToOrder = (product: Product) => {
         const { PosStore, SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = SettingsStore!;
         const { fiat } = settings;
-        if (!PosStore.currentOrder) PosStore.createCurrentOrder(fiat || 'USD');
-        const order = PosStore.currentOrder;
+        if (!PosStore!.currentOrder)
+            PosStore?.createCurrentOrder(fiat || 'USD');
+        const order = PosStore?.currentOrder;
 
         if (!order) return;
 
@@ -341,10 +347,10 @@ export default class StandalonePosPane extends React.PureComponent<
         });
     };
 
-    renderGridItem = ({ item }) => {
+    renderGridItem = ({ item }: { item: any }) => {
         const { UnitsStore } = this.props;
 
-        let priceDisplay = UnitsStore.getFormattedAmount(
+        let priceDisplay = UnitsStore?.getFormattedAmount(
             item.price,
             item.pricedIn
         );
@@ -384,7 +390,7 @@ export default class StandalonePosPane extends React.PureComponent<
         );
     };
 
-    renderSectionHeader = ({ section }) => {
+    renderSectionHeader = ({ section }: { section: any }) => {
         return (
             <View
                 style={{
@@ -406,7 +412,7 @@ export default class StandalonePosPane extends React.PureComponent<
         );
     };
 
-    renderSection = ({ item }) => {
+    renderSection = ({ item }: { item: any }) => {
         return (
             <FlatList
                 data={item.items}
@@ -452,14 +458,14 @@ export default class StandalonePosPane extends React.PureComponent<
             navigation
         } = this.props;
         const { search, selectedIndex, productsList, itemQty } = this.state;
-        const { setFiltersPos } = ActivityStore;
+        const { setFiltersPos } = ActivityStore!;
         const {
             getOrders,
             filteredOpenOrders,
             filteredPaidOrders,
             updateSearch,
             hideOrder
-        } = PosStore;
+        } = PosStore!;
         const { getRate, getFiatRates }: any = FiatStore;
         const orders =
             selectedIndex === 0
@@ -468,7 +474,7 @@ export default class StandalonePosPane extends React.PureComponent<
                 ? filteredOpenOrders
                 : filteredPaidOrders;
 
-        const currentOrder = PosStore.currentOrder;
+        const currentOrder = PosStore?.currentOrder;
         const disableButtons =
             !currentOrder ||
             (currentOrder.total_money.amount === 0 &&
@@ -479,9 +485,9 @@ export default class StandalonePosPane extends React.PureComponent<
                 ? localeString('general.pos')
                 : `${localeString('general.pos')} (${orders.length || 0})`;
 
-        const error = NodeInfoStore.error || SettingsStore.error;
+        const error = NodeInfoStore?.error || SettingsStore?.error;
 
-        const loading = PosStore.loading || InventoryStore.loading;
+        const loading = PosStore?.loading || InventoryStore?.loading;
 
         const fiatEnabled = SettingsStore?.settings?.fiatEnabled;
 
@@ -532,7 +538,7 @@ export default class StandalonePosPane extends React.PureComponent<
             { element: openOrdersButton },
             { element: paidOrdersButton }
         ];
-
+        const buttonElements = buttons.map((btn) => btn.element());
         if (error) {
             return (
                 <View
@@ -552,9 +558,9 @@ export default class StandalonePosPane extends React.PureComponent<
                             marginBottom: 25
                         }}
                     >
-                        {SettingsStore.errorMsg
+                        {SettingsStore?.errorMsg
                             ? SettingsStore.errorMsg
-                            : NodeInfoStore.errorMsg
+                            : NodeInfoStore?.errorMsg
                             ? NodeInfoStore.errorMsg
                             : localeString('views.Wallet.MainPane.error')}
                     </Text>
@@ -568,8 +574,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             'views.Wallet.MainPane.goToSettings'
                         )}
                         buttonStyle={{
-                            backgroundColor: 'gray',
-                            borderRadius: 30
+                            backgroundColor: 'gray'
                         }}
                         containerStyle={{
                             alignItems: 'center'
@@ -646,7 +651,7 @@ export default class StandalonePosPane extends React.PureComponent<
                             this.setState({ selectedIndex });
                         }}
                         selectedIndex={selectedIndex}
-                        buttons={buttons}
+                        buttons={buttonElements}
                         selectedButtonStyle={{
                             backgroundColor: themeColor('highlight'),
                             borderRadius: 12
@@ -668,42 +673,37 @@ export default class StandalonePosPane extends React.PureComponent<
                     </View>
                 )}
 
-                {!loading &&
-                    ((selectedIndex === 0 &&
-                        productsList &&
-                        productsList.length > 0) ||
-                        (orders &&
-                            orders.length > 0 &&
-                            selectedIndex !== 0)) && (
-                        <SearchBar
-                            placeholder={localeString('general.search')}
-                            onChangeText={(value: string) => {
-                                if (selectedIndex === 0) {
-                                    this.updateProductSearch(value);
-                                    return;
-                                }
+                {!loading && (
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
+                        onChangeText={(value: string) => {
+                            if (selectedIndex === 0) {
+                                this.updateProductSearch(value);
+                                return;
+                            }
 
-                                updateSearch(value);
-                                this.setState({
-                                    search: value
-                                });
-                            }}
-                            value={search}
-                            inputStyle={{
-                                color: themeColor('text')
-                            }}
-                            placeholderTextColor={themeColor('secondaryText')}
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                borderTopWidth: 0,
-                                borderBottomWidth: 0
-                            }}
-                            inputContainerStyle={{
-                                borderRadius: 15,
-                                backgroundColor: themeColor('secondary')
-                            }}
-                        />
-                    )}
+                            updateSearch(value);
+                            this.setState({
+                                search: value
+                            });
+                        }}
+                        value={search}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                    />
+                )}
 
                 {!loading &&
                     selectedIndex === 0 &&
@@ -750,7 +750,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                         ? (itemQty > 0 ? `${itemQty} - ` : '') +
                                           (fiatEnabled
                                               ? this.state.totalMoneyDisplay
-                                              : ` ${this.props.UnitsStore.getAmountFromSats(
+                                              : ` ${this.props.UnitsStore?.getAmountFromSats(
                                                     currentOrder?.total_money
                                                         ?.sats
                                                 )}`)
@@ -790,7 +790,7 @@ export default class StandalonePosPane extends React.PureComponent<
                                     flex: 1
                                 }}
                                 onPress={() => {
-                                    PosStore.clearCurrentOrder();
+                                    PosStore?.clearCurrentOrder();
                                     this.setState({
                                         itemQty: 0,
                                         totalMoneyDisplay: '0'

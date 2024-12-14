@@ -24,6 +24,8 @@ interface SetFeesFormProps {
     SettingsStore?: SettingsStore;
     baseFee?: string;
     feeRate?: string;
+    baseFeeInbound?: string;
+    feeRateInbound?: string;
     timeLockDelta?: string;
     channelPoint?: string;
     channelId?: string;
@@ -36,6 +38,8 @@ interface SetFeesFormState {
     feesSubmitted: boolean;
     newBaseFee: string;
     newFeeRate: string;
+    newBaseFeeInbound: string;
+    newFeeRateInbound: string;
     newTimeLockDelta: string;
     newMinHtlc: string;
     newMaxHtlc: string;
@@ -54,6 +58,8 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted: false,
             newBaseFee: props.baseFee || '',
             newFeeRate: props.feeRate || '',
+            newBaseFeeInbound: props.baseFeeInbound || '',
+            newFeeRateInbound: props.feeRateInbound || '',
             newTimeLockDelta: props.timeLockDelta || '',
             newMinHtlc: props.minHtlc || '',
             newMaxHtlc: props.maxHtlc || ''
@@ -65,6 +71,8 @@ export default class SetFeesForm extends React.Component<
             feesSubmitted,
             newBaseFee,
             newFeeRate,
+            newBaseFeeInbound,
+            newFeeRateInbound,
             newTimeLockDelta,
             newMinHtlc,
             newMaxHtlc
@@ -75,6 +83,8 @@ export default class SetFeesForm extends React.Component<
             SettingsStore,
             baseFee,
             feeRate,
+            baseFeeInbound,
+            feeRateInbound,
             timeLockDelta,
             channelPoint,
             channelId,
@@ -93,6 +103,20 @@ export default class SetFeesForm extends React.Component<
 
         return (
             <React.Fragment>
+                {feesSubmitted && setFeesSuccess && (
+                    <SuccessMessage
+                        message={localeString('components.SetFeesForm.success')}
+                    />
+                )}
+                {feesSubmitted && setFeesError && (
+                    <ErrorMessage
+                        message={
+                            setFeesErrorMsg
+                                ? setFeesErrorMsg
+                                : localeString('components.SetFeesForm.error')
+                        }
+                    />
+                )}
                 <Text
                     style={{
                         ...styles.text,
@@ -149,6 +173,60 @@ export default class SetFeesForm extends React.Component<
                     autoCapitalize="none"
                     autoCorrect={false}
                 />
+                {BackendUtils.supportInboundFees() && (
+                    <>
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Channel.inbound'
+                            )} ${localeString(
+                                'components.SetFeesForm.baseFee'
+                            )} (${localeString('general.sats')})`}
+                        </Text>
+                        <TextInput
+                            // @ts-ignore:next-line
+                            keyboardType="decimal"
+                            placeholder={baseFeeInbound || '1'}
+                            value={newBaseFeeInbound}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    newBaseFeeInbound: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                        <Text
+                            style={{
+                                ...styles.text,
+                                color: themeColor('secondaryText')
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Channel.inbound'
+                            )} ${localeString(
+                                'components.SetFeesForm.feeRate'
+                            )} (${localeString('general.percentage')})`}
+                        </Text>
+                        <TextInput
+                            // @ts-ignore:next-line
+                            keyboardType="decimal"
+                            placeholder={feeRateInbound || '1'}
+                            value={newFeeRateInbound}
+                            onChangeText={(text: string) =>
+                                this.setState({
+                                    newFeeRateInbound: text
+                                })
+                            }
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                        />
+                    </>
+                )}
 
                 {BackendUtils.isLNDBased() && (
                     <>
@@ -230,6 +308,8 @@ export default class SetFeesForm extends React.Component<
                                 setFees(
                                     newBaseFee,
                                     newFeeRate,
+                                    newBaseFeeInbound,
+                                    newFeeRateInbound,
                                     Number(newTimeLockDelta),
                                     channelPoint,
                                     channelId,
@@ -253,20 +333,6 @@ export default class SetFeesForm extends React.Component<
                             tertiary
                         />
                     </View>
-                )}
-                {feesSubmitted && setFeesSuccess && (
-                    <SuccessMessage
-                        message={localeString('components.SetFeesForm.success')}
-                    />
-                )}
-                {feesSubmitted && setFeesError && (
-                    <ErrorMessage
-                        message={
-                            setFeesErrorMsg
-                                ? setFeesErrorMsg
-                                : localeString('components.SetFeesForm.error')
-                        }
-                    />
                 )}
             </React.Fragment>
         );

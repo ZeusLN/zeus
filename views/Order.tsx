@@ -23,10 +23,11 @@ import TextInput from '../components/TextInput';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import FiatStore from '../stores/FiatStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 
 import RNPrint from 'react-native-print';
 import PosStore from '../stores/PosStore';
@@ -60,7 +61,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         const { settings } = SettingsStore;
         const disableTips: boolean =
-            settings && settings.pos && settings.pos.disableTips;
+            (settings && settings.pos && settings.pos.disableTips) || false;
 
         this.state = {
             order,
@@ -238,7 +239,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             </View>
         );
 
-        const buttons = [
+        const buttons: any = [
             { element: twentyPercentButton },
             { element: twentyFivePercentButton },
             { element: thirtyPercentButton },

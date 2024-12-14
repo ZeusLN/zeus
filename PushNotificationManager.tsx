@@ -3,7 +3,7 @@ import { Alert, Platform, View } from 'react-native';
 import { Notifications } from 'react-native-notifications';
 import stores from './stores/Stores';
 
-export default class PushNotificationManager extends React.Component {
+export default class PushNotificationManager extends React.Component<any, any> {
     componentDidMount() {
         if (Platform.OS === 'ios') Notifications.ios.setBadgeCount(0);
         this.registerDevice();
@@ -70,7 +70,7 @@ export default class PushNotificationManager extends React.Component {
         );
 
         Notifications.events().registerNotificationReceivedBackground(
-            (notification, completion) => {
+            (notification, completion: any) => {
                 console.log('Notification Received - Background', notification);
                 // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
                 completion({ alert: true, sound: true, badge: false });

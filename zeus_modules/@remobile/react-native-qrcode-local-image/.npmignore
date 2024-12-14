@@ -1,0 +1,12 @@
+*.DS_Store
+.DS_Store
+*Thumbs.db
+.gradle
+.idea
+*.iml
+npm-debug.log
+node_modules
+/android/build
+/ios/**/*xcuserdata*
+/ios/**/*xcshareddata*
+

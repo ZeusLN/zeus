@@ -2,8 +2,6 @@ import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
-import NavigationService from '../../NavigationService';
-
 import Button from '../Button';
 import ModalBox from '../ModalBox';
 
@@ -26,7 +24,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
             showInfoModal,
             infoModalText,
             infoModalLink,
-            infoModalNav,
+            infoModalAdditionalButtons,
             toggleInfoModal
         } = ModalStore;
 
@@ -88,7 +86,27 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             ))}
 
                         <View style={styles.buttons}>
-                            {(infoModalLink || infoModalNav) && (
+                            {infoModalAdditionalButtons?.map(
+                                ({ title, callback }, index) => (
+                                    <View
+                                        key={index}
+                                        style={{
+                                            ...styles.button,
+                                            marginBottom: 25
+                                        }}
+                                    >
+                                        <Button
+                                            title={title}
+                                            onPress={() => {
+                                                toggleInfoModal();
+                                                if (callback) callback();
+                                            }}
+                                            tertiary
+                                        />
+                                    </View>
+                                )
+                            )}
+                            {infoModalLink && (
                                 <View
                                     style={{
                                         ...styles.button,
@@ -101,15 +119,10 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                         )}
                                         onPress={() => {
                                             toggleInfoModal();
-                                            if (infoModalLink)
-                                                UrlUtils.goToUrl(infoModalLink);
-                                            if (infoModalNav)
-                                                NavigationService.navigate(
-                                                    infoModalNav
-                                                );
+                                            UrlUtils.goToUrl(infoModalLink);
                                         }}
                                         tertiary
-                                    ></Button>
+                                    />
                                 </View>
                             )}
                             <View style={styles.button}>
@@ -117,7 +130,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                     title={localeString('general.close')}
                                     onPress={() => toggleInfoModal()}
                                     secondary
-                                ></Button>
+                                />
                             </View>
                         </View>
                     </View>
@@ -129,7 +142,8 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
 
 const styles = StyleSheet.create({
     buttons: {
-        width: '100%'
+        width: '100%',
+        alignItems: 'center'
     },
     button: {
         width: 350

@@ -25,6 +25,8 @@ export default class OpenChannelRequest extends BaseModel {
     public private?: boolean;
     public minHtlcMsat: string;
     public localFundingAmount: string;
+    public min_htlc_msat?: string;
+    public local_funding_amount: string;
     public host?: string;
     public id?: string;
     public satoshis?: string;

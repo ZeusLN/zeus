@@ -87,8 +87,9 @@ export interface AddHoldInvoiceResp {
      */
     addIndex: string;
     /**
-     * The payment address of the generated invoice. This value should be used
-     * in all payments for this invoice as we require it for end to end
+     * The payment address of the generated invoice. This is also called
+     * the payment secret in specifications (e.g. BOLT 11). This value should
+     * be used in all payments for this invoice as we require it for end to end
      * security.
      */
     paymentAddr: Uint8Array | string;
@@ -136,6 +137,7 @@ export interface Invoices {
         onError?: (err: Error) => void
     ): void;
     /**
+     * lncli: `cancelinvoice`
      * CancelInvoice cancels a currently open invoice. If the invoice is already
      * canceled, this call will succeed. If the invoice is already settled, it will
      * fail.
@@ -144,6 +146,7 @@ export interface Invoices {
         request?: DeepPartial<CancelInvoiceMsg>
     ): Promise<CancelInvoiceResp>;
     /**
+     * lncli: `addholdinvoice`
      * AddHoldInvoice creates a hold invoice. It ties the invoice to the hash
      * supplied in the request.
      */
@@ -151,6 +154,7 @@ export interface Invoices {
         request?: DeepPartial<AddHoldInvoiceRequest>
     ): Promise<AddHoldInvoiceResp>;
     /**
+     * lncli: `settleinvoice`
      * SettleInvoice settles an accepted invoice. If the invoice is already
      * settled, this call will succeed.
      */

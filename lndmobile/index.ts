@@ -182,8 +182,10 @@ export const sendCustomMessage = async (
         response: lnrpc.SendCustomMessageResponse,
         method: 'SendCustomMessage',
         options: {
+            // @ts-ignore:next-line
             peer: Base64Utils.hexToBase64(peer),
             type,
+            // @ts-ignore:next-line
             data: Base64Utils.hexToBase64(data)
         }
     });
@@ -490,7 +492,7 @@ export const sendKeysendPayment = async (
     pre_image: Uint8Array,
     route_hints: lnrpc.IRouteHint[],
     tlv_record_name_str: string
-): Promise<lnrpc.SendResponse> => {
+): Promise<lnrpc.SendResponse | null> => {
     try {
         const responseQueryRoutes = await sendCommand<
             lnrpc.IQueryRoutesRequest,
@@ -545,7 +547,7 @@ export const sendKeysendPayment = async (
                 console.log(e);
             }
         }
-    } catch (e) {
+    } catch (e: any) {
         console.log('QueryRoutes Error', e.message);
     }
     return null;
@@ -568,6 +570,7 @@ export const addInvoice = async ({
     memo,
     expiry = 3600,
     is_amp,
+    is_blinded,
     is_private,
     preimage,
     route_hints
@@ -577,6 +580,7 @@ export const addInvoice = async ({
     memo: string;
     expiry: number;
     is_amp?: boolean;
+    is_blinded?: boolean;
     is_private?: boolean;
     preimage?: string;
     route_hints?: lnrpc.IRouteHint[] | null;
@@ -597,6 +601,7 @@ export const addInvoice = async ({
             private: is_private,
             min_hop_hints: is_private ? 6 : 0,
             is_amp,
+            is_blinded,
             r_preimage: preimage ? Base64Utils.hexToBytes(preimage) : undefined,
             route_hints
         }

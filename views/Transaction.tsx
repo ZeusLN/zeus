@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import forEach from 'lodash/forEach';
 import isNull from 'lodash/isNull';
 import {
@@ -42,7 +41,7 @@ interface TransactionProps {
 }
 
 interface TransactionState {
-    storedNotes: string | null;
+    storedNote: string;
 }
 
 @inject('NodeInfoStore', 'TransactionsStore')
@@ -52,26 +51,21 @@ export default class TransactionView extends React.Component<
     TransactionState
 > {
     state = {
-        storedNotes: ''
+        storedNote: ''
     };
     async componentDidMount() {
         const { navigation, route } = this.props;
         const transaction = route.params?.transaction;
         navigation.addListener('focus', () => {
             this.props.TransactionsStore.resetBroadcast();
-            EncryptedStorage.getItem('note-' + transaction.tx)
-                .then((storedNotes) => {
-                    this.setState({ storedNotes });
-                })
-                .catch((error) => {
-                    console.error('Error retrieving notes:', error);
-                });
+            const note = transaction.getNote;
+            this.setState({ storedNote: note });
         });
     }
     render() {
         const { NodeInfoStore, navigation, route } = this.props;
         const transaction = route.params?.transaction;
-        const { storedNotes } = this.state;
+        const { storedNote } = this.state;
         const { testnet } = NodeInfoStore;
 
         const {
@@ -87,7 +81,8 @@ export default class TransactionView extends React.Component<
             getFeePercentage,
             status,
             getOutpoint,
-            raw_tx_hex
+            raw_tx_hex,
+            getNoteKey
         } = transaction;
         const amount = transaction.getAmount;
         const date = time_stamp && new Date(Number(time_stamp) * 1000);
@@ -123,7 +118,10 @@ export default class TransactionView extends React.Component<
                                     color: themeColor('highlight')
                                 }}
                             >
-                                {PrivacyUtils.sensitiveValue(address)}
+                                {`${
+                                    typeof address === 'string' &&
+                                    PrivacyUtils.sensitiveValue(address)
+                                }`}
                             </Text>
                         </TouchableOpacity>
                     }
@@ -134,7 +132,9 @@ export default class TransactionView extends React.Component<
         );
         const EditNotesButton = () => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('AddNotes', { txid: tx })}
+                onPress={() =>
+                    navigation.navigate('AddNotes', { noteKey: getNoteKey })
+                }
             >
                 <EditNotes
                     style={{ alignSelf: 'center' }}
@@ -154,7 +154,7 @@ export default class TransactionView extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={EditNotesButton}
+                    rightComponent={<EditNotesButton />}
                     navigation={navigation}
                 />
                 <View style={styles.center}>
@@ -217,7 +217,10 @@ export default class TransactionView extends React.Component<
                                         color: themeColor('highlight')
                                     }}
                                 >
-                                    {PrivacyUtils.sensitiveValue(tx)}
+                                    {`${
+                                        typeof tx === 'string' &&
+                                        PrivacyUtils.sensitiveValue(tx)
+                                    }`}
                                 </Text>
                             </TouchableOpacity>
                         }
@@ -243,9 +246,12 @@ export default class TransactionView extends React.Component<
                                             color: themeColor('highlight')
                                         }}
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            block_hash
-                                        )}
+                                        {`${
+                                            typeof block_hash === 'string' &&
+                                            PrivacyUtils.sensitiveValue(
+                                                block_hash
+                                            )
+                                        }`}
                                     </Text>
                                 </TouchableOpacity>
                             }
@@ -272,11 +278,15 @@ export default class TransactionView extends React.Component<
                                             color: themeColor('highlight')
                                         }}
                                     >
-                                        {PrivacyUtils.sensitiveValue(
-                                            getBlockHeight.toString(),
-                                            5,
-                                            true
-                                        )}
+                                        {`${
+                                            typeof getBlockHeight ===
+                                                'string' &&
+                                            PrivacyUtils.sensitiveValue(
+                                                getBlockHeight.toString(),
+                                                5,
+                                                true
+                                            )
+                                        }`}
                                     </Text>
                                 </TouchableOpacity>
                             }
@@ -362,15 +372,17 @@ export default class TransactionView extends React.Component<
                         </>
                     )}
 
-                    {storedNotes && (
+                    {storedNote && (
                         <TouchableOpacity
                             onPress={() =>
-                                navigation.navigate('AddNotes', { txid: tx })
+                                navigation.navigate('AddNotes', {
+                                    noteKey: getNoteKey
+                                })
                             }
                         >
                             <KeyValue
                                 keyValue={localeString('general.note')}
-                                value={storedNotes}
+                                value={storedNote}
                                 sensitive
                             />
                         </TouchableOpacity>
@@ -390,10 +402,10 @@ export default class TransactionView extends React.Component<
                         />
                     )}
 
-                    {tx && (
+                    {getNoteKey && (
                         <Button
                             title={
-                                storedNotes
+                                storedNote
                                     ? localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )
@@ -402,7 +414,9 @@ export default class TransactionView extends React.Component<
                                       )
                             }
                             onPress={() =>
-                                navigation.navigate('AddNotes', { txid: tx })
+                                navigation.navigate('AddNotes', {
+                                    noteKey: getNoteKey
+                                })
                             }
                             containerStyle={{ marginTop: 20 }}
                             noUppercase

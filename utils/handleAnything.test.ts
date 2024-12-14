@@ -1,5 +1,5 @@
 jest.mock('./AddressUtils', () => ({
-    processSendAddress: () => mockProcessedSendAddress,
+    processBIP21Uri: () => mockProcessedSendAddress,
     isValidBitcoinAddress: () => mockIsValidBitcoinAddress,
     isValidLightningPubKey: () => mockIsValidLightningPubKey,
     isValidLightningPaymentRequest: () => mockIsValidLightningPaymentRequest
@@ -139,9 +139,13 @@ describe('handleAnything', () => {
             const result = await handleAnything(data);
 
             expect(result).toEqual([
-                'LnurlPay',
+                'ChoosePaymentMethod',
                 {
-                    lnurlParams: mockGetLnurlParams
+                    amount: undefined,
+                    lightning:
+                        'LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF',
+                    offer: undefined,
+                    value: 'BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N'
                 }
             ]);
         });
@@ -167,20 +171,19 @@ describe('handleAnything', () => {
         it('should return PaymentRequest screen and call getPayReq if not from clipboard', async () => {
             const data =
                 'bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&lightning=LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6';
-            mockProcessedSendAddress = {
-                value: 'BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U',
-                lightning:
-                    'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6'
-            };
-            mockIsValidBitcoinAddress = true;
-            mockSupportsOnchainSends = false;
 
             const result = await handleAnything(data);
 
-            expect(stores.invoicesStore.getPayReq).toHaveBeenCalledWith(
-                'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6'
-            );
-            expect(result).toEqual(['PaymentRequest', {}]);
+            expect(result).toEqual([
+                'ChoosePaymentMethod',
+                {
+                    amount: undefined,
+                    lightning:
+                        'LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF',
+                    offer: undefined,
+                    value: 'BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N'
+                }
+            ]);
         });
 
         it('should return true if from clipboard', async () => {

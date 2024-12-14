@@ -66,6 +66,7 @@ import {
 import {
     getTransactions,
     newAddress,
+    newChangeAddress,
     sendCoins,
     sendCoinsAll,
     walletBalance,
@@ -88,7 +89,9 @@ import {
     finalizePsbt,
     publishTransaction,
     listAccounts,
-    importAccount
+    listAddresses,
+    importAccount,
+    rescan
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
@@ -100,7 +103,9 @@ import {
     routerrpc,
     walletrpc
 } from '../proto/lightning';
+// @ts-ignore:next-line
 import type { WorkInfo } from './LndMobile.d.ts';
+import { OutPoint } from '../models/TransactionRequest';
 
 export interface ILndMobileInjections {
     index: {
@@ -133,6 +138,7 @@ export interface ILndMobileInjections {
             memo,
             expiry,
             is_amp,
+            is_blinded,
             is_private,
             preimage,
             route_hints
@@ -142,6 +148,7 @@ export interface ILndMobileInjections {
             memo: string;
             expiry?: number;
             is_amp?: boolean;
+            is_blinded?: boolean;
             is_private?: boolean;
             preimage?: string;
             route_hints?: lnrpc.IRouteHint[] | null;
@@ -324,12 +331,17 @@ export interface ILndMobileInjections {
             type: lnrpc.AddressType,
             account?: string
         ) => Promise<lnrpc.NewAddressResponse>;
+        newChangeAddress: (
+            type: walletrpc.AddressType,
+            account?: string
+        ) => Promise<walletrpc.AddrResponse>;
         sendCoins: (
             address: string,
             sat: number,
             feeRate?: number,
             spend_unconfirmed?: boolean,
-            send_all?: boolean
+            send_all?: boolean,
+            outpoints?: Array<OutPoint>
         ) => Promise<lnrpc.SendCoinsResponse>;
         sendCoinsAll: (
             address: string,
@@ -416,6 +428,7 @@ export interface ILndMobileInjections {
             tx_hex: Uint8Array;
         }) => Promise<walletrpc.PublishResponse>;
         listAccounts: () => Promise<walletrpc.ListAccountsResponse>;
+        listAddresses: () => Promise<walletrpc.ListAddressesResponse>;
         importAccount: ({
             name,
             extended_public_key,
@@ -429,6 +442,11 @@ export interface ILndMobileInjections {
             address_type?: number;
             dry_run: boolean;
         }) => Promise<walletrpc.ImportAccountResponse>;
+        rescan: ({
+            start_height
+        }: {
+            start_height: number;
+        }) => Promise<walletrpc.RescanResponse>;
     };
     autopilot: {
         status: () => Promise<autopilotrpc.StatusResponse>;
@@ -443,6 +461,7 @@ export interface ILndMobileInjections {
     };
 }
 
+// @ts-ignore:next-line
 export default {
     index: {
         initialize,
@@ -510,6 +529,7 @@ export default {
     onchain: {
         getTransactions,
         newAddress,
+        newChangeAddress,
         sendCoins,
         sendCoinsAll,
         walletBalance,
@@ -532,7 +552,9 @@ export default {
         finalizePsbt,
         publishTransaction,
         listAccounts,
-        importAccount
+        listAddresses,
+        importAccount,
+        rescan
     },
     autopilot: {
         status,

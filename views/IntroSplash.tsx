@@ -301,7 +301,10 @@ export default class IntroSplash extends React.Component<
                                                     embeddedLndNetwork:
                                                         'Mainnet',
                                                     implementation:
-                                                        'embedded-lnd'
+                                                        'embedded-lnd',
+                                                    nickname: localeString(
+                                                        'general.defaultNodeNickname'
+                                                    )
                                                 }
                                             ];
 

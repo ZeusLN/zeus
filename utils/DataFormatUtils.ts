@@ -12,6 +12,10 @@ import transform from 'lodash/transform';
 export function snakeize<T extends object>(obj: T): T {
     return transform(obj, (acc: any, value: any, key: string, target: any) => {
         const snakeKey = isArray(target) ? key : snakeCase(key);
+// change responses from camel-case to snake-case
+const snakeize = (obj: any) =>
+    transform(obj, (acc: any, value, key, target) => {
+        const snakeKey = isArray(target) ? key : snakeCase(key.toString());
         acc[snakeKey] = isObject(value) ? snakeize(value) : value;
     });
 }

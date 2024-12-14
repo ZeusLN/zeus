@@ -8,6 +8,8 @@ import BackendUtils from '../utils/BackendUtils';
 import Account from '../models/Account';
 import Utxo from '../models/Utxo';
 
+import { walletrpc } from '../proto/lightning';
+
 export default class UTXOsStore {
     // utxos
     @observable public loading = false;
@@ -20,6 +22,16 @@ export default class UTXOsStore {
     @observable public importingAccount = false;
     @observable public accounts: any = [];
     @observable public accountToImport: any | null;
+    @observable public start_height?: number;
+    @observable public addresses_to_generate: number = 50;
+    @observable public addresses_to_generate_progress: number = 1;
+    // rescan
+    @observable public attemptingRescan = false;
+    @observable public rescanErrorMsg: string;
+    // addresses
+    @observable public loadingAddresses: boolean = false;
+    @observable public accountsWithAddresses = [];
+    @observable public loadingAddressesError: string = '';
     //
     settingsStore: SettingsStore;
 
@@ -38,6 +50,10 @@ export default class UTXOsStore {
         this.accounts = [];
         this.accountToImport = null;
         this.utxos = [];
+        // addresses
+        this.loadingAddresses = false;
+        this.accountsWithAddresses = [];
+        this.loadingAddressesError = '';
     };
 
     getUtxosError = () => {
@@ -137,7 +153,6 @@ export default class UTXOsStore {
         this.loadingAccounts = true;
         return BackendUtils.listAccounts(data)
             .then(async (data: any) => {
-                this.loadingAccounts = false;
                 const accounts: any = [];
                 for (const i in data.accounts) {
                     const account = new Account(data.accounts[i]);
@@ -166,6 +181,7 @@ export default class UTXOsStore {
                     }
                 }
                 this.accounts = accounts;
+                this.loadingAccounts = false;
                 this.error = false;
                 return this.accounts;
             })
@@ -181,15 +197,81 @@ export default class UTXOsStore {
         this.errorMsg = '';
         this.success = false;
         this.importingAccount = true;
+        if (data.dry_run) {
+            this.start_height = undefined;
+            this.addresses_to_generate = 50;
+        }
+
+        if (data.birthday_height) {
+            this.start_height = data.birthday_height;
+        }
+
+        if (data.addresses_to_generate) {
+            this.addresses_to_generate_progress = 1;
+            this.addresses_to_generate = data.addresses_to_generate || 50;
+        }
+
+        if (this.start_height && !data.birthday_height) {
+            data.birthday_height = this.start_height;
+        }
+
+        console.log('importAccount req', data);
 
         return BackendUtils.importAccount(data)
-            .then((response: any) => {
-                this.importingAccount = false;
-                this.error = false;
-                if (response === this.accountToImport && !data.dry_run) {
+            .then(async (response: any) => {
+                if (!data.dry_run) {
+                    if (this.start_height) {
+                        // generate N addresses from account
+                        for (let i = 0; i < this.addresses_to_generate; i++) {
+                            this.addresses_to_generate_progress = i + 1;
+                            await BackendUtils.getNewAddress({
+                                account: this.accountToImport.account.name,
+                                type: walletrpc.AddressType[
+                                    this.accountToImport.account.address_type
+                                ]
+                            }).then((response: any) => {
+                                console.log(
+                                    `generated address ${i}`,
+                                    response.address
+                                );
+                            });
+                            await BackendUtils.getNewChangeAddress({
+                                account: this.accountToImport.account.name,
+                                type: walletrpc.AddressType[
+                                    this.accountToImport.account.address_type
+                                ],
+                                change: true
+                            }).then((response: any) => {
+                                console.log(
+                                    `generated change address ${i}`,
+                                    response.addr
+                                );
+                            });
+                        }
+
+                        console.log(
+                            'Starting rescan at height',
+                            this.start_height
+                        );
+
+                        BackendUtils.rescan({
+                            start_height: this.start_height
+                        })
+                            .then((response: any) => {
+                                console.log('rescan resp', response);
+                            })
+                            .catch((err: Error) => {
+                                console.log('rescan err', err);
+                            });
+                    }
+
+                    this.importingAccount = false;
+                    this.error = false;
                     this.success = true;
                     return;
                 } else {
+                    this.importingAccount = false;
+                    this.error = false;
                     this.accountToImport = response;
                     return this.accountToImport;
                 }
@@ -200,7 +282,51 @@ export default class UTXOsStore {
                 this.success = false;
                 this.accountToImport = null;
                 this.importingAccount = false;
+                this.start_height = undefined;
                 this.getUtxosError();
             });
+    };
+
+    @action
+    public rescan = (blockHeight: number) => {
+        this.rescanErrorMsg = '';
+        this.attemptingRescan = true;
+
+        return BackendUtils.rescan({
+            start_height: blockHeight
+        })
+            .then((response: any) => {
+                console.log('rescan resp', response);
+                this.attemptingRescan = false;
+                return;
+            })
+            .catch((err: Error) => {
+                console.log('rescan err', err);
+                this.attemptingRescan = false;
+                this.rescanErrorMsg = err.toString();
+                return;
+            });
+    };
+
+    @action
+    public listAddresses = async () => {
+        this.loadingAddresses = true;
+        this.accountsWithAddresses = [];
+        this.loadingAddressesError = '';
+
+        return await new Promise((resolve, reject) => {
+            BackendUtils.listAddresses()
+                .then((response: any) => {
+                    this.accountsWithAddresses =
+                        response.account_with_addresses;
+                    this.loadingAddresses = false;
+                    resolve(this.accountsWithAddresses);
+                })
+                .catch((err: Error) => {
+                    this.loadingAddressesError = err.toString();
+                    this.loadingAddresses = false;
+                    reject();
+                });
+        });
     };
 }

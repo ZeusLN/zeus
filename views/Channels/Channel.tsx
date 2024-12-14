@@ -15,6 +15,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Channel from '../../models/Channel';
+import ClosedChannel from '../../models/ClosedChannel';
 
 import Amount from '../../components/Amount';
 import BalanceSlider from '../../components/BalanceSlider';
@@ -42,7 +43,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import ContactStore from '../../stores/ContactStore';
 
+// @ts-ignore:next-line
 import Edit from '../../assets/images/SVG/Edit.svg';
+// @ts-ignore:next-line
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 
 interface ChannelProps {
@@ -51,7 +54,7 @@ interface ChannelProps {
     SettingsStore: SettingsStore;
     NodeInfoStore: NodeInfoStore;
     ContactStore: ContactStore;
-    route: Route<'Channel', { channel: Channel }>;
+    route: Route<'Channel', { channel: Channel | ClosedChannel }>;
 }
 
 interface ChannelState {
@@ -90,7 +93,7 @@ export default class ChannelView extends React.Component<
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
-        return contacts.find((contact) => contact.pubkey.includes(pubkey));
+        return contacts.find((contact: any) => contact.pubkey.includes(pubkey));
     };
 
     renderContactLink = (remotePubkey: string) => {
@@ -150,11 +153,13 @@ export default class ChannelView extends React.Component<
         }
 
         const streamingCall = await ChannelsStore.closeChannel(
-            channelPoint ? { funding_txid_str, output_index } : null,
-            channelId ? channelId : null,
-            satPerVbyte ? satPerVbyte : null,
-            forceClose,
-            deliveryAddress ? deliveryAddress : null
+            funding_txid_str && output_index
+                ? { funding_txid_str, output_index }
+                : undefined,
+            channelId ? channelId : undefined,
+            satPerVbyte ? satPerVbyte : undefined,
+            forceClose || false,
+            deliveryAddress ? deliveryAddress : undefined
         );
 
         if (implementation === 'lightning-node-connect') {
@@ -225,16 +230,22 @@ export default class ChannelView extends React.Component<
             channel_point,
             commit_weight,
             localBalance,
+            remoteBalance,
+            sendingCapacity,
+            receivingCapacity,
+            localReserveBalance,
+            remoteReserveBalance,
+            isBelowReserve,
             commit_fee,
             csv_delay,
             total_satoshis_received,
             isActive,
-            remoteBalance,
             unsettled_balance,
             total_satoshis_sent,
             remotePubkey,
             capacity,
             channelId,
+            shortChannelId,
             initiator,
             alias_scids,
             local_chan_reserve_sat,
@@ -257,7 +268,7 @@ export default class ChannelView extends React.Component<
             zero_conf,
             getCommitmentType,
             pending_htlcs
-        } = channel;
+        } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
 
@@ -283,16 +294,6 @@ export default class ChannelView extends React.Component<
             </TouchableOpacity>
         );
 
-        const rightComponent = () => {
-            if (
-                editableFees &&
-                this.props.SettingsStore.implementation !== 'embedded-lnd'
-            ) {
-                return <EditFees />;
-            }
-            return null;
-        };
-
         return (
             <Screen>
                 <Header
@@ -300,7 +301,15 @@ export default class ChannelView extends React.Component<
                     onBack={() => {
                         ChannelsStore.clearCloseChannelErr();
                     }}
-                    rightComponent={rightComponent}
+                    rightComponent={
+                        editableFees &&
+                        this.props.SettingsStore.implementation !==
+                            'embedded-lnd' ? (
+                            <EditFees />
+                        ) : (
+                            <></>
+                        )
+                    }
                     placement="right"
                     navigation={navigation}
                 />
@@ -316,7 +325,7 @@ export default class ChannelView extends React.Component<
                                 ...styles.alias
                             }}
                         >
-                            {peerDisplay}
+                            {`${peerDisplay}`}
                         </Text>
                         {remotePubkey && (
                             <TouchableOpacity
@@ -334,22 +343,40 @@ export default class ChannelView extends React.Component<
                                         ...styles.pubkey
                                     }}
                                 >
-                                    {PrivacyUtils.sensitiveValue(
-                                        remotePubkey
-                                    ).slice(0, 6) +
-                                        '...' +
-                                        PrivacyUtils.sensitiveValue(
-                                            remotePubkey
-                                        ).slice(-6)}
+                                    {remotePubkey
+                                        ? (() => {
+                                              const maskedPubkey: string | any =
+                                                  PrivacyUtils.sensitiveValue(
+                                                      remotePubkey
+                                                  );
+                                              return (
+                                                  maskedPubkey.slice(0, 6) +
+                                                  '...' +
+                                                  maskedPubkey.slice(-6)
+                                              );
+                                          })()
+                                        : ''}
                                 </Text>
                             </TouchableOpacity>
                         )}
                         {remotePubkey && this.renderContactLink(remotePubkey)}
                     </View>
-                    <BalanceSlider
-                        localBalance={lurkerMode ? 50 : localBalance}
-                        remoteBalance={lurkerMode ? 50 : remoteBalance}
-                    />
+                    <View style={{ height: 40 }}>
+                        <BalanceSlider
+                            sendingCapacity={lurkerMode ? 50 : sendingCapacity}
+                            receivingCapacity={
+                                lurkerMode ? 50 : receivingCapacity
+                            }
+                            localBalance={lurkerMode ? 50 : localBalance}
+                            remoteBalance={lurkerMode ? 50 : remoteBalance}
+                            localReserveBalance={
+                                lurkerMode ? 50 : localReserveBalance
+                            }
+                            remoteReserveBalance={
+                                lurkerMode ? 50 : remoteReserveBalance
+                            }
+                        />
+                    </View>
                     <Text
                         style={{ ...styles.status, color: themeColor('text') }}
                     >
@@ -365,6 +392,30 @@ export default class ChannelView extends React.Component<
                             ? localeString('views.Channel.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
+                    {channelId && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.channelId')}
+                            value={channelId}
+                        />
+                    )}
+                    {shortChannelId && (
+                        <KeyValue
+                            keyValue={localeString('views.Channel.scid')}
+                            value={shortChannelId}
+                        />
+                    )}
+                    {!!alias_scids && alias_scids.length > 0 && (
+                        <KeyValue
+                            keyValue={
+                                alias_scids.length > 1
+                                    ? localeString('views.Channel.aliasScids')
+                                    : localeString('views.Channel.aliasScid')
+                            }
+                            value={PrivacyUtils.sensitiveValue(
+                                alias_scids.join(', ')
+                            )}
+                        />
+                    )}
                     {zero_conf && (
                         <KeyValue
                             keyValue={localeString('views.Channel.zeroConf')}
@@ -559,18 +610,27 @@ export default class ChannelView extends React.Component<
                         />
                     )}
                     <KeyValue
-                        keyValue={localeString('views.Channel.outbound')}
+                        keyValue={localeString('views.Channel.localBalance')}
                         value={
-                            <Amount sats={localBalance} sensitive toggleable />
+                            <Amount
+                                sats={localBalance}
+                                sensitive
+                                toggleable
+                                color={
+                                    isBelowReserve
+                                        ? 'warningReserve'
+                                        : undefined
+                                }
+                            />
                         }
                     />
                     <KeyValue
-                        keyValue={localeString('views.Channel.inbound')}
+                        keyValue={localeString('views.Channel.remoteBalance')}
                         value={
                             <Amount sats={remoteBalance} sensitive toggleable />
                         }
                     />
-                    {unsettled_balance && (
+                    {unsettled_balance !== '0' && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.Channel.unsettledBalance'
@@ -584,18 +644,28 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
-                    {!!alias_scids && alias_scids.length > 0 && (
-                        <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
-                            )}
-                        />
-                    )}
+                    <KeyValue
+                        keyValue={localeString('views.Channel.Total.outbound')}
+                        value={
+                            <Amount
+                                sats={sendingCapacity}
+                                sensitive
+                                toggleable
+                            />
+                        }
+                        indicatorColor={themeColor('outbound')}
+                    />
+                    <KeyValue
+                        keyValue={localeString('views.Channel.Total.inbound')}
+                        value={
+                            <Amount
+                                sats={receivingCapacity}
+                                sensitive
+                                toggleable
+                            />
+                        }
+                        indicatorColor={themeColor('inbound')}
+                    />
                     {!!local_chan_reserve_sat && (
                         <KeyValue
                             keyValue={localeString(
@@ -606,8 +676,18 @@ export default class ChannelView extends React.Component<
                                     sats={local_chan_reserve_sat}
                                     sensitive
                                     toggleable
+                                    color={
+                                        isBelowReserve
+                                            ? 'warningReserve'
+                                            : undefined
+                                    }
                                 />
                             }
+                            infoModalText={localeString(
+                                'views.Channel.localReserve.info'
+                            )}
+                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            indicatorColor={themeColor('outboundReserve')}
                         />
                     )}
                     {!!remote_chan_reserve_sat && (
@@ -622,6 +702,11 @@ export default class ChannelView extends React.Component<
                                     toggleable
                                 />
                             }
+                            infoModalText={localeString(
+                                'views.Channel.remoteReserve.info'
+                            )}
+                            infoModalLink="https://bitcoin.design/guide/how-it-works/liquidity/#what-is-a-channel-reserve"
+                            indicatorColor={themeColor('inboundReserve')}
                         />
                     )}
                     {capacity && (
@@ -636,7 +721,7 @@ export default class ChannelView extends React.Component<
                     {BackendUtils.isLNDBased() && editableFees && (
                         <FeeBreakdown
                             isActive={isActive}
-                            isClosed={closeHeight || closeType}
+                            isClosed={!!closeHeight || !!closeType}
                             channelId={channelId}
                             peerDisplay={peerDisplay}
                             channelPoint={channel_point}
@@ -705,50 +790,6 @@ export default class ChannelView extends React.Component<
                             )}
                             {BackendUtils.isLNDBased() && (
                                 <>
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Channel.closingRate'
-                                        )}
-                                    </Text>
-                                    <OnchainFeeInput
-                                        fee={satPerByte}
-                                        onChangeFee={(text: string) => {
-                                            this.setState({
-                                                satPerByte: text
-                                            });
-                                        }}
-                                        navigation={navigation}
-                                    />
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                            infoText={localeString(
-                                                'views.Channel.externalAddress.info'
-                                            )}
-                                        >
-                                            {localeString(
-                                                'views.Channel.externalAddress'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            placeholder={'bc1...'}
-                                            value={deliveryAddress}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    deliveryAddress: text
-                                                })
-                                            }
-                                            locked={closingChannel}
-                                        />
-                                    </>
                                     <View style={{ marginBottom: 10 }}>
                                         <Text
                                             style={{
@@ -771,6 +812,54 @@ export default class ChannelView extends React.Component<
                                             }
                                         />
                                     </View>
+                                    {!forceCloseChannel && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.closingRate'
+                                                )}
+                                            </Text>
+                                            <OnchainFeeInput
+                                                fee={satPerByte}
+                                                onChangeFee={(text: string) => {
+                                                    this.setState({
+                                                        satPerByte: text
+                                                    });
+                                                }}
+                                                navigation={navigation}
+                                            />
+                                        </>
+                                    )}
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor('text')
+                                            }}
+                                            infoModalText={localeString(
+                                                'views.Channel.externalAddress.info'
+                                            )}
+                                        >
+                                            {localeString(
+                                                'views.Channel.externalAddress'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder={'bc1...'}
+                                            value={deliveryAddress}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    deliveryAddress: text
+                                                })
+                                            }
+                                            locked={closingChannel}
+                                        />
+                                    </>
                                 </>
                             )}
                             <View style={styles.button}>
@@ -811,8 +900,10 @@ const styles = StyleSheet.create({
     },
     status: {
         fontFamily: 'PPNeueMontreal-Book',
-        alignSelf: 'center',
-        marginBottom: 10
+        margin: 18,
+        flex: 1,
+        flexDirection: 'row',
+        textAlign: 'center'
     },
     alias: {
         fontSize: 28,

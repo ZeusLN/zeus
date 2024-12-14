@@ -23,7 +23,6 @@ import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
 
-import Button from '../components/Button';
 import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
@@ -204,10 +203,9 @@ interface WalletHeaderProps {
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     navigation: StackNavigationProp<any, any>;
-    loading: boolean;
-    title: string;
-    channels: boolean;
-    toggle?: () => void;
+    loading?: boolean;
+    title?: string;
+    channels?: boolean;
 }
 
 interface WalletHeaderState {
@@ -255,7 +253,6 @@ export default class WalletHeader extends React.Component<
             loading,
             title,
             channels,
-            toggle,
             AlertStore,
             SettingsStore,
             NodeInfoStore,
@@ -265,7 +262,7 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
-        const { filteredPendingChannels, pendingHTLCs } = ChannelsStore!;
+        const { pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
@@ -285,7 +282,7 @@ export default class WalletHeader extends React.Component<
         const NodeButton = () => (
             <TouchableOpacity
                 onPress={() =>
-                    protectedNavigation(navigation, 'Nodes', undefined, {
+                    protectedNavigation(navigation, 'Wallets', undefined, {
                         animation: 'slide_from_right'
                     })
                 }
@@ -339,7 +336,8 @@ export default class WalletHeader extends React.Component<
         };
 
         const CustodialBadge = () => {
-            return implementation === 'lndhub' ? (
+            return implementation === 'lndhub' &&
+                !selectedNode.dismissCustodialWarning ? (
                 <Badge
                     onPress={() =>
                         navigation.navigate('CustodialWalletWarning')
@@ -405,7 +403,7 @@ export default class WalletHeader extends React.Component<
 
         const AlertButton = () => (
             <TouchableOpacity
-                onPress={() => ModalStore.toggleAlertModal(true)}
+                onPress={() => ModalStore?.toggleAlertModal(true)}
                 accessibilityLabel={localeString('general.search')}
             >
                 <Alert
@@ -516,36 +514,7 @@ export default class WalletHeader extends React.Component<
                 centerComponent={
                     title ? (
                         <View style={{ flex: 1 }}>
-                            {toggle ? (
-                                <View
-                                    style={{ flex: 1, width: '100%' }}
-                                    accessibilityLiveRegion="polite"
-                                >
-                                    <Button
-                                        onPress={() => toggle()}
-                                        title={title}
-                                        noUppercase
-                                        buttonStyle={{
-                                            alignSelf: 'center',
-                                            height: 40
-                                        }}
-                                        icon={
-                                            filteredPendingChannels?.length > 0
-                                                ? {
-                                                      name: 'clockcircle',
-                                                      type: 'antdesign',
-                                                      size: 20,
-                                                      color: themeColor(
-                                                          'background'
-                                                      )
-                                                  }
-                                                : null
-                                        }
-                                    />
-                                </View>
-                            ) : (
-                                <Body bold>{title}</Body>
-                            )}
+                            <Body bold>{title}</Body>
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 0 }}>
@@ -557,7 +526,7 @@ export default class WalletHeader extends React.Component<
                                         fontSize: 16
                                     }}
                                     onPress={() => {
-                                        navigation.navigate('Nodes');
+                                        navigation.navigate('Wallets');
                                     }}
                                 >
                                     {PrivacyUtils.sensitiveValue(
@@ -629,7 +598,9 @@ export default class WalletHeader extends React.Component<
                                     <SyncBadge navigation={navigation} />
                                 </View>
                             )}
-                            {!loading && AlertStore.hasError && <AlertButton />}
+                            {!loading && AlertStore?.hasError && (
+                                <AlertButton />
+                            )}
                             {posEnabled === PosEnabled.Disabled && (
                                 <View>
                                     <NodeButton />

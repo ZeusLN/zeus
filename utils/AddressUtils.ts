@@ -3,7 +3,7 @@ const bitcoin = require('bitcoinjs-lib');
 
 import Base64Utils from '../utils/Base64Utils';
 
-import { SATS_PER_BTC } from '../stores/UnitsStore';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { walletrpc } from '../proto/lightning';
 
@@ -21,6 +21,10 @@ const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
 const lnInvoice =
     /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
+
+/* BIP-21 */
+const bip21Uri =
+    /^(bitcoin|BITCOIN):([13a-zA-Z0-9]{25,42})?(\?((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO)=([^&]*))((&((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO)=([^&]*)))*))?/;
 
 /* BOLT 12 */
 const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
@@ -60,6 +64,8 @@ const wpkhDescriptor =
 
 const nestedWpkhDescriptor =
     /^sh\(wpkh\(\[[a-zA-Z0-9]+\/[0-9]+h\/[0-9]+h\/[0-9]+h\](xpub|ypub|zpub|vpub|tpub)[a-zA-Z0-9]+\/<([0-9]+);([0-9]+)>\/[*]\)\)#([a-zA-Z0-9]+)$/;
+
+const snakeCase = /^[a-zA-Z]+(?:_[a-zA-Z]+)*$/;
 
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',
@@ -101,7 +107,7 @@ const bitcoinQrParser = (input: string, prefix: string) => {
 };
 
 class AddressUtils {
-    processSendAddress = (input: string) => {
+    processBIP21Uri = (input: string) => {
         let value, amount, lightning, offer;
 
         // handle addresses prefixed with 'bitcoin:' and
@@ -179,6 +185,8 @@ class AddressUtils {
 
         return btcNonBech.test(input) || btcBech.test(input);
     };
+
+    isValidBIP21Uri = (input: string) => bip21Uri.test(input);
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
     isValidLightningOffer = (input: string) => lnOffer.test(input);
@@ -307,6 +315,17 @@ class AddressUtils {
                 ExtPubKey: ''
             };
         }
+    };
+
+    snakeToHumanReadable = (input: string) => {
+        let output = input;
+        if (snakeCase.test(input)) {
+            // remove capital demarcation with spaces, move all to lowercase
+            output = output.split('_').join(' ').toLowerCase();
+            // capitalize first letter
+            output = output.charAt(0).toUpperCase() + output.slice(1);
+        }
+        return output;
     };
 }
 

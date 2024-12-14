@@ -34,7 +34,7 @@ function CopyBox(props: CopyBoxProps) {
                         : themeColor('background')
             }}
             onPress={() => {
-                Clipboard.setString(URL);
+                Clipboard.setString(URL || '');
                 setCopied(true);
                 setCurrentTheme('light');
                 setTimeout(function () {

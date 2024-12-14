@@ -5,10 +5,161 @@ jest.mock('react-native-encrypted-storage', () => ({
     clear: jest.fn(() => Promise.resolve())
 }));
 
+jest.mock('../stores/Stores', () => ({
+    SettingsStore: {
+        settings: {
+            display: {
+                removeDecimalSpaces: false
+            }
+        }
+    }
+}));
+
 import AddressUtils from './AddressUtils';
 import { walletrpc } from '../proto/lightning';
 
 describe('AddressUtils', () => {
+    describe('isValidBIP21Uri', () => {
+        it('validates all BIP-21 URI variations', () => {
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'bitcoin:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'bitcoin:?lno=lno1qsgqmqvgm96frzdg8m0gc6nzeqffvzsqzrxqy32afmr3jn9ggkwg3egfwch2hy0l6jut6vfd8vpsc3h89l6u3dm4q2d6nuamav3w27xvdmv3lpgklhg7l5teypqz9l53hj7zvuaenh34xqsz2sa967yzqkylfu9xtcd5ymcmfp32h083e805y7jfd236w9afhavqqvl8uyma7x77yun4ehe9pnhu2gekjguexmxpqjcr2j822xr7q34p078gzslf9wpwz5y57alxu99s0z2ql0kfqvwhzycqq45ehh58xnfpuek80hw6spvwrvttjrrq9pphh0dpydh06qqspp5uq4gpyt6n9mwexde44qv7lstzzq60nr40ff38u27un6y53aypmx0p4qruk2tf9mjwqlhxak4znvna5y'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'BITCOIN:?LNO=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
+                    'shitcoin:?LNO=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual(false);
+        });
+    });
+
+    describe('processBIP21Uri', () => {
+        it('processes all BIP-21 URI variations', () => {
+            // with fee
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                amount: '170003' // amount in sats
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                amount: '170003' // amount in sats
+            });
+
+            // without fee
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                amount: '170003' // amount in sats
+            });
+
+            // bolt12 offers
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'BITCOIN:?LNO=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
+        });
+    });
+
     describe('isValidBitcoinAddress', () => {
         it('validates Bitcoin Addresses properly', () => {
             expect(AddressUtils.isValidBitcoinAddress('a', false)).toBeFalsy();
@@ -67,105 +218,6 @@ describe('AddressUtils', () => {
                     false
                 )
             ).toBeFalsy();
-        });
-
-        it('processes all Bech32 send address variations', () => {
-            // with fee
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
-                )
-            ).toEqual({
-                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                amount: '170003' // amount in sats
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
-                )
-            ).toEqual({
-                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
-                amount: '170003' // amount in sats
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
-                )
-            ).toEqual({
-                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                amount: '170003' // amount in sats
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
-                )
-            ).toEqual({
-                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
-                amount: '170003' // amount in sats
-            });
-            // without fee
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-                )
-            ).toEqual({
-                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-                )
-            ).toEqual({
-                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'bitcoin:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-                )
-            ).toEqual({
-                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU'
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-                )
-            ).toEqual({
-                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU?amount=0.00170003'
-                )
-            ).toEqual({
-                value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                amount: '170003' // amount in sats
-            });
-
-            // bolt12 offers
-            expect(
-                AddressUtils.processSendAddress(
-                    'bitcoin:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
-                )
-            ).toEqual({
-                value: '',
-                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:?lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
-                )
-            ).toEqual({
-                value: '',
-                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
-            });
-            expect(
-                AddressUtils.processSendAddress(
-                    'BITCOIN:?LNO=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
-                )
-            ).toEqual({
-                value: '',
-                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
-            });
         });
 
         it('validates Bech32m - P2TR properly', () => {
@@ -283,10 +335,10 @@ describe('AddressUtils', () => {
             ).toBeFalsy();
         });
 
-        describe('processSendAddress', () => {
+        describe('processBIP21Uri', () => {
             it('process address inputed and scanned from the Send view', () => {
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?amount=0.00170003'
                     )
                 ).toEqual({
@@ -295,7 +347,7 @@ describe('AddressUtils', () => {
                 });
 
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?label=test&amount=0.00170003'
                     )
                 ).toEqual({
@@ -304,7 +356,7 @@ describe('AddressUtils', () => {
                 });
 
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb?amount=0.00170003&label=testw&randomparams=rm2'
                     )
                 ).toEqual({
@@ -313,7 +365,7 @@ describe('AddressUtils', () => {
                 });
 
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb'
                     )
                 ).toEqual({
@@ -322,7 +374,7 @@ describe('AddressUtils', () => {
                 });
 
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:34K6tvoWM7k2ujeXVuimv29WyAsqzhWofd?label=BitMEX%20Deposit%20-%20randomUser'
                     )
                 ).toEqual({
@@ -333,7 +385,7 @@ describe('AddressUtils', () => {
 
             it('processes BIP21 invoices', () => {
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&lightning=LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6'
                     )
                 ).toEqual({
@@ -346,7 +398,7 @@ describe('AddressUtils', () => {
 
             it('processes BIP21 invoices - with hanging values after lightning param', () => {
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&lightning=LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6&test=haha'
                     )
                 ).toEqual({
@@ -359,7 +411,7 @@ describe('AddressUtils', () => {
 
             it('processes BIP21 invoices - with lightning param in all caps', () => {
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&LIGHTNING=LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6&test=haha'
                     )
                 ).toEqual({
@@ -372,7 +424,7 @@ describe('AddressUtils', () => {
 
             it('processes BIP21 invoices - with amount param in all caps', () => {
                 expect(
-                    AddressUtils.processSendAddress(
+                    AddressUtils.processBIP21Uri(
                         'bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?AMOUNT=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&LIGHTNING=LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6&test=haha'
                     )
                 ).toEqual({
@@ -888,6 +940,29 @@ describe('AddressUtils', () => {
                 MasterFingerprint: '',
                 ExtPubKey: ''
             });
+        });
+    });
+
+    describe('snakeToHumanReadable', () => {
+        it('processes address types properly', () => {
+            expect(
+                AddressUtils.snakeToHumanReadable('WITNESS_PUBKEY_HASH')
+            ).toEqual('Witness pubkey hash');
+            expect(
+                AddressUtils.snakeToHumanReadable('NESTED_PUBKEY_HASH')
+            ).toEqual('Nested pubkey hash');
+            expect(
+                AddressUtils.snakeToHumanReadable('UNUSED_WITNESS_PUBKEY_HASH')
+            ).toEqual('Unused witness pubkey hash');
+            expect(
+                AddressUtils.snakeToHumanReadable('UNUSED_NESTED_PUBKEY_HASH')
+            ).toEqual('Unused nested pubkey hash');
+            expect(AddressUtils.snakeToHumanReadable('TAPROOT_PUBKEY')).toEqual(
+                'Taproot pubkey'
+            );
+            expect(
+                AddressUtils.snakeToHumanReadable('UNUSED_TAPROOT_PUBKEY')
+            ).toEqual('Unused taproot pubkey');
         });
     });
 });

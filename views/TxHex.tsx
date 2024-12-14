@@ -51,13 +51,13 @@ interface TxHexState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    txDecoded: any;
+    txDecoded?: any;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
 @observer
 export default class TxHex extends React.Component<TxHexProps, TxHexState> {
-    state = {
+    state: TxHexState = {
         infoIndex: 0,
         selectedIndex: 0,
         txHex: '',
@@ -65,7 +65,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        txDecoded: null
+        txDecoded: undefined
     };
 
     UNSAFE_componentWillMount(): void {
@@ -179,7 +179,10 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             </Text>
         );
 
-        const infoButtons = [{ element: qrButton }, { element: infoButton }];
+        const infoButtons: any = [
+            { element: qrButton },
+            { element: infoButton }
+        ];
 
         const singleButton = () => (
             <Text
@@ -221,7 +224,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             </Text>
         );
 
-        const qrButtons = [
+        const qrButtons: any = [
             { element: singleButton },
             { element: bcurButton },
             { element: bbqrButton }
@@ -500,9 +503,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                     )
                                                                                 }}
                                                                             >
-                                                                                {PrivacyUtils.sensitiveValue(
+                                                                                {`${PrivacyUtils.sensitiveValue(
                                                                                     outpoint
-                                                                                )}
+                                                                                )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }
@@ -574,9 +577,9 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                                                     )
                                                                                 }}
                                                                             >
-                                                                                {PrivacyUtils.sensitiveValue(
+                                                                                {`${PrivacyUtils.sensitiveValue(
                                                                                     address
-                                                                                )}
+                                                                                )}`}
                                                                             </Text>
                                                                         </TouchableOpacity>
                                                                     }

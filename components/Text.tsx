@@ -8,21 +8,30 @@ import { themeColor } from './../utils/ThemeUtils';
 import ModalStore from '../stores/ModalStore';
 
 interface TextProps {
-    ModalStore: ModalStore;
+    ModalStore?: ModalStore;
     style?: TextStyle;
-    children: string;
-    infoText?: string | Array<string>;
-    infoLink?: string;
-    infoNav?: string;
+    children?: string;
+    infoModalText?: string | Array<string>;
+    infoModalLink?: string;
+    infoModalAdditionalButtons?: Array<{
+        title: string;
+        callback?: () => void;
+    }>;
 }
 
 @inject('ModalStore')
 @observer
 export default class ZeusText extends React.Component<TextProps, {}> {
     render() {
-        const { children, style, infoText, infoLink, infoNav, ModalStore } =
-            this.props;
-        const { toggleInfoModal } = ModalStore;
+        const {
+            children,
+            style,
+            infoModalText,
+            infoModalLink,
+            infoModalAdditionalButtons,
+            ModalStore
+        } = this.props;
+        const { toggleInfoModal } = ModalStore!;
 
         const CoreText = () => (
             <Row>
@@ -35,7 +44,7 @@ export default class ZeusText extends React.Component<TextProps, {}> {
                 >
                     {children}
                 </Text>
-                {infoText && (
+                {infoModalText && (
                     <Text
                         style={{
                             color: themeColor('text'),
@@ -49,10 +58,16 @@ export default class ZeusText extends React.Component<TextProps, {}> {
             </Row>
         );
 
-        if (infoText) {
+        if (infoModalText) {
             return (
                 <TouchableOpacity
-                    onPress={() => toggleInfoModal(infoText, infoLink, infoNav)}
+                    onPress={() =>
+                        toggleInfoModal(
+                            infoModalText,
+                            infoModalLink,
+                            infoModalAdditionalButtons
+                        )
+                    }
                 >
                     <CoreText />
                 </TouchableOpacity>

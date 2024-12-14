@@ -1,10 +1,23 @@
 #!/bin/bash
-# reactnativecommunity/react-native-android:13.0
-BUILDER_IMAGE="reactnativecommunity/react-native-android@sha256:4ff9c9f80da57c72284900fcfdbd079183e735684c62d7fafd3df50fdb895453"
+# reactnativecommunity/react-native-android:15.0
+BUILDER_IMAGE="reactnativecommunity/react-native-android@sha256:1ffc7741cdcbeb337a389d67e598f331dc3b917e0cd0e0b6341a3f241cd95bb9"
 CONTAINER_NAME="zeus_builder_container"
 ZEUS_PATH=/olympus/zeus
 
-docker run --rm -it --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $BUILDER_IMAGE bash -c \
+# Default options for the Docker command
+TTY_FLAG="-it"
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --no-tty) TTY_FLAG="" ;; # Remove -it if --no-tty is provided
+        *) echo "Unknown parameter: $1" && exit 1 ;;
+    esac
+    shift
+done
+
+# Run the Docker command
+docker run --rm $TTY_FLAG --name $CONTAINER_NAME -v "$(pwd):$ZEUS_PATH" $BUILDER_IMAGE bash -c \
      'echo -e "\n\n********************************\n*** Building ZEUS...\n********************************\n" && \
       cd /olympus/zeus ; yarn install --frozen-lockfile && \
       cd /olympus/zeus/android ; ./gradlew app:assembleRelease && \
@@ -18,4 +31,3 @@ docker run --rm -it --name $CONTAINER_NAME -v `pwd`:$ZEUS_PATH $BUILDER_IMAGE ba
 	      sha256sum $RENAMED_FILENAME
       done && \
       echo -e "\n" ';
-

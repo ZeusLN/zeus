@@ -25,15 +25,15 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import handleAnything from '../utils/handleAnything';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
-import ZIcon from '../assets/images/icon-black.png';
-import LightningIcon from '../assets/images/lightning-black.png';
-import OnChainIcon from '../assets/images/onchain-black.png';
-import ZPayIcon from '../assets/images/pay-z-black.png';
+const ZIcon = require('../assets/images/icon-black.png');
+const LightningIcon = require('../assets/images/lightning-black.png');
+const OnChainIcon = require('../assets/images/onchain-black.png');
+const ZPayIcon = require('../assets/images/pay-z-black.png');
 
-import ZIconWhite from '../assets/images/icon-white.png';
-import LightningIconWhite from '../assets/images/lightning-white.png';
-import OnChainIconWhite from '../assets/images/onchain-white.png';
-import ZPayIconWhite from '../assets/images/pay-z-white.png';
+const ZIconWhite = require('../assets/images/icon-white.png');
+const LightningIconWhite = require('../assets/images/lightning-white.png');
+const OnChainIconWhite = require('../assets/images/onchain-white.png');
+const ZPayIconWhite = require('../assets/images/pay-z-white.png');
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
@@ -66,13 +66,14 @@ import PosStore from '../stores/PosStore';
 import SettingsStore, { TIME_PERIOD_KEYS } from '../stores/SettingsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
-import UnitsStore, { SATS_PER_BTC } from '../stores/UnitsStore';
+import UnitsStore from '../stores/UnitsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import NFCUtils from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -108,7 +109,9 @@ interface ReceiveProps {
             amount: string;
             autoGenerate: boolean;
             autoGenerateOnChain: boolean;
+            autoGenerateChange?: boolean;
             account: string;
+            addressType?: string;
             selectedIndex: number;
             memo: string;
             orderId: string;
@@ -116,6 +119,7 @@ interface ReceiveProps {
             orderTip: string;
             exchangeRate: string;
             rate: number;
+            hideRightHeaderComponent: boolean;
         }
     >;
 }
@@ -134,6 +138,8 @@ interface ReceiveState {
     ampInvoice: boolean;
     routeHints: boolean;
     account: string;
+    blindedPaths: boolean;
+    nfcSupported: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -147,6 +153,7 @@ interface ReceiveState {
     lspNotConfigured: boolean;
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
+    hideRightHeaderComponent?: boolean;
 }
 
 enum RouteHintMode {
@@ -188,6 +195,8 @@ export default class Receive extends React.Component<
         ampInvoice: false,
         routeHints: false,
         account: 'default',
+        blindedPaths: false,
+        nfcSupported: false,
         // POS
         orderId: '',
         orderTip: '',
@@ -246,7 +255,14 @@ export default class Receive extends React.Component<
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: newExpirySeconds,
             routeHints: settings?.invoices?.routeHints || false,
-            ampInvoice: settings?.invoices?.ampInvoice || false,
+            ampInvoice:
+                (settings?.invoices?.ampInvoice &&
+                    BackendUtils.supportsAMP()) ||
+                false,
+            blindedPaths:
+                (settings?.invoices?.blindedPaths &&
+                    BackendUtils.supportsBolt11BlindedRoutes()) ||
+                false,
             enableLSP: settings?.enableLSP,
             lspIsActive:
                 settings?.enableLSP &&
@@ -270,24 +286,28 @@ export default class Receive extends React.Component<
             amount,
             autoGenerate,
             autoGenerateOnChain,
+            autoGenerateChange,
             account,
-            selectedIndex
+            selectedIndex,
+            hideRightHeaderComponent
         } = route.params ?? {};
 
+        if (hideRightHeaderComponent) {
+            this.setState({ hideRightHeaderComponent });
+        }
+
         if (account) {
-            this.setState({
-                account
-            });
+            this.setState({ account });
         }
 
         if (selectedIndex) {
-            this.setState({
-                selectedIndex
-            });
+            this.setState({ selectedIndex });
         }
 
-        const { expirySeconds, routeHints, ampInvoice, addressType } =
+        const { expirySeconds, routeHints, ampInvoice, blindedPaths } =
             this.state;
+
+        const addressType = route.params?.addressType || this.state.addressType;
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -323,7 +343,7 @@ export default class Receive extends React.Component<
             });
         }
 
-        if (amount) {
+        if (amount && amount != '0') {
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
@@ -349,17 +369,20 @@ export default class Receive extends React.Component<
 
         if (autoGenerate) {
             this.autoGenerateInvoice(
-                getSatAmount(amount),
+                getSatAmount(amount).toString(),
                 memo,
                 expirySeconds,
                 routeHints,
                 ampInvoice,
+                blindedPaths,
                 addressType
             );
         }
 
-        if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress(account);
+        if (autoGenerateChange) {
+            this.autoGenerateChange(account, addressType);
+        } else if (autoGenerateOnChain) {
+            this.autoGenerateOnChainAddress(account, addressType);
         }
     }
 
@@ -370,7 +393,7 @@ export default class Receive extends React.Component<
         reset();
         const { amount, lnurlParams: lnurl } = route.params ?? {};
 
-        if (amount) {
+        if (amount && amount != '0') {
             let needInbound = false;
             if (
                 this.state.lspIsActive &&
@@ -407,6 +430,11 @@ export default class Receive extends React.Component<
         }
     }
 
+    async componentDidMount() {
+        const nfcSupported = await NfcManager.isSupported();
+        this.setState({ nfcSupported });
+    }
+
     clearListeners = () => {
         if (this.listener && this.listener.stop) this.listener.stop();
         if (this.listenerSecondary && this.listenerSecondary.stop)
@@ -435,26 +463,25 @@ export default class Receive extends React.Component<
         expirySeconds?: string,
         routeHints?: boolean,
         ampInvoice?: boolean,
+        blindedPaths?: boolean,
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
         const { lspIsActive } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
-        createUnifiedInvoice(
-            lspIsActive ? '' : memo || '',
-            amount || '0',
-            expirySeconds || '3600',
-            undefined,
-            lspIsActive ? false : ampInvoice || false,
-            lspIsActive ? false : routeHints || false,
-            undefined,
-            BackendUtils.supportsAddressTypeSelection()
+        createUnifiedInvoice({
+            memo: lspIsActive ? '' : memo || '',
+            value: amount || '0',
+            expiry: expirySeconds || '3600',
+            ampInvoice: lspIsActive ? false : ampInvoice || false,
+            blindedPaths: lspIsActive ? false : blindedPaths || false,
+            routeHints: lspIsActive ? false : routeHints || false,
+            addressType: BackendUtils.supportsAddressTypeSelection()
                 ? addressType || '1'
                 : undefined,
-            undefined,
-            !lspIsActive
-        ).then(
+            noLsp: !lspIsActive
+        }).then(
             ({
                 rHash,
                 onChainAddress
@@ -467,13 +494,12 @@ export default class Receive extends React.Component<
         );
     };
 
-    autoGenerateOnChainAddress = (account?: string) => {
+    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
         const { InvoicesStore } = this.props;
-        const { addressType } = this.state;
         const { getNewAddress } = InvoicesStore;
 
         let request: any = {
-            type: addressType
+            type: address_type || this.state.addressType
         };
 
         if (account) {
@@ -481,6 +507,23 @@ export default class Receive extends React.Component<
         }
 
         getNewAddress(request).then((onChainAddress: string) => {
+            this.subscribeInvoice(undefined, onChainAddress);
+        });
+    };
+
+    autoGenerateChange = (account?: string, address_type?: string) => {
+        const { InvoicesStore } = this.props;
+        const { getNewChangeAddress } = InvoicesStore;
+
+        let request: any = {
+            type: address_type || this.state.addressType
+        };
+
+        if (account) {
+            request.account = account;
+        }
+
+        getNewChangeAddress(request).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -558,18 +601,13 @@ export default class Receive extends React.Component<
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
-                        createUnifiedInvoice(
-                            lspIsActive ? '' : memo,
-                            amount.toString(),
-                            '3600',
-                            lnurlParams,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            undefined,
-                            !lspIsActive
-                        )
+                        createUnifiedInvoice({
+                            memo: lspIsActive ? '' : memo,
+                            value: amount.toString(),
+                            expiry: '3600',
+                            lnurl: lnurlParams,
+                            noLsp: !lspIsActive
+                        })
                             .then(
                                 ({
                                     rHash,
@@ -637,6 +675,7 @@ export default class Receive extends React.Component<
 
                             if (
                                 invoice.settled &&
+                                // @ts-ignore:next-line
                                 Base64Utils.bytesToHex(invoice.r_hash) === rHash
                             ) {
                                 setWatchedInvoicePaid(
@@ -652,6 +691,7 @@ export default class Receive extends React.Component<
                                     type: 'ln',
                                     tx: invoice.payment_request,
                                     preimage: Base64Utils.bytesToHex(
+                                        // @ts-ignore:next-line
                                         invoice.r_preimage
                                     )
                                 });
@@ -1041,7 +1081,10 @@ export default class Receive extends React.Component<
             lspIsActive,
             lspNotConfigured,
             routeHintMode,
-            selectedRouteHintChannels
+            selectedRouteHintChannels,
+            blindedPaths,
+            hideRightHeaderComponent,
+            nfcSupported
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1229,7 +1272,7 @@ export default class Receive extends React.Component<
             </React.Fragment>
         );
 
-        const buttons =
+        const buttons: any =
             BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet
                 ? [
                       { element: unifiedButton },
@@ -1353,14 +1396,14 @@ export default class Receive extends React.Component<
             </Text>
         );
 
-        const expirationButtons = [
+        const expirationButtons: any = [
             { element: tenMButton },
             { element: oneHButton },
             { element: oneDButton },
             { element: oneWButton }
         ];
 
-        const routeHintModeButtons = [
+        const routeHintModeButtons: any = [
             {
                 element: () => (
                     <Text
@@ -1429,7 +1472,8 @@ export default class Receive extends React.Component<
                     rightComponent={
                         loading ||
                         watchedInvoicePaid ||
-                        posStatus === 'active' ? null : haveInvoice ? (
+                        posStatus === 'active' ||
+                        hideRightHeaderComponent ? null : haveInvoice ? (
                             <ClearButton />
                         ) : (
                             BackendUtils.supportsAddressTypeSelection() &&
@@ -1477,7 +1521,8 @@ export default class Receive extends React.Component<
                                                   'views.Receive.youReceived'
                                               )} ${getAmountFromSats(
                                                   watchedInvoicePaidAmt ||
-                                                      payment_request_amt
+                                                      payment_request_amt ||
+                                                      ''
                                               )}`}
                                     </Text>
                                 </>
@@ -1612,6 +1657,7 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
+                                    zeroConfFee &&
                                     zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
@@ -1740,12 +1786,12 @@ export default class Receive extends React.Component<
                                         </TouchableOpacity>
                                     )}
                                 {haveInvoice && !creatingInvoiceError && (
-                                    <View style={{ marginTop: 10 }}>
+                                    <View>
                                         {selectedIndex == 0 &&
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
-                                                    value={unifiedInvoice}
+                                                    value={unifiedInvoice || ''}
                                                     copyText={localeString(
                                                         'views.Receive.copyInvoice'
                                                     )}
@@ -1759,13 +1805,20 @@ export default class Receive extends React.Component<
                                                             ? ZIconWhite
                                                             : ZIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
+                                                    satAmount={satAmount}
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
+                                                    }
                                                 />
                                             )}
                                         {selectedIndex == 1 &&
                                             !belowDustLimit &&
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
-                                                    value={lnInvoice}
+                                                    value={lnInvoice || ''}
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
@@ -1781,6 +1834,13 @@ export default class Receive extends React.Component<
                                                         )
                                                             ? LightningIconWhite
                                                             : LightningIcon
+                                                    }
+                                                    nfcSupported={nfcSupported}
+                                                    satAmount={satAmount}
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
                                                     }
                                                 />
                                             )}
@@ -1804,6 +1864,17 @@ export default class Receive extends React.Component<
                                                         )
                                                             ? OnChainIconWhite
                                                             : OnChainIcon
+                                                    }
+                                                    nfcSupported={nfcSupported}
+                                                    satAmount={
+                                                        satAmount === '0'
+                                                            ? undefined
+                                                            : satAmount
+                                                    }
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
                                                     }
                                                 />
                                             )}
@@ -1873,6 +1944,7 @@ export default class Receive extends React.Component<
                                                             ? ZPayIconWhite
                                                             : ZPayIcon
                                                     }
+                                                    nfcSupported={nfcSupported}
                                                 />
                                             )}
 
@@ -1888,7 +1960,7 @@ export default class Receive extends React.Component<
                                             (belowDustLimit ||
                                                 !haveUnifiedInvoice) && (
                                                 <CollapsedQR
-                                                    value={lnInvoice}
+                                                    value={lnInvoice || ''}
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
@@ -1898,39 +1970,49 @@ export default class Receive extends React.Component<
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
+                                                    nfcSupported={nfcSupported}
+                                                    satAmount={satAmount}
+                                                    displayAmount={
+                                                        settings?.invoices
+                                                            ?.displayAmountOnInvoice ||
+                                                        false
+                                                    }
                                                 />
                                             )}
                                         {!(
                                             selectedIndex === 3 &&
-                                            !lightningAddress
-                                        ) && (
-                                            <View
-                                                style={[
-                                                    styles.button,
-                                                    { paddingTop: 0 }
-                                                ]}
-                                            >
-                                                <Button
-                                                    title={
-                                                        posStatus === 'active'
-                                                            ? localeString(
-                                                                  'general.payNfc'
-                                                              )
-                                                            : localeString(
-                                                                  'general.receiveNfc'
-                                                              )
-                                                    }
-                                                    icon={{
-                                                        name: 'nfc',
-                                                        size: 25
-                                                    }}
-                                                    onPress={() =>
-                                                        this.enableNfc()
-                                                    }
-                                                    secondary
-                                                />
-                                            </View>
-                                        )}
+                                            (!lightningAddress ||
+                                                lightningAddressLoading)
+                                        ) &&
+                                            nfcSupported && (
+                                                <View
+                                                    style={[
+                                                        styles.button,
+                                                        { paddingTop: 0 }
+                                                    ]}
+                                                >
+                                                    <Button
+                                                        title={
+                                                            posStatus ===
+                                                            'active'
+                                                                ? localeString(
+                                                                      'general.payNfc'
+                                                                  )
+                                                                : localeString(
+                                                                      'general.receiveNfc'
+                                                                  )
+                                                        }
+                                                        icon={{
+                                                            name: 'nfc',
+                                                            size: 25
+                                                        }}
+                                                        onPress={() =>
+                                                            this.enableNfc()
+                                                        }
+                                                        secondary
+                                                    />
+                                                </View>
+                                            )}
                                     </View>
                                 )}
                                 {!loading && !haveInvoice && !creatingInvoice && (
@@ -1946,7 +2028,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.lspSwitchExplainer1'
                                                             ),
@@ -1954,7 +2036,17 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.lspSwitchExplainer2'
                                                             )
                                                         ]}
-                                                        infoNav="LspExplanationOverview"
+                                                        infoModalAdditionalButtons={[
+                                                            {
+                                                                title: localeString(
+                                                                    'general.learnMore'
+                                                                ),
+                                                                callback: () =>
+                                                                    navigation.navigate(
+                                                                        'LspExplanationOverview'
+                                                                    )
+                                                            }
+                                                        ]}
                                                     >
                                                         {localeString(
                                                             'views.Settings.LSP.enableLSP'
@@ -2450,7 +2542,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.routeHintSwitchExplainer1'
                                                             ),
@@ -2471,6 +2563,7 @@ export default class Receive extends React.Component<
                                                                     !routeHints
                                                             })
                                                         }
+                                                        disabled={blindedPaths}
                                                     />
                                                 </>
                                             )}
@@ -2583,7 +2676,7 @@ export default class Receive extends React.Component<
                                                             ),
                                                             top: 20
                                                         }}
-                                                        infoText={[
+                                                        infoModalText={[
                                                             localeString(
                                                                 'views.Receive.ampSwitchExplainer1'
                                                             ),
@@ -2591,7 +2684,7 @@ export default class Receive extends React.Component<
                                                                 'views.Receive.ampSwitchExplainer2'
                                                             )
                                                         ]}
-                                                        infoLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                     >
                                                         {localeString(
                                                             'views.Receive.ampInvoice'
@@ -2603,6 +2696,48 @@ export default class Receive extends React.Component<
                                                             this.setState({
                                                                 ampInvoice:
                                                                     !ampInvoice
+                                                            })
+                                                        }
+                                                        disabled={blindedPaths}
+                                                    />
+                                                </>
+                                            )}
+
+                                        {BackendUtils.supportsBolt11BlindedRoutes() &&
+                                            !lspIsActive && (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.secondaryText,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            top: 20
+                                                        }}
+                                                        infoModalText={[
+                                                            localeString(
+                                                                'views.Receive.blindedPathsExplainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.Receive.blindedPathsExplainer2'
+                                                            )
+                                                        ]}
+                                                        infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                    >
+                                                        {localeString(
+                                                            'views.Receive.blindedPaths'
+                                                        )}
+                                                    </Text>
+                                                    <Switch
+                                                        value={blindedPaths}
+                                                        onValueChange={() =>
+                                                            this.setState({
+                                                                blindedPaths:
+                                                                    !blindedPaths,
+                                                                ampInvoice:
+                                                                    false,
+                                                                routeHints:
+                                                                    false
                                                             })
                                                         }
                                                     />
@@ -2622,30 +2757,41 @@ export default class Receive extends React.Component<
                                                         : '')
                                                 }
                                                 onPress={() => {
-                                                    createUnifiedInvoice(
-                                                        lspIsActive ? '' : memo,
-                                                        satAmount.toString() ||
+                                                    createUnifiedInvoice({
+                                                        memo: lspIsActive
+                                                            ? ''
+                                                            : memo,
+                                                        value:
+                                                            satAmount.toString() ||
                                                             '0',
-                                                        expirySeconds,
+                                                        expiry: expirySeconds,
                                                         lnurl,
-                                                        lspIsActive
+                                                        ampInvoice: lspIsActive
                                                             ? false
                                                             : ampInvoice ||
+                                                              false,
+                                                        blindedPaths:
+                                                            lspIsActive
+                                                                ? false
+                                                                : blindedPaths ||
                                                                   false,
                                                         routeHints,
-                                                        routeHintMode ===
+                                                        routeHintChannels:
+                                                            routeHintMode ===
                                                             RouteHintMode.Custom
-                                                            ? selectedRouteHintChannels
-                                                            : undefined,
-                                                        BackendUtils.supportsAddressTypeSelection()
-                                                            ? addressType
-                                                            : undefined,
-                                                        BackendUtils.supportsCustomPreimages() &&
+                                                                ? selectedRouteHintChannels
+                                                                : undefined,
+                                                        addressType:
+                                                            BackendUtils.supportsAddressTypeSelection()
+                                                                ? addressType
+                                                                : undefined,
+                                                        customPreimage:
+                                                            BackendUtils.supportsCustomPreimages() &&
                                                             showCustomPreimageField
-                                                            ? customPreimage
-                                                            : undefined,
-                                                        !lspIsActive
-                                                    ).then(
+                                                                ? customPreimage
+                                                                : undefined,
+                                                        noLsp: !lspIsActive
+                                                    }).then(
                                                         ({
                                                             rHash,
                                                             onChainAddress

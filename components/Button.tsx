@@ -4,7 +4,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import { StyleProp, TextStyle, ViewStyle } from 'react-native';
 
 interface ButtonProps {
-    title?: string;
+    title?: string | React.ReactElement;
     icon?: any;
     titleStyle?: TextStyle;
     onPress?: any;
@@ -90,12 +90,12 @@ function Button(props: ButtonProps) {
                     : warning
                     ? themeColor('delete')
                     : themeColor('text'),
-                ...buttonStyle
+                ...(buttonStyle as object)
             }}
             titleStyle={
                 titleStyle
                     ? {
-                          ...titleStyle,
+                          ...(titleStyle as object),
                           textTransform: noUppercase ? 'none' : 'uppercase',
                           fontFamily: 'PPNeueMontreal-Book'
                       }

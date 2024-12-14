@@ -78,7 +78,7 @@ export default class LightningAddressInfo extends React.Component<
                             >
                                 {localeString(
                                     'views.Settings.LightningAddressInfo.explainer1'
-                                )}
+                                ).replace('OLYMPUS by ZEUS', 'Olympus by ZEUS')}
                             </Text>
                         </View>
                         <View
@@ -106,7 +106,9 @@ export default class LightningAddressInfo extends React.Component<
                                     keyValue={localeString(
                                         'views.Settings.LightningAddressInfo.minimumAmount'
                                     )}
-                                    value={`${minimumSats} sats`}
+                                    value={`${minimumSats} ${
+                                        minimumSats === 1 ? 'sat' : 'sats'
+                                    }`}
                                 />
                             )}
 
@@ -123,12 +125,25 @@ export default class LightningAddressInfo extends React.Component<
                                             limitQualifier,
                                             fee,
                                             feeQualifier
-                                        } = feeItem;
+                                        } = feeItem as {
+                                            limitAmount: number;
+                                            limitQualifier: keyof typeof LIMIT_QUALIFIERS;
+                                            fee: number | string;
+                                            feeQualifier: keyof typeof FEE_QUALIFIERS;
+                                        };
 
                                         return (
                                             <KeyValue
                                                 key={index}
-                                                keyValue={`${LIMIT_QUALIFIERS[limitQualifier]} ${limitAmount} sats`}
+                                                keyValue={`${
+                                                    LIMIT_QUALIFIERS[
+                                                        limitQualifier
+                                                    ]
+                                                } ${limitAmount} ${
+                                                    limitAmount === 1
+                                                        ? 'sat'
+                                                        : 'sats'
+                                                }`}
                                                 value={`${fee}${FEE_QUALIFIERS[feeQualifier]}`}
                                             />
                                         );

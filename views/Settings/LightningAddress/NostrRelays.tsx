@@ -50,8 +50,8 @@ export default class NostrRelays extends React.Component<
         addRelay: ''
     };
 
-    remove = (arrOriginal, elementToRemove) => {
-        return arrOriginal.filter(function (el) {
+    remove = (arrOriginal: Array<string>, elementToRemove: Array<string>) => {
+        return arrOriginal.filter(function (el: any) {
             return el !== elementToRemove;
         });
     };
@@ -121,7 +121,7 @@ export default class NostrRelays extends React.Component<
                             }
                         }}
                         rightComponent={
-                            loading && <LoadingIndicator size={32} />
+                            loading ? <LoadingIndicator size={32} /> : <></>
                         }
                         navigation={navigation}
                     />

@@ -106,6 +106,7 @@ export default class SelectCurrency extends React.Component<
                     />
                     <SearchBar
                         placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
                         value={search}
                         inputStyle={{
@@ -122,6 +123,7 @@ export default class SelectCurrency extends React.Component<
                             borderRadius: 15,
                             backgroundColor: themeColor('secondary')
                         }}
+                        // @ts-ignore:next-line
                         searchIcon={{
                             importantForAccessibility: 'no-hide-descendants',
                             accessibilityElementsHidden: true
@@ -173,16 +175,17 @@ export default class SelectCurrency extends React.Component<
                                     (!selectedCurrency &&
                                         item.value === DEFAULT_FIAT)) &&
                                     !currencyConverter && (
-                                        <View style={{ textAlign: 'right' }}>
+                                        <View>
                                             <Icon
                                                 name="check"
                                                 color={themeColor('highlight')}
+                                                style={{ textAlign: 'right' }}
                                             />
                                         </View>
                                     )}
                             </ListItem>
                         )}
-                        keyExtractor={(item, index) => `${item.host}-${index}`}
+                        keyExtractor={(_, index) => index.toString()}
                         ItemSeparatorComponent={this.renderSeparator}
                     />
                 </View>

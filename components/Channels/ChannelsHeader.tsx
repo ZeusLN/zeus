@@ -9,13 +9,19 @@ import { Spacer } from '../layout/Spacer';
 import Amount from '../Amount';
 import { localeString } from '../../utils/LocaleUtils';
 
+interface ChannelsHeaderProps {
+    totalInbound: number;
+    totalOutbound: number;
+    totalOffline: number;
+}
+
 function TotalRow({
     kind,
     amount,
     color
 }: {
     kind: string;
-    amount: number;
+    amount: number | string;
     color: string;
 }) {
     return (
@@ -39,7 +45,7 @@ function TotalRow({
     );
 }
 
-export function ChannelsHeader(props) {
+export function ChannelsHeader(props: ChannelsHeaderProps) {
     const { totalInbound, totalOutbound, totalOffline } = props;
 
     return (

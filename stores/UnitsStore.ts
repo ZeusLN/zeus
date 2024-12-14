@@ -3,12 +3,15 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 
 import SettingsStore from './SettingsStore';
 import FiatStore from './FiatStore';
-import FeeUtils from './../utils/FeeUtils';
+
+import {
+    SATS_PER_BTC,
+    numberWithCommas,
+    numberWithDecimals
+} from '../utils/UnitsUtils';
+import FeeUtils from '../utils/FeeUtils';
 
 type Units = 'sats' | 'BTC' | 'fiat';
-
-// 100_000_000
-export const SATS_PER_BTC = 100000000;
 
 const UNIT_KEY = 'zeus-units';
 
@@ -20,6 +23,7 @@ interface ValueDisplayProps {
     plural?: boolean;
     rtl?: boolean;
     space?: boolean;
+    error?: string;
 }
 
 export default class UnitsStore {
@@ -93,7 +97,7 @@ export default class UnitsStore {
             };
         } else if (units === 'sats') {
             return {
-                amount: this.fiatStore.numberWithCommas(absValueSats),
+                amount: numberWithCommas(absValueSats),
                 unit: 'sats',
                 negative,
                 plural: !(Number(value) === 1 || Number(value) === -1)
@@ -117,6 +121,8 @@ export default class UnitsStore {
 
                 if (!fiatEntry?.rate) {
                     return {
+                        amount: 'Disabled',
+                        unit: 'fiat',
                         error: 'Rate for selected currency not available'
                     };
                 }
@@ -131,8 +137,8 @@ export default class UnitsStore {
 
                 return {
                     amount: separatorSwap
-                        ? this.fiatStore.numberWithDecimals(amount)
-                        : this.fiatStore.numberWithCommas(amount),
+                        ? numberWithDecimals(amount)
+                        : numberWithCommas(amount),
                     unit: 'fiat',
                     symbol,
                     negative,
@@ -141,7 +147,11 @@ export default class UnitsStore {
                     space
                 };
             } else {
-                return { error: 'Error fetching fiat rates' };
+                return {
+                    amount: 'Disabled',
+                    unit: 'fiat',
+                    error: 'Error fetching fiat rates'
+                };
             }
         }
     };
@@ -170,9 +180,9 @@ export default class UnitsStore {
                 Number(wholeSats || 0) / SATS_PER_BTC
             )}`;
         } else if (units === 'sats') {
-            const sats = `${
-                this.fiatStore.numberWithCommas(wholeSats || value) || 0
-            } ${Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'}`;
+            const sats = `${numberWithCommas(wholeSats || value) || 0} ${
+                Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
+            }`;
             return sats;
         } else if (units === 'fiat' && fiat) {
             if (this.fiatStore.fiatRates) {
@@ -190,8 +200,8 @@ export default class UnitsStore {
                 ).toFixed(2);
 
                 const formattedAmount = separatorSwap
-                    ? this.fiatStore.numberWithDecimals(amount)
-                    : this.fiatStore.numberWithCommas(amount);
+                    ? numberWithDecimals(amount)
+                    : numberWithCommas(amount);
 
                 if (rtl) {
                     return `${formattedAmount}${space ? ' ' : ''}${symbol}`;
@@ -224,9 +234,9 @@ export default class UnitsStore {
             return `₿${FeeUtils.toFixed(Number(value || 0))}`;
         } else if (units === 'sats') {
             const [wholeSats] = value.toString().split('.');
-            const sats = `${
-                this.fiatStore.numberWithCommas(wholeSats || value) || 0
-            } ${Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'}`;
+            const sats = `${numberWithCommas(wholeSats || value) || 0} ${
+                Number(value) === 1 || Number(value) === -1 ? 'sat' : 'sats'
+            }`;
             return sats;
         } else if (units === 'fiat' && fiat) {
             if (this.fiatStore.fiatRates) {
@@ -243,8 +253,8 @@ export default class UnitsStore {
                 ).toFixed(2);
 
                 const formattedAmount = separatorSwap
-                    ? this.fiatStore.numberWithDecimals(amount)
-                    : this.fiatStore.numberWithCommas(amount);
+                    ? numberWithDecimals(amount)
+                    : numberWithCommas(amount);
 
                 if (rtl) {
                     return `${formattedAmount}${space ? ' ' : ''}${symbol}`;

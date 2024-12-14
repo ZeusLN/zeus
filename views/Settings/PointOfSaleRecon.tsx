@@ -21,11 +21,11 @@ import Export from '../../assets/images/SVG/Export.svg';
 
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
-import { SATS_PER_BTC } from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { SATS_PER_BTC } from '../../utils/UnitsUtils';
 
 import { ReconHeader } from './PointOfSaleReconHeader';
 
@@ -41,7 +41,7 @@ interface PointOfSaleReconState {
     selectedIndex: number;
 }
 
-const HOURS = {
+const HOURS: { [key: number]: number } = {
     0: 24,
     1: 24 * 7,
     2: 24 * 30,
@@ -65,7 +65,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
         PosStore.getOrdersHistorical();
     }
 
-    renderItem = (order) => {
+    renderItem = (order: any) => {
         const { navigation, FiatStore } = this.props;
         const { getSymbol } = FiatStore;
         const { item } = order;
@@ -224,6 +224,8 @@ export default class PointOfSaleRecon extends React.PureComponent<
             { element: oneYButton }
         ];
 
+        const buttonElements = buttons.map((btn) => btn.element());
+
         return (
             <Screen>
                 <Header
@@ -249,7 +251,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
-                            buttons={buttons}
+                            buttons={buttonElements}
                             selectedButtonStyle={{
                                 backgroundColor: themeColor('highlight'),
                                 borderRadius: 12
@@ -271,7 +273,7 @@ export default class PointOfSaleRecon extends React.PureComponent<
                                 ListFooterComponent={<Spacer height={100} />}
                                 onRefresh={() => getOrdersHistorical()}
                                 refreshing={loading}
-                                keyExtractor={(item, index) => `${index}`}
+                                keyExtractor={(_item, index) => `${index}`}
                             />
                         )}
                         {false && orders.length === 0 && !loading && (

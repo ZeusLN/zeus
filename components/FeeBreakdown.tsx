@@ -12,6 +12,7 @@ import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
+import BackendUtils from '../utils/BackendUtils';
 
 import { Divider } from 'react-native-elements';
 
@@ -19,18 +20,18 @@ import Amount from './Amount';
 import KeyValue from './KeyValue';
 
 interface FeeBreakdownProps {
-    ChannelsStore: ChannelsStore;
-    NodeInfoStore: NodeInfoStore;
-    channelId: string;
+    ChannelsStore?: ChannelsStore;
+    NodeInfoStore?: NodeInfoStore;
+    channelId: string | any;
     channelPoint: string;
-    peerDisplay?: string;
+    peerDisplay?: string | any;
     initiator?: boolean;
     isActive?: boolean;
     isClosed?: boolean;
     total_satoshis_received?: string;
     total_satoshis_sent?: string;
-    commit_weight?: number;
-    commit_fee?: number;
+    commit_weight?: number | string;
+    commit_fee?: number | string;
     csv_delay?: number;
     label?: string;
 }
@@ -58,8 +59,8 @@ export default class FeeBreakdown extends React.Component<
             csv_delay,
             label
         } = this.props;
-        const { loading, chanInfo } = ChannelsStore;
-        const { nodeInfo, testnet } = NodeInfoStore;
+        const { loading, chanInfo } = ChannelsStore!;
+        const { nodeInfo, testnet } = NodeInfoStore!;
         const { nodeId } = nodeInfo;
 
         let localPolicy, remotePolicy;
@@ -146,6 +147,72 @@ export default class FeeBreakdown extends React.Component<
                             }%`}
                             sensitive
                         />
+                        {BackendUtils.supportInboundFees() && (
+                            <>
+                                {!!localPolicy.inbound_fee_base_msat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.localInboundBaseFee'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    Number(
+                                                        localPolicy.inbound_fee_base_msat
+                                                    ) / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {!!localPolicy.inbound_fee_rate_milli_msat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.localInboundFeeRate'
+                                        )}
+                                        value={`${
+                                            Number(
+                                                localPolicy.inbound_fee_rate_milli_msat
+                                            ) / 10000
+                                        }%`}
+                                        sensitive
+                                    />
+                                )}
+                                {!!remotePolicy.inbound_fee_base_msat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.remoteInboundBaseFee'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={
+                                                    Number(
+                                                        remotePolicy.inbound_fee_base_msat
+                                                    ) / 1000
+                                                }
+                                                toggleable
+                                                sensitive
+                                            />
+                                        }
+                                    />
+                                )}
+                                {!!remotePolicy.inbound_fee_rate_milli_msat && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Channel.remoteInboundFeeRate'
+                                        )}
+                                        value={`${
+                                            Number(
+                                                remotePolicy.inbound_fee_rate_milli_msat
+                                            ) / 10000
+                                        }%`}
+                                        sensitive
+                                    />
+                                )}
+                            </>
+                        )}
                     </React.Fragment>
                 )}
                 {isClosed && (
@@ -364,6 +431,12 @@ export default class FeeBreakdown extends React.Component<
                                 value={`${csv_delay} ${localeString(
                                     'general.blocks'
                                 )}`}
+                                infoModalText={[
+                                    localeString(
+                                        'views.Channel.csvDelay.info1'
+                                    ),
+                                    localeString('views.Channel.csvDelay.info2')
+                                ]}
                             />
                         )}
 

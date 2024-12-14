@@ -13,11 +13,13 @@ import QRCode from 'react-native-qrcode-svg';
 
 import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
 
-import Button from './../components/Button';
+import Amount from './Amount';
+import Button from './Button';
 import CopyButton from './CopyButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
+import Conversion from './Conversion';
 
 const defaultLogo = require('../assets/images/icon-black.png');
 const defaultLogoWhite = require('../assets/images/icon-white.png');
@@ -67,6 +69,9 @@ interface CollapsedQRProps {
     textBottom?: boolean;
     truncateLongValue?: boolean;
     logo?: any;
+    nfcSupported?: boolean;
+    satAmount?: string | number;
+    displayAmount?: boolean;
 }
 
 interface CollapsedQRState {
@@ -140,13 +145,27 @@ export default class CollapsedQR extends React.Component<
             expanded,
             textBottom,
             truncateLongValue,
-            logo
+            logo,
+            satAmount
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
 
         return (
             <React.Fragment>
+                {satAmount != null && this.props.displayAmount && (
+                    <View
+                        style={{
+                            flexDirection: 'column',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Amount sats={satAmount} toggleable></Amount>
+                        <View>
+                            <Conversion sats={satAmount} sensitive />
+                        </View>
+                    </View>
+                )}
                 {!hideText && !textBottom && (
                     <ValueText
                         value={value}
@@ -259,7 +278,7 @@ export default class CollapsedQR extends React.Component<
                     />
                 )}
                 <CopyButton copyValue={copyValue || value} title={copyText} />
-                {Platform.OS === 'android' && (
+                {Platform.OS === 'android' && this.props.nfcSupported && (
                     <Button
                         title={
                             nfcBroadcast

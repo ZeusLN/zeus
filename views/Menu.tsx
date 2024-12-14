@@ -15,6 +15,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AddIcon from '../assets/images/SVG/Add.svg';
 import BlockIcon from '../assets/images/SVG/Block.svg';
 import Bolt12Icon from '../assets/images/SVG/AtSign.svg';
+import CoinsIcon from '../assets/images/SVG/Coins.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import GearIcon from '../assets/images/SVG/Gear.svg';
@@ -94,13 +95,18 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
         const { implementation, settings, seedPhrase } = SettingsStore;
         const { paid } = LightningAddressStore;
 
+        // Define the type for implementationDisplayValue
+        interface ImplementationDisplayValue {
+            [key: string]: string;
+        }
+
         const selectedNode: any =
             (settings &&
                 settings.nodes?.length &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
 
-        const implementationDisplayValue = {};
+        const implementationDisplayValue: ImplementationDisplayValue = {};
         INTERFACE_KEYS.forEach((item) => {
             implementationDisplayValue[item.value] = item.key;
         });
@@ -135,7 +141,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             <Screen>
                 <Header
                     leftComponent="Close"
-                    rightComponent={OlympusButton}
+                    rightComponent={<OlympusButton />}
                     navigation={navigation}
                 />
                 <ScrollView
@@ -147,7 +153,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                 >
                     {selectedNode ? (
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Nodes')}
+                            onPress={() => navigation.navigate('Wallets')}
                         >
                             <View
                                 style={{
@@ -216,7 +222,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             <TouchableOpacity
                                 style={styles.columnField}
                                 onPress={() =>
-                                    navigation.navigate('NodeConfiguration', {
+                                    navigation.navigate('WalletConfiguration', {
                                         newEntry: true,
                                         index: 0
                                     })
@@ -235,7 +241,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         color: themeColor('highlight')
                                     }}
                                 >
-                                    {localeString('views.Settings.connectNode')}
+                                    {localeString(
+                                        'views.Settings.createConnectWallet'
+                                    )}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
@@ -468,6 +476,49 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 </TouchableOpacity>
                             </View>
                         )}
+
+                    {BackendUtils.supportsAddressesWithDerivationPaths() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('OnChainAddresses')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <CoinsIcon
+                                            fill={themeColor('text')}
+                                            height={30}
+                                            width={30}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.OnChainAddresses.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {selectedNode && BackendUtils.supportsOffers() && (
                         <View

@@ -15,16 +15,26 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import ChannelsFilter from '../../components/Channels/ChannelsFilter';
-
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 import { Spacer } from '../../components/layout/Spacer';
+import Screen from '../../components/Screen';
+
+// nav
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import {
+    DefaultTheme,
+    NavigationContainer,
+    NavigationContainerRef,
+    NavigationIndependentTree
+} from '@react-navigation/native';
 
 import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
 
@@ -44,7 +54,7 @@ interface ChannelsProps {
     SettingsStore?: SettingsStore;
 }
 
-const ColorChangingButton = ({ onPress }) => {
+const ColorChangingButton = ({ onPress }: { onPress: () => void }) => {
     const [forward, setForward] = useState(true);
     const animation = useRef(new Animated.Value(0)).current;
 
@@ -86,6 +96,8 @@ const ColorChangingButton = ({ onPress }) => {
 @inject('ChannelsStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
+    private tabNavigationRef = React.createRef<NavigationContainerRef<any>>();
+
     renderItem = ({ item }: { item: Channel }) => {
         const { ChannelsStore, navigation } = this.props;
         const { largestChannelSats, channelsType } = ChannelsStore!;
@@ -119,9 +131,12 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                         title={item.displayName}
                         status={getStatus()}
                         pendingHTLCs={item?.pending_htlcs?.length > 0}
-                        inbound={item.remoteBalance}
-                        outbound={item.localBalance}
+                        localBalance={item.localBalance}
+                        remoteBalance={item.remoteBalance}
+                        receivingCapacity={item.receivingCapacity}
+                        sendingCapacity={item.sendingCapacity}
                         largestTotal={largestChannelSats}
+                        isBelowReserve={item.isBelowReserve}
                     />
                 </TouchableHighlight>
             );
@@ -137,37 +152,21 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             >
                 <ChannelItem
                     title={item.displayName}
-                    inbound={item.remoteBalance}
-                    outbound={item.localBalance}
+                    localBalance={item.localBalance}
+                    remoteBalance={item.remoteBalance}
+                    receivingCapacity={item.receivingCapacity}
+                    sendingCapacity={item.sendingCapacity}
                     status={getStatus()}
                     pendingHTLCs={item?.pending_htlcs?.length > 0}
                     pendingTimelock={
                         item.forceClose
                             ? forceCloseTimeLabel(item.blocks_til_maturity)
-                            : null
+                            : undefined
                     }
+                    isBelowReserve={item.isBelowReserve}
                 />
             </TouchableHighlight>
         );
-    };
-
-    toggleChannelsType = () => {
-        const { ChannelsStore } = this.props;
-        const { channelsType } = ChannelsStore!;
-
-        let newType = ChannelsType.Open;
-        switch (channelsType) {
-            case ChannelsType.Open:
-                newType = ChannelsType.Pending;
-                break;
-            case ChannelsType.Pending:
-                newType = ChannelsType.Closed;
-                break;
-
-            default:
-                newType = ChannelsType.Open;
-        }
-        ChannelsStore!.setChannelsType(newType);
     };
 
     updateSearch = (value: string) => {
@@ -175,6 +174,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     };
 
     render() {
+        const Tab = createBottomTabNavigator();
+
         const { ChannelsStore, SettingsStore, navigation } = this.props;
         const {
             loading,
@@ -186,53 +187,101 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             filteredPendingChannels,
             filteredClosedChannels,
             showSearch,
-            channelsType
+            setChannelsType
         } = ChannelsStore!;
 
         const { settings } = SettingsStore!;
 
-        const lurkerMode: boolean = settings?.privacy?.lurkerMode || false;
+        const Theme = {
+            ...DefaultTheme,
+            colors: {
+                ...DefaultTheme.colors,
+                background: themeColor('background'),
+                card: themeColor('background'),
+                border: themeColor('background')
+            }
+        };
 
-        let headerString;
-        let channelsData: Channel[];
-        switch (channelsType) {
-            case ChannelsType.Open:
-                headerString = `${localeString(
-                    'views.Wallet.Wallet.channels'
-                )} (${filteredChannels?.length || 0})`;
-                channelsData = filteredChannels;
-                break;
-            case ChannelsType.Pending:
-                headerString = `${localeString(
-                    'views.Wallet.Wallet.pendingChannels'
-                )} (${filteredPendingChannels?.length || 0})`;
-                channelsData = filteredPendingChannels;
-                break;
-            case ChannelsType.Closed:
-                headerString = `${localeString(
-                    'views.Wallet.Wallet.closedChannels'
-                )} (${filteredClosedChannels?.length || 0})`;
-                channelsData = filteredClosedChannels;
-                break;
-        }
+        const OpenChannelsScreen = () => {
+            return (
+                <Screen>
+                    <FlatList
+                        data={filteredChannels}
+                        renderItem={this.renderItem}
+                        ListFooterComponent={<Spacer height={100} />}
+                        onRefresh={() => getChannels()}
+                        refreshing={loading}
+                        keyExtractor={(item, index) =>
+                            `${item.remote_pubkey}-${index}`
+                        }
+                    />
+                </Screen>
+            );
+        };
+
+        const PendingChannelsScreen = () => {
+            return (
+                <Screen>
+                    <FlatList
+                        data={filteredPendingChannels}
+                        renderItem={this.renderItem}
+                        ListFooterComponent={<Spacer height={100} />}
+                        onRefresh={() => getChannels()}
+                        refreshing={loading}
+                        keyExtractor={(item, index) =>
+                            `${item.remote_pubkey}-${index}`
+                        }
+                    />
+                </Screen>
+            );
+        };
+
+        const ClosedChannelsScreen = () => {
+            return (
+                <Screen>
+                    <FlatList
+                        data={filteredClosedChannels}
+                        renderItem={this.renderItem}
+                        ListFooterComponent={<Spacer height={100} />}
+                        onRefresh={() => getChannels()}
+                        refreshing={loading}
+                        keyExtractor={(item, index) =>
+                            `${item.remote_pubkey}-${index}`
+                        }
+                    />
+                </Screen>
+            );
+        };
+
+        const openChannelsTabName = `${localeString(
+            'views.Wallet.Wallet.open'
+        )} (${filteredChannels?.length || 0})`;
+
+        const pendingChannelsTabName = `${localeString(
+            'views.Wallet.Wallet.pending'
+        )} (${filteredPendingChannels?.length || 0})`;
+
+        const closedChannelsTabName = `${localeString(
+            'views.Wallet.Wallet.closed'
+        )} (${filteredClosedChannels?.length || 0})`;
 
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
                     navigation={navigation}
-                    title={headerString}
-                    channels
-                    toggle={
+                    title={
                         BackendUtils.supportsPendingChannels()
-                            ? this.toggleChannelsType
-                            : undefined
+                            ? localeString('views.Wallet.Wallet.channels')
+                            : `${localeString(
+                                  'views.Wallet.Wallet.channels'
+                              )} (${filteredChannels?.length || 0})`
                     }
+                    channels
                 />
                 <ChannelsHeader
                     totalInbound={totalInbound}
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
-                    lurkerMode={lurkerMode}
                 />
                 {settings?.lsps1ShowPurchaseButton &&
                     (BackendUtils.supportsLSPS1customMessage() ||
@@ -248,9 +297,68 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     <View style={{ marginTop: 40 }}>
                         <LoadingIndicator />
                     </View>
+                ) : BackendUtils.supportsPendingChannels() ? (
+                    <NavigationIndependentTree>
+                        <NavigationContainer
+                            theme={Theme}
+                            ref={this.tabNavigationRef}
+                        >
+                            <Tab.Navigator
+                                initialRouteName={openChannelsTabName}
+                                backBehavior="none"
+                                screenOptions={() => ({
+                                    headerShown: false,
+                                    tabBarActiveTintColor: themeColor('text'),
+                                    tabBarInactiveTintColor: 'gray',
+                                    tabBarShowLabel: true,
+                                    tabBarStyle: {
+                                        borderTopWidth: 0.2,
+                                        borderTopColor:
+                                            themeColor('secondaryText')
+                                    },
+                                    tabBarItemStyle: {
+                                        justifyContent: 'center'
+                                    },
+                                    tabBarIconStyle: { display: 'none' },
+                                    tabBarLabelStyle: {
+                                        fontSize: 16,
+                                        fontFamily: 'PPNeueMontreal-Medium'
+                                    },
+                                    animation: 'shift'
+                                })}
+                            >
+                                <Tab.Screen
+                                    name={openChannelsTabName}
+                                    component={OpenChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(ChannelsType.Open)
+                                    }}
+                                />
+                                <Tab.Screen
+                                    name={pendingChannelsTabName}
+                                    component={PendingChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(
+                                                ChannelsType.Pending
+                                            )
+                                    }}
+                                />
+                                <Tab.Screen
+                                    name={closedChannelsTabName}
+                                    component={ClosedChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(ChannelsType.Closed)
+                                    }}
+                                />
+                            </Tab.Navigator>
+                        </NavigationContainer>
+                    </NavigationIndependentTree>
                 ) : (
                     <FlatList
-                        data={channelsData}
+                        data={filteredChannels}
                         renderItem={this.renderItem}
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => getChannels()}

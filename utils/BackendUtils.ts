@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
@@ -33,7 +33,7 @@ class BackendUtils {
     }
 
     getClass = () => {
-        const { implementation } = stores.settingsStore;
+        const { implementation } = settingsStore;
         switch (implementation) {
             case 'lnd':
                 return this.lnd;
@@ -85,6 +85,8 @@ class BackendUtils {
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
+    getNewChangeAddress = (...args: any[]) =>
+        this.call('getNewChangeAddress', args);
     openChannelSync = (...args: any[]) => this.call('openChannelSync', args);
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
@@ -106,6 +108,7 @@ class BackendUtils {
     getUTXOs = (...args: any[]) => this.call('getUTXOs', args);
     listAccounts = (...args: any[]) => this.call('listAccounts', args);
     importAccount = (...args: any[]) => this.call('importAccount', args);
+    listAddresses = (...args: any[]) => this.call('listAddresses', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
@@ -124,6 +127,7 @@ class BackendUtils {
     subscribeTransactions = (...args: any[]) =>
         this.call('subscribeTransactions', args);
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
+    rescan = (...args: any[]) => this.call('rescan', args);
 
     // BOLT 12 / Offers
     listOffers = (...args: any[]) => this.call('listOffers', args);
@@ -166,10 +170,16 @@ class BackendUtils {
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
+    supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
     supportsOffers = () => this.call('supportsOffers');
+    supportsBolt11BlindedRoutes = () =>
+        this.call('supportsBolt11BlindedRoutes');
+    supportsAddressesWithDerivationPaths = () =>
+        this.call('supportsAddressesWithDerivationPaths');
     isLNDBased = () => this.call('isLNDBased');
+    supportInboundFees = () => this.call('supportInboundFees');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

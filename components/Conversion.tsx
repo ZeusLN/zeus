@@ -16,12 +16,12 @@ import { themeColor } from '../utils/ThemeUtils';
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 
 interface ConversionProps {
-    amount: string | number;
-    sats: string | number;
-    satsPending: string | number;
-    FiatStore: FiatStore;
-    UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
+    amount?: string | number;
+    sats?: string | number;
+    satsPending?: string | number;
+    FiatStore?: FiatStore;
+    UnitsStore?: UnitsStore;
+    SettingsStore?: SettingsStore;
     sensitive?: boolean;
 }
 
@@ -56,8 +56,8 @@ export default class Conversion extends React.Component<
             sensitive
         } = this.props;
         const { showRate } = this.state;
-        const { units } = UnitsStore;
-        const { settings } = SettingsStore;
+        const { units } = UnitsStore!;
+        const { settings } = SettingsStore!;
         const { fiatEnabled } = settings;
 
         const { getRate }: any = FiatStore;
@@ -66,7 +66,9 @@ export default class Conversion extends React.Component<
         if (sats) {
             satAmount = sats;
         } else {
-            satAmount = getSatAmount(amount);
+            satAmount = Number.isNaN(Number(amount))
+                ? 0
+                : getSatAmount(amount ?? 0);
         }
 
         if (!fiatEnabled || (!amount && !sats)) return;
@@ -89,7 +91,7 @@ export default class Conversion extends React.Component<
                     <>
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {` | ${getRate(
-                                this.props.UnitsStore.units === 'sats'
+                                this.props.UnitsStore?.units === 'sats'
                             )}`}
                         </Text>
                     </>
@@ -129,7 +131,7 @@ export default class Conversion extends React.Component<
                     <>
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {` | ${getRate(
-                                this.props.UnitsStore.units === 'sats'
+                                this.props.UnitsStore?.units === 'sats'
                             )}`}
                         </Text>
                     </>
@@ -144,7 +146,7 @@ export default class Conversion extends React.Component<
                 {units === 'fiat' && (
                     <TouchableOpacity
                         onPress={() => this.toggleShowRate()}
-                        disabled={FiatStore.loading}
+                        disabled={FiatStore?.loading}
                     >
                         {satsPending ? (
                             <ConversionPendingDisplay
@@ -162,7 +164,7 @@ export default class Conversion extends React.Component<
                 {units !== 'fiat' && (
                     <TouchableOpacity
                         onPress={() => this.toggleShowRate()}
-                        disabled={FiatStore.loading}
+                        disabled={FiatStore?.loading}
                     >
                         {satsPending ? (
                             <ConversionPendingDisplay

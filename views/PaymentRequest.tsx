@@ -78,11 +78,12 @@ interface InvoiceState {
     feeOption: string;
     maxFeePercent: string;
     timeoutSeconds: string;
-    outgoingChanId: string | undefined;
-    lastHopPubkey: string | undefined;
+    outgoingChanId: string | any;
+    lastHopPubkey: string | any;
     settingsToggle: boolean;
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
+    slideToPayThreshold: number;
 }
 
 @inject(
@@ -117,7 +118,8 @@ export default class PaymentRequest extends React.Component<
         lastHopPubkey: null,
         settingsToggle: false,
         zaplockerToggle: false,
-        lightningReadyToSend: false
+        lightningReadyToSend: false,
+        slideToPayThreshold: 10000
     };
 
     async UNSAFE_componentWillMount() {
@@ -140,7 +142,8 @@ export default class PaymentRequest extends React.Component<
             feeOption,
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
-            timeoutSeconds: settings?.payments?.timeoutSeconds || '60'
+            timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
+            slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
 
         if (implementation === 'embedded-lnd') {
@@ -269,6 +272,66 @@ export default class PaymentRequest extends React.Component<
         navigation.navigate('SendingLightning');
     };
 
+    triggerPayment = () => {
+        const { InvoicesStore, LnurlPayStore, SettingsStore } = this.props;
+        const {
+            enableMultiPathPayment,
+            maxParts,
+            maxShardAmt,
+            feeLimitSat,
+            outgoingChanId,
+            lastHopPubkey,
+            satAmount,
+            timeoutSeconds,
+            maxFeePercent,
+            enableAtomicMultiPathPayment
+        } = this.state;
+
+        const { paymentRequest, pay_req } = InvoicesStore;
+        const { implementation } = SettingsStore;
+
+        const isLnd: boolean = BackendUtils.isLNDBased();
+        const isCLightning: boolean =
+            implementation === 'c-lightning-REST' ||
+            implementation === 'cln-rest';
+
+        // Zaplocker
+        const { isZaplocker } = LnurlPayStore;
+
+        // Broadcast attestation if Zaplocker is enabled
+        if (isZaplocker) LnurlPayStore.broadcastAttestation();
+
+        // handle fee percents that use commas
+        const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
+
+        let lockAtomicMultiPathPayment = false;
+        if (
+            pay_req &&
+            pay_req.features &&
+            pay_req.features['30'] &&
+            pay_req.features['30'].is_required
+        ) {
+            lockAtomicMultiPathPayment = true;
+        }
+
+        const enableAmp: boolean =
+            enableAtomicMultiPathPayment || lockAtomicMultiPathPayment;
+
+        // Call sendPayment with the freshest values
+        this.sendPayment({
+            payment_request: paymentRequest,
+            amount: satAmount ? satAmount.toString() : undefined,
+            max_parts: enableMultiPathPayment ? maxParts : '16',
+            max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
+            fee_limit_sat: isLnd ? feeLimitSat : '1000',
+            max_fee_percent: isCLightning ? maxFeePercentFormatted : '5.0',
+            outgoing_chan_id: outgoingChanId ?? '',
+            last_hop_pubkey: lastHopPubkey ?? '',
+            amp: enableAmp,
+            timeout_seconds: timeoutSeconds
+        });
+    };
+
     render() {
         const {
             InvoicesStore,
@@ -283,17 +346,13 @@ export default class PaymentRequest extends React.Component<
             enableAtomicMultiPathPayment,
             maxParts,
             maxShardAmt,
-            feeLimitSat,
             feeOption,
-            maxFeePercent,
-            outgoingChanId,
-            lastHopPubkey,
             customAmount,
-            satAmount,
             zaplockerToggle,
             settingsToggle,
             timeoutSeconds,
-            lightningReadyToSend
+            lightningReadyToSend,
+            slideToPayThreshold
         } = this.state;
         const {
             pay_req,
@@ -316,16 +375,16 @@ export default class PaymentRequest extends React.Component<
 
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
-        const requestAmount = pay_req && pay_req.getRequestAmount;
+        const requestAmount =
+            pay_req && pay_req.getRequestAmount
+                ? pay_req.getRequestAmount
+                : undefined;
         const expiry = pay_req && pay_req.expiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;
         const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
-
-        // handle fee percents that use commas
-        const maxFeePercentFormatted = maxFeePercent.replace(/,/g, '.');
 
         let lockAtomicMultiPathPayment = false;
         if (
@@ -368,7 +427,8 @@ export default class PaymentRequest extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: `lightning:${paymentRequest}`
+                        value: `lightning:${paymentRequest}`,
+                        satAmount: requestAmount
                     })
                 }
             >
@@ -806,7 +866,7 @@ export default class PaymentRequest extends React.Component<
                                                                 this.setState({
                                                                     lastHopPubkey:
                                                                         channels[0]
-                                                                            ?.channelId
+                                                                            ?.remotePubkey
                                                                 })
                                                             }
                                                             title={localeString(
@@ -1046,35 +1106,10 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
-                            {requestAmount >= 10000 ? (
+                            {requestAmount &&
+                            requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
-                                    onSwipeSuccess={() => {
-                                        if (isZaplocker)
-                                            LnurlPayStore.broadcastAttestation();
-                                        this.sendPayment({
-                                            payment_request: paymentRequest,
-                                            amount: satAmount
-                                                ? satAmount.toString()
-                                                : undefined,
-                                            max_parts: enableMultiPathPayment
-                                                ? maxParts
-                                                : null,
-                                            max_shard_amt:
-                                                enableMultiPathPayment
-                                                    ? maxShardAmt
-                                                    : null,
-                                            fee_limit_sat: isLnd
-                                                ? feeLimitSat
-                                                : null,
-                                            max_fee_percent: isCLightning
-                                                ? maxFeePercentFormatted
-                                                : null,
-                                            outgoing_chan_id: outgoingChanId,
-                                            last_hop_pubkey: lastHopPubkey,
-                                            amp: enableAmp,
-                                            timeout_seconds: timeoutSeconds
-                                        });
-                                    }}
+                                    onSwipeSuccess={this.triggerPayment}
                                     instructionText={localeString(
                                         'views.PaymentRequest.slideToPay'
                                     )}
@@ -1100,35 +1135,7 @@ export default class PaymentRequest extends React.Component<
                                                   }
                                                 : undefined
                                         }
-                                        onPress={() => {
-                                            if (isZaplocker)
-                                                LnurlPayStore.broadcastAttestation();
-                                            this.sendPayment({
-                                                payment_request: paymentRequest,
-                                                amount: satAmount
-                                                    ? satAmount.toString()
-                                                    : undefined,
-                                                max_parts:
-                                                    enableMultiPathPayment
-                                                        ? maxParts
-                                                        : null,
-                                                max_shard_amt:
-                                                    enableMultiPathPayment
-                                                        ? maxShardAmt
-                                                        : null,
-                                                fee_limit_sat: isLnd
-                                                    ? feeLimitSat
-                                                    : null,
-                                                max_fee_percent: isCLightning
-                                                    ? maxFeePercentFormatted
-                                                    : null,
-                                                outgoing_chan_id:
-                                                    outgoingChanId,
-                                                last_hop_pubkey: lastHopPubkey,
-                                                amp: enableAmp,
-                                                timeout_seconds: timeoutSeconds
-                                            });
-                                        }}
+                                        onPress={this.triggerPayment}
                                         disabled={!lightningReadyToSend}
                                     />
                                 </View>

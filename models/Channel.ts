@@ -1,5 +1,7 @@
 import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
+import BigInt from 'big-integer';
+
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
 
@@ -20,6 +22,16 @@ export default class Channel extends BaseModel {
     fee_per_kw: string;
     total_satoshis_received: string;
     pending_htlcs: Array<HTLC>;
+    pendingOpen: any;
+    pendingClose: any;
+    forceClose: any;
+    closing: any;
+    blocks_til_maturity: any;
+    chain_hash: string;
+    closing_tx_hash: string;
+    closing_txid: string;
+    settled_balance: any;
+    time_locked_balance: any;
     num_updates: string;
     @observable
     active: boolean;
@@ -95,6 +107,18 @@ export default class Channel extends BaseModel {
     }
 
     @computed
+    public get sendingCapacity(): string {
+        const localBalance = new BigNumber(this.localBalance).minus(
+            this.localReserveBalance
+        );
+        if (localBalance.gt(0)) {
+            return localBalance.toString();
+        } else {
+            return '0';
+        }
+    }
+
+    @computed
     public get remoteBalance(): string {
         return this.total
             ? ((Number(this.total) - Number(this.to_us)) / 1000).toString()
@@ -111,6 +135,47 @@ export default class Channel extends BaseModel {
             : this.remote_balance || '0';
     }
 
+    @computed
+    public get receivingCapacity(): string {
+        const remoteBalance = new BigNumber(this.remoteBalance).minus(
+            this.remoteReserveBalance
+        );
+        if (remoteBalance.gt(0)) {
+            return remoteBalance.toString();
+        } else {
+            return '0';
+        }
+    }
+
+    @computed
+    public get localReserveBalance(): string {
+        return this.local_chan_reserve_sat
+            ? Number(this.local_chan_reserve_sat).toString()
+            : '0';
+    }
+
+    @computed
+    public get remoteReserveBalance(): string {
+        return this.remote_chan_reserve_sat
+            ? Number(this.remote_chan_reserve_sat).toString()
+            : '0';
+    }
+
+    @computed
+    public get totalReserveBalance(): string {
+        return (
+            Number(this.localReserveBalance) + Number(this.remoteReserveBalance)
+        ).toString();
+    }
+
+    @computed
+    public get isBelowReserve(): boolean {
+        return (
+            new BigNumber(this.localBalance).lt(this.localReserveBalance) &&
+            new BigNumber(this.localBalance).gt(0)
+        );
+    }
+
     /** Channel id
      * @returns {string | undefined} id of the channel or undefined if channel is pending
      */
@@ -120,8 +185,29 @@ export default class Channel extends BaseModel {
     }
 
     @computed
+    public get shortChannelId(): string | undefined {
+        // make sure channelId is a number, or don't both w/ SCID calculation
+        if (Number.isNaN(Number(this.channelId))) return;
+
+        const chanId = BigInt(Number(this.channelId) || 0); // Use BigInt for large numbers
+
+        // Extract the components
+        // @ts-ignore:next-line
+        const blockHeight = chanId >> BigInt(40); // Shift right by 40 bits
+        // @ts-ignore:next-line
+        const txIndex = (chanId >> BigInt(16)) & BigInt(0xffffff); // Shift right by 16 bits and mask 24 bits
+        // @ts-ignore:next-line
+        const outputIndex = chanId & BigInt(0xffff); // Mask the lower 16 bits
+
+        // Combine components into the short channel ID
+        const scid = `${blockHeight}x${txIndex}x${outputIndex}`;
+
+        return scid !== '0x0x0' ? scid : '';
+    }
+
+    @computed
     public get remotePubkey(): string {
-        return this.remote_pubkey || this.remote_node_pub;
+        return this.remote_pubkey || this.remote_node_pub || '';
     }
 
     @computed

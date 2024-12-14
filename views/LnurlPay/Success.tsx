@@ -17,7 +17,7 @@ interface LnurlPaySuccessProps {
     domain: any;
     successAction: LNURLPaySuccessAction;
     preimage: string;
-    scrollable: boolean;
+    scrollable?: boolean;
     maxHeight?: number;
 }
 
@@ -92,7 +92,7 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                 case 'aes':
                     try {
                         plaintext = decipherAES(successAction, preimage);
-                    } catch (err) {
+                    } catch (err: any) {
                         plaintext = `<error decrypting message: ${err.message}>`;
                     }
                     body = (

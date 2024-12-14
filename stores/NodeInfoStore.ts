@@ -1,4 +1,5 @@
 import { action, observable } from 'mobx';
+import NetworkInfo from '../models/NetworkInfo';
 import NodeInfo from '../models/NodeInfo';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore from './SettingsStore';
@@ -12,7 +13,7 @@ export default class NodeInfoStore {
     @observable public error = false;
     @observable public errorMsg: string;
     @observable public nodeInfo: NodeInfo | any = {};
-    @observable public networkInfo: any = {};
+    @observable public networkInfo: NetworkInfo | any = {};
     @observable public testnet: boolean;
     @observable public regtest: boolean;
     channelsStore: ChannelsStore;
@@ -91,7 +92,7 @@ export default class NodeInfoStore {
         this.loading = true;
         return BackendUtils.getNetworkInfo()
             .then((data: any) => {
-                this.networkInfo = data;
+                this.networkInfo = new NetworkInfo(data);
                 this.loading = false;
                 this.error = false;
                 return this.networkInfo;

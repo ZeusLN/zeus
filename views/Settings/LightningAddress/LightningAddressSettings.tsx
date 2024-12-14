@@ -106,7 +106,7 @@ export default class LightningAddressSettings extends React.Component<
                             }
                         }}
                         rightComponent={
-                            loading && <LoadingIndicator size={32} />
+                            loading ? <LoadingIndicator size={32} /> : <></>
                         }
                         navigation={navigation}
                     />
@@ -206,7 +206,7 @@ export default class LightningAddressSettings extends React.Component<
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
-                                    infoText={[
+                                    infoModalText={[
                                         localeString(
                                             'views.Settings.LightningAddressSettings.routeHintsExplainer1'
                                         ),

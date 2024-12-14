@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
-import { StackNavigationProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import TextInput from '../components/TextInput';
 import { themeColor } from '../utils/ThemeUtils';
@@ -13,6 +13,8 @@ interface OnchainFeeInputProps {
     fee?: string;
     onChangeFee: (fee: string) => void;
 }
+
+const DEFAULT_FEE = '10';
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { fee, onChangeFee, navigation } = props;
@@ -41,6 +43,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     setLoading(false);
                 })
                 .catch(() => {
+                    onChangeFee('0');
                     setErrorOccurredLoadingFees(true);
                     setLoading(false);
                 });
@@ -96,12 +99,13 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             ) : (
                 <TextInput
                     keyboardType="numeric"
-                    placeholder="2"
+                    placeholder={DEFAULT_FEE}
                     value={newFee}
                     onChangeText={(text: string) => {
                         setNewFee(text);
                         onChangeFee(text);
                     }}
+                    error={!newFee || newFee === '0'}
                 />
             )}
         </>

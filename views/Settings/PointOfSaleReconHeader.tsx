@@ -15,7 +15,7 @@ function TotalRow({
 }: {
     kind: string;
     amount: string;
-    color: string;
+    color?: string;
 }) {
     return (
         <Row justify="space-between">
@@ -43,7 +43,14 @@ function TotalRow({
     );
 }
 
-export function ReconHeader(props) {
+interface ReconHeaderProps {
+    total: string;
+    tax: string;
+    tips: string;
+    FiatStore: any;
+}
+
+export function ReconHeader(props: ReconHeaderProps) {
     const { total, tax, tips, FiatStore } = props;
     const { getSymbol } = FiatStore;
 

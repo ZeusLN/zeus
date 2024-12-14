@@ -4,6 +4,8 @@ export enum PolicyType {
     LEGACY = 'LEGACY',
     /** ANCHOR - Selects the policy from the anchor tower client. */
     ANCHOR = 'ANCHOR',
+    /** TAPROOT - Selects the policy from the taproot tower client. */
+    TAPROOT = 'TAPROOT',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -28,6 +30,26 @@ export interface RemoveTowerRequest {
 }
 
 export interface RemoveTowerResponse {}
+
+export interface DeactivateTowerRequest {
+    /** The identifying public key of the watchtower to deactivate. */
+    pubkey: Uint8Array | string;
+}
+
+export interface DeactivateTowerResponse {
+    /** A string describing the action that took place. */
+    status: string;
+}
+
+export interface TerminateSessionRequest {
+    /** The ID of the session that should be terminated. */
+    sessionId: Uint8Array | string;
+}
+
+export interface TerminateSessionResponse {
+    /** A string describing the action that took place. */
+    status: string;
+}
 
 export interface GetTowerInfoRequest {
     /** The identifying public key of the watchtower to retrieve information for. */
@@ -67,6 +89,8 @@ export interface TowerSession {
      * the justice transaction in the event of a channel breach.
      */
     sweepSatPerVbyte: number;
+    /** The ID of the session. */
+    id: Uint8Array | string;
 }
 
 export interface Tower {
@@ -184,6 +208,7 @@ export interface PolicyResponse {
  */
 export interface WatchtowerClient {
     /**
+     * lncli: `wtclient add`
      * AddTower adds a new watchtower reachable at the given address and
      * considers it for new sessions. If the watchtower already exists, then
      * any new addresses included will be considered when dialing it for
@@ -191,6 +216,7 @@ export interface WatchtowerClient {
      */
     addTower(request?: DeepPartial<AddTowerRequest>): Promise<AddTowerResponse>;
     /**
+     * lncli: `wtclient remove`
      * RemoveTower removes a watchtower from being considered for future session
      * negotiations and from being used for any subsequent backups until it's added
      * again. If an address is provided, then this RPC only serves as a way of
@@ -199,15 +225,44 @@ export interface WatchtowerClient {
     removeTower(
         request?: DeepPartial<RemoveTowerRequest>
     ): Promise<RemoveTowerResponse>;
-    /** ListTowers returns the list of watchtowers registered with the client. */
+    /**
+     * lncli: `wtclient deactivate`
+     * DeactivateTower sets the given tower's status to inactive so that it
+     * is not considered for session negotiation. Its sessions will also not
+     * be used while the tower is inactive.
+     */
+    deactivateTower(
+        request?: DeepPartial<DeactivateTowerRequest>
+    ): Promise<DeactivateTowerResponse>;
+    /**
+     * lncli: `wtclient session terminate`
+     * Terminate terminates the given session and marks it as terminal so that
+     * it is not used for backups anymore.
+     */
+    terminateSession(
+        request?: DeepPartial<TerminateSessionRequest>
+    ): Promise<TerminateSessionResponse>;
+    /**
+     * lncli: `wtclient towers`
+     * ListTowers returns the list of watchtowers registered with the client.
+     */
     listTowers(
         request?: DeepPartial<ListTowersRequest>
     ): Promise<ListTowersResponse>;
-    /** GetTowerInfo retrieves information for a registered watchtower. */
+    /**
+     * lncli: `wtclient tower`
+     * GetTowerInfo retrieves information for a registered watchtower.
+     */
     getTowerInfo(request?: DeepPartial<GetTowerInfoRequest>): Promise<Tower>;
-    /** Stats returns the in-memory statistics of the client since startup. */
+    /**
+     * lncli: `wtclient stats`
+     * Stats returns the in-memory statistics of the client since startup.
+     */
     stats(request?: DeepPartial<StatsRequest>): Promise<StatsResponse>;
-    /** Policy returns the active watchtower client policy configuration. */
+    /**
+     * lncli: `wtclient policy`
+     * Policy returns the active watchtower client policy configuration.
+     */
     policy(request?: DeepPartial<PolicyRequest>): Promise<PolicyResponse>;
 }
 

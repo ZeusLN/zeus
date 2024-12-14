@@ -1,5 +1,5 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import stores from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
@@ -105,7 +105,7 @@ export default class LND {
     };
 
     supports = (minVersion: string, eosVersion?: string) => {
-        const { nodeInfo } = stores.nodeInfoStore;
+        const { nodeInfo } = nodeInfoStore;
         const { version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         return isSupportedVersion(version, minVersion, eosVersion);
@@ -113,7 +113,7 @@ export default class LND {
 
     wsReq = (route: string, method: string, data?: any) => {
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -203,7 +203,7 @@ export default class LND {
             accessToken,
             certVerification,
             enableTor
-        } = stores.settingsStore;
+        } = settingsStore;
 
         if (params) {
             route = `${route}?${Object.keys(params)
@@ -254,7 +254,8 @@ export default class LND {
             sat_per_vbyte: data.sat_per_vbyte,
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed,
-            send_all: data.send_all
+            send_all: data.send_all,
+            outpoints: data.outpoints
         });
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {
@@ -267,7 +268,7 @@ export default class LND {
         const method = 'GET';
 
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -320,6 +321,7 @@ export default class LND {
             value_msat: data.value_msat || Number(data.value) * 1000,
             expiry: data.expiry,
             is_amp: data.is_amp,
+            is_blinded: data.is_blinded,
             private: data.private,
             r_preimage: data.preimage
                 ? Base64Utils.hexToBase64(data.preimage)
@@ -328,6 +330,8 @@ export default class LND {
         });
     getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
+    getNewChangeAddress = (data: any) =>
+        this.postRequest('/v2/wallet/address/next', data);
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any = {
             private: data.privateChannel,
@@ -402,7 +406,7 @@ export default class LND {
 
         // make call
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -481,7 +485,7 @@ export default class LND {
             urlParams && urlParams[1]
         }?force=${urlParams && urlParams[2]}`;
 
-        if (urlParams && urlParams[3]) {
+        if (urlParams && !urlParams[2] && urlParams[3]) {
             requestString += `&sat_per_vbyte=${urlParams && urlParams[3]}`;
         }
 
@@ -501,13 +505,21 @@ export default class LND {
             fee_rate,
             time_lock_delta,
             min_htlc,
-            max_htlc
+            max_htlc,
+            base_fee_msat_inbound,
+            fee_rate_inbound
         } = data;
 
         if (data.global) {
             return this.postRequest('/v1/chanpolicy', {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
+                ...(this.supportInboundFees() && {
+                    inboundFee: {
+                        base_fee_msat: base_fee_msat_inbound,
+                        fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+                    }
+                }),
                 global: true,
                 time_lock_delta: Number(time_lock_delta),
                 min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
@@ -518,6 +530,12 @@ export default class LND {
         return this.postRequest('/v1/chanpolicy', {
             base_fee_msat,
             fee_rate: `${Number(fee_rate) / 100}`,
+            ...(this.supportInboundFees() && {
+                inboundFee: {
+                    base_fee_msat: base_fee_msat_inbound,
+                    fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+                }
+            }),
             chan_point: {
                 funding_txid_str: chan_point.funding_txid_str,
                 output_index: chan_point.output_index
@@ -558,6 +576,7 @@ export default class LND {
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
+    listAddresses = () => this.getRequest('/v2/wallet/addresses');
     importAccount = (data: any) =>
         this.postRequest('/v2/wallet/accounts/import', data);
     signMessage = (message: string) =>
@@ -584,7 +603,7 @@ export default class LND {
     subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     initChanAcceptor = (data?: any) => {
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
-            stores.settingsStore;
+            settingsStore;
 
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
@@ -670,9 +689,17 @@ export default class LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
+    supportsOffers = (): Promise<boolean> | boolean => false;
+    supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
+    isLNDBased = () => true;
+    supportInboundFees = () => this.supports('v0.18.0');
 }

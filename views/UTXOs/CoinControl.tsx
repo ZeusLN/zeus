@@ -36,7 +36,7 @@ export default class CoinControl extends React.Component<
     constructor(props: CoinControlProps) {
         super(props);
 
-        const accountParam = props.route.account;
+        const accountParam = props.route.params.account;
         const account =
             accountParam && accountParam === 'On-chain'
                 ? 'default'
@@ -149,7 +149,7 @@ export default class CoinControl extends React.Component<
                                 </React.Fragment>
                             );
                         }}
-                        keyExtractor={(item, index) => `utxo-${index}`}
+                        keyExtractor={(_, index) => `utxo-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}

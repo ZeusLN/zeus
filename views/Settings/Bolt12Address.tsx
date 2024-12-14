@@ -155,7 +155,9 @@ export default class Bolt12AddressSettings extends React.Component<
                             color: themeColor('text')
                         }
                     }}
-                    rightComponent={loading && <LoadingIndicator size={30} />}
+                    rightComponent={
+                        loading ? <LoadingIndicator size={30} /> : <></>
+                    }
                     containerStyle={{ borderBottomWidth: 0 }}
                     navigation={navigation}
                 />

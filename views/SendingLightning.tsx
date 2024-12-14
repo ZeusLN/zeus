@@ -18,9 +18,11 @@ import LightningLoadingPattern from '../components/LightningLoadingPattern';
 import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
+import { Row } from '../components/layout/Row';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
+import PaymentsStore from '../stores/PaymentsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -34,32 +36,41 @@ interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
+    PaymentsStore: PaymentsStore;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore')
+interface SendingLightningState {
+    storedNotes: string;
+    wasSuccessful: boolean;
+    currentPayment: any;
+}
+
+@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
-    {}
+    SendingLightningState
 > {
     private backPressSubscription: NativeEventSubscription;
 
-    state = {
-        storedNotes: ''
-    };
+    constructor(props: SendingLightningProps) {
+        super(props);
+        this.state = {
+            storedNotes: '',
+            currentPayment: null,
+            wasSuccessful: false
+        };
+    }
+
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
         navigation.addListener('focus', () => {
-            const noteKey =
-                typeof TransactionsStore.payment_hash === 'string'
-                    ? TransactionsStore.payment_hash
-                    : typeof TransactionsStore.payment_preimage === 'string'
-                    ? TransactionsStore.payment_preimage
-                    : null;
-            EncryptedStorage.getItem('note-' + noteKey)
+            const noteKey: string = TransactionsStore.noteKey;
+            if (!noteKey) return;
+            EncryptedStorage.getItem(noteKey)
                 .then((storedNotes) => {
-                    this.setState({ storedNotes });
+                    this.setState({ storedNotes: storedNotes || '' });
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);
@@ -72,6 +83,33 @@ export default class SendingLightning extends React.Component<
         );
     }
 
+    componentDidUpdate(_prevProps: SendingLightningProps) {
+        const { TransactionsStore } = this.props;
+        const wasSuccessful = this.successfullySent(TransactionsStore);
+
+        if (wasSuccessful && !this.state.wasSuccessful) {
+            this.fetchPayments();
+            this.setState({ wasSuccessful: true }); // Update success state
+        } else if (!wasSuccessful && this.state.wasSuccessful) {
+            this.setState({ wasSuccessful: false }); // Reset success state if needed
+        }
+    }
+
+    fetchPayments = async () => {
+        const { PaymentsStore, TransactionsStore } = this.props;
+        try {
+            const payments = await PaymentsStore.getPayments();
+            const matchingPayment = payments.find(
+                (payment: any) =>
+                    payment.payment_preimage ===
+                    TransactionsStore.payment_preimage
+            );
+            this.setState({ currentPayment: matchingPayment });
+        } catch (error) {
+            this.setState({ currentPayment: null });
+            console.error('Failed to fetch payments', error);
+        }
+    };
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
         if (
@@ -114,20 +152,19 @@ export default class SendingLightning extends React.Component<
             payment_hash,
             payment_preimage,
             payment_error,
-            isIncomplete
+            isIncomplete,
+            noteKey
         } = TransactionsStore;
-        const { storedNotes } = this.state;
+        const { storedNotes, currentPayment } = this.state;
+
+        const enhancedPath = currentPayment?.enhancedPath;
+
+        const paymentPathExists =
+            enhancedPath?.length > 0 && enhancedPath[0][0];
 
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
         const windowSize = Dimensions.get('window');
-
-        const noteKey =
-            typeof payment_hash === 'string'
-                ? payment_hash
-                : typeof payment_preimage === 'string'
-                ? payment_preimage
-                : null;
 
         return (
             <Screen>
@@ -341,12 +378,40 @@ export default class SendingLightning extends React.Component<
                                 )}
                         </View>
 
-                        <View
-                            style={[
-                                styles.buttons,
-                                !noteKey && { marginTop: 14 }
-                            ]}
+                        <Row
+                            align="flex-end"
+                            style={{
+                                marginLeft: paymentPathExists ? 10 : 0,
+                                marginRight: paymentPathExists ? 10 : 0,
+                                bottom: 25,
+                                alignSelf: 'center'
+                            }}
                         >
+                            {paymentPathExists && (
+                                <Button
+                                    title={`${localeString(
+                                        'views.Payment.title'
+                                    )} ${
+                                        enhancedPath?.length > 1
+                                            ? `${localeString(
+                                                  'views.Payment.paths'
+                                              )} (${enhancedPath.length})`
+                                            : localeString('views.Payment.path')
+                                    } `}
+                                    onPress={() =>
+                                        navigation.navigate('PaymentPaths', {
+                                            enhancedPath
+                                        })
+                                    }
+                                    secondary
+                                    buttonStyle={{ height: 40, width: '100%' }}
+                                    containerStyle={{
+                                        backgroundColor: 'red',
+                                        maxWidth: '45%',
+                                        margin: 10
+                                    }}
+                                />
+                            )}
                             {noteKey && !error && !payment_error && (
                                 <Button
                                     title={
@@ -360,58 +425,47 @@ export default class SendingLightning extends React.Component<
                                     }
                                     onPress={() =>
                                         navigation.navigate('AddNotes', {
-                                            payment_hash: noteKey
+                                            noteKey
                                         })
                                     }
                                     secondary
-                                    buttonStyle={{ height: 40 }}
+                                    buttonStyle={{ height: 40, width: '100%' }}
+                                    containerStyle={{
+                                        maxWidth: paymentPathExists
+                                            ? '45%'
+                                            : '100%',
+                                        margin: 10
+                                    }}
                                 />
                             )}
+                        </Row>
+
+                        <View
+                            style={[
+                                styles.buttons,
+                                !noteKey && { marginTop: 14 }
+                            ]}
+                        >
                             {(payment_error == 'FAILURE_REASON_NO_ROUTE' ||
                                 payment_error ==
                                     localeString(
                                         'error.failureReasonNoRoute'
                                     )) && (
-                                <>
-                                    <Text
-                                        style={{
-                                            textAlign: 'center',
-                                            color: 'white',
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            padding: 20,
-                                            fontSize: 14
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.SendingLightning.lowFeeLimitMessage'
-                                        )}
-                                    </Text>
-                                    <Button
-                                        title={localeString(
-                                            'views.SendingLightning.tryAgain'
-                                        )}
-                                        icon={{
-                                            name: 'return-up-back',
-                                            type: 'ionicon',
-                                            size: 25
-                                        }}
-                                        onPress={() => navigation.goBack()}
-                                        buttonStyle={{
-                                            backgroundColor: 'white',
-                                            height: 40
-                                        }}
-                                        containerStyle={{
-                                            width: '100%',
-                                            margin: 10
-                                        }}
-                                    />
-                                </>
+                                <Text
+                                    style={{
+                                        textAlign: 'center',
+                                        color: 'white',
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        padding: 20,
+                                        fontSize: 14
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.SendingLightning.lowFeeLimitMessage'
+                                    )}
+                                </Text>
                             )}
-                            {(payment_error == 'FAILURE_REASON_TIMEOUT' ||
-                                payment_error ==
-                                    localeString(
-                                        'error.failureReasonTimeout'
-                                    )) && (
+                            {(!!payment_error || !!error) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.tryAgain'

@@ -33,6 +33,8 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import TransactionRequest from '../models/TransactionRequest';
+
 import Scan from '../assets/images/SVG/Scan.svg';
 
 interface SweepProps {
@@ -115,7 +117,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         const { destination, fee, confirmationTarget } = this.state;
         const { implementation } = SettingsStore;
 
-        let request;
+        let request: TransactionRequest;
         request =
             implementation === 'c-lightning-REST' ||
             implementation === 'cln-rest'

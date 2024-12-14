@@ -19,6 +19,7 @@ import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
 import SettingsStore, {
+    DEFAULT_VIEW_KEYS_POS,
     POS_CONF_PREF_KEYS,
     POS_ENABLED_KEYS,
     PosEnabled
@@ -40,6 +41,7 @@ interface PointOfSaleState {
     showKeypad: boolean;
     taxPercentage: string;
     enablePrinter: boolean;
+    defaultView: string;
 }
 
 @inject('SettingsStore')
@@ -58,7 +60,8 @@ export default class PointOfSale extends React.Component<
         squareDevMode: false,
         showKeypad: true,
         taxPercentage: '0',
-        enablePrinter: false
+        enablePrinter: false,
+        defaultView: 'Products'
     };
 
     async UNSAFE_componentWillMount() {
@@ -77,7 +80,9 @@ export default class PointOfSale extends React.Component<
             squareDevMode: settings?.pos?.squareDevMode || false,
             showKeypad: settings?.pos?.showKeypad || false,
             taxPercentage: settings?.pos?.taxPercentage || '0',
-            enablePrinter: settings?.pos?.enablePrinter || false
+            enablePrinter: settings?.pos?.enablePrinter || false,
+            defaultView:
+                (settings?.pos && settings?.pos?.defaultView) || 'Products'
         });
     }
 
@@ -102,7 +107,8 @@ export default class PointOfSale extends React.Component<
             squareDevMode,
             showKeypad,
             taxPercentage,
-            enablePrinter
+            enablePrinter,
+            defaultView
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { passphrase, pin, fiatEnabled } = settings;
@@ -182,7 +188,8 @@ export default class PointOfSale extends React.Component<
                                         squareDevMode,
                                         showKeypad,
                                         taxPercentage,
-                                        enablePrinter
+                                        enablePrinter,
+                                        defaultView
                                     }
                                 });
                             }}
@@ -219,7 +226,8 @@ export default class PointOfSale extends React.Component<
                                                 squareDevMode,
                                                 showKeypad,
                                                 taxPercentage,
-                                                enablePrinter
+                                                enablePrinter,
+                                                defaultView
                                             }
                                         });
                                     }}
@@ -253,7 +261,8 @@ export default class PointOfSale extends React.Component<
                                                 squareDevMode,
                                                 showKeypad,
                                                 taxPercentage,
-                                                enablePrinter
+                                                enablePrinter,
+                                                defaultView
                                             }
                                         });
                                     }}
@@ -302,7 +311,8 @@ export default class PointOfSale extends React.Component<
                                                             !squareDevMode,
                                                         showKeypad,
                                                         taxPercentage,
-                                                        enablePrinter
+                                                        enablePrinter,
+                                                        defaultView
                                                     }
                                                 });
                                             }}
@@ -342,7 +352,8 @@ export default class PointOfSale extends React.Component<
                                                 squareDevMode,
                                                 showKeypad,
                                                 taxPercentage,
-                                                enablePrinter
+                                                enablePrinter,
+                                                defaultView
                                             }
                                         });
                                     }}
@@ -366,12 +377,43 @@ export default class PointOfSale extends React.Component<
                                                 disableTips,
                                                 squareDevMode,
                                                 showKeypad,
-                                                taxPercentage
+                                                taxPercentage,
+                                                defaultView
                                             }
                                         });
                                     }}
                                     values={POS_CONF_PREF_KEYS}
                                 />
+                                {posEnabled === PosEnabled.Standalone && (
+                                    <DropdownSetting
+                                        title={localeString(
+                                            'views.Settings.Display.defaultView'
+                                        )}
+                                        selectedValue={defaultView}
+                                        onValueChange={async (
+                                            value: string
+                                        ) => {
+                                            this.setState({
+                                                defaultView: value
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    posEnabled,
+                                                    squareAccessToken,
+                                                    squareLocationId,
+                                                    merchantName,
+                                                    confirmationPreference,
+                                                    disableTips,
+                                                    squareDevMode,
+                                                    showKeypad,
+                                                    taxPercentage,
+                                                    defaultView: value
+                                                }
+                                            });
+                                        }}
+                                        values={DEFAULT_VIEW_KEYS_POS}
+                                    />
+                                )}
 
                                 <ListItem
                                     containerStyle={{
@@ -415,7 +457,8 @@ export default class PointOfSale extends React.Component<
                                                         squareDevMode,
                                                         showKeypad,
                                                         taxPercentage,
-                                                        enablePrinter
+                                                        enablePrinter,
+                                                        defaultView
                                                     }
                                                 });
                                             }}
@@ -470,7 +513,8 @@ export default class PointOfSale extends React.Component<
                                                             showKeypad,
                                                             taxPercentage,
                                                             enablePrinter:
-                                                                !enablePrinter
+                                                                !enablePrinter,
+                                                            defaultView
                                                         }
                                                     });
                                                 }}
@@ -523,7 +567,8 @@ export default class PointOfSale extends React.Component<
                                                         disableTips,
                                                         squareDevMode,
                                                         taxPercentage,
-                                                        showKeypad: !showKeypad
+                                                        showKeypad: !showKeypad,
+                                                        defaultView
                                                     }
                                                 });
                                             }}
@@ -558,7 +603,8 @@ export default class PointOfSale extends React.Component<
                                                 disableTips,
                                                 squareDevMode,
                                                 taxPercentage: text,
-                                                showKeypad
+                                                showKeypad,
+                                                defaultView
                                             }
                                         });
                                     }}

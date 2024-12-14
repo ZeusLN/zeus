@@ -10,6 +10,7 @@ import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
+// @ts-ignore:next-line
 import { getPublicKey, relayInit } from 'nostr-tools';
 
 const bip39 = require('bip39');
@@ -31,8 +32,6 @@ const LNURL_SOCKET_PATH = '/stream';
 const ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
-const RELAYS = ['wss://nostr.mutinywallet.com', 'wss://relay.damus.io'];
-
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
@@ -43,7 +42,8 @@ export default class LightningAddressStore {
     @observable public redeemingAll: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
-    @observable public availableHashes: number = 0;
+    @observable public availableHashes: number = 0; // on server
+    @observable public localHashes: number = 0; // on device
     @observable public paid: any = [];
     @observable public preimageMap: any = {};
     @observable public fees: any = {};
@@ -63,17 +63,38 @@ export default class LightningAddressStore {
     }
 
     @action
+    public deleteAndGenerateNewPreimages = async () => {
+        this.loading = true;
+        await EncryptedStorage.setItem(
+            HASHES_STORAGE_STRING,
+            JSON.stringify('')
+        );
+        this.generatePreimages(true);
+    };
+
+    @action
+    public DEV_deleteLocalHashes = async () => {
+        this.loading = true;
+        await EncryptedStorage.setItem(
+            HASHES_STORAGE_STRING,
+            JSON.stringify('')
+        );
+        await this.status();
+        this.loading = false;
+    };
+
+    @action
     public getPreimageMap = async () => {
         this.loading = true;
         const map = await EncryptedStorage.getItem(HASHES_STORAGE_STRING);
 
         if (map) {
             this.preimageMap = JSON.parse(map);
-            this.loading = false;
-            return this.preimageMap;
-        } else {
-            this.loading = false;
+            this.localHashes = Object.keys(this.preimageMap).length;
         }
+
+        this.loading = false;
+        return this.preimageMap;
     };
 
     @action
@@ -115,7 +136,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public generatePreimages = async () => {
+    public generatePreimages = async (newDevice?: boolean) => {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
@@ -206,14 +227,16 @@ export default class LightningAddressStore {
                                                   message: verification,
                                                   signature,
                                                   hashes,
-                                                  nostrSignatures
+                                                  nostrSignatures,
+                                                  newDevice
                                               }
                                             : {
                                                   pubkey: this.nodeInfoStore
                                                       .nodeInfo.identity_pubkey,
                                                   message: verification,
                                                   signature,
-                                                  hashes
+                                                  hashes,
+                                                  newDevice
                                               }
                                     )
                                 )
@@ -571,6 +594,7 @@ export default class LightningAddressStore {
                                             }
                                             this.loading = false;
                                             this.availableHashes = results || 0;
+                                            await this.getPreimageMap();
                                             this.paid =
                                                 this.enhanceWithFee(paid);
                                             this.fees = fees;
@@ -584,6 +608,11 @@ export default class LightningAddressStore {
                                             }
 
                                             if (
+                                                this.lightningAddress &&
+                                                this.localHashes === 0
+                                            ) {
+                                                this.generatePreimages(true);
+                                            } else if (
                                                 this.lightningAddress &&
                                                 new BigNumber(
                                                     this.availableHashes
@@ -742,31 +771,33 @@ export default class LightningAddressStore {
             const hashpk = getPublicKey(hash);
 
             await Promise.all(
-                RELAYS.map(async (relayItem) => {
-                    const relay = relayInit(relayItem);
-                    relay.on('connect', () => {
-                        console.log(`connected to ${relay.url}`);
-                    });
-                    relay.on('error', () => {
-                        console.log(`failed to connect to ${relay.url}`);
-                    });
+                this.settingsStore.settings.lightningAddress.nostrRelays.map(
+                    async (relayItem) => {
+                        const relay = relayInit(relayItem);
+                        relay.on('connect', () => {
+                            console.log(`connected to ${relay.url}`);
+                        });
+                        relay.on('error', () => {
+                            console.log(`failed to connect to ${relay.url}`);
+                        });
 
-                    await relay.connect();
+                        await relay.connect();
 
-                    const events = await relay.list([
-                        {
-                            kinds: [55869],
-                            '#p': [hashpk]
-                        }
-                    ]);
+                        const events = await relay.list([
+                            {
+                                kinds: [55869],
+                                '#p': [hashpk]
+                            }
+                        ]);
 
-                    events.map((event) => {
-                        attestationEvents[event.id] = event;
-                    });
+                        events.map((event: any) => {
+                            attestationEvents[event.id] = event;
+                        });
 
-                    relay.close();
-                    return;
-                })
+                        relay.close();
+                        return;
+                    }
+                )
             );
 
             Object.keys(attestationEvents).map((key) => {
@@ -936,6 +967,7 @@ export default class LightningAddressStore {
                 const title = 'ZEUS Pay payment received!';
                 const body = `Payment of ${value_commas} sats automatically accepted`;
                 if (Platform.OS === 'android') {
+                    // @ts-ignore:next-line
                     Notifications.postLocalNotification({
                         title,
                         body
@@ -943,6 +975,7 @@ export default class LightningAddressStore {
                 }
 
                 if (Platform.OS === 'ios') {
+                    // @ts-ignore:next-line
                     Notifications.postLocalNotification({
                         title,
                         body,
@@ -1049,7 +1082,7 @@ export default class LightningAddressStore {
                     });
             }
         }
-        this.status();
+        this.status(true);
         this.redeemingAll = false;
     };
 
@@ -1150,6 +1183,7 @@ export default class LightningAddressStore {
         this.error = false;
         this.error_msg = '';
         this.availableHashes = 0;
+        this.localHashes = 0;
         this.paid = [];
         this.preimageMap = {};
         this.socket = undefined;

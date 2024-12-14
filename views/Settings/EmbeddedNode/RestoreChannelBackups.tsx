@@ -96,7 +96,7 @@ export default class RestoreChannelBackups extends React.Component<
                                             channelBackupsBase64
                                         );
                                         navigation.popTo('Wallet');
-                                    } catch (e) {
+                                    } catch (e: any) {
                                         console.log('e', e);
                                         this.setState({
                                             error: e.toString()

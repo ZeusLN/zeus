@@ -1,9 +1,13 @@
 import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+// @ts-ignore:next-line
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { schnorr } from '@noble/curves/secp256k1';
+import { bytesToHex } from '@noble/hashes/utils';
+import hashjs from 'hash.js';
 
 import Button from '../../../components/Button';
 import KeyValue from '../../../components/KeyValue';
@@ -97,9 +101,9 @@ export default class NostrKey extends React.Component<
         this.setState({
             existingNostrPrivateKey: nostrPrivateKey,
             nostrPrivateKey,
-            nostrPublicKey,
-            nostrNsec,
-            nostrNpub,
+            nostrPublicKey: nostrPublicKey ? nostrPublicKey : '',
+            nostrNsec: nostrNsec ? nostrNsec : '',
+            nostrNpub: nostrNpub ? nostrNpub : '',
             setup,
             editMode: setup,
             revealSensitive: false
@@ -261,8 +265,13 @@ export default class NostrKey extends React.Component<
                                                 } catch (e) {}
                                                 this.setState({
                                                     nostrPrivateKey,
-                                                    nostrPublicKey,
-                                                    nostrNpub
+                                                    nostrPublicKey:
+                                                        nostrPublicKey
+                                                            ? nostrPublicKey
+                                                            : '',
+                                                    nostrNpub: nostrNpub
+                                                        ? nostrNpub
+                                                        : ''
                                                 });
                                             }}
                                             autoCapitalize="none"
@@ -346,9 +355,28 @@ export default class NostrKey extends React.Component<
                                                     { nostrPrivateKey }
                                                 );
                                             } else {
+                                                const relays =
+                                                    settings.lightningAddress
+                                                        .nostrRelays;
+                                                const relays_sig = bytesToHex(
+                                                    schnorr.sign(
+                                                        hashjs
+                                                            .sha256()
+                                                            .update(
+                                                                JSON.stringify(
+                                                                    relays
+                                                                )
+                                                            )
+                                                            .digest('hex'),
+                                                        nostrPrivateKey
+                                                    )
+                                                );
                                                 try {
                                                     update({
-                                                        nostr_pk: nostrPublicKey
+                                                        nostr_pk:
+                                                            nostrPublicKey,
+                                                        relays,
+                                                        relays_sig
                                                     }).then(async () => {
                                                         this.setState({
                                                             existingNostrPrivateKey:

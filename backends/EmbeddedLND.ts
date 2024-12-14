@@ -48,10 +48,17 @@ const {
     finalizePsbt,
     publishTransaction,
     listAccounts,
-    importAccount
+    listAddresses,
+    importAccount,
+    rescan
 } = lndMobile.wallet;
-const { walletBalance, newAddress, getTransactions, sendCoins } =
-    lndMobile.onchain;
+const {
+    walletBalance,
+    newAddress,
+    newChangeAddress,
+    getTransactions,
+    sendCoins
+} = lndMobile.onchain;
 
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
@@ -69,7 +76,8 @@ export default class EmbeddedLND extends LND {
             data.amount,
             data.sat_per_vbyte,
             data.spend_unconfirmed,
-            data.send_all
+            data.send_all,
+            data.outpoints
         );
     sendCustomMessage = async (data: any) =>
         await sendCustomMessage(data.peer, data.type, data.data);
@@ -84,6 +92,7 @@ export default class EmbeddedLND extends LND {
             memo: data.memo,
             expiry: data.expiry,
             is_amp: data.is_amp,
+            is_blinded: data.is_blinded,
             is_private: data.private,
             preimage: data.preimage,
             route_hints: data.route_hints
@@ -91,6 +100,8 @@ export default class EmbeddedLND extends LND {
     getPayments = async () => await listPayments();
     getNewAddress = async (data: any) =>
         await newAddress(data.type, data.account);
+    getNewChangeAddress = async (data: any) =>
+        await newChangeAddress(data.type, data.account);
     openChannelSync = async (data: OpenChannelRequest) =>
         await openChannelSync(
             data.nodePubkeyString,
@@ -147,6 +158,8 @@ export default class EmbeddedLND extends LND {
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams: Array<string>) =>
         await decodePayReq(urlParams && urlParams[0]);
+    decodePaymentRequest = async (urlParams?: string[]) =>
+        await decodePayReq((urlParams && urlParams[0]) || '');
     payLightningInvoice = async (data: any) => {
         const sendPaymentReq = {
             payment_request: data.payment_request,
@@ -188,7 +201,9 @@ export default class EmbeddedLND extends LND {
             urlParams && urlParams[1] ? Number(urlParams[1]) : 0;
         const force = urlParams && urlParams[2] ? true : false;
         const sat_per_vbyte =
-            urlParams && urlParams[3] ? Number(urlParams[3]) : undefined;
+            urlParams && urlParams[3] && !urlParams[2]
+                ? Number(urlParams[3])
+                : undefined;
         const delivery_address =
             urlParams && urlParams[4] ? urlParams[4] : undefined;
 
@@ -204,6 +219,10 @@ export default class EmbeddedLND extends LND {
     getNodeInfo = async (urlParams: Array<string>) =>
         await getNodeInfo(urlParams[0]);
     signMessage = async (msg: string) => {
+    getNodeInfo = async (urlParams?: Array<string>) =>
+        await getNodeInfo((urlParams && urlParams[0]) || '');
+    signMessage = async (msg: any) => {
+ 
         return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
     };
     verifyMessage = async (data: any) => {
@@ -219,6 +238,8 @@ export default class EmbeddedLND extends LND {
     getRoutes = async (urlParams: Array<string | Long>) =>
         urlParams &&
         (await queryRoutes(urlParams[0] as string, urlParams[1] as Long));
+    getRoutes = async (urlParams?: Array<any>) =>
+        urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
     // // Coin Control
     fundPsbt = async (data: any) => await fundPsbt(data);
@@ -260,7 +281,9 @@ export default class EmbeddedLND extends LND {
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
     listAccounts = async () => await listAccounts();
+    listAddresses = async () => await listAddresses();
     importAccount = async (data: any) => await importAccount(data);
+    rescan = async (data: any) => await rescan(data);
 
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
@@ -294,9 +317,15 @@ export default class EmbeddedLND extends LND {
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
+    supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
+    supportsOffers = () => false;
+    supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
+    isLNDBased = () => true;
+    supportInboundFees = () => this.supports('v0.18.0');
 }

@@ -20,7 +20,7 @@ const Message = ({
     onPress
 }: MessageProps) => {
     const [isDismissed, setDismissed] = useState(false);
-    if (isDismissed) return;
+    if (isDismissed) return <></>;
     return onPress ? (
         <TouchableOpacity style={[styles.field]} onPress={onPress}>
             <Text

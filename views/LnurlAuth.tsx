@@ -62,7 +62,7 @@ export default class LnurlAuth extends React.Component<
 
         try {
             this.state = this.stateFromProps(props);
-        } catch (err) {
+        } catch (err: any) {
             this.state = {
                 domain: '',
                 action: '',
@@ -168,7 +168,6 @@ export default class LnurlAuth extends React.Component<
         this.setState({ authenticating: true });
 
         const { route } = this.props;
-        const { domain } = this.state;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
@@ -203,17 +202,6 @@ export default class LnurlAuth extends React.Component<
                         signatureSuccess: false,
                         errorMsgAuth: data.reason
                     });
-                    Alert.alert(
-                        `[error] ${domain} says:`,
-                        data.reason,
-                        [
-                            {
-                                text: localeString('general.ok'),
-                                onPress: () => void 0
-                            }
-                        ],
-                        { cancelable: false }
-                    );
                     return;
                 } else {
                     this.setState({
@@ -236,6 +224,13 @@ export default class LnurlAuth extends React.Component<
             errorMsgAuth,
             chooseAuthMode
         } = this.state;
+
+        const hasError =
+            !preparingSignature &&
+            !signatureSuccess &&
+            !chooseAuthMode &&
+            !authenticating &&
+            !lnurlAuthSuccess;
 
         const LndHubAuthMode = () => (
             <DropdownSetting
@@ -279,68 +274,74 @@ export default class LnurlAuth extends React.Component<
                     >
                         {domain}
                     </Text>
-                </View>
-                {this.state.chooseAuthMode && (
-                    <View style={styles.content}>
-                        <View style={styles.dropdown}>
-                            <LndHubAuthMode />
-                        </View>
-                    </View>
-                )}
-                <View style={styles.content}>
-                    <View style={styles.button}>
-                        <Button
-                            title={localeString('views.LnurlAuth.login')}
-                            icon={{
-                                name: 'vpn-key',
-                                size: 25,
-                                color: 'white'
-                            }}
-                            onPress={async () => {
-                                if (chooseAuthMode && !signatureSuccess) {
-                                    this.setState({ chooseAuthMode: false });
-                                    await this.triggerSign();
-                                    this.sendValues();
-                                } else {
-                                    this.sendValues();
-                                }
-                            }}
-                            style={styles.button}
-                            disabled={
-                                (!signatureSuccess && !chooseAuthMode) ||
-                                authenticating
-                            }
-                            buttonStyle={{
-                                backgroundColor: 'orange',
-                                borderRadius: 30
-                            }}
-                        />
-                    </View>
 
-                    <View style={styles.content}>
-                        {(preparingSignature || authenticating) && (
-                            <LightningIndicator />
-                        )}
-                        {lnurlAuthSuccess && (
-                            <SuccessMessage
-                                message={localeString(
-                                    'views.LnurlAuth.loginSuccess'
-                                )}
-                            />
-                        )}
-                        {!preparingSignature &&
-                            !signatureSuccess &&
-                            !chooseAuthMode &&
-                            !authenticating &&
-                            !lnurlAuthSuccess && (
-                                <ErrorMessage
-                                    message={
-                                        errorMsgAuth ||
-                                        localeString('general.error')
-                                    }
-                                />
+                    {this.state.chooseAuthMode && (
+                        <View style={styles.content}>
+                            <View style={styles.dropdown}>
+                                <LndHubAuthMode />
+                            </View>
+                        </View>
+                    )}
+                    {(preparingSignature || authenticating) && (
+                        <LightningIndicator />
+                    )}
+                    {lnurlAuthSuccess && (
+                        <SuccessMessage
+                            message={localeString(
+                                'views.LnurlAuth.loginSuccess'
                             )}
-                    </View>
+                        />
+                    )}
+                    {hasError && (
+                        <ErrorMessage
+                            message={
+                                errorMsgAuth || localeString('general.error')
+                            }
+                        />
+                    )}
+                </View>
+
+                <View style={{ marginBottom: 15 }}>
+                    {(hasError || lnurlAuthSuccess) && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('general.goBack')}
+                                onPress={() => {
+                                    navigation.navigate('Wallet');
+                                }}
+                            />
+                        </View>
+                    )}
+                    {!hasError && !lnurlAuthSuccess && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.LnurlAuth.login')}
+                                icon={{
+                                    name: 'vpn-key',
+                                    size: 25,
+                                    color: 'white'
+                                }}
+                                onPress={async () => {
+                                    if (chooseAuthMode && !signatureSuccess) {
+                                        this.setState({
+                                            chooseAuthMode: false
+                                        });
+                                        await this.triggerSign();
+                                        this.sendValues();
+                                    } else {
+                                        this.sendValues();
+                                    }
+                                }}
+                                disabled={
+                                    (!signatureSuccess && !chooseAuthMode) ||
+                                    authenticating
+                                }
+                                buttonStyle={{
+                                    backgroundColor: themeColor('highlight')
+                                }}
+                            />
+                        </View>
+                    )}
                 </View>
             </Screen>
         );
@@ -349,6 +350,7 @@ export default class LnurlAuth extends React.Component<
 
 const styles = StyleSheet.create({
     content: {
+        flex: 1,
         paddingLeft: 20,
         paddingRight: 20
     },

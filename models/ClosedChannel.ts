@@ -3,18 +3,11 @@ import Channel from './Channel';
 import { lnrpc } from '../proto/lightning';
 
 export default class ClosedChannel extends Channel {
-    chain_hash: string;
-    closing_tx_hash: string;
     close_height: number;
-    settled_balance: string;
     time_lock_balance: string;
     close_time: number;
-    open_initiator: any;
-    close_initiator: any;
     resolutions: any;
-    remote_node_pub: string;
     close_type: string;
-    closing_txid: string;
 
     @computed
     public get localBalance(): string {

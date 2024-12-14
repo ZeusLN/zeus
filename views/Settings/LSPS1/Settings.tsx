@@ -343,14 +343,14 @@ export default class LSPS1Settings extends React.Component<
                             </ListItem>
                         )}
                         keyExtractor={(item, index) => `${item.label}-${index}`}
-                        ItemSeparatorComponent={
+                        ItemSeparatorComponent={() => (
                             <View
                                 style={{
                                     height: 1,
                                     backgroundColor: themeColor('separator')
                                 }}
                             />
-                        }
+                        )}
                     />
                 </View>
             </Screen>

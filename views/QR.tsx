@@ -2,56 +2,78 @@ import * as React from 'react';
 import { Dimensions, View } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { inject, observer } from 'mobx-react';
 
 import CollapsedQR from '../components/CollapsedQR';
 import Header from '../components/Header';
 import Screen from '../components/Screen';
 import Text from '../components/Text';
 
+import SettingsStore from '../stores/SettingsStore';
+
 import { themeColor } from '../utils/ThemeUtils';
 
 interface QRProps {
     navigation: StackNavigationProp<any, any>;
+    SettingsStore?: SettingsStore;
     route: Route<
         'QR',
         {
             value: string;
+            copyValue: string;
             label: string;
             hideText: boolean;
             jumboLabel: boolean;
             logo: any;
+            satAmount?: string | number;
         }
     >;
 }
 
 interface QRState {
     value: string;
+    copyValue: string;
     label: string;
     hideText: boolean;
     jumboLabel: boolean;
     logo: any;
+    satAmount?: string | number;
 }
 
+@inject('SettingsStore')
+@observer
 export default class QR extends React.PureComponent<QRProps, QRState> {
     constructor(props: QRProps) {
         super(props);
 
         const value = props.route.params?.value ?? '';
+        const copyValue = props.route.params?.copyValue ?? '';
         const label = props.route.params?.label ?? '';
         const { hideText, jumboLabel, logo } = props.route.params ?? {};
+        const satAmount = props.route.params?.satAmount ?? undefined;
 
         this.state = {
             value,
+            copyValue,
             label,
             hideText,
             jumboLabel,
-            logo
+            logo,
+            satAmount
         };
     }
 
     render() {
         const { navigation } = this.props;
-        const { value, label, hideText, jumboLabel, logo } = this.state;
+        const {
+            value,
+            copyValue,
+            label,
+            hideText,
+            jumboLabel,
+            logo,
+            satAmount
+        } = this.state;
 
         const { fontScale } = Dimensions.get('window');
 
@@ -66,8 +88,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                 />
                 <View
                     style={{
-                        top: 5,
-                        padding: 15,
+                        paddingHorizontal: 15,
                         alignItems: 'center'
                     }}
                 >
@@ -85,10 +106,16 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                     )}
                     <CollapsedQR
                         value={value}
+                        copyValue={copyValue || value}
                         expanded
                         textBottom
                         hideText={hideText}
                         logo={logo}
+                        satAmount={satAmount}
+                        displayAmount={
+                            this.props.SettingsStore?.settings?.invoices
+                                ?.displayAmountOnInvoice || false
+                        }
                     />
                 </View>
             </Screen>

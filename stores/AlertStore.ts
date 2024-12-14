@@ -1,4 +1,5 @@
 import { action, reaction, observable } from 'mobx';
+// @ts-ignore:next-line
 import Ping from 'react-native-ping';
 
 import SettingsStore from './SettingsStore';

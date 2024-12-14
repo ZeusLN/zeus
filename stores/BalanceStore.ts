@@ -13,7 +13,7 @@ export default class BalanceStore {
     @observable public loadingBlockchainBalance = false;
     @observable public loadingLightningBalance = false;
     @observable public error = false;
-    @observable public pendingOpenBalance: number | string;
+    @observable public pendingOpenBalance: number | string | any;
     @observable public lightningBalance: number | string;
     @observable public otherAccounts: any = {};
     settingsStore: SettingsStore;
@@ -25,8 +25,8 @@ export default class BalanceStore {
             () => this.settingsStore.settings,
             () => {
                 if (this.settingsStore.hasCredentials()) {
-                    this.getBlockchainBalance();
-                    this.getLightningBalance();
+                    this.getBlockchainBalance(false, false);
+                    this.getLightningBalance(false);
                 }
             }
         );
@@ -147,8 +147,8 @@ export default class BalanceStore {
     @action
     public getCombinedBalance = async (reset: boolean = false) => {
         if (reset) this.reset();
-        const lightning = await this.getLightningBalance();
-        const onChain = await this.getBlockchainBalance();
+        const lightning = await this.getLightningBalance(false);
+        const onChain = await this.getBlockchainBalance(false, false);
 
         // LN
         this.pendingOpenBalance =

@@ -34,6 +34,7 @@ import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 import Sweep from './views/Sweep';
+import OnChainAddresses from './views/OnChainAddresses';
 
 import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
@@ -44,8 +45,8 @@ import ContactQR from './views/ContactQR';
 
 // Settings views
 import Settings from './views/Settings/Settings';
-import NodeConfiguration from './views/Settings/NodeConfiguration';
-import Nodes from './views/Settings/Nodes';
+import WalletConfiguration from './views/Settings/WalletConfiguration';
+import Wallets from './views/Settings/Wallets';
 import Privacy from './views/Settings/Privacy';
 import Security from './views/Settings/Security';
 import SetPassword from './views/Settings/SetPassword';
@@ -76,7 +77,8 @@ import PaymentsSettings from './views/Settings/PaymentsSettings';
 import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
-import SetNodePicture from './views/Settings/SetNodePicture';
+import SetWalletPicture from './views/Settings/SetWalletPicture';
+import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
 // Lightning address
 import LightningAddress from './views/Settings/LightningAddress';
@@ -105,6 +107,8 @@ import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
 import Advanced from './views/Settings/EmbeddedNode/Advanced';
+import AdvancedRescan from './views/Settings/EmbeddedNode/AdvancedRescan';
+import Troubleshooting from './views/Settings/EmbeddedNode/Troubleshooting';
 
 // Routing
 import Routing from './views/Routing/Routing';
@@ -243,6 +247,7 @@ export default class App extends React.PureComponent {
                                                         );
                                                     }
                                                 }}
+                                                // @ts-ignore:next-line
                                                 theme={{
                                                     dark: true,
                                                     colors: {
@@ -294,580 +299,604 @@ export default class App extends React.PureComponent {
                                                     })}
                                                 >
                                                     <Stack.Screen
-                                                        name="Wallet"
+                                                        name="Wallet" // @ts-ignore:next-line
                                                         component={Wallet}
                                                     />
                                                     <Stack.Screen
-                                                        name="IntroSplash"
+                                                        name="IntroSplash" // @ts-ignore:next-line
                                                         component={IntroSplash}
                                                     />
                                                     <Stack.Screen
-                                                        name="Intro"
+                                                        name="Intro" // @ts-ignore:next-line
                                                         component={Intro}
                                                     />
                                                     <Stack.Screen
-                                                        name="Lockscreen"
+                                                        name="Lockscreen" // @ts-ignore:next-line
                                                         component={Lockscreen}
                                                     />
                                                     <Stack.Screen
-                                                        name="Accounts"
+                                                        name="Accounts" // @ts-ignore:next-line
                                                         component={Accounts}
                                                     />
                                                     <Stack.Screen
-                                                        name="Send"
-                                                        component={Send}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="Sweep"
-                                                        component={Sweep}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="EditFee"
-                                                        component={EditFee}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="Menu"
-                                                        component={Menu}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="Settings"
-                                                        component={Settings}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="Tools"
-                                                        component={Tools}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="NodeConfiguration"
+                                                        name="ChoosePaymentMethod" // @ts-ignore:next-line
                                                         component={
-                                                            NodeConfiguration
+                                                            ChoosePaymentMethod
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Nodes"
-                                                        component={Nodes}
+                                                        name="Send" // @ts-ignore:next-line
+                                                        component={Send}
                                                     />
                                                     <Stack.Screen
-                                                        name="Privacy"
+                                                        name="Sweep" // @ts-ignore:next-line
+                                                        component={Sweep}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="EditFee" // @ts-ignore:next-line
+                                                        component={EditFee}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Menu" // @ts-ignore:next-line
+                                                        component={Menu}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Settings" // @ts-ignore:next-line
+                                                        component={Settings}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Tools" // @ts-ignore:next-line
+                                                        component={Tools}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WalletConfiguration" // @ts-ignore:next-line
+                                                        component={
+                                                            WalletConfiguration
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Wallets" // @ts-ignore:next-line
+                                                        component={Wallets}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Privacy" // @ts-ignore:next-line
                                                         component={Privacy}
                                                     />
                                                     <Stack.Screen
-                                                        name="Security"
+                                                        name="Security" // @ts-ignore:next-line
                                                         component={Security}
                                                     />
                                                     <Stack.Screen
-                                                        name="SetPassword"
+                                                        name="SetPassword" // @ts-ignore:next-line
                                                         component={SetPassword}
                                                     />
                                                     <Stack.Screen
-                                                        name="SetDuressPassword"
+                                                        name="SetDuressPassword" // @ts-ignore:next-line
                                                         component={
                                                             SetDuressPassword
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SetPin"
+                                                        name="SetPin" // @ts-ignore:next-line
                                                         component={SetPin}
                                                     />
                                                     <Stack.Screen
-                                                        name="SetDuressPin"
+                                                        name="SetDuressPin" // @ts-ignore:next-line
                                                         component={SetDuressPin}
                                                     />
                                                     <Stack.Screen
-                                                        name="Language"
+                                                        name="Language" // @ts-ignore:next-line
                                                         component={Language}
                                                     />
                                                     <Stack.Screen
-                                                        name="Currency"
+                                                        name="Currency" // @ts-ignore:next-line
                                                         component={Currency}
                                                     />
                                                     <Stack.Screen
-                                                        name="SelectCurrency"
+                                                        name="SelectCurrency" // @ts-ignore:next-line
                                                         component={
                                                             SelectCurrency
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Display"
+                                                        name="Display" // @ts-ignore:next-line
                                                         component={Display}
                                                     />
                                                     <Stack.Screen
-                                                        name="Support"
+                                                        name="Support" // @ts-ignore:next-line
                                                         component={Support}
                                                     />
                                                     <Stack.Screen
-                                                        name="Help"
+                                                        name="Help" // @ts-ignore:next-line
                                                         component={Help}
                                                     />
                                                     <Stack.Screen
-                                                        name="Sponsors"
+                                                        name="Sponsors" // @ts-ignore:next-line
                                                         component={Sponsors}
                                                     />
                                                     <Stack.Screen
-                                                        name="Olympians"
+                                                        name="Olympians" // @ts-ignore:next-line
                                                         component={Olympians}
                                                     />
                                                     <Stack.Screen
-                                                        name="Gods"
+                                                        name="Gods" // @ts-ignore:next-line
                                                         component={Gods}
                                                     />
                                                     <Stack.Screen
-                                                        name="Mortals"
+                                                        name="Mortals" // @ts-ignore:next-line
                                                         component={Mortals}
                                                     />
                                                     <Stack.Screen
-                                                        name="CertInstallInstructions"
+                                                        name="CertInstallInstructions" // @ts-ignore:next-line
                                                         component={
                                                             CertInstallInstructions
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SignVerifyMessage"
+                                                        name="SignVerifyMessage" // @ts-ignore:next-line
                                                         component={
                                                             SignVerifyMessage
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Transaction"
+                                                        name="Transaction" // @ts-ignore:next-line
                                                         component={Transaction}
                                                     />
                                                     <Stack.Screen
-                                                        name="Channel"
+                                                        name="Channel" // @ts-ignore:next-line
                                                         component={Channel}
                                                     />
                                                     <Stack.Screen
-                                                        name="Payment"
+                                                        name="Payment" // @ts-ignore:next-line
                                                         component={Payment}
                                                     />
                                                     <Stack.Screen
-                                                        name="PaymentPaths"
+                                                        name="PaymentPaths" // @ts-ignore:next-line
                                                         component={PaymentPaths}
                                                     />
                                                     <Stack.Screen
-                                                        name="Invoice"
+                                                        name="Invoice" // @ts-ignore:next-line
                                                         component={Invoice}
                                                     />
                                                     <Stack.Screen
-                                                        name="LnurlPay"
+                                                        name="LnurlPay" // @ts-ignore:next-line
                                                         component={LnurlPay}
                                                     />
                                                     <Stack.Screen
-                                                        name="Receive"
+                                                        name="Receive" // @ts-ignore:next-line
                                                         component={Receive}
                                                     />
                                                     <Stack.Screen
-                                                        name="LnurlChannel"
+                                                        name="LnurlChannel" // @ts-ignore:next-line
                                                         component={LnurlChannel}
                                                     />
                                                     <Stack.Screen
-                                                        name="LnurlAuth"
+                                                        name="LnurlAuth" // @ts-ignore:next-line
                                                         component={LnurlAuth}
                                                     />
                                                     <Stack.Screen
-                                                        name="PaymentRequest"
+                                                        name="PaymentRequest" // @ts-ignore:next-line
                                                         component={
                                                             PaymentRequest
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="OpenChannel"
+                                                        name="OpenChannel" // @ts-ignore:next-line
                                                         component={OpenChannel}
                                                     />
                                                     <Stack.Screen
-                                                        name="SendingOnChain"
+                                                        name="SendingOnChain" // @ts-ignore:next-line
                                                         component={
                                                             SendingOnChain
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SendingLightning"
+                                                        name="SendingLightning" // @ts-ignore:next-line
                                                         component={
                                                             SendingLightning
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="NetworkInfo"
+                                                        name="NetworkInfo" // @ts-ignore:next-line
                                                         component={NetworkInfo}
                                                     />
                                                     <Stack.Screen
-                                                        name="NodeInfo"
+                                                        name="NodeInfo" // @ts-ignore:next-line
                                                         component={NodeInfo}
                                                     />
                                                     <Stack.Screen
-                                                        name="Routing"
+                                                        name="Routing" // @ts-ignore:next-line
                                                         component={Routing}
                                                     />
                                                     <Stack.Screen
-                                                        name="RoutingEvent"
+                                                        name="RoutingEvent" // @ts-ignore:next-line
                                                         component={RoutingEvent}
                                                     />
                                                     <Stack.Screen
-                                                        name="SetFees"
+                                                        name="SetFees" // @ts-ignore:next-line
                                                         component={SetFees}
                                                     />
                                                     <Stack.Screen
-                                                        name="Activity"
+                                                        name="Activity" // @ts-ignore:next-line
                                                         component={Activity}
                                                     />
                                                     <Stack.Screen
-                                                        name="ActivityFilter"
+                                                        name="ActivityFilter" // @ts-ignore:next-line
                                                         component={
                                                             ActivityFilter
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="CoinControl"
+                                                        name="CoinControl" // @ts-ignore:next-line
                                                         component={CoinControl}
                                                     />
                                                     <Stack.Screen
-                                                        name="Utxo"
+                                                        name="Utxo" // @ts-ignore:next-line
                                                         component={Utxo}
                                                     />
                                                     <Stack.Screen
-                                                        name="ImportAccount"
+                                                        name="ImportAccount" // @ts-ignore:next-line
                                                         component={
                                                             ImportAccount
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ImportingAccount"
+                                                        name="ImportingAccount" // @ts-ignore:next-line
                                                         component={
                                                             ImportingAccount
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="HandleAnythingQRScanner"
+                                                        name="HandleAnythingQRScanner" // @ts-ignore:next-line
                                                         component={
                                                             HandleAnythingQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="NodeQRCodeScanner"
+                                                        name="NodeQRCodeScanner" // @ts-ignore:next-line
                                                         component={
                                                             NodeQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SparkQRScanner"
+                                                        name="SparkQRScanner" // @ts-ignore:next-line
                                                         component={
                                                             SparkQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Order"
+                                                        name="Order" // @ts-ignore:next-line
                                                         component={Order}
                                                     />
                                                     <Stack.Screen
-                                                        name="PointOfSaleSettings"
+                                                        name="PointOfSaleSettings" // @ts-ignore:next-line
                                                         component={PointOfSale}
                                                     />
                                                     <Stack.Screen
-                                                        name="PointOfSaleRecon"
+                                                        name="PointOfSaleRecon" // @ts-ignore:next-line
                                                         component={
                                                             PointOfSaleRecon
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="PointOfSaleReconExport"
+                                                        name="PointOfSaleReconExport" // @ts-ignore:next-line
                                                         component={
                                                             PointOfSaleReconExport
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Categories"
+                                                        name="Categories" // @ts-ignore:next-line
                                                         component={Categories}
                                                     />
                                                     <Stack.Screen
-                                                        name="ProductCategoryDetails"
+                                                        name="ProductCategoryDetails" // @ts-ignore:next-line
                                                         component={
                                                             ProductCategoryDetails
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Products"
+                                                        name="Products" // @ts-ignore:next-line
                                                         component={Products}
                                                     />
                                                     <Stack.Screen
-                                                        name="ProductDetails"
+                                                        name="ProductDetails" // @ts-ignore:next-line
                                                         component={
                                                             ProductDetails
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="PaymentsSettings"
+                                                        name="PaymentsSettings" // @ts-ignore:next-line
                                                         component={
                                                             PaymentsSettings
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="InvoicesSettings"
+                                                        name="InvoicesSettings" // @ts-ignore:next-line
                                                         component={
                                                             InvoicesSettings
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Seed"
+                                                        name="Seed" // @ts-ignore:next-line
                                                         component={Seed}
                                                     />
                                                     <Stack.Screen
-                                                        name="SeedRecovery"
+                                                        name="SeedRecovery" // @ts-ignore:next-line
                                                         component={SeedRecovery}
                                                     />
                                                     <Stack.Screen
-                                                        name="Sync"
+                                                        name="Sync" // @ts-ignore:next-line
                                                         component={Sync}
                                                     />
                                                     <Stack.Screen
-                                                        name="SyncRecovery"
+                                                        name="SyncRecovery" // @ts-ignore:next-line
                                                         component={SyncRecovery}
                                                     />
                                                     <Stack.Screen
-                                                        name="BumpFee"
+                                                        name="BumpFee" // @ts-ignore:next-line
                                                         component={BumpFee}
                                                     />
                                                     <Stack.Screen
-                                                        name="QR"
+                                                        name="QR" // @ts-ignore:next-line
                                                         component={QR}
                                                     />
                                                     <Stack.Screen
-                                                        name="AddNotes"
+                                                        name="AddNotes" // @ts-ignore:next-line
                                                         component={AddNotes}
                                                     />
                                                     <Stack.Screen
-                                                        name="LspExplanationFees"
+                                                        name="LspExplanationFees" // @ts-ignore:next-line
                                                         component={
                                                             LspExplanationFees
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LspExplanationRouting"
+                                                        name="LspExplanationRouting" // @ts-ignore:next-line
                                                         component={
                                                             LspExplanationRouting
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LspExplanationWrappedInvoices"
+                                                        name="LspExplanationWrappedInvoices" // @ts-ignore:next-line
                                                         component={
                                                             LspExplanationWrappedInvoices
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LspExplanationOverview"
+                                                        name="LspExplanationOverview" // @ts-ignore:next-line
                                                         component={
                                                             LspExplanationOverview
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="EmbeddedNodeSettings"
+                                                        name="EmbeddedNodeSettings" // @ts-ignore:next-line
                                                         component={EmbeddedNode}
                                                     />
                                                     <Stack.Screen
-                                                        name="DisasterRecovery"
+                                                        name="DisasterRecovery" // @ts-ignore:next-line
                                                         component={
                                                             DisasterRecovery
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="DisasterRecoveryAdvanced"
+                                                        name="DisasterRecoveryAdvanced" // @ts-ignore:next-line
                                                         component={
                                                             DisasterRecoveryAdvanced
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Pathfinding"
+                                                        name="Pathfinding" // @ts-ignore:next-line
                                                         component={Pathfinding}
                                                     />
                                                     <Stack.Screen
-                                                        name="ExpressGraphSync"
+                                                        name="ExpressGraphSync" // @ts-ignore:next-line
                                                         component={
                                                             ExpressGraphSync
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LNDLogs"
+                                                        name="LNDLogs" // @ts-ignore:next-line
                                                         component={LNDLogs}
                                                     />
                                                     <Stack.Screen
-                                                        name="Peers"
+                                                        name="Peers" // @ts-ignore:next-line
                                                         component={Peers}
                                                     />
                                                     <Stack.Screen
-                                                        name="NeutrinoPeers"
+                                                        name="NeutrinoPeers" // @ts-ignore:next-line
                                                         component={
                                                             NeutrinoPeers
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ZeroConfPeers"
+                                                        name="ZeroConfPeers" // @ts-ignore:next-line
                                                         component={
                                                             ZeroConfPeers
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="EmbeddedNodeSettingsAdvanced"
+                                                        name="EmbeddedNodeSettingsAdvanced" // @ts-ignore:next-line
                                                         component={Advanced}
                                                     />
                                                     <Stack.Screen
-                                                        name="LSPSettings"
+                                                        name="EmbeddedNodeTroubleshooting" // @ts-ignore:next-line
+                                                        component={
+                                                            Troubleshooting
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AdvancedRescan" // @ts-ignore:next-line
+                                                        component={
+                                                            AdvancedRescan
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LSPSettings" // @ts-ignore:next-line
                                                         component={LSP}
                                                     />
                                                     <Stack.Screen
-                                                        name="LightningAddress"
+                                                        name="LightningAddress" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddress
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LightningAddressInfo"
+                                                        name="LightningAddressInfo" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddressInfo
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LightningAddressSettings"
+                                                        name="LightningAddressSettings" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddressSettings
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Attestations"
+                                                        name="Attestations" // @ts-ignore:next-line
                                                         component={Attestations}
                                                     />
                                                     <Stack.Screen
-                                                        name="Attestation"
+                                                        name="Attestation" // @ts-ignore:next-line
                                                         component={Attestation}
                                                     />
                                                     <Stack.Screen
-                                                        name="Contacts"
+                                                        name="Contacts" // @ts-ignore:next-line
                                                         component={Contacts}
                                                     />
                                                     <Stack.Screen
-                                                        name="AddContact"
+                                                        name="AddContact" // @ts-ignore:next-line
                                                         component={AddContact}
                                                     />
                                                     <Stack.Screen
-                                                        name="ContactDetails"
+                                                        name="ContactDetails" // @ts-ignore:next-line
                                                         component={
                                                             ContactDetails
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="NostrKeys"
+                                                        name="NostrKeys" // @ts-ignore:next-line
                                                         component={NostrKeys}
                                                     />
                                                     <Stack.Screen
-                                                        name="NostrRelays"
+                                                        name="NostrRelays" // @ts-ignore:next-line
                                                         component={NostrRelays}
                                                     />
                                                     <Stack.Screen
-                                                        name="ChangeAddress"
+                                                        name="ChangeAddress" // @ts-ignore:next-line
                                                         component={
                                                             ChangeAddress
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="PayCodes"
+                                                        name="PayCodes" // @ts-ignore:next-line
                                                         component={PayCodes}
                                                     />
                                                     <Stack.Screen
-                                                        name="PayCode"
+                                                        name="PayCode" // @ts-ignore:next-line
                                                         component={PayCode}
                                                     />
                                                     <Stack.Screen
-                                                        name="CreatePayCode"
+                                                        name="CreatePayCode" // @ts-ignore:next-line
                                                         component={
                                                             CreatePayCode
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Bolt12Address"
+                                                        name="Bolt12Address" // @ts-ignore:next-line
                                                         component={
                                                             Bolt12Address
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SocialMedia"
+                                                        name="SocialMedia" // @ts-ignore:next-line
                                                         component={SocialMedia}
                                                     />
                                                     <Stack.Screen
-                                                        name="NostrContacts"
+                                                        name="NostrContacts" // @ts-ignore:next-line
                                                         component={
                                                             NostrContacts
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ContactQR"
+                                                        name="ContactQR" // @ts-ignore:next-line
                                                         component={ContactQR}
                                                     />
                                                     <Stack.Screen
-                                                        name="CurrencyConverter"
+                                                        name="CurrencyConverter" // @ts-ignore:next-line
                                                         component={
                                                             CurrencyConverter
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ChannelsSettings"
+                                                        name="ChannelsSettings" // @ts-ignore:next-line
                                                         component={
                                                             ChannelsSettings
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="RawTxHex"
+                                                        name="RawTxHex" // @ts-ignore:next-line
                                                         component={RawTxHex}
                                                     />
                                                     <Stack.Screen
-                                                        name="RestoreChannelBackups"
+                                                        name="RestoreChannelBackups" // @ts-ignore:next-line
                                                         component={
                                                             RestoreChannelBackups
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="SetNodePicture"
+                                                        name="SetWalletPicture" // @ts-ignore:next-line
                                                         component={
-                                                            SetNodePicture
+                                                            SetWalletPicture
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="CustodialWalletWarning"
+                                                        name="CustodialWalletWarning" // @ts-ignore:next-line
                                                         component={
                                                             CustodialWalletWarning
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="PSBT"
+                                                        name="PSBT" // @ts-ignore:next-line
                                                         component={PSBT}
                                                     />
                                                     <Stack.Screen
-                                                        name="TxHex"
+                                                        name="TxHex" // @ts-ignore:next-line
                                                         component={TxHex}
                                                     />
                                                     <Stack.Screen
-                                                        name="LSPServicesList"
+                                                        name="LSPServicesList" // @ts-ignore:next-line
                                                         component={
                                                             LSPServicesList
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LSPS1"
+                                                        name="LSPS1" // @ts-ignore:next-line
                                                         component={LSPS1}
                                                     />
                                                     <Stack.Screen
-                                                        name="LSPS1Settings"
+                                                        name="LSPS1Settings" // @ts-ignore:next-line
                                                         component={
                                                             LSPS1Settings
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="OrdersPane"
+                                                        name="OrdersPane" // @ts-ignore:next-line
                                                         component={OrdersPane}
                                                     />
                                                     <Stack.Screen
-                                                        name="LSPS1Order"
+                                                        name="LSPS1Order" // @ts-ignore:next-line
                                                         component={Orders}
                                                     />
                                                     <Stack.Screen
-                                                        name="PendingHTLCs"
+                                                        name="PendingHTLCs" // @ts-ignore:next-line
                                                         component={PendingHTLCs}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="OnChainAddresses" // @ts-ignore:next-line
+                                                        component={
+                                                            OnChainAddresses
+                                                        }
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
@@ -875,9 +904,13 @@ export default class App extends React.PureComponent {
                                     )}
                                 </Observer>
                             </SafeAreaView>
+                            {/* @ts-ignore:next-line */}
                             <AlertModal />
+                            {/* @ts-ignore:next-line */}
                             <ExternalLinkModal />
+                            {/* @ts-ignore:next-line */}
                             <AndroidNfcModal />
+                            {/* @ts-ignore:next-line */}
                             <InfoModal />
                         </GestureHandlerRootView>
                     </PushNotificationManager>

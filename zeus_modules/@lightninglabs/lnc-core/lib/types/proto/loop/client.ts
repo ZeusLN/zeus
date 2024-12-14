@@ -108,6 +108,11 @@ export enum FailureReason {
      * wasn't published due to insufficient confirmed balance.
      */
     FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE = 'FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE',
+    /**
+     * FAILURE_REASON_INCORRECT_HTLC_AMT_SWEPT - FAILURE_REASON_INCORRECT_HTLC_AMT_SWEPT indicates that a swap
+     * wasn't published due to insufficient confirmed balance.
+     */
+    FAILURE_REASON_INCORRECT_HTLC_AMT_SWEPT = 'FAILURE_REASON_INCORRECT_HTLC_AMT_SWEPT',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -283,6 +288,19 @@ export interface LoopOutRequest {
      * associated sweep batched.
      */
     isExternalAddr: boolean;
+    /**
+     * The reservations to use for the swap. If this field is set, loop will try
+     * to use the instant out flow using the given reservations. If the
+     * reservations are not sufficient, the swap will fail. The swap amount must
+     * be equal to the sum of the amounts of the reservations.
+     */
+    reservationIds: Uint8Array | string[];
+    /**
+     * The timeout in seconds to use for off-chain payments. Note that the swap
+     * payment is attempted multiple times where each attempt will set this value
+     * as the timeout for the payment.
+     */
+    paymentTimeout: number;
 }
 
 export interface LoopInRequest {
@@ -592,10 +610,10 @@ export interface TokensRequest {}
 
 export interface TokensResponse {
     /** List of all tokens the daemon knows of, including old/expired tokens. */
-    tokens: LsatToken[];
+    tokens: L402Token[];
 }
 
-export interface LsatToken {
+export interface L402Token {
     /** The base macaroon that was baked by the auth server. */
     baseMacaroon: Uint8Array | string;
     /** The payment hash of the payment that was paid to obtain the token. */
@@ -887,11 +905,73 @@ export interface ClientReservation {
     /** The amount that the reservation is for. */
     amount: string;
     /** The transaction id of the reservation. */
-    txId: Uint8Array | string;
+    txId: string;
     /** The vout of the reservation. */
     vout: number;
     /** The expiry of the reservation. */
     expiry: number;
+}
+
+export interface InstantOutRequest {
+    /** The reservations to use for the swap. */
+    reservationIds: Uint8Array | string[];
+    /**
+     * A restriction on the channel set that may be used to loop out. The actual
+     * channel(s) that will be used are selected based on the lowest routing fee
+     * for the swap payment to the server.
+     */
+    outgoingChanSet: string[];
+    /**
+     * An optional address to sweep the onchain funds to. If not set, the funds
+     * will be swept to the wallet's internal address.
+     */
+    destAddr: string;
+}
+
+export interface InstantOutResponse {
+    /** The hash of the swap preimage. */
+    instantOutHash: Uint8Array | string;
+    /** The transaction id of the sweep transaction. */
+    sweepTxId: string;
+    /** The state of the swap. */
+    state: string;
+}
+
+export interface InstantOutQuoteRequest {
+    /** The amount to swap in satoshis. */
+    amt: string;
+    /** The amount of reservations to use for the swap. */
+    numReservations: number;
+}
+
+export interface InstantOutQuoteResponse {
+    /** The fee that the swap service is charging for the swap. */
+    serviceFeeSat: string;
+    /**
+     * The estimated on-chain fee that needs to be paid to publish the Sweepless
+     * Sweep.
+     */
+    sweepFeeSat: string;
+}
+
+export interface ListInstantOutsRequest {}
+
+export interface ListInstantOutsResponse {
+    /** The list of all currently known instant out swaps and their status. */
+    swaps: InstantOut[];
+}
+
+export interface InstantOut {
+    /** The swap hash that identifies this swap. */
+    swapHash: Uint8Array | string;
+    /** The state the swap is in. */
+    state: string;
+    /** The amount of the swap. */
+    amount: string;
+    /** The used reservations for the swap. */
+    reservationIds: Uint8Array | string[];
+    /** The sweep transaction id of the swap. */
+    sweepTxId: string;
 }
 
 /**
@@ -980,7 +1060,17 @@ export interface SwapClient {
     probe(request?: DeepPartial<ProbeRequest>): Promise<ProbeResponse>;
     /**
      * loop: `listauth`
-     * GetLsatTokens returns all LSAT tokens the daemon ever paid for.
+     * GetL402Tokens returns all L402 tokens the daemon ever paid for.
+     */
+    getL402Tokens(
+        request?: DeepPartial<TokensRequest>
+    ): Promise<TokensResponse>;
+    /**
+     * Deprecated: use GetL402Tokens.
+     * This API is provided to maintain backward compatibility with gRPC clients
+     * (e.g. `loop listauth`, Terminal Web, RTL).
+     * Type LsatToken used by GetLsatTokens in the past was renamed to L402Token,
+     * but this does not affect binary encoding, so we can use type L402Token here.
      */
     getLsatTokens(
         request?: DeepPartial<TokensRequest>
@@ -1026,6 +1116,29 @@ export interface SwapClient {
     listReservations(
         request?: DeepPartial<ListReservationsRequest>
     ): Promise<ListReservationsResponse>;
+    /**
+     * loop: `instantout`
+     * InstantOut initiates an instant out swap with the given parameters.
+     */
+    instantOut(
+        request?: DeepPartial<InstantOutRequest>
+    ): Promise<InstantOutResponse>;
+    /**
+     * loop: `instantoutquote`
+     * InstantOutQuote returns a quote for an instant out swap with the provided
+     * parameters.
+     */
+    instantOutQuote(
+        request?: DeepPartial<InstantOutQuoteRequest>
+    ): Promise<InstantOutQuoteResponse>;
+    /**
+     * loop: `listinstantouts`
+     * ListInstantOuts returns a list of all currently known instant out swaps and
+     * their current status.
+     */
+    listInstantOuts(
+        request?: DeepPartial<ListInstantOutsRequest>
+    ): Promise<ListInstantOutsResponse>;
 }
 
 type Builtin =

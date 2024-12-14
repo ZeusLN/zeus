@@ -18,19 +18,26 @@ import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
+import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import {
+    SATS_PER_BTC,
+    numberWithCommas,
+    numberWithDecimals
+} from '../../utils/UnitsUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
-import { SATS_PER_BTC } from '../../stores/UnitsStore';
+import NotesStore from '../../stores/NotesStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
+import ActivityToCsv from './ActivityToCsv';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -38,14 +45,16 @@ interface ActivityProps {
     FiatStore: FiatStore;
     PosStore: PosStore;
     SettingsStore: SettingsStore;
+    NotesStore: NotesStore;
     route: Route<'Activity', { order: any }>;
 }
 
 interface ActivityState {
     selectedPaymentForOrder: any;
+    isCsvModalVisible: boolean;
 }
 
-@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore')
+@inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
 @observer
 export default class Activity extends React.PureComponent<
     ActivityProps,
@@ -55,7 +64,8 @@ export default class Activity extends React.PureComponent<
     invoicesListener: any;
 
     state = {
-        selectedPaymentForOrder: null
+        selectedPaymentForOrder: null,
+        isCsvModalVisible: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -141,7 +151,7 @@ export default class Activity extends React.PureComponent<
             SettingsStore,
             route
         } = this.props;
-        const { selectedPaymentForOrder } = this.state;
+        const { selectedPaymentForOrder, isCsvModalVisible } = this.state;
 
         const { loading, filteredActivity, getActivityAndFilter } =
             ActivityStore;
@@ -176,16 +186,26 @@ export default class Activity extends React.PureComponent<
                         .multipliedBy(SATS_PER_BTC)
                         .toFixed(3);
 
-                    const fiatEntry = FiatStore.fiatRates.filter(
-                        (entry: any) => entry.code === fiat
-                    )[0];
+                    const { fiatRates } = FiatStore;
 
-                    const { symbol, space, rtl, separatorSwap } =
-                        FiatStore.symbolLookup(fiatEntry && fiatEntry.code);
+                    const fiatEntry =
+                        fiatRates &&
+                        fiatRates.filter(
+                            (entry: any) => entry.code === fiat
+                        )[0];
+
+                    const { symbol, space, rtl, separatorSwap } = fiatEntry
+                        ? FiatStore.symbolLookup(fiatEntry.code)
+                        : {
+                              symbol: 'N/A',
+                              space: true,
+                              rtl: false,
+                              separatorSwap: false
+                          };
 
                     const formattedRate = separatorSwap
-                        ? FiatStore.numberWithDecimals(rate)
-                        : FiatStore.numberWithCommas(rate);
+                        ? numberWithDecimals(rate)
+                        : numberWithCommas(rate);
 
                     const exchangeRate = rtl
                         ? `${formattedRate}${
@@ -221,8 +241,31 @@ export default class Activity extends React.PureComponent<
                 }
                 accessibilityLabel={localeString('views.ActivityFilter.title')}
             >
-                <Filter fill={themeColor('text')} />
+                <Filter fill={themeColor('text')} size={35} />
             </TouchableOpacity>
+        );
+
+        const DownloadButton = () => (
+            <View style={{ marginRight: 15 }}>
+                <TouchableOpacity
+                    onPress={() =>
+                        this.setState({
+                            isCsvModalVisible: true
+                        })
+                    }
+                    accessibilityLabel={localeString(
+                        'views.ActivityToCsv.title'
+                    )}
+                >
+                    <Icon
+                        name="download"
+                        type="feather"
+                        color={themeColor('text')}
+                        underlayColor="transparent"
+                        size={35}
+                    />
+                </TouchableOpacity>
+            </View>
         );
 
         return (
@@ -237,24 +280,42 @@ export default class Activity extends React.PureComponent<
                         }
                     }}
                     rightComponent={
-                        order ? (
-                            selectedPaymentForOrder ? (
-                                <MarkPaymentButton />
-                            ) : null
-                        ) : (
-                            <FilterButton />
-                        )
+                        !loading ? (
+                            <Row>
+                                {filteredActivity?.length > 0 && (
+                                    <DownloadButton />
+                                )}
+                                {order ? (
+                                    selectedPaymentForOrder ? (
+                                        <MarkPaymentButton />
+                                    ) : undefined
+                                ) : (
+                                    <FilterButton />
+                                )}
+                            </Row>
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
+
+                <ActivityToCsv
+                    filteredActivity={filteredActivity}
+                    closeModal={() =>
+                        this.setState({ isCsvModalVisible: false })
+                    }
+                    isVisible={isCsvModalVisible}
+                />
+
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
                     </View>
-                ) : !!filteredActivity && filteredActivity.length > 0 ? (
+                ) : filteredActivity?.length > 0 ? (
                     <FlatList
                         data={filteredActivity}
                         renderItem={({ item }: { item: any }) => {
+                            const note = item.getNote;
+
                             let displayName = item.model;
                             let subTitle = item.model;
 
@@ -563,6 +624,50 @@ export default class Activity extends React.PureComponent<
                                                         </ListItem.Subtitle>
                                                     </View>
                                                 )}
+                                            {note && (
+                                                <View style={styles.row}>
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.leftCell,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            flexShrink: 0,
+                                                            flex: 0,
+                                                            width: 'auto',
+                                                            overflow: 'hidden'
+                                                        }}
+                                                        numberOfLines={1}
+                                                    >
+                                                        {localeString(
+                                                            'general.note'
+                                                        )}
+                                                    </ListItem.Subtitle>
+
+                                                    <ListItem.Subtitle
+                                                        style={{
+                                                            ...styles.rightCell,
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontFamily:
+                                                                'Lato-Regular',
+                                                            flexWrap: 'wrap',
+                                                            flexShrink: 1
+                                                        }}
+                                                        ellipsizeMode="tail"
+                                                    >
+                                                        {note.length > 150
+                                                            ? `${note.substring(
+                                                                  0,
+                                                                  150
+                                                              )}...`
+                                                            : note}
+                                                    </ListItem.Subtitle>
+                                                </View>
+                                            )}
                                         </ListItem.Content>
                                     </ListItem>
                                 </React.Fragment>

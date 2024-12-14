@@ -2,9 +2,9 @@ import * as React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
-import { UR, UREncoder } from '@ngraveio/bc-ur';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 const bitcoin = require('bitcoinjs-lib');
 
@@ -31,6 +31,14 @@ interface PSBTProps {
     route: Route<'PSBT', { psbt: string }>;
 }
 
+interface PSBTDecoded {
+    inputCount?: number;
+    outputCount?: number;
+    data?: {
+        inputs?: Array<{ [key: string]: any }>;
+        outputs?: Array<{ [key: string]: any }>;
+    };
+}
 interface PSBTState {
     infoIndex: number;
     selectedIndex: number;
@@ -39,13 +47,13 @@ interface PSBTState {
     bbqrParts: Array<string>;
     bcurEncoder: any;
     bcurPart: string;
-    psbtDecoded: any;
+    psbtDecoded?: PSBTDecoded;
 }
 
 @inject('ChannelsStore', 'TransactionsStore')
 @observer
 export default class PSBT extends React.Component<PSBTProps, PSBTState> {
-    state = {
+    state: PSBTState = {
         infoIndex: 0,
         selectedIndex: 0,
         fundedPsbt: '',
@@ -53,11 +61,24 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        psbtDecoded: null
+        psbtDecoded: undefined
     };
 
     UNSAFE_componentWillMount(): void {
         const { route } = this.props;
+        const psbt = route.params?.psbt;
+        this.setState(
+            {
+                fundedPsbt: psbt
+            },
+            () => {
+                this.generateInfo();
+            }
+        );
+    }
+
+    UNSAFE_componentWillReceiveProps(nextProps: any): void {
+        const { route } = nextProps;
         const psbt = route.params?.psbt;
         this.setState(
             {
@@ -92,10 +113,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         // bc-ur
 
-        const messageBuffer = Buffer.from(fundedPsbt);
-
-        // First step is to create a UR object from a Buffer
-        const ur = UR.fromBuffer(messageBuffer);
+        const messageBuffer = Buffer.from(fundedPsbt, 'base64');
 
         // Then, create the UREncoder object
 
@@ -109,7 +127,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         const firstSeqNum = 0;
 
         // Create the encoder object
-        const encoder = new UREncoder(ur, maxFragmentLength, firstSeqNum);
+        const cryptoPSBT = new CryptoPSBT(messageBuffer);
+        const encoder = cryptoPSBT.toUREncoder(maxFragmentLength, firstSeqNum);
         //
 
         this.setState({
@@ -126,7 +145,9 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                     this.state.frameIndex === length - 1
                         ? 0
                         : this.state.frameIndex + 1,
-                bcurPart: this.state.bcurEncoder?.nextPart() || undefined
+                bcurPart:
+                    this.state.bcurEncoder?.nextPart().toUpperCase() ||
+                    undefined
             });
         }, 1000);
     };
@@ -172,7 +193,10 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             </Text>
         );
 
-        const infoButtons = [{ element: qrButton }, { element: infoButton }];
+        const infoButtons: any = [
+            { element: qrButton },
+            { element: infoButton }
+        ];
 
         const singleButton = () => (
             <Text
@@ -214,7 +238,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             </Text>
         );
 
-        const qrButtons = [
+        const qrButtons: any = [
             { element: singleButton },
             { element: bcurButton },
             { element: bbqrButton }
@@ -433,21 +457,21 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                         'views.PSBT.inputCount'
                                                     )}
                                                     value={
-                                                        psbtDecoded.inputCount
+                                                        psbtDecoded?.inputCount
                                                     }
                                                 />
                                             )}
-                                            {psbtDecoded.outputCount && (
+                                            {psbtDecoded?.outputCount && (
                                                 <KeyValue
                                                     keyValue={localeString(
                                                         'views.PSBT.outputCount'
                                                     )}
                                                     value={
-                                                        psbtDecoded.outputCount
+                                                        psbtDecoded?.outputCount
                                                     }
                                                 />
                                             )}
-                                            {psbtDecoded.data?.inputs?.map(
+                                            {psbtDecoded?.data?.inputs?.map(
                                                 (input: any, index: number) => (
                                                     <View
                                                         key={`input-${index}`}

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Image } from 'react-native';
 
-import Loading from './../assets/images/GIF/Loading.gif';
+const Loading = require('../assets/images/GIF/Loading.gif');
 
 interface LightningIndicatorProps {
     size?: number;

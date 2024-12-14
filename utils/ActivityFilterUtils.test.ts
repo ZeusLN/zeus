@@ -2,6 +2,11 @@ jest.mock('dateformat', () => ({}));
 jest.mock('./LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
+jest.mock('../stores/Stores', () => ({
+    NotesStore: {
+        notes: []
+    }
+}));
 
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';

@@ -2,10 +2,11 @@ import { observable, computed } from 'mobx';
 import humanizeDuration from 'humanize-duration';
 
 import BaseModel from './BaseModel';
-import Base64Utils from './../utils/Base64Utils';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import Bolt11Utils from './../utils/Bolt11Utils';
-import { localeString } from './../utils/LocaleUtils';
+import Base64Utils from '../utils/Base64Utils';
+import DateTimeUtils from '../utils/DateTimeUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
+import { localeString } from '../utils/LocaleUtils';
+import { notesStore } from '../stores/storeInstances';
 
 interface HopHint {
     fee_proportional_millionths: number;
@@ -52,6 +53,7 @@ export default class Invoice extends BaseModel {
     public cltv_expiry: string;
     public htlcs: Array<HTLC>;
     public is_amp?: boolean;
+    public is_blinded?: boolean;
     // c-lightning, eclair
     public bolt11: string;
     public label: string;
@@ -75,6 +77,8 @@ export default class Invoice extends BaseModel {
     public expire_time?: number;
     public millisatoshis?: string;
     public pay_req?: string;
+
+    public amount_received_msat?: string | number;
 
     public formattedOriginalTimeUntilExpiry: string;
     public formattedTimeUntilExpiry: string;
@@ -142,7 +146,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getPaymentRequest(): string {
-        return this.bolt11 || this.payment_request || this.pay_req;
+        return this.bolt11 || this.payment_request || this.pay_req || '';
     }
 
     // return amount in satoshis
@@ -240,6 +244,10 @@ export default class Invoice extends BaseModel {
         );
     }
 
+    @computed public get getCreationDate(): Date {
+        return DateTimeUtils.listDate(this.creation_date);
+    }
+
     @computed public get formattedCreationDate(): string {
         return DateTimeUtils.listFormattedDate(this.creation_date);
     }
@@ -256,8 +264,7 @@ export default class Invoice extends BaseModel {
 
     @computed public get getKeysendMessage(): string {
         if (
-            this.htlcs &&
-            this.htlcs[0] &&
+            this.htlcs?.length > 0 &&
             this.htlcs[0].custom_records &&
             this.htlcs[0].custom_records[keySendMessageType]
         ) {
@@ -379,5 +386,13 @@ export default class Invoice extends BaseModel {
                 .replace(/(\d) ([^,])/g, '$1 $2') // LTR
                 .replace(/([^,]) (\d)/g, '$2 $1') // RTL
         );
+    }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.payment_hash || this.getRPreimage}`;
+    }
+
+    @computed public get getNote(): string {
+        return notesStore.notes[this.getNoteKey] || '';
     }
 }

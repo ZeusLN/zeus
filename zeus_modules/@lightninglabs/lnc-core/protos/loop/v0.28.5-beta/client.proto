@@ -1,0 +1,1442 @@
+syntax = "proto3";
+
+import "swapserverrpc/common.proto";
+
+package looprpc;
+
+option go_package = "github.com/lightninglabs/loop/looprpc";
+
+/*
+SwapClient is a service that handles the client side process of onchain/offchain
+swaps. The service is designed for a single client.
+*/
+service SwapClient {
+    /* loop: `out`
+    LoopOut initiates an loop out swap with the given parameters. The call
+    returns after the swap has been set up with the swap server. From that
+    point onwards, progress can be tracked via the SwapStatus stream that is
+    returned from Monitor().
+    */
+    rpc LoopOut (LoopOutRequest) returns (SwapResponse);
+
+    /* loop: `in`
+    LoopIn initiates a loop in swap with the given parameters. The call
+    returns after the swap has been set up with the swap server. From that
+    point onwards, progress can be tracked via the SwapStatus stream
+    that is returned from Monitor().
+    */
+    rpc LoopIn (LoopInRequest) returns (SwapResponse);
+
+    /* loop: `monitor`
+    Monitor will return a stream of swap updates for currently active swaps.
+    */
+    rpc Monitor (MonitorRequest) returns (stream SwapStatus);
+
+    /* loop: `listswaps`
+    ListSwaps returns a list of all currently known swaps and their current
+    status.
+    */
+    rpc ListSwaps (ListSwapsRequest) returns (ListSwapsResponse);
+
+    /* loop: `swapinfo`
+    SwapInfo returns all known details about a single swap.
+    */
+    rpc SwapInfo (SwapInfoRequest) returns (SwapStatus);
+
+    /* loop: `abandonswap`
+    AbandonSwap allows the client to abandon a swap.
+    */
+    rpc AbandonSwap (AbandonSwapRequest) returns (AbandonSwapResponse);
+
+    /* loop: `terms`
+    LoopOutTerms returns the terms that the server enforces for a loop out swap.
+    */
+    rpc LoopOutTerms (TermsRequest) returns (OutTermsResponse);
+
+    /* loop: `quote`
+    LoopOutQuote returns a quote for a loop out swap with the provided
+    parameters.
+    */
+    rpc LoopOutQuote (QuoteRequest) returns (OutQuoteResponse);
+
+    /* loop: `terms`
+    GetTerms returns the terms that the server enforces for swaps.
+    */
+    rpc GetLoopInTerms (TermsRequest) returns (InTermsResponse);
+
+    /* loop: `quote`
+    GetQuote returns a quote for a swap with the provided parameters.
+    */
+    rpc GetLoopInQuote (QuoteRequest) returns (InQuoteResponse);
+
+    /*
+    Probe asks he sever to probe the route to us to have a better upfront
+    estimate about routing fees when loopin-in.
+    */
+    rpc Probe (ProbeRequest) returns (ProbeResponse);
+
+    /* loop: `listauth`
+    GetL402Tokens returns all L402 tokens the daemon ever paid for.
+    */
+    rpc GetL402Tokens (TokensRequest) returns (TokensResponse);
+
+    /*
+    Deprecated: use GetL402Tokens.
+    This API is provided to maintain backward compatibility with gRPC clients
+    (e.g. `loop listauth`, Terminal Web, RTL).
+    Type LsatToken used by GetLsatTokens in the past was renamed to L402Token,
+    but this does not affect binary encoding, so we can use type L402Token here.
+    */
+    rpc GetLsatTokens (TokensRequest) returns (TokensResponse);
+
+    /* loop: `getinfo`
+    GetInfo gets basic information about the loop daemon.
+    */
+    rpc GetInfo (GetInfoRequest) returns (GetInfoResponse);
+
+    /* loop: `getparams`
+    GetLiquidityParams gets the parameters that the daemon's liquidity manager
+    is currently configured with. This may be nil if nothing is configured.
+    [EXPERIMENTAL]: endpoint is subject to change.
+    */
+    rpc GetLiquidityParams (GetLiquidityParamsRequest)
+        returns (LiquidityParameters);
+
+    /* loop: `setparams`
+    SetLiquidityParams sets a new set of parameters for the daemon's liquidity
+    manager. Note that the full set of parameters must be provided, because
+    this call fully overwrites our existing parameters.
+    [EXPERIMENTAL]: endpoint is subject to change.
+    */
+    rpc SetLiquidityParams (SetLiquidityParamsRequest)
+        returns (SetLiquidityParamsResponse);
+
+    /* loop: `suggestswaps`
+    SuggestSwaps returns a list of recommended swaps based on the current
+    state of your node's channels and it's liquidity manager parameters.
+    Note that only loop out suggestions are currently supported.
+    [EXPERIMENTAL]: endpoint is subject to change.
+    */
+    rpc SuggestSwaps (SuggestSwapsRequest) returns (SuggestSwapsResponse);
+
+    /* loop: `listreservations`
+    ListReservations returns a list of all reservations the server opened to us.
+    */
+    rpc ListReservations (ListReservationsRequest)
+        returns (ListReservationsResponse);
+
+    /* loop: `instantout`
+    InstantOut initiates an instant out swap with the given parameters.
+    */
+    rpc InstantOut (InstantOutRequest) returns (InstantOutResponse);
+
+    /* loop: `instantoutquote`
+    InstantOutQuote returns a quote for an instant out swap with the provided
+    parameters.
+    */
+    rpc InstantOutQuote (InstantOutQuoteRequest)
+        returns (InstantOutQuoteResponse);
+
+    /* loop: `listinstantouts`
+    ListInstantOuts returns a list of all currently known instant out swaps and
+    their current status.
+    */
+    rpc ListInstantOuts (ListInstantOutsRequest)
+        returns (ListInstantOutsResponse);
+}
+
+message LoopOutRequest {
+    /*
+    Requested swap amount in sat. This does not include the swap and miner fee.
+    */
+    int64 amt = 1;
+
+    /*
+    Base58 encoded destination address for the swap.
+    */
+    string dest = 2;
+
+    /*
+    Maximum off-chain fee in sat that may be paid for swap payment to the
+    server. This limit is applied during path finding. Typically this value is
+    taken from the response of the GetQuote call.
+    */
+    int64 max_swap_routing_fee = 3;
+
+    /*
+    Maximum off-chain fee in sat that may be paid for the prepay to the server.
+    This limit is applied during path finding. Typically this value is taken
+    from the response of the GetQuote call.
+    */
+    int64 max_prepay_routing_fee = 4;
+
+    /*
+    Maximum we are willing to pay the server for the swap. This value is not
+    disclosed in the swap initiation call, but if the server asks for a
+    higher fee, we abort the swap. Typically this value is taken from the
+    response of the GetQuote call. It includes the prepay amount.
+    */
+    int64 max_swap_fee = 5;
+
+    /*
+    Maximum amount of the swap fee that may be charged as a prepayment.
+    */
+    int64 max_prepay_amt = 6;
+
+    /*
+    Maximum in on-chain fees that we are willing to spend. If we want to
+    sweep the on-chain htlc and the fee estimate turns out higher than this
+    value, we cancel the swap. If the fee estimate is lower, we publish the
+    sweep tx.
+
+    If the sweep tx is not confirmed, we are forced to ratchet up fees until it
+    is swept. Possibly even exceeding max_miner_fee if we get close to the htlc
+    timeout. Because the initial publication revealed the preimage, we have no
+    other choice. The server may already have pulled the off-chain htlc. Only
+    when the fee becomes higher than the swap amount, we can only wait for fees
+    to come down and hope - if we are past the timeout - that the server is not
+    publishing the revocation.
+
+    max_miner_fee is typically taken from the response of the GetQuote call.
+    */
+    int64 max_miner_fee = 7;
+
+    /*
+    Deprecated, use outgoing_chan_set. The channel to loop out, the channel
+    to loop out is selected based on the lowest routing fee for the swap
+    payment to the server.
+    */
+    uint64 loop_out_channel = 8 [deprecated = true];
+
+    /*
+    A restriction on the channel set that may be used to loop out. The actual
+    channel(s) that will be used are selected based on the lowest routing fee
+    for the swap payment to the server.
+    */
+    repeated uint64 outgoing_chan_set = 11;
+
+    /*
+    The number of blocks from the on-chain HTLC's confirmation height that it
+    should be swept within.
+    */
+    int32 sweep_conf_target = 9;
+
+    /*
+    The number of confirmations that we require for the on chain htlc that will
+    be published by the server before we reveal the preimage.
+    */
+    int32 htlc_confirmations = 13;
+
+    /*
+    The latest time (in unix seconds) we allow the server to wait before
+    publishing the HTLC on chain. Setting this to a larger value will give the
+    server the opportunity to batch multiple swaps together, and wait for
+    low-fee periods before publishing the HTLC, potentially resulting in a
+    lower total swap fee.
+    */
+    uint64 swap_publication_deadline = 10;
+
+    /*
+    An optional label for this swap. This field is limited to 500 characters
+    and may not start with the prefix [reserved], which is used to tag labels
+    produced by the daemon.
+    */
+    string label = 12;
+
+    /*
+    An optional identification string that will be appended to the user agent
+    string sent to the server to give information about the usage of loop. This
+    initiator part is meant for user interfaces to add their name to give the
+    full picture of the binary used (loopd, LiT) and the method used for
+    triggering the swap (loop CLI, autolooper, LiT UI, other 3rd party UI).
+    */
+    string initiator = 14;
+
+    /*
+    An alternative destination address source for the swap. This field
+    represents the name of the account in the backing lnd instance.
+    Refer to lnd's wallet import functions for reference.
+     */
+    string account = 15;
+
+    /*
+    The address type of the account specified in the account field.
+     */
+    AddressType account_addr_type = 16;
+
+    /*
+    A flag indicating whether the defined destination address does not belong to
+    the wallet. This is used to flag whether this loop out swap could have its
+    associated sweep batched.
+    */
+    bool is_external_addr = 17;
+
+    /*
+    The reservations to use for the swap. If this field is set, loop will try
+    to use the instant out flow using the given reservations. If the
+    reservations are not sufficient, the swap will fail. The swap amount must
+    be equal to the sum of the amounts of the reservations.
+    */
+    repeated bytes reservation_ids = 18;
+
+    /*
+    The timeout in seconds to use for off-chain payments. Note that the swap
+    payment is attempted multiple times where each attempt will set this value
+    as the timeout for the payment.
+    */
+    uint32 payment_timeout = 19;
+}
+
+/*
+`AddressType` has to be one of:
+
+- `unknown`: Unknown address type
+- `p2tr`: Pay to taproot pubkey (`TAPROOT_PUBKEY` = 1)
+*/
+enum AddressType {
+    ADDRESS_TYPE_UNKNOWN = 0;
+    TAPROOT_PUBKEY = 1;
+}
+
+message LoopInRequest {
+    /*
+    Requested swap amount in sat. This does not include the swap and miner
+    fee.
+    */
+    int64 amt = 1;
+
+    /*
+    Maximum we are willing to pay the server for the swap. This value is not
+    disclosed in the swap initiation call, but if the server asks for a
+    higher fee, we abort the swap. Typically this value is taken from the
+    response of the GetQuote call.
+    */
+    int64 max_swap_fee = 2;
+
+    /*
+    Maximum in on-chain fees that we are willing to spend. If we want to
+    publish the on-chain htlc and the fee estimate turns out higher than this
+    value, we cancel the swap.
+
+    max_miner_fee is typically taken from the response of the GetQuote call.
+    */
+    int64 max_miner_fee = 3;
+
+    /*
+    The last hop to use for the loop in swap. If empty, the last hop is selected
+    based on the lowest routing fee for the swap payment from the server.
+    */
+    bytes last_hop = 4;
+
+    /*
+    If external_htlc is true, we expect the htlc to be published by an external
+    actor.
+    */
+    bool external_htlc = 5;
+
+    /*
+    The number of blocks that the on chain htlc should confirm within.
+    */
+    int32 htlc_conf_target = 6;
+
+    /*
+    An optional label for this swap. This field is limited to 500 characters
+    and may not be one of the reserved values in loop/labels Reserved list.
+    */
+    string label = 7;
+
+    /*
+    An optional identification string that will be appended to the user agent
+    string sent to the server to give information about the usage of loop. This
+    initiator part is meant for user interfaces to add their name to give the
+    full picture of the binary used (loopd, LiT) and the method used for
+    triggering the swap (loop CLI, autolooper, LiT UI, other 3rd party UI).
+    */
+    string initiator = 8;
+
+    /*
+    Optional route hints to reach the destination through private channels.
+    */
+    repeated looprpc.RouteHint route_hints = 9;
+
+    /*
+    Private indicates whether the destination node should be considered
+    private. In which case, loop will generate hophints to assist with
+    probing and payment.
+    */
+    bool private = 10;
+}
+
+message SwapResponse {
+    /*
+    Swap identifier to track status in the update stream that is returned from
+    the Start() call. Currently this is the hash that locks the htlcs.
+    DEPRECATED: To make the API more consistent, this field is deprecated in
+    favor of id_bytes and will be removed in a future release.
+    */
+    string id = 1 [deprecated = true];
+
+    /*
+    Swap identifier to track status in the update stream that is returned from
+    the Start() call. Currently this is the hash that locks the htlcs.
+    */
+    bytes id_bytes = 3;
+
+    /*
+    DEPRECATED. This field stores the address of the onchain htlc, but
+    depending on the request, the semantics are different.
+    - For internal loop-in htlc_address contains the address of the
+    native segwit (P2WSH) htlc.
+/    - For loop-out htlc_address always contains the native segwit (P2WSH)
+    htlc address.
+    */
+    string htlc_address = 2 [deprecated = true];
+
+    reserved 4;
+
+    /*
+    The native segwit address of the on-chain htlc.
+    Used for both loop-in and loop-out.
+    */
+    string htlc_address_p2wsh = 5;
+
+    // The address of the v3 (taproot) htlc. Used for both loop-in and loop-out.
+    string htlc_address_p2tr = 7;
+
+    // A human-readable message received from the loop server.
+    string server_message = 6;
+}
+
+message MonitorRequest {
+}
+
+message SwapStatus {
+    /*
+    Requested swap amount in sat. This does not include the swap and miner
+    fee.
+    */
+    int64 amt = 1;
+
+    /*
+    Swap identifier to track status in the update stream that is returned from
+    the Start() call. Currently this is the hash that locks the htlcs.
+    DEPRECATED: To make the API more consistent, this field is deprecated in
+    favor of id_bytes and will be removed in a future release.
+    */
+    string id = 2 [deprecated = true];
+
+    /*
+    Swap identifier to track status in the update stream that is returned from
+    the Start() call. Currently this is the hash that locks the htlcs.
+    */
+    bytes id_bytes = 11;
+
+    /*
+    The type of the swap.
+    */
+    SwapType type = 3;
+
+    /*
+    State the swap is currently in, see State enum.
+    */
+    SwapState state = 4;
+
+    /*
+    A failure reason for the swap, only set if the swap has failed.
+    */
+    FailureReason failure_reason = 14;
+
+    /*
+    Initiation time of the swap.
+    */
+    int64 initiation_time = 5;
+
+    /*
+    Initiation time of the swap.
+    */
+    int64 last_update_time = 6;
+
+    /*
+    DEPRECATED:  This field stores the address of the onchain htlc.
+    - For internal loop-in htlc_address contains the address of the
+    native segwit (P2WSH) htlc.
+    - For loop-out htlc_address always contains the native segwit (P2WSH)
+    htlc address.
+    */
+    string htlc_address = 7 [deprecated = true];
+
+    // HTLC address (native segwit), used in loop-in and loop-out swaps.
+    string htlc_address_p2wsh = 12;
+
+    // The address of the v3 (taproot) htlc. Used for both loop-in and loop-out.
+    string htlc_address_p2tr = 18;
+
+    // Swap server cost
+    int64 cost_server = 8;
+
+    // On-chain transaction cost
+    int64 cost_onchain = 9;
+
+    // Off-chain routing fees
+    int64 cost_offchain = 10;
+
+    // Optional last hop if provided in the loop in request.
+    bytes last_hop = 16;
+
+    // Optional outgoing channel set if provided in the loop out request.
+    repeated uint64 outgoing_chan_set = 17;
+
+    // An optional label given to the swap on creation.
+    string label = 15;
+}
+
+enum SwapType {
+    // LOOP_OUT indicates an loop out swap (off-chain to on-chain)
+    LOOP_OUT = 0;
+
+    // LOOP_IN indicates a loop in swap (on-chain to off-chain)
+    LOOP_IN = 1;
+}
+
+enum SwapState {
+    /*
+    INITIATED is the initial state of a swap. At that point, the initiation
+    call to the server has been made and the payment process has been started
+    for the swap and prepayment invoices.
+    */
+    INITIATED = 0;
+
+    /*
+    PREIMAGE_REVEALED is reached when the sweep tx publication is first
+    attempted. From that point on, we should consider the preimage to no
+    longer be secret and we need to do all we can to get the sweep confirmed.
+    This state will mostly coalesce with StateHtlcConfirmed, except in the
+    case where we wait for fees to come down before we sweep.
+    */
+    PREIMAGE_REVEALED = 1;
+
+    /*
+    HTLC_PUBLISHED is reached when the htlc tx has been published in a loop in
+    swap.
+    */
+    HTLC_PUBLISHED = 2;
+
+    /*
+    SUCCESS is the final swap state that is reached when the sweep tx has
+    the required confirmation depth.
+    */
+    SUCCESS = 3;
+
+    /*
+    FAILED is the final swap state for a failed swap with or without loss of
+    the swap amount.
+    */
+    FAILED = 4;
+
+    /*
+    INVOICE_SETTLED is reached when the swap invoice in a loop in swap has been
+    paid, but we are still waiting for the htlc spend to confirm.
+    */
+    INVOICE_SETTLED = 5;
+}
+
+enum FailureReason {
+    /*
+    FAILURE_REASON_NONE is set when the swap did not fail, it is either in
+    progress or succeeded.
+    */
+    FAILURE_REASON_NONE = 0;
+
+    /*
+    FAILURE_REASON_OFFCHAIN indicates that a loop out failed because it wasn't
+    possible to find a route for one or both off chain payments that met the fee
+    and timelock limits required.
+    */
+    FAILURE_REASON_OFFCHAIN = 1;
+
+    /*
+    FAILURE_REASON_TIMEOUT indicates that the swap failed because on chain htlc
+    did not confirm before its expiry, or it confirmed too late for us to reveal
+    our preimage and claim.
+    */
+    FAILURE_REASON_TIMEOUT = 2;
+
+    /*
+    FAILURE_REASON_SWEEP_TIMEOUT indicates that a loop out permanently failed
+    because the on chain htlc wasn't swept before the server revoked the
+    htlc.
+    */
+    FAILURE_REASON_SWEEP_TIMEOUT = 3;
+
+    /*
+    FAILURE_REASON_INSUFFICIENT_VALUE indicates that a loop out has failed
+    because the on chain htlc had a lower value than requested.
+    */
+    FAILURE_REASON_INSUFFICIENT_VALUE = 4;
+
+    /*
+    FAILURE_REASON_TEMPORARY indicates that a swap cannot continue due to an
+    internal error. Manual intervention such as a restart is required.
+    */
+    FAILURE_REASON_TEMPORARY = 5;
+
+    /*
+    FAILURE_REASON_INCORRECT_AMOUNT indicates that a loop in permanently failed
+    because the amount extended by an external loop in htlc is insufficient.
+    */
+    FAILURE_REASON_INCORRECT_AMOUNT = 6;
+
+    /*
+    FAILURE_REASON_ABANDONED indicates that a swap permanently failed because
+    the client manually abandoned the swap.
+    */
+    FAILURE_REASON_ABANDONED = 7;
+
+    /*
+    FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE indicates that a swap
+    wasn't published due to insufficient confirmed balance.
+    */
+    FAILURE_REASON_INSUFFICIENT_CONFIRMED_BALANCE = 8;
+
+    /*
+    FAILURE_REASON_INCORRECT_HTLC_AMT_SWEPT indicates that a swap
+    wasn't published due to insufficient confirmed balance.
+    */
+    FAILURE_REASON_INCORRECT_HTLC_AMT_SWEPT = 9;
+}
+
+message ListSwapsRequest {
+    // Optional filter to only return swaps that match the filter.
+    ListSwapsFilter list_swap_filter = 1;
+}
+
+message ListSwapsFilter {
+    enum SwapTypeFilter {
+        // ANY indicates that no filter is applied.
+        ANY = 0;
+        // LOOP_OUT indicates an loop out swap (off-chain to on-chain).
+        LOOP_OUT = 1;
+
+        // LOOP_IN indicates a loop in swap (on-chain to off-chain).
+        LOOP_IN = 2;
+    }
+    // The type of the swap.
+    SwapTypeFilter swap_type = 1;
+
+    // If set, only pending swaps are returned.
+    bool pending_only = 2;
+
+    // If specified on creation, the outgoing channel set of the swap.
+    repeated uint64 outgoing_chan_set = 3;
+
+    // Label of swap to filter for.
+    string label = 4;
+
+    // If specified on creation, the last hop of the swap.
+    bytes loop_in_last_hop = 5;
+}
+
+message ListSwapsResponse {
+    /*
+    The list of all currently known swaps and their status.
+    */
+    repeated SwapStatus swaps = 1;
+}
+
+message SwapInfoRequest {
+    /*
+    The swap identifier which currently is the hash that locks the HTLCs. When
+    using REST, this field must be encoded as URL safe base64.
+    */
+    bytes id = 1;
+}
+
+message TermsRequest {
+}
+
+message InTermsResponse {
+    reserved 1, 2, 3, 4, 7;
+
+    /*
+    Minimum swap amount (sat)
+    */
+    int64 min_swap_amount = 5;
+
+    /*
+    Maximum swap amount (sat)
+    */
+    int64 max_swap_amount = 6;
+}
+
+message OutTermsResponse {
+    reserved 1, 2, 3, 4, 7;
+
+    /*
+    Minimum swap amount (sat)
+    */
+    int64 min_swap_amount = 5;
+
+    /*
+    Maximum swap amount (sat)
+    */
+    int64 max_swap_amount = 6;
+
+    // The minimally accepted cltv delta of the on-chain htlc.
+    int32 min_cltv_delta = 8;
+
+    // The maximally accepted cltv delta of the on-chain htlc.
+    int32 max_cltv_delta = 9;
+}
+
+message QuoteRequest {
+    /*
+    The amount to swap in satoshis.
+    */
+    int64 amt = 1;
+
+    /*
+    The confirmation target that should be used either for the sweep of the
+    on-chain HTLC broadcast by the swap server in the case of a Loop Out, or for
+    the confirmation of the on-chain HTLC broadcast by the swap client in the
+    case of a Loop In.
+    */
+    int32 conf_target = 2;
+
+    /*
+    If external_htlc is true, we expect the htlc to be published by an external
+    actor.
+    */
+    bool external_htlc = 3;
+
+    /*
+    The latest time (in unix seconds) we allow the server to wait before
+    publishing the HTLC on chain. Setting this to a larger value will give the
+    server the opportunity to batch multiple swaps together, and wait for
+    low-fee periods before publishing the HTLC, potentially resulting in a
+    lower total swap fee. This only has an effect on loop out quotes.
+    */
+    uint64 swap_publication_deadline = 4;
+
+    /*
+    Optionally the client can specify the last hop pubkey when requesting a
+    loop-in quote. This is useful to get better off-chain routing fee from the
+    server.
+    */
+    bytes loop_in_last_hop = 5;
+
+    /*
+    Optional route hints to reach the destination through private channels.
+    */
+    repeated looprpc.RouteHint loop_in_route_hints = 6;
+
+    /*
+    Private indicates whether the destination node should be considered
+    private. In which case, loop will generate hophints to assist with
+    probing and payment.
+    */
+    bool private = 7;
+}
+
+message InQuoteResponse {
+    reserved 2, 4;
+
+    /*
+    The fee that the swap server is charging for the swap.
+    */
+    int64 swap_fee_sat = 1;
+
+    /*
+    An estimate of the on-chain fee that needs to be paid to publish the HTLC
+    If a miner fee of 0 is returned, it means the external_htlc flag was set for
+    a loop in and the fee estimation was skipped. If a miner fee of -1 is
+    returned, it means lnd's wallet tried to estimate the fee but was unable to
+    create a sample estimation transaction because not enough funds are
+    available. An information message should be shown to the user in this case.
+    */
+    int64 htlc_publish_fee_sat = 3;
+
+    /*
+    On-chain cltv expiry delta
+    */
+    int32 cltv_delta = 5;
+
+    /*
+    The confirmation target to be used to publish the on-chain HTLC.
+    */
+    int32 conf_target = 6;
+}
+
+message OutQuoteResponse {
+    /*
+    The fee that the swap server is charging for the swap.
+    */
+    int64 swap_fee_sat = 1;
+
+    /*
+    The part of the swap fee that is requested as a prepayment.
+    */
+    int64 prepay_amt_sat = 2;
+
+    /*
+    An estimate of the on-chain fee that needs to be paid to sweep the HTLC for
+    a loop out.
+    */
+    int64 htlc_sweep_fee_sat = 3;
+
+    /*
+    The node pubkey where the swap payment needs to be paid
+    to. This can be used to test connectivity before initiating the swap.
+    */
+    bytes swap_payment_dest = 4;
+
+    /*
+    On-chain cltv expiry delta
+    */
+    int32 cltv_delta = 5;
+
+    /*
+    The confirmation target to be used for the sweep of the on-chain HTLC.
+    */
+    int32 conf_target = 6;
+}
+
+message ProbeRequest {
+    /*
+    The amount to probe.
+    */
+    int64 amt = 1;
+
+    /*
+    Optional last hop of the route to probe.
+    */
+    bytes last_hop = 2;
+
+    /*
+    Optional route hints to reach the destination through private channels.
+    */
+    repeated looprpc.RouteHint route_hints = 3;
+}
+
+message ProbeResponse {
+}
+
+message TokensRequest {
+}
+
+message TokensResponse {
+    /*
+    List of all tokens the daemon knows of, including old/expired tokens.
+    */
+    repeated L402Token tokens = 1;
+}
+
+message L402Token {
+    /*
+    The base macaroon that was baked by the auth server.
+    */
+    bytes base_macaroon = 1;
+
+    /*
+    The payment hash of the payment that was paid to obtain the token.
+    */
+    bytes payment_hash = 2;
+
+    /*
+    The preimage of the payment hash, knowledge of this is proof that the
+    payment has been paid. If the preimage is set to all zeros, this means the
+    payment is still pending and the token is not yet fully valid.
+    */
+    bytes payment_preimage = 3;
+
+    /*
+    The amount of millisatoshis that was paid to get the token.
+    */
+    int64 amount_paid_msat = 4;
+
+    /*
+    The amount of millisatoshis paid in routing fee to pay for the token.
+    */
+    int64 routing_fee_paid_msat = 5;
+
+    /*
+    The creation time of the token as UNIX timestamp in seconds.
+    */
+    int64 time_created = 6;
+
+    /*
+    Indicates whether the token is expired or still valid.
+    */
+    bool expired = 7;
+
+    /*
+    Identifying attribute of this token in the store. Currently represents the
+    file name of the token where it's stored on the file system.
+    */
+    string storage_name = 8;
+
+    /*
+    The l402 ID of the token.
+    */
+    string id = 9;
+}
+
+message LoopStats {
+    /*
+    Number of currently pending swaps.
+     */
+    uint64 pending_count = 1;
+
+    /*
+    Number of succeeded swaps.
+     */
+    uint64 success_count = 2;
+
+    /*
+    Number failed swaps.
+     */
+    uint64 fail_count = 3;
+
+    /*
+    The sum of all pending swap amounts.
+     */
+    int64 sum_pending_amt = 4;
+
+    /*
+    The sum of all succeeded swap amounts.
+     */
+    int64 sum_succeeded_amt = 5;
+}
+
+message GetInfoRequest {
+}
+
+message GetInfoResponse {
+    /*
+    The current daemon version.
+     */
+    string version = 1;
+
+    /*
+    The network the daemon is running on.
+     */
+    string network = 2;
+
+    /*
+    Host and port of the loopd grpc server.
+     */
+    string rpc_listen = 3;
+
+    /*
+    Host and port of the loopd rest server.
+     */
+    string rest_listen = 4;
+
+    /*
+    Loop's macaroon path that clients use to talk to the daemon.
+     */
+    string macaroon_path = 5;
+
+    /*
+    Loop's tls cert path
+     */
+    string tls_cert_path = 6;
+
+    /*
+    Statistics about loop outs.
+     */
+    LoopStats loop_out_stats = 7;
+
+    /*
+    Statistics about loop ins.
+     */
+    LoopStats loop_in_stats = 8;
+}
+
+message GetLiquidityParamsRequest {
+}
+
+message LiquidityParameters {
+    /*
+    A set of liquidity rules that describe the desired liquidity balance.
+    */
+    repeated LiquidityRule rules = 1;
+
+    /*
+    The parts per million of swap amount that is allowed to be allocated to swap
+    fees. This value is applied across swap categories and may not be set in
+    conjunction with sweep fee rate, swap fee ppm, routing fee ppm, prepay
+    routing, max prepay and max miner fee.
+    */
+    uint64 fee_ppm = 16;
+
+    /*
+    The limit we place on our estimated sweep cost for a swap in sat/vByte. If
+    the estimated fee for our sweep transaction within the specified
+    confirmation target is above this value, we will not suggest any swaps.
+    */
+    uint64 sweep_fee_rate_sat_per_vbyte = 2;
+
+    /*
+    The maximum fee paid to the server for facilitating the swap, expressed
+    as parts per million of the swap volume.
+    */
+    uint64 max_swap_fee_ppm = 3;
+
+    /*
+    The maximum fee paid to route the swap invoice off chain, expressed as
+    parts per million of the volume being routed.
+    */
+    uint64 max_routing_fee_ppm = 4;
+
+    /*
+    The maximum fee paid to route the prepay invoice off chain, expressed as
+    parts per million of the volume being routed.
+    */
+    uint64 max_prepay_routing_fee_ppm = 5;
+
+    /*
+    The maximum no-show penalty in satoshis paid for a swap.
+    */
+    uint64 max_prepay_sat = 6;
+
+    /*
+    The maximum miner fee we will pay to sweep the swap on chain. Note that we
+    will not suggest a swap if the estimate is above the sweep limit set by
+    these parameters, and we use the current fee estimate to sweep on chain so
+    this value is only a cap placed on the amount we spend on fees in the case
+    where the swap needs to be claimed on chain, but fees have suddenly spiked.
+    */
+    uint64 max_miner_fee_sat = 7;
+
+    /*
+    The number of blocks from the on-chain HTLC's confirmation height that it
+    should be swept within.
+    */
+    int32 sweep_conf_target = 8;
+
+    /*
+    The amount of time we require pass since a channel was part of a failed
+    swap due to off chain payment failure until it will be considered for swap
+    suggestions again, expressed in seconds.
+    */
+    uint64 failure_backoff_sec = 9;
+
+    /*
+    Set to true to enable automatic dispatch of swaps. All swaps will be limited
+    to the fee categories set by these parameters, and total expenditure will
+    be limited to the autoloop budget.
+    */
+    bool autoloop = 10;
+
+    /*
+    The total budget for automatically dispatched swaps since the budget start
+    time, expressed in satoshis.
+    */
+    uint64 autoloop_budget_sat = 11;
+
+    /*
+    Deprecated, use autoloop_budget_refresh_period_sec. The start time for
+    autoloop budget, expressed as a unix timestamp in seconds. If this value is
+    0, the budget will be applied for all automatically dispatched swaps. Swaps
+    that were completed before this date will not be included in budget
+    calculations.
+    */
+    uint64 autoloop_budget_start_sec = 12 [deprecated = true];
+
+    /*
+    The maximum number of automatically dispatched swaps that we allow to be in
+    flight at any point in time.
+    */
+    uint64 auto_max_in_flight = 13;
+
+    /*
+    The minimum amount, expressed in satoshis, that the autoloop client will
+    dispatch a swap for. This value is subject to the server-side limits
+    specified by the LoopOutTerms endpoint.
+    */
+    uint64 min_swap_amount = 14;
+
+    /*
+    The maximum amount, expressed in satoshis, that the autoloop client will
+    dispatch a swap for. This value is subject to the server-side limits
+    specified by the LoopOutTerms endpoint.
+    */
+    uint64 max_swap_amount = 15;
+
+    /*
+    The confirmation target for loop in on-chain htlcs.
+    */
+    int32 htlc_conf_target = 17;
+
+    /*
+    The destination address to use for autoloop loop outs. Set to "default" in
+    order to revert to default behavior.
+    */
+    string autoloop_dest_address = 18;
+
+    /*
+    The period over which the autoloop budget is refreshed, expressed in
+    seconds.
+    */
+    uint64 autoloop_budget_refresh_period_sec = 19;
+
+    /*
+    The time at which the autoloop budget was last refreshed, expressed as a
+    UNIX timestamp in seconds.
+    */
+    uint64 autoloop_budget_last_refresh = 20;
+
+    /*
+    Set to true to enable easy autoloop. If set, all channel/peer rules will be
+    overridden and the client will automatically dispatch swaps in order to meet
+    the configured local balance target size. Currently only loop out is
+    supported, meaning that easy autoloop can only reduce the funds that are
+    held as balance in channels.
+    */
+    bool easy_autoloop = 21;
+
+    /*
+    The local balance target size, expressed in satoshis. This is used by easy
+    autoloop to determine how much liquidity should be maintained in channels.
+    */
+    uint64 easy_autoloop_local_target_sat = 22;
+
+    /*
+   An alternative destination address source for the swap. This field
+   represents the name of the account in the backing lnd instance.
+   Refer to lnd's wallet import functions for reference.
+    */
+    string account = 23;
+
+    /*
+    The address type of the account specified in the account field.
+    */
+    AddressType account_addr_type = 24;
+}
+
+enum LiquidityRuleType {
+    UNKNOWN = 0;
+    THRESHOLD = 1;
+}
+
+message LiquidityRule {
+    /*
+    The short channel ID of the channel that this rule should be applied to.
+    This field may not be set when the pubkey field is set.
+    */
+    uint64 channel_id = 1;
+
+    // The type of swap that will be dispatched for this rule.
+    SwapType swap_type = 6;
+
+    /*
+    The public key of the peer that this rule should be applied to. This field
+    may not be set when the channel id field is set.
+    */
+    bytes pubkey = 5;
+
+    /*
+    Type indicates the type of rule that this message rule represents. Setting
+    this value will determine which fields are used in the message. The comments
+    on each field in this message will be prefixed with the LiquidityRuleType
+    they belong to.
+    */
+    LiquidityRuleType type = 2;
+
+    /*
+    THRESHOLD: The percentage of total capacity that incoming capacity should
+    not drop beneath.
+    */
+    uint32 incoming_threshold = 3;
+
+    /*
+    THRESHOLD: The percentage of total capacity that outgoing capacity should
+    not drop beneath.
+    */
+    uint32 outgoing_threshold = 4;
+}
+
+message SetLiquidityParamsRequest {
+    /*
+    Parameters is the desired new set of parameters for the liquidity management
+    subsystem. Note that the current set of parameters will be completely
+    overwritten by the parameters provided (if they are valid), so the full set
+    of parameters should be provided for each call.
+    */
+    LiquidityParameters parameters = 1;
+}
+
+message SetLiquidityParamsResponse {
+}
+
+message SuggestSwapsRequest {
+}
+
+enum AutoReason {
+    AUTO_REASON_UNKNOWN = 0;
+
+    /*
+    Budget not started indicates that we do not recommend any swaps because
+    the start time for our budget has not arrived yet.
+    */
+    AUTO_REASON_BUDGET_NOT_STARTED = 1;
+
+    /*
+    Sweep fees indicates that the estimated fees to sweep swaps are too high
+    right now.
+    */
+    AUTO_REASON_SWEEP_FEES = 2;
+
+    /*
+    Budget elapsed indicates that the autoloop budget for the period has been
+    elapsed.
+    */
+    AUTO_REASON_BUDGET_ELAPSED = 3;
+
+    /*
+    In flight indicates that the limit on in-flight automatically dispatched
+    swaps has already been reached.
+    */
+    AUTO_REASON_IN_FLIGHT = 4;
+
+    /*
+    Swap fee indicates that the server fee for a specific swap is too high.
+    */
+    AUTO_REASON_SWAP_FEE = 5;
+
+    /*
+    Miner fee indicates that the miner fee for a specific swap is to high.
+    */
+    AUTO_REASON_MINER_FEE = 6;
+
+    /*
+    Prepay indicates that the prepay fee for a specific swap is too high.
+    */
+    AUTO_REASON_PREPAY = 7;
+
+    /*
+    Failure backoff indicates that a swap has recently failed for this target,
+    and the backoff period has not yet passed.
+    */
+    AUTO_REASON_FAILURE_BACKOFF = 8;
+
+    /*
+    Loop out indicates that a loop out swap is currently utilizing the channel,
+    so it is not eligible.
+    */
+    AUTO_REASON_LOOP_OUT = 9;
+
+    /*
+    Loop In indicates that a loop in swap is currently in flight for the peer,
+    so it is not eligible.
+    */
+    AUTO_REASON_LOOP_IN = 10;
+
+    /*
+    Liquidity ok indicates that a target meets the liquidity balance expressed
+    in its rule, so no swap is needed.
+    */
+    AUTO_REASON_LIQUIDITY_OK = 11;
+
+    /*
+    Budget insufficient indicates that we cannot perform a swap because we do
+    not have enough pending budget available. This differs from budget elapsed,
+    because we still have some budget available, but we have allocated it to
+    other swaps.
+    */
+    AUTO_REASON_BUDGET_INSUFFICIENT = 12;
+
+    /*
+    Fee insufficient indicates that the fee estimate for a swap is higher than
+    the portion of total swap amount that we allow fees to consume.
+    */
+    AUTO_REASON_FEE_INSUFFICIENT = 13;
+}
+
+message Disqualified {
+    /*
+    The short channel ID of the channel that was excluded from our suggestions.
+    */
+    uint64 channel_id = 1;
+
+    /*
+    The public key of the peer that was excluded from our suggestions.
+    */
+    bytes pubkey = 3;
+
+    /*
+    The reason that we excluded the channel from the our suggestions.
+    */
+    AutoReason reason = 2;
+}
+
+message SuggestSwapsResponse {
+    /*
+    The set of recommended loop outs.
+    */
+    repeated LoopOutRequest loop_out = 1;
+
+    /*
+    The set of recommended loop in swaps
+    */
+    repeated LoopInRequest loop_in = 3;
+
+    /*
+    Disqualified contains the set of channels that swaps are not recommended
+    for.
+    */
+    repeated Disqualified disqualified = 2;
+}
+
+message AbandonSwapRequest {
+    /*
+    The swap identifier which currently is the hash that locks the HTLCs. When
+    using REST, this field must be encoded as URL safe base64.
+    */
+    bytes id = 1;
+
+    /*
+    A flag that tries to ensure that the client understands that they are
+    risking loss of funds by abandoning a swap. This could happen if an
+    abandoned swap would wait on a timeout sweep by the client.
+     */
+    bool i_know_what_i_am_doing = 2;
+}
+
+message AbandonSwapResponse {
+}
+
+message ListReservationsRequest {
+}
+
+message ListReservationsResponse {
+    /*
+    The list of all currently known reservations and their status.
+    */
+    repeated ClientReservation reservations = 1;
+}
+
+message ClientReservation {
+    /*
+    The reservation id that identifies this reservation.
+    */
+    bytes reservation_id = 1;
+
+    /*
+    The state the reservation is in.
+    */
+    string state = 2;
+    /*
+        The amount that the reservation is for.
+    */
+    uint64 amount = 3;
+    /*
+        The transaction id of the reservation.
+    */
+    string tx_id = 4;
+    /*
+        The vout of the reservation.
+    */
+    uint32 vout = 5;
+    /*
+        The expiry of the reservation.
+    */
+    uint32 expiry = 6;
+}
+
+message InstantOutRequest {
+    /*
+    The reservations to use for the swap.
+    */
+    repeated bytes reservation_ids = 1;
+
+    /*
+    A restriction on the channel set that may be used to loop out. The actual
+    channel(s) that will be used are selected based on the lowest routing fee
+    for the swap payment to the server.
+    */
+    repeated uint64 outgoing_chan_set = 2;
+
+    /*
+    An optional address to sweep the onchain funds to. If not set, the funds
+    will be swept to the wallet's internal address.
+    */
+    string dest_addr = 3;
+}
+
+message InstantOutResponse {
+    /*
+    The hash of the swap preimage.
+    */
+    bytes instant_out_hash = 1;
+    /*
+    The transaction id of the sweep transaction.
+    */
+    string sweep_tx_id = 2;
+    /*
+    The state of the swap.
+    */
+    string state = 3;
+}
+
+message InstantOutQuoteRequest {
+    /*
+    The amount to swap in satoshis.
+    */
+    uint64 amt = 1;
+
+    /*
+    The amount of reservations to use for the swap.
+    */
+    int32 num_reservations = 2;
+}
+
+message InstantOutQuoteResponse {
+    /*
+    The fee that the swap service is charging for the swap.
+    */
+    int64 service_fee_sat = 1;
+
+    /*
+    The estimated on-chain fee that needs to be paid to publish the Sweepless
+    Sweep.
+    */
+    int64 sweep_fee_sat = 2;
+}
+
+message ListInstantOutsRequest {
+}
+
+message ListInstantOutsResponse {
+    /*
+    The list of all currently known instant out swaps and their status.
+    */
+    repeated InstantOut swaps = 1;
+}
+
+message InstantOut {
+    /*
+    The swap hash that identifies this swap.
+    */
+    bytes swap_hash = 1;
+
+    /*
+    The state the swap is in.
+    */
+    string state = 2;
+
+    /*
+    The amount of the swap.
+    */
+    uint64 amount = 3;
+
+    /*
+    The used reservations for the swap.
+    */
+    repeated bytes reservation_ids = 4;
+
+    /*
+    The sweep transaction id of the swap.
+    */
+    string sweep_tx_id = 5;
+}

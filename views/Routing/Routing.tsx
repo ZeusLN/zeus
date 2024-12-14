@@ -30,7 +30,7 @@ interface RoutingState {
     selectedIndex: number;
 }
 
-const HOURS = {
+const HOURS: { [key: number]: number } = {
     0: 24,
     1: 24 * 7,
     2: 24 * 30,
@@ -57,7 +57,7 @@ export default class Routing extends React.PureComponent<
         }
     }
 
-    renderItem = ({ item }) => {
+    renderItem = ({ item }: { item: any }) => {
         const { navigation } = this.props;
         return (
             <TouchableOpacity
@@ -189,7 +189,7 @@ export default class Routing extends React.PureComponent<
             </Text>
         );
 
-        const buttons = [
+        const buttons: any = [
             { element: oneDButton },
             { element: oneWButton },
             { element: oneMButton },

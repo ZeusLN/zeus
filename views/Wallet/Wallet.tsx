@@ -64,12 +64,14 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
-    Settings
+    Settings,
+    INTERFACE_KEYS
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
+import NotesStore from '../../stores/NotesStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -77,6 +79,8 @@ import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import POS from '../../assets/images/SVG/POS.svg';
 import Temple from '../../assets/images/SVG/Temple.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
+
+import { version } from '../../package.json';
 
 interface WalletProps {
     enterSetup: any;
@@ -95,6 +99,7 @@ interface WalletProps {
     ModalStore: ModalStore;
     SyncStore: SyncStore;
     LSPStore: LSPStore;
+    NotesStore: NotesStore;
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
     LnurlPayStore: LnurlPayStore;
@@ -121,7 +126,8 @@ interface WalletState {
     'LSPStore',
     'LnurlPayStore',
     'ChannelBackupStore',
-    'LightningAddressStore'
+    'LightningAddressStore',
+    'NotesStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -275,7 +281,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 settings.nodes.length > 0
             ) {
                 if (settings.selectNodeOnStartup && initialStart) {
-                    navigation.navigate('Nodes');
+                    navigation.navigate('Wallets');
                 }
                 if (!this.state.unlocked) {
                     this.startListeners();
@@ -303,7 +309,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelBackupStore,
             SyncStore,
             LightningAddressStore,
-            LnurlPayStore
+            LnurlPayStore,
+            NotesStore
         } = this.props;
         const {
             settings,
@@ -345,9 +352,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
+            ContactStore.loadContacts();
+            NotesStore.loadNoteKeys();
         }
-
-        ContactStore.loadContacts();
 
         LnurlPayStore.reset();
 
@@ -561,6 +568,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
 
+        // Define the type for implementationDisplayValue
+        interface ImplementationDisplayValue {
+            [key: string]: string;
+        }
+
+        const implementationDisplayValue: ImplementationDisplayValue = {};
+        INTERFACE_KEYS.forEach((item) => {
+            implementationDisplayValue[item.value] = item.key;
+        });
+
         const BalanceScreen = () => {
             return (
                 <Screen>
@@ -574,6 +591,34 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                     {error && (
                         <View style={{ backgroundColor: themeColor('error') }}>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    marginBottom: 15,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {`v${version} | ${implementationDisplayValue[implementation]}`}
+                            </Text>
+                            <Button
+                                icon={{
+                                    name: 'settings',
+                                    size: 25,
+                                    color: '#fff'
+                                }}
+                                title={localeString(
+                                    'views.Wallet.MainPane.goToSettings'
+                                )}
+                                buttonStyle={{
+                                    backgroundColor: 'gray',
+                                    marginBottom: 20
+                                }}
+                                onPress={() =>
+                                    protectedNavigation(navigation, 'Menu')
+                                }
+                            />
                             <Button
                                 title={localeString('views.Wallet.restart')}
                                 icon={{
@@ -665,7 +710,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         };
 
-        const CameraScreen = () => {};
+        const CameraScreen: any = () => {};
 
         const ChannelsScreen = () => {
             return (
@@ -698,7 +743,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     initialRouteName={
                                         posEnabled !== PosEnabled.Disabled &&
                                         posStatus === 'active'
-                                            ? 'POS'
+                                            ? (settings.pos &&
+                                                  settings.pos.defaultView) ||
+                                              'Products'
                                             : isSyncing
                                             ? 'Balance'
                                             : (settings.display &&
@@ -721,7 +768,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             if (route.name === 'Balance') {
                                                 return <Temple fill={color} />;
                                             }
-                                            if (route.name === 'POS') {
+                                            if (route.name === 'Products') {
                                                 return <POS stroke={color} />;
                                             }
                                             if (route.name === 'POS Keypad') {

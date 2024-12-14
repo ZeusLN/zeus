@@ -6,7 +6,7 @@ import {
 
 import LNC, { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-rn';
 
-import stores from '../stores/Stores';
+import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import CredentialStore from './LNC/credentialStore';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
@@ -41,6 +41,15 @@ interface Params {
     min_htlc_msat_specified?: boolean;
 }
 
+const NEXT_ADDR_MAP: any = {
+    WITNESS_PUBKEY_HASH: 0,
+    NESTED_PUBKEY_HASH: 1,
+    UNUSED_WITNESS_PUBKEY_HASH: 2,
+    UNUSED_NESTED_PUBKEY_HASH: 3,
+    TAPROOT_PUBKEY: 4,
+    UNUSED_TAPROOT_PUBKEY: 5
+};
+
 export default class LightningNodeConnect {
     lnc: LNC;
     listener: EventSubscription | null = null;
@@ -55,7 +64,7 @@ export default class LightningNodeConnect {
 
     initLNC = async () => {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
-            stores.settingsStore;
+            settingsStore;
 
         this.lnc = new LNC({
             credentialStore: new CredentialStore()
@@ -147,6 +156,54 @@ export default class LightningNodeConnect {
         return snakeize(response);
     }
 
+    disconnect = () => this.lnc && this.lnc.disconnect();
+
+    getTransactions = async () =>
+        await this.lnc.lnd.lightning
+            .getTransactions({})
+            .then((data: lnrpc.TransactionDetails) => {
+                const formatted = snakeize(data);
+                return {
+                    transactions: formatted.transactions.reverse()
+                };
+            });
+    getChannels = async () =>
+        await this.lnc.lnd.lightning
+            .listChannels({})
+            .then((data: lnrpc.ListChannelsResponse) => snakeize(data));
+    getPendingChannels = async () =>
+        await this.lnc.lnd.lightning
+            .pendingChannels({})
+            .then((data: lnrpc.PendingChannelsResponse) => snakeize(data));
+    getClosedChannels = async () =>
+        await this.lnc.lnd.lightning
+            .closedChannels({})
+            .then((data: lnrpc.ClosedChannelsResponse) => snakeize(data));
+    getChannelInfo = async (chanId: string) => {
+        const request: lnrpc.ChanInfoRequest = { chanId };
+        return await this.lnc.lnd.lightning
+            .getChanInfo(request)
+            .then((data: lnrpc.ChannelEdge) => snakeize(data));
+    };
+    getBlockchainBalance = async (req: lnrpc.WalletBalanceRequest) =>
+        await this.lnc.lnd.lightning
+            .walletBalance(req)
+            .then((data: lnrpc.WalletBalanceResponse) => snakeize(data));
+    getLightningBalance = async (req: lnrpc.ChannelBalanceRequest) =>
+        await this.lnc.lnd.lightning
+            .channelBalance(req)
+            .then((data: lnrpc.ChannelBalanceResponse) => snakeize(data));
+    sendCoins = async (data: any) =>
+        await this.lnc.lnd.lightning
+            .sendCoins({
+                addr: data.addr,
+                sat_per_vbyte: data.sat_per_vbyte,
+                amount: data.amount,
+                spend_unconfirmed: data.spend_unconfirmed,
+                send_all: data.send_all,
+                outpoints: data.outpoints
+            })
+            .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     sendCustomMessage = async (data: any) =>
         await this.lnc.lnd.lightning
             .sendCustomMessage({
@@ -193,6 +250,69 @@ export default class LightningNodeConnect {
         });
         return snakeize(response);
     }
+    getMyNodeInfo = async () =>
+        await this.lnc.lnd.lightning
+            .getInfo({})
+            .then((data: lnrpc.GetInfoResponse) => snakeize(data));
+    getNetworkInfo = async () =>
+        await this.lnc.lnd.lightning
+            .getNetworkInfo({})
+            .then((data: lnrpc.NetworkInfo) => snakeize(data));
+    getInvoices = async () =>
+        await this.lnc.lnd.lightning
+            .listInvoices({ reversed: true, num_max_invoices: 100 })
+            .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
+    createInvoice = async (data: any) =>
+        await this.lnc.lnd.lightning
+            .addInvoice({
+                memo: data.memo,
+                value_msat: data.value_msat || Number(data.value) * 1000,
+                expiry: data.expiry,
+                is_amp: data.is_amp,
+                is_blinded: data.is_blinded,
+                private: data.private,
+                r_preimage: data.preimage
+                    ? Base64Utils.hexToBase64(data.preimage)
+                    : undefined,
+                route_hints: data.route_hints
+            })
+            .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
+    getPayments = async () =>
+        await this.lnc.lnd.lightning
+            .listPayments({
+                include_incomplete: true
+            })
+            .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
+    getNewAddress = async (data: any) =>
+        await this.lnc.lnd.lightning
+            .newAddress({
+                type: ADDRESS_TYPES[data.type] || data.type,
+                account: data.account || 'default'
+            })
+            .then((data: walletrpc.AddrRequest) => snakeize(data));
+    getNewChangeAddress = async (data: any) =>
+        await this.lnc.lnd.walletKit
+            .nextAddr({
+                type: NEXT_ADDR_MAP[data.type],
+                account: data.account || 'default',
+                change: true
+            })
+            .then((data: walletrpc.AddrResponse) => snakeize(data));
+    openChannelSync = async (data: OpenChannelRequest) => {
+        let request: any = {
+            private: data.privateChannel,
+            scid_alias: data.scidAlias,
+            local_funding_amount: data.local_funding_amount || 0,
+            min_confs: data.min_confs,
+            node_pubkey_string: data.node_pubkey_string,
+            sat_per_vbyte: data.sat_per_vbyte,
+            spend_unconfirmed: data.spend_unconfirmed
+        };
+
+        if (data.fundMax) {
+            request.fund_max = true;
+            delete request.local_funding_amount;
+        }
 
     async getNetworkInfo(): Promise<lnrpc.NetworkInfo> {
         const info = await this.lnc.lnd.lightning.getNetworkInfo({});
@@ -226,6 +346,16 @@ export default class LightningNodeConnect {
     openChannelStream = (data: OpenChannelRequest) => {
         const request: lnrpc.OpenChannelRequest =
             this.createOpenChannelRequest(data);
+        let request: any = {
+            private: data.privateChannel || false,
+            scid_alias: data.scidAlias,
+            local_funding_amount: data.local_funding_amount,
+            min_confs: data.min_confs,
+            node_pubkey: Base64Utils.hexToBase64(data.node_pubkey_string),
+            sat_per_vbyte: !data.funding_shim ? data.sat_per_vbyte : undefined,
+            spend_unconfirmed: data.spend_unconfirmed,
+            funding_shim: data.funding_shim
+        };
 
         this.lnc.lnd.lightning.openChannel(request);
         return new Promise((resolve, reject) => {
@@ -332,7 +462,7 @@ export default class LightningNodeConnect {
             force: urlParams && urlParams[2]
         };
 
-        if (urlParams && urlParams[3]) {
+        if (urlParams && urlParams[3] && !urlParams[2]) {
             params.sat_per_vbyte = Number(urlParams[3]);
         }
 
@@ -361,6 +491,13 @@ export default class LightningNodeConnect {
             params = {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
+                ...(this.supportInboundFees() && {
+                    inboundFee: {
+                        base_fee_msat: data.base_fee_msat_inbound,
+                        fee_rate_ppm: `${Number(data.fee_rate_inbound) * 10000}`
+                    }
+                }),
+
                 global: true,
                 time_lock_delta: Number(data.time_lock_delta),
                 min_htlc_msat: data.min_htlc
@@ -375,6 +512,12 @@ export default class LightningNodeConnect {
             params = {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
+                ...(this.supportInboundFees() && {
+                    inboundFee: {
+                        base_fee_msat: data.base_fee_msat_inbound,
+                        fee_rate_ppm: `${Number(data.fee_rate_inbound) * 10000}`
+                    }
+                }),
                 chan_point: {
                     funding_txid_str: data.chan_point.funding_txid_str,
                     output_index: data.chan_point.output_index
@@ -402,7 +545,7 @@ export default class LightningNodeConnect {
             })
             .then((data: lnrpc.QueryRoutesResponse) => snakeize(data));
     getForwardingHistory = async (hours = 24) => {
-        const req: lnrpc.ForwardingHistoryRequest = {
+        const req: any = {
             numMaxEvents: 10000000,
             startTime: Math.round(
                 new Date(Date.now() - hours * 60 * 60 * 1000).getTime() / 1000
@@ -429,11 +572,13 @@ export default class LightningNodeConnect {
             .then((data: walletrpc.FinalizePsbtResponse) => snakeize(data));
     publishTransaction = async (req: walletrpc.Transaction) => {
         if (req.txHex) req.txHex = Base64Utils.hexToBase64(req.txHex as string);
+    publishTransaction = async (req: any) => {
+        if (req.tx_hex) req.tx_hex = Base64Utils.hexToBase64(req.tx_hex);
         return await this.lnc.lnd.walletKit
             .publishTransaction(req)
             .then((data: walletrpc.PublishResponse) => snakeize(data));
     };
-    fundingStateStep = async (req: lnrpc.FundingTransitionMsg) => {
+    fundingStateStep = async (req: any) => {
         // Finalize
         if (req.psbtFinalize?.finalRawTx)
             req.psbtFinalize.finalRawTx = Base64Utils.hexToBase64(
@@ -456,6 +601,10 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .listAccounts({})
             .then((data: walletrpc.ListAccountsResponse) => snakeize(data));
+    listAddresses = async () =>
+        await this.lnc.lnd.walletKit
+            .listAddresses({})
+            .then((data: walletrpc.ListAddressesResponse) => snakeize(data));
     importAccount = async (req: walletrpc.ImportAccountRequest) =>
         await this.lnc.lnd.walletKit
             .importAccount(req)
@@ -482,7 +631,7 @@ export default class LightningNodeConnect {
                 .digest()
         };
     };
-    lookupInvoice = async (data: lnrpc.PaymentHash) =>
+    lookupInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
             .lookupInvoice({
                 rHash: Base64Utils.hexToBase64(data.rHash as string)
@@ -496,6 +645,8 @@ export default class LightningNodeConnect {
 
     supports(minVersion: string, eosVersion?: string): boolean {
         const { nodeInfo } = stores.nodeInfoStore;
+    supports = (minVersion: string, eosVersion?: string) => {
+        const { nodeInfo } = nodeInfoStore;
         const { version } = nodeInfo;
         const { isSupportedVersion } = VersionUtils;
         return isSupportedVersion(version, minVersion, eosVersion);
@@ -533,4 +684,27 @@ export default class LightningNodeConnect {
     supportsLSPS1customMessage = (): boolean => true;
     supportsLSPS1rest = (): boolean => false;
     supportsOffers = () => false;
+    supportsHopPicking = () => this.permOpenChannel;
+    supportsAccounts = () => this.permImportAccount;
+    supportsRouting = () => this.permForwardingHistory;
+    supportsNodeInfo = () => true;
+    singleFeesEarnedTotal = () => false;
+    supportsAddressTypeSelection = () => true;
+    supportsTaproot = () => this.supports('v0.15.0');
+    supportsBumpFee = () => true;
+    supportsLSPs = () => false;
+    supportsNetworkInfo = () => true;
+    supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
+    supportsCustomPreimages = () => true;
+    supportsSweep = () => true;
+    supportsOnchainSendMax = () => this.supports('v0.18.3');
+    supportsOnchainBatching = () => true;
+    supportsChannelBatching = () => true;
+    supportsLSPS1customMessage = () => false;
+    supportsLSPS1rest = () => true;
+    supportsOffers = () => false;
+    supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
+    supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
+    isLNDBased = () => true;
+    supportInboundFees = () => this.supports('v0.18.0');
 }

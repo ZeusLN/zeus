@@ -10,10 +10,14 @@ import {
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { inject, observer } from 'mobx-react';
 
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
+
+import stores from './../../stores/Stores';
+import SyncStore from '../../stores/SyncStore';
 
 import Coins from './../../assets/images/SVG/Coins.svg';
 import Receive from './../../assets/images/SVG/Receive.svg';
@@ -26,8 +30,13 @@ interface OnchainSwipeableRowProps {
     locked?: boolean;
     account?: string;
     hidden?: boolean;
+    children?: React.ReactNode;
+    disabled?: boolean;
+    SyncStore?: SyncStore;
 }
 
+@inject('SyncStore')
+@observer
 export default class OnchainSwipeableRow extends Component<
     OnchainSwipeableRowProps,
     {}
@@ -35,7 +44,7 @@ export default class OnchainSwipeableRow extends Component<
     private renderAction = (
         text: string,
         x: number,
-        progress: Animated.AnimatedInterpolation
+        progress: Animated.AnimatedInterpolation<number>
     ) => {
         const { account, navigation } = this.props;
         const transTranslateX = progress.interpolate({
@@ -120,7 +129,9 @@ export default class OnchainSwipeableRow extends Component<
         );
     };
 
-    private renderActions = (progress: Animated.AnimatedInterpolation) => (
+    private renderActions = (
+        progress: Animated.AnimatedInterpolation<number>
+    ) => (
         <View
             style={{
                 marginLeft: 15,
@@ -150,11 +161,11 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     private close = () => {
-        this.swipeableRow.close();
+        if (this.swipeableRow) this.swipeableRow.close();
     };
 
     private open = () => {
-        this.swipeableRow.openLeft();
+        if (this.swipeableRow) this.swipeableRow.openLeft();
     };
 
     private sendToAddress = () => {
@@ -167,11 +178,30 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     render() {
-        const { children, value, locked, hidden } = this.props;
+        const { children, value, locked, hidden, disabled, SyncStore } =
+            this.props;
+        const { isSyncing } = SyncStore!;
+        if (isSyncing) {
+            return (
+                <TouchableOpacity
+                    onPress={() =>
+                        stores.modalStore.toggleInfoModal(
+                            localeString('views.Wallet.waitForSync')
+                        )
+                    }
+                    activeOpacity={1}
+                    style={{ width: '100%' }}
+                >
+                    <View style={{ opacity: hidden ? 0.25 : 1 }}>
+                        {children}
+                    </View>
+                </TouchableOpacity>
+            );
+        }
         if (locked && value) {
             return (
                 <TouchableOpacity
-                    onPress={() => this.sendToAddress()}
+                    onPress={() => (disabled ? null : this.sendToAddress())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
                 >
@@ -181,7 +211,7 @@ export default class OnchainSwipeableRow extends Component<
         }
         if (locked)
             return (
-                <View style={{ width: '100%', opacity: hidden ? 0.1 : 1 }}>
+                <View style={{ width: '100%', opacity: hidden ? 0.25 : 1 }}>
                     {children}
                 </View>
             );

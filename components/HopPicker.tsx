@@ -33,8 +33,8 @@ interface ChannelPickerProps {
     onCancel?: () => void;
     ChannelsStore: ChannelsStore;
     UnitsStore: UnitsStore;
-    containerStyle: ViewStyle;
-    clearOnTap: boolean;
+    containerStyle?: ViewStyle;
+    clearOnTap?: boolean;
     selectionMode?: 'single' | 'multiple';
     selectedChannels?: Channel[];
 }
@@ -144,8 +144,13 @@ export default class ChannelPicker extends React.Component<
                 <TouchableHighlight onPress={() => this.toggleItem(item)}>
                     <ChannelItem
                         title={item.displayName}
-                        inbound={item.remoteBalance}
-                        outbound={item.localBalance}
+                        localBalance={item.localBalance}
+                        remoteBalance={item.remoteBalance}
+                        sendingCapacity={item.sendingCapacity}
+                        receivingCapacity={item.receivingCapacity}
+                        outboundReserve={item.localReserveBalance}
+                        inboundReserve={item.remoteReserveBalance}
+                        isBelowReserve={item.isBelowReserve}
                         largestTotal={largestChannelSats}
                         selected={selected}
                     />
@@ -157,8 +162,13 @@ export default class ChannelPicker extends React.Component<
             <TouchableHighlight onPress={() => this.toggleItem(item)}>
                 <ChannelItem
                     title={item.displayName}
-                    inbound={item.remoteBalance}
-                    outbound={item.localBalance}
+                    localBalance={item.localBalance}
+                    remoteBalance={item.remoteBalance}
+                    sendingCapacity={item.sendingCapacity}
+                    receivingCapacity={item.receivingCapacity}
+                    outboundReserve={item.localReserveBalance}
+                    inboundReserve={item.remoteReserveBalance}
+                    isBelowReserve={item.isBelowReserve}
                     selected={selected}
                 />
             </TouchableHighlight>
@@ -226,7 +236,7 @@ export default class ChannelPicker extends React.Component<
                                       )}
                             </Text>
 
-                            <ChannelsFilter width="86%" />
+                            <ChannelsFilter />
 
                             <FlatList
                                 data={channels}

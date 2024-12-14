@@ -22,7 +22,9 @@ interface DisasterRecoveryAdvancedProps {
 }
 
 interface DisasterRecoveryAdvancedState {
-    selected: any;
+    selected: {
+        backup?: string;
+    };
 }
 
 @inject('ChannelBackupStore')
@@ -32,7 +34,7 @@ export default class DisasterRecoveryAdvanced extends React.Component<
     DisasterRecoveryAdvancedState
 > {
     state = {
-        selected: {}
+        selected: { backup: '' }
     };
 
     UNSAFE_componentWillMount(): void {

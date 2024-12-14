@@ -7,6 +7,7 @@ import isEqual from 'lodash/isEqual';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import { getSupportedBiometryType } from '../utils/BiometricUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
@@ -22,6 +23,7 @@ export interface Node {
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
+    dismissCustodialWarning: boolean;
     photo?: string;
     // LNC
     pairingPhrase?: string;
@@ -43,6 +45,7 @@ interface DisplaySettings {
     displayNickname?: boolean;
     bigKeypadButtons?: boolean;
     showAllDecimalPlaces?: boolean;
+    removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
 }
 
@@ -64,6 +67,7 @@ interface PosSettings {
     showKeypad?: boolean;
     taxPercentage?: string;
     enablePrinter?: boolean;
+    defaultView?: string;
 }
 
 interface PaymentsSettings {
@@ -72,6 +76,7 @@ interface PaymentsSettings {
     defaultFeeFixed?: string;
     timeoutSeconds?: string;
     preferredMempoolRate?: string;
+    slideToPayThreshold: number;
 }
 
 interface InvoicesSettings {
@@ -82,7 +87,9 @@ interface InvoicesSettings {
     expirySeconds?: string;
     routeHints?: boolean;
     ampInvoice?: boolean;
+    blindedPaths: boolean;
     showCustomPreimageField?: boolean;
+    displayAmountOnInvoice?: boolean;
 }
 
 interface ChannelsSettings {
@@ -245,7 +252,10 @@ export const SPEEDLOADER_KEYS = [
     }
 ];
 
-export const INTERFACE_KEYS = [
+export const INTERFACE_KEYS: {
+    key: string;
+    value: string;
+}[] = [
     { key: 'Embedded LND', value: 'embedded-lnd' },
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
@@ -837,11 +847,6 @@ export const THEME_KEYS = [
     },
     { key: 'BPM', translateKey: 'views.Settings.Theme.bpm', value: 'bpm' },
     {
-        key: 'Orange',
-        translateKey: 'views.Settings.Theme.orange',
-        value: 'orange'
-    },
-    {
         key: 'Blacked Out',
         translateKey: 'views.Settings.Theme.blacked-out',
         value: 'blacked-out'
@@ -917,6 +922,11 @@ export const THEME_KEYS = [
         key: 'Radioactive',
         translateKey: 'views.Settings.Theme.radioactive',
         value: 'radioactive'
+    },
+    {
+        key: 'Spooky',
+        translateKey: 'views.Settings.Theme.spooky',
+        value: 'orange'
     }
 ];
 
@@ -930,6 +940,19 @@ export const DEFAULT_VIEW_KEYS = [
         key: 'Keypad',
         translateKey: 'views.Settings.Display.DefaultView.keypad',
         value: 'Keypad'
+    }
+];
+
+export const DEFAULT_VIEW_KEYS_POS = [
+    {
+        key: 'Products',
+        translateKey: 'views.Settings.POS.Products',
+        value: 'Products'
+    },
+    {
+        key: 'POS Keypad',
+        translateKey: 'views.Settings.POS.Keypad',
+        value: 'POS Keypad'
     }
 ];
 
@@ -981,10 +1004,18 @@ export const DEFAULT_LSPS1_PUBKEY_TESTNET =
 export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
-export const DEFAULT_NOSTR_RELAYS = [
+export const DEFAULT_NOSTR_RELAYS_2023 = [
     'wss://nostr.mutinywallet.com',
     'wss://relay.damus.io',
     'wss://nostr.lnproxy.org'
+];
+
+export const DEFAULT_NOSTR_RELAYS = [
+    'wss://relay.damus.io',
+    'wss://nostr.land',
+    'wss://nostr.wine',
+    'wss://nos.lol',
+    'wss://relay.snort.social'
 ];
 
 export const NOTIFICATIONS_PREF_KEYS = [
@@ -1030,14 +1061,27 @@ export const DEFAULT_NEUTRINO_PEERS_MAINNET = [
     'btcd2.lnolymp.us',
     'btcd-mainnet.lightning.computer',
     'node.eldamar.icu',
-    'noad.sathoarder.com',
-    'sg.lnolymp.us'
+    'noad.sathoarder.com'
 ];
 
 export const SECONDARY_NEUTRINO_PEERS_MAINNET = [
-    'node.blixtwallet.com',
-    'bb1.breez.technology',
-    'bb2.breez.technology'
+    // friends
+    [
+        'uswest.blixtwallet.com',
+        'europe.blixtwallet.com',
+        'bb1.breez.technology',
+        'bb2.breez.technology'
+    ],
+    // Asia
+    [
+        'sg.lnolymp.us',
+        'asia.blixtwallet.com',
+        // per Expatriotic
+        '168.159.213.bc.googleusercontent.com',
+        '115.85.88.107',
+        '182.229.145.161',
+        '18.142.108.45'
+    ]
 ];
 
 export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
@@ -1047,6 +1091,8 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
 ];
 
 const STORAGE_KEY = 'zeus-settings';
+
+const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 export default class SettingsStore {
     @observable settings: Settings = {
@@ -1063,6 +1109,7 @@ export default class SettingsStore {
             displayNickname: false,
             bigKeypadButtons: false,
             showAllDecimalPlaces: false,
+            removeDecimalSpaces: false,
             showMillisatoshiAmounts: true
         },
         pos: {
@@ -1076,14 +1123,16 @@ export default class SettingsStore {
             squareDevMode: false,
             showKeypad: true,
             taxPercentage: '0',
-            enablePrinter: false
+            enablePrinter: false,
+            defaultView: 'Products'
         },
         payments: {
             defaultFeeMethod: 'fixed', // deprecated
             defaultFeePercentage: '5.0',
             defaultFeeFixed: '1000',
             timeoutSeconds: '60',
-            preferredMempoolRate: 'fastestFee'
+            preferredMempoolRate: 'fastestFee',
+            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
         },
         invoices: {
             addressType: '0',
@@ -1093,7 +1142,9 @@ export default class SettingsStore {
             expirySeconds: '3600',
             routeHints: false,
             ampInvoice: false,
-            showCustomPreimageField: false
+            blindedPaths: false,
+            showCustomPreimageField: false,
+            displayAmountOnInvoice: false
         },
         channels: {
             min_confs: 1,
@@ -1180,6 +1231,7 @@ export default class SettingsStore {
     @observable username: string;
     @observable password: string;
     @observable lndhubUrl: string;
+    @observable dismissCustodialWarning: boolean = false;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
     @observable public accessToken: string;
@@ -1338,7 +1390,7 @@ export default class SettingsStore {
             // Retrieve the settings
             const settings = await EncryptedStorage.getItem(STORAGE_KEY);
             if (settings) {
-                const newSettings = JSON.parse(settings);
+                const newSettings = JSON.parse(settings) as Settings;
                 if (!newSettings.fiatRatesSource) {
                     newSettings.fiatRatesSource = DEFAULT_FIAT_RATES_SOURCE;
                 }
@@ -1497,6 +1549,35 @@ export default class SettingsStore {
                     await EncryptedStorage.setItem(MOD_KEY6, 'true');
                 }
 
+                // switch off bimodal pathfinding while bug exists
+                // https://github.com/lightningnetwork/lnd/issues/9085
+                const MOD_KEY7 = 'bimodal-bug-9085';
+                const mod7 = await EncryptedStorage.getItem(MOD_KEY7);
+                if (!mod7) {
+                    if (newSettings?.bimodalPathfinding) {
+                        newSettings.bimodalPathfinding = false;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY7, 'true');
+                }
+
+                const MOD_KEY8 = 'nostr-relays-2024';
+                const mod8 = await EncryptedStorage.getItem(MOD_KEY8);
+                if (!mod8) {
+                    if (
+                        JSON.stringify(
+                            newSettings?.lightningAddress?.nostrRelays
+                        ) === JSON.stringify(DEFAULT_NOSTR_RELAYS_2023)
+                    ) {
+                        newSettings.lightningAddress.nostrRelays =
+                            DEFAULT_NOSTR_RELAYS;
+                    }
+
+                    this.setSettings(JSON.stringify(newSettings));
+                    await EncryptedStorage.setItem(MOD_KEY8, 'true');
+                }
+
                 // migrate old POS squareEnabled setting to posEnabled
                 if (newSettings?.pos?.squareEnabled) {
                     newSettings.pos.posEnabled = PosEnabled.Square;
@@ -1510,6 +1591,15 @@ export default class SettingsStore {
                 if (!newSettings.neutrinoPeersTestnet) {
                     newSettings.neutrinoPeersTestnet =
                         DEFAULT_NEUTRINO_PEERS_TESTNET;
+                }
+
+                if (newSettings.payments == null) {
+                    newSettings.payments = {
+                        slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
+                    };
+                } else if (newSettings.payments.slideToPayThreshold == null) {
+                    newSettings.payments.slideToPayThreshold =
+                        DEFAULT_SLIDE_TO_PAY_THRESHOLD;
                 }
 
                 if (!isEqual(this.settings, newSettings)) {
@@ -1529,6 +1619,7 @@ export default class SettingsStore {
                     this.macaroonHex = node.macaroonHex;
                     this.rune = node.rune;
                     this.accessKey = node.accessKey;
+                    this.dismissCustodialWarning = node.dismissCustodialWarning;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
                     this.enableTor = node.enableTor;
@@ -1732,6 +1823,19 @@ export default class SettingsStore {
         (this.settings.passphrase ||
             this.settings.pin ||
             this.isBiometryConfigured());
+
+    public checkBiometricsStatus = async () => {
+        const biometryType = await getSupportedBiometryType();
+        if (this.settings.supportedBiometryType !== biometryType) {
+            this.updateSettings({
+                supportedBiometryType: biometryType
+            });
+        }
+        return {
+            supportedBiometryType: biometryType,
+            isBiometryEnabled: this.settings.isBiometryEnabled
+        };
+    };
 
     public isBiometryConfigured = () =>
         this.settings != null &&

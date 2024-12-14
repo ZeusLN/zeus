@@ -2,8 +2,9 @@ import { computed } from 'mobx';
 import BigNumber from 'bignumber.js';
 
 import BaseModel from './BaseModel';
-import DateTimeUtils from './../utils/DateTimeUtils';
-import { localeString } from './../utils/LocaleUtils';
+import DateTimeUtils from '../utils/DateTimeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { notesStore } from '../stores/storeInstances';
 
 interface OutputDetail {
     address: string;
@@ -108,9 +109,9 @@ export default class Transaction extends BaseModel {
             : new BigNumber(amount).plus(this.getFee).toString();
     }
 
-    @computed public get getBlockHeight(): string | boolean {
+    @computed public get getBlockHeight(): string {
         const block_height = this.blockheight || this.block_height;
-        return block_height ? block_height.toString() : false;
+        return block_height ? block_height.toString() : '';
     }
 
     @computed public get tx(): string {
@@ -128,5 +129,13 @@ export default class Transaction extends BaseModel {
                 outpoint = `${this.tx}:${output.output_index}`;
         });
         return outpoint;
+    }
+
+    @computed public get getNoteKey(): string {
+        return `note-${this.tx}`;
+    }
+
+    @computed public get getNote(): string {
+        return notesStore.notes[this.getNoteKey] || '';
     }
 }
