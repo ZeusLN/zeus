@@ -187,7 +187,8 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             filteredPendingChannels,
             filteredClosedChannels,
             showSearch,
-            setChannelsType
+            setChannelsType,
+            channelsType
         } = ChannelsStore!;
 
         const { settings } = SettingsStore!;
@@ -265,6 +266,15 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             'views.Wallet.Wallet.closed'
         )} (${filteredClosedChannels?.length || 0})`;
 
+        let initialRoute;
+        if (channelsType === ChannelsType.Open) {
+            initialRoute = openChannelsTabName;
+        } else if (channelsType === ChannelsType.Pending) {
+            initialRoute = pendingChannelsTabName;
+        } else if (channelsType === ChannelsType.Closed) {
+            initialRoute = closedChannelsTabName;
+        }
+
         return (
             <View style={{ flex: 1 }}>
                 <WalletHeader
@@ -304,7 +314,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                             ref={this.tabNavigationRef}
                         >
                             <Tab.Navigator
-                                initialRouteName={openChannelsTabName}
+                                initialRouteName={initialRoute}
                                 backBehavior="none"
                                 screenOptions={() => ({
                                     headerShown: false,
