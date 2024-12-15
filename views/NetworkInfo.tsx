@@ -9,6 +9,7 @@ import Screen from '../components/Screen';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 
@@ -32,27 +33,33 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
         const NETWORK_INFO = [
             {
                 label: 'views.NetworkInfo.numChannels',
-                value: networkInfo.num_channels || 0
+                value: networkInfo.num_channels || 0,
+                formatValue: true
             },
             {
                 label: 'views.NetworkInfo.numNodes',
-                value: networkInfo.num_nodes || 0
+                value: networkInfo.num_nodes || 0,
+                formatValue: true
             },
             {
                 label: 'views.NetworkInfo.numZombieChannels',
-                value: networkInfo.num_zombie_chans || 0
+                value: networkInfo.num_zombie_chans || 0,
+                formatValue: true
             },
             {
                 label: 'views.NetworkInfo.graphDiameter',
-                value: networkInfo.graph_diameter || 0
+                value: networkInfo.graph_diameter || 0,
+                formatValue: false
             },
             {
                 label: 'views.NetworkInfo.averageOutDegree',
-                value: networkInfo.avg_out_degree || 0
+                value: networkInfo.avg_out_degree || 0,
+                formatValue: false
             },
             {
                 label: 'views.NetworkInfo.maxOutDegree',
-                value: networkInfo.max_out_degree || 0
+                value: networkInfo.max_out_degree || 0,
+                formatValue: false
             }
         ];
 
@@ -75,10 +82,14 @@ export default class NetworkInfo extends React.Component<NetworkInfoProps, {}> {
                     renderItem={({ item }) => (
                         <KeyValue
                             keyValue={localeString(item.label)}
-                            value={item.value}
+                            value={
+                                item.formatValue
+                                    ? numberWithCommas(item.value)
+                                    : item.value
+                            }
                         />
                     )}
-                    onRefresh={() => getNetworkInfo}
+                    onRefresh={() => getNetworkInfo()}
                     refreshing={loading}
                     style={styles.content}
                 />
