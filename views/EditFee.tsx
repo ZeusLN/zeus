@@ -388,10 +388,12 @@ export default class EditFee extends React.Component<
                                             'views.EditFee.confirmFee'
                                         )}
                                         onPress={() => {
-                                            this.props.route.params.onNavigateBack(
-                                                fee
+                                            FeeStore.setTempFee(
+                                                selectedFee === 'custom'
+                                                    ? customFee
+                                                    : fee
                                             );
-                                            this.props.navigation.goBack();
+                                            navigation.goBack();
                                         }}
                                         disabled={
                                             !fee ||

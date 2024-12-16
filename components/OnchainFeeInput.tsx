@@ -50,18 +50,24 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
         }
     }, []);
 
+    useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            if (feeStore.tempFee) {
+                setErrorOccurredLoadingFees(false);
+                onChangeFee(feeStore.tempFee);
+                feeStore.setTempFee('');
+            }
+        });
+
+        return unsubscribe;
+    }, [navigation]);
+
     return (
         <>
             {enableMempoolRates ? (
                 <TouchableWithoutFeedback
                     onPress={() =>
                         navigation.navigate('EditFee', {
-                            onNavigateBack: (fee: string) => {
-                                if (fee) {
-                                    setErrorOccurredLoadingFees(false);
-                                }
-                                onChangeFee(fee);
-                            },
                             fee: newFee
                         })
                     }
