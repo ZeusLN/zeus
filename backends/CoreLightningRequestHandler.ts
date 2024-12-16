@@ -1,3 +1,10 @@
+import * as bitcoin from 'bitcoinjs-lib';
+import ecc from '../zeus_modules/noble_ecc';
+
+import stores from '../stores/Stores';
+
+bitcoin.initEccLib(ecc);
+
 import CLNRest from './CLNRest';
 
 const api = new CLNRest();
@@ -139,7 +146,122 @@ export const getChainTransactions = async () => {
         api.postRequest('/v1/listtransactions'),
         api.postRequest('/v1/getinfo')
     ]);
-    const [sqlResult, listTxsResult, getinfoResult] = results;
+    const [sqlResult, listTxsResult, getinfoResult]: any = results;
+
+    listTxsResult?.value?.transactions?.forEach((tx: any) => {
+        const addresses: Array<string> = [];
+        tx.outputs.forEach((output: any) => {
+            const nodeInfo = stores?.nodeInfoStore?.nodeInfo;
+            const { isTestnet, isRegtest } = nodeInfo;
+
+            let network = bitcoin.networks.bitcoin;
+            if (isTestnet) network = bitcoin.networks.testnet;
+            if (isRegtest) network = bitcoin.networks.regtest;
+
+            const scriptPubKeyHex = output.scriptPubKey;
+
+            const scriptBuffer = Buffer.from(scriptPubKeyHex, 'hex');
+
+            const decodedScript = bitcoin.script.decompile(scriptBuffer);
+
+            // Handle P2PKH (Pay-to-PubKey-Hash)
+            if (
+                decodedScript &&
+                decodedScript[0] === bitcoin.opcodes.OP_DUP &&
+                decodedScript[1] === bitcoin.opcodes.OP_HASH160
+            ) {
+                try {
+                    const pubKeyHash: any = decodedScript[2];
+                    const { address } = bitcoin.payments.p2pkh({
+                        hash: pubKeyHash,
+                        network
+                    });
+                    if (address) addresses.push(address);
+                } catch (e) {
+                    console.log('error decoding p2pkh pkscript', e);
+                }
+                return;
+            }
+
+            // Handle P2PK (Pay-to-PubKey)
+            if (
+                decodedScript &&
+                decodedScript[1] === bitcoin.opcodes.OP_CHECKSIG
+            ) {
+                try {
+                    const pubkey: any = decodedScript[0];
+                    const { address } = bitcoin.payments.p2pk({
+                        pubkey,
+                        network
+                    });
+                    if (address) addresses.push(address);
+                } catch (e) {
+                    console.log('error decoding p2kh pkscript', e);
+                }
+                return;
+            }
+
+            // Handle P2SH (Pay-to-Script-Hash)
+            if (
+                decodedScript &&
+                decodedScript[0] === bitcoin.opcodes.OP_HASH160
+            ) {
+                try {
+                    const scriptHash: any = decodedScript[1];
+                    const { address } = bitcoin.payments.p2sh({
+                        hash: scriptHash,
+                        network
+                    });
+                    if (address) addresses.push(address);
+                } catch (e) {
+                    console.log('error decoding p2sh pkscript', e);
+                }
+                return;
+            }
+
+            // Handle P2WPKH (Pay-to-Witness-PubKey-Hash) - SegWit
+            if (
+                decodedScript &&
+                decodedScript[0] === bitcoin.opcodes.OP_0 &&
+                decodedScript[1] === 0x14
+            ) {
+                try {
+                    const pubKeyHash: any = decodedScript[2];
+                    const { address } = bitcoin.payments.p2wpkh({
+                        pubkey: pubKeyHash,
+                        network
+                    });
+                    if (address) addresses.push(address);
+                } catch (e) {
+                    console.log('error decoding p2wpkh pkscript', e);
+                }
+                return;
+            }
+
+            // Handle P2TR (Pay-to-Taproot) - Taproot address
+            if (decodedScript && decodedScript[0] === 0x51) {
+                // OP_CHECKSIG
+                console.log('attempting to decode taproot pkscript');
+                try {
+                    const taprootPubKey: any = decodedScript[1];
+                    const { address } = bitcoin.payments.p2tr({
+                        pubkey: taprootPubKey,
+                        network
+                    });
+                    if (address) addresses.push(address);
+                } catch (e) {
+                    console.log('error decoding taproot pkscript', e);
+                }
+                return;
+            }
+
+            console.log(
+                'unknown address type for script pubkey',
+                scriptPubKeyHex
+            );
+        });
+        tx.dest_addresses = addresses;
+    });
 
     // If getinfo fails, return blank txs
     if (getinfoResult.status !== 'fulfilled') {
@@ -218,7 +340,8 @@ export const getChainTransactions = async () => {
                     num_confirmations: getinfo.blockheight - withdrawal[6],
                     time_stamp: withdrawal[5],
                     txid: tx.hash,
-                    note: 'on-chain withdrawal'
+                    note: 'on-chain withdrawal',
+                    dest_addresses: tx.dest_addresses
                 };
             }
 
@@ -229,7 +352,8 @@ export const getChainTransactions = async () => {
                     num_confirmations: getinfo.blockheight - deposit[6],
                     time_stamp: deposit[5],
                     txid: tx.hash,
-                    note: 'on-chain deposit'
+                    note: 'on-chain deposit',
+                    dest_addresses: tx.dest_addresses
                 };
             }
 
