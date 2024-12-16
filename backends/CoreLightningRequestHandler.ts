@@ -340,7 +340,6 @@ export const getChainTransactions = async () => {
                     num_confirmations: getinfo.blockheight - withdrawal[6],
                     time_stamp: withdrawal[5],
                     txid: tx.hash,
-                    note: 'on-chain withdrawal',
                     dest_addresses: tx.dest_addresses
                 };
             }
@@ -352,7 +351,6 @@ export const getChainTransactions = async () => {
                     num_confirmations: getinfo.blockheight - deposit[6],
                     time_stamp: deposit[5],
                     txid: tx.hash,
-                    note: 'on-chain deposit',
                     dest_addresses: tx.dest_addresses
                 };
             }
