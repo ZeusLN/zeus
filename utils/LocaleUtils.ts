@@ -129,3 +129,16 @@ export function localeString(localeString: string): any {
             return English[localeString];
     }
 }
+
+export const languagesWithNounCapitalization = ['de', 'pl', 'cs', 'sk'];
+
+export const formatInlineNoun = (text: string): string => {
+    if (
+        !languagesWithNounCapitalization.includes(
+            stores.settingsStore?.settings?.locale || ''
+        )
+    ) {
+        return text.toLowerCase();
+    }
+    return text;
+};
