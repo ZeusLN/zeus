@@ -11,6 +11,7 @@ import Screen from '../components/Screen';
 import { version } from '../package.json';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -125,7 +126,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                 {nodeInfo.currentBlockHeight && (
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.blockHeight')}
-                        value={nodeInfo.currentBlockHeight}
+                        value={numberWithCommas(nodeInfo.currentBlockHeight)}
                     />
                 )}
 
