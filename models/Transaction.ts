@@ -119,7 +119,11 @@ export default class Transaction extends BaseModel {
     }
 
     @computed public get destAddresses(): Array<string> {
-        return this.dest_addresses || [this.address];
+        return this.dest_addresses
+            ? this.dest_addresses
+            : this.address
+            ? [this.address]
+            : [];
     }
 
     @computed public get getOutpoint(): string {
