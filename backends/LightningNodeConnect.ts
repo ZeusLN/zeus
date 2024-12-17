@@ -48,7 +48,9 @@ export default class LightningNodeConnect {
             settingsStore;
 
         this.lnc = new LNC({
-            credentialStore: new CredentialStore()
+            credentialStore: await new CredentialStore(
+                pairingPhrase
+            ).initialize()
         });
 
         this.lnc.credentials.pairingPhrase = pairingPhrase;

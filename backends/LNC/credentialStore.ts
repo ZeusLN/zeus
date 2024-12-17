@@ -35,6 +35,46 @@ export default class LncCredentialStore implements CredentialStore {
         if (pairingPhrase) this.pairingPhrase = pairingPhrase;
     }
 
+    async initialize() {
+        if (this._pairingPhrase) {
+            await this._migrateServerHost();
+        }
+        return this;
+    }
+
+    private async _migrateServerHost() {
+        try {
+            const baseKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
+            const hostKey = `${baseKey}:host`;
+            const hasNewFormat = await EncryptedStorage.getItem(hostKey);
+
+            // Only migrate if new format doesn't exist yet
+            if (!hasNewFormat) {
+                const oldData = await EncryptedStorage.getItem(baseKey);
+
+                if (oldData) {
+                    const parsed = JSON.parse(oldData);
+                    if (parsed.serverHost) {
+                        await EncryptedStorage.setItem(
+                            hostKey,
+                            parsed.serverHost
+                        );
+
+                        // Remove serverHost from old format
+                        delete parsed.serverHost;
+                        await EncryptedStorage.setItem(
+                            baseKey,
+                            JSON.stringify(parsed)
+                        );
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('Migration failed:', error);
+            throw new Error(`Migration failed: ${(error as Error).message}`);
+        }
+    }
+
     //
     // Public fields which implement the `CredentialStore` interface
     //
@@ -47,7 +87,7 @@ export default class LncCredentialStore implements CredentialStore {
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */
     set serverHost(host: string) {
         this.persisted.serverHost = host;
-        this._save();
+        this._saveServerHost();
     }
 
     /** Stores the LNC pairing phrase used to initialize the connection to the LNC proxy */
@@ -96,8 +136,9 @@ export default class LncCredentialStore implements CredentialStore {
 
     /** Clears any persisted data in the store */
     clear() {
-        const key = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
-        EncryptedStorage.removeItem(key);
+        const baseKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
+        EncryptedStorage.removeItem(baseKey);
+        EncryptedStorage.removeItem(`${baseKey}:host`);
         this.persisted = {
             serverHost: this.persisted.serverHost,
             localKey: '',
@@ -114,10 +155,15 @@ export default class LncCredentialStore implements CredentialStore {
         // only load if pairingPhrase is set
         if (!pairingPhrase) return;
         try {
-            const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
-            const json = await EncryptedStorage.getItem(key);
+            const baseKey = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
+            const hostKey = `${baseKey}:host`;
+            const json = await EncryptedStorage.getItem(baseKey);
+            const serverHost = await EncryptedStorage.getItem(hostKey);
             if (json) {
                 this.persisted = JSON.parse(json);
+                if (serverHost) {
+                    this.persisted.serverHost = serverHost;
+                }
                 this._localKey = this.persisted.localKey;
                 this._remoteKey = this.persisted.remoteKey;
             }
@@ -132,13 +178,18 @@ export default class LncCredentialStore implements CredentialStore {
     // Private functions only used internally
     //
 
+    private _saveServerHost() {
+        const hostKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}:host`;
+        EncryptedStorage.setItem(hostKey, this.persisted.serverHost);
+    }
+
     /** Saves persisted data to EncryptedStorage */
     private _save() {
         // only save if localKey and remoteKey is set
         if (!this._localKey) return;
         if (!this._remoteKey) return;
-        const key = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
-        EncryptedStorage.setItem(key, JSON.stringify(this.persisted));
+        const baseKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
+        EncryptedStorage.setItem(baseKey, JSON.stringify(this.persisted));
     }
 }
 
