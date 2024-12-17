@@ -12,6 +12,12 @@ jest.mock('../stores/Stores', () => ({
                 removeDecimalSpaces: false
             }
         }
+    },
+    nodeInfoStore: {
+        nodeInfo: {
+            isTestNet: false,
+            isRegTest: false
+        }
     }
 }));
 
@@ -963,6 +969,144 @@ describe('AddressUtils', () => {
             expect(
                 AddressUtils.snakeToHumanReadable('UNUSED_TAPROOT_PUBKEY')
             ).toEqual('Unused taproot pubkey');
+        });
+    });
+
+    describe('scriptPubKeyToAddress', () => {
+        test('should correctly decode a P2WSH scriptPubKey - mainnet', () => {
+            let scriptPubKey, expectedAddress;
+            scriptPubKey =
+                '002008737603b10129fc2dcb2e5167eb556ba2c84aec6622ff4d46767d186f63150d';
+            expectedAddress =
+                'bc1qppehvqa3qy5lctwt9egk0664dw3vsjhvvc307n2xwe73smmrz5xs5ckg7p';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey =
+                '0020a1157ce5620e1e93ad8a98a9765971c89b5920a343add041b47ec34b7302d951';
+            expectedAddress =
+                'bc1q5y2heetzpc0f8tv2nz5hvkt3ezd4jg9rgwkaqsd50mp5kuczm9gs8v8gxh';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey =
+                '0020983cca35d586a96de538166552d2773ed291b96a3af65917560ee7eda5e9e106';
+            expectedAddress =
+                'bc1qnq7v5dw4s65kmefczej495nh8mffrwt28tm9j96kpmn7mf0fuyrq80tshr';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey =
+                '0020c273ca3b47fcab3a53c9cc4daacfb37d921e62014c794f6d25606f43797fc0f0';
+            expectedAddress =
+                'bc1qcfeu5w68lj4n557fe3x64nan0kfpucspf3u57mf9vph5x7tlcrcqtgr8cj';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+        });
+
+        test('should correctly decode a P2SH scriptPubKey - mainnet', () => {
+            let scriptPubKey, expectedAddress;
+            scriptPubKey = 'a91426101b3dae044fddcd71e6dfe831ebe383f23a5887';
+            expectedAddress = '35AGtvgHoBLXncmR8Xtrv7gw34WVqkLLeU';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey = 'a914b40fce0fca1eefcec03e61e833bf6326c11ccaf087';
+            expectedAddress = '3J76VDefK1m8zpjXEmCK5UNR3mSAN7BcBD';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey = 'a9142d2ecbffc89a98365e2b45e90f00d3f6edec68d687';
+            expectedAddress = '35ovPgP18XYiRQLNwWyhNequKyyqavs3Sw';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+        });
+
+        test('should correctly decode a P2WPKH scriptPubKey - mainnet', () => {
+            let scriptPubKey, expectedAddress;
+
+            scriptPubKey =
+                '00201ff7ed9fecf23980cb3e6d9db8331054942aee8ca34b7190450e20a69ffeeda2';
+            expectedAddress =
+                'bc1qrlm7m8lv7gucpje7dkwmsvcs2j2z4m5v5d9hryz9pcs2d8l7ak3qasgq03';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey = '0014def7b24f3e42b0858240cf3b993a3d44a7f5abe9';
+            expectedAddress = 'bc1qmmmmyne7g2cgtqjqeuaejw3agjnlt2lfp7agua';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey = '0014e8550bc74d38fd002481339349ed4780cb1d77b3';
+            expectedAddress = 'bc1qap2sh36d8r7sqfypxwf5nm28sr936aandruujw';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey = '0014647f217856160110ce3abcc8cc2ec77ff39561ad';
+            expectedAddress = 'bc1qv3ljz7zkzcq3pn36hnyvctk80lee2cddu4laeu';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+        });
+
+        test('should correctly decode a P2TR scriptPubKey - mainnet', () => {
+            let scriptPubKey, expectedAddress;
+
+            scriptPubKey =
+                '5120fb3c4af6e6471fe9319afcfd25eb3daf2b83e5be7411b1932bb36ed84701337f';
+            expectedAddress =
+                'bc1plv7y4ahxgu07jvv6ln7jt6ea4u4c8ed7wsgmryetkdhds3cpxdlsk0jcq5';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey =
+                '512071d18973aa5daf214d500de76c1b860fcac1228260af21a62d5f6eed74cb0547';
+            expectedAddress =
+                'bc1pw8gcjua2tkhjzn2sphnkcxuxpl9vzg5zvzhjrf3dtahw6axtq4rsymnp0s';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey =
+                '5120bd6b2524312d1ce75e7e00676b1da2f6b72a846ca767b3009f09b471623a5865';
+            expectedAddress =
+                'bc1ph44j2fp395wwwhn7qpnkk8dz76mj4prv5anmxqylpx68zc36tpjsfljvmu';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+
+            scriptPubKey =
+                '5120ad55091d54ca1938cebe01f5435790c352021df23d8153a301cd90d06171ceed';
+            expectedAddress =
+                'bc1p442sj825egvn3n47q865x4uscdfqy80j8kq48gcpekgdqct3emks35rjff';
+            expect(AddressUtils.scriptPubKeyToAddress(scriptPubKey)).toBe(
+                expectedAddress
+            );
+        });
+
+        test('should throw an error for an invalid scriptPubKey (non-hex input)', () => {
+            const invalidScriptPubKey = 'invalid_script';
+            expect(() => {
+                AddressUtils.scriptPubKeyToAddress(invalidScriptPubKey);
+            }).toThrow('Unknown scriptPubKey format');
+        });
+
+        test('should throw an error for empty scriptPubKey', () => {
+            const emptyScriptPubKey = '';
+            expect(() => {
+                AddressUtils.scriptPubKeyToAddress(emptyScriptPubKey);
+            }).toThrow('Unknown scriptPubKey format');
         });
     });
 });
