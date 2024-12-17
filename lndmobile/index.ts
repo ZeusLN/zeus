@@ -721,7 +721,10 @@ export const listPeers = async (): Promise<lnrpc.ListPeersResponse> => {
 /**
  * @throws
  */
-export const listPayments = async (): Promise<lnrpc.ListPaymentsResponse> => {
+export const listPayments = async (params?: {
+    maxPayments?: number;
+    reversed?: boolean;
+}): Promise<lnrpc.ListPaymentsResponse> => {
     const response = await sendCommand<
         lnrpc.IListPaymentsRequest,
         lnrpc.ListPaymentsRequest,
@@ -731,7 +734,11 @@ export const listPayments = async (): Promise<lnrpc.ListPaymentsResponse> => {
         response: lnrpc.ListPaymentsResponse,
         method: 'ListPayments',
         options: {
-            include_incomplete: true
+            include_incomplete: true,
+            ...(params?.maxPayments && {
+                max_payments: Long.fromValue(params.maxPayments)
+            }),
+            ...(params?.reversed && { reversed: params.reversed })
         }
     });
     return response;
