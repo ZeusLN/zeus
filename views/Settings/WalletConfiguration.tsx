@@ -188,7 +188,8 @@ export default class WalletConfiguration extends React.Component<
             if (
                 clipboard.includes('lndconnect://') ||
                 clipboard.includes('lndhub://') ||
-                clipboard.includes('bluewallet:')
+                clipboard.includes('bluewallet:') ||
+                clipboard.includes('clnrest://')
             ) {
                 this.setState({
                     suggestImport: clipboard
@@ -239,6 +240,29 @@ export default class WalletConfiguration extends React.Component<
                     existingAccount
                 });
             }
+        } else if (suggestImport.includes('clnrest://')) {
+            const {
+                host,
+                rune,
+                port,
+                enableTor,
+                implementation
+            }: {
+                host: string;
+                rune: string;
+                port: string;
+                enableTor: boolean;
+                implementation: Implementations;
+            } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
+
+            this.setState({
+                host,
+                rune,
+                port,
+                enableTor,
+                implementation,
+                suggestImport: ''
+            });
         }
 
         Clipboard.setString('');
