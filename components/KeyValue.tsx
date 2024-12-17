@@ -74,8 +74,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                             width: 12,
                             height: 12,
                             borderRadius: 12 / 2,
-                            backgroundColor: indicatorColor,
-                            marginRight: 7
+                            backgroundColor: indicatorColor
                         }}
                     ></View>
                 )}
@@ -87,7 +86,7 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
                                 : themeColor('text')
                     }}
                 >
-                    {keyValue}
+                    {indicatorColor ? ` ${keyValue}` : keyValue}
                 </Text>
                 {infoModalText && (
                     <Text
