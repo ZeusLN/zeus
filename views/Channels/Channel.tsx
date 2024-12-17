@@ -576,6 +576,9 @@ export default class ChannelView extends React.Component<
                             />
                         </ListItem>
                     )}
+
+                    <Divider orientation="horizontal" style={{ margin: 20 }} />
+
                     <KeyValue
                         keyValue={localeString('views.Channel.channelBalance')}
                     />
@@ -717,7 +720,9 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
+
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
+
                     {BackendUtils.isLNDBased() && editableFees && (
                         <FeeBreakdown
                             isActive={isActive}
