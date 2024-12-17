@@ -12,6 +12,7 @@ import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Tab } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -352,34 +353,6 @@ export default class OpenChannel extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    centerComponent={
-                        <View style={{ top: 5 }}>
-                            <View style={{ top: -9, width: '100%' }}>
-                                <Button
-                                    onPress={() =>
-                                        this.setState({
-                                            connectPeerOnly: !connectPeerOnly
-                                        })
-                                    }
-                                    title={
-                                        connectPeerOnly
-                                            ? localeString(
-                                                  'views.OpenChannel.connectPeer'
-                                              )
-                                            : additionalChannels.length > 0
-                                            ? localeString(
-                                                  'views.OpenChannel.openChannels'
-                                              )
-                                            : localeString(
-                                                  'views.OpenChannel.openChannel'
-                                              )
-                                    }
-                                    noUppercase
-                                    buttonStyle={{ alignSelf: 'center' }}
-                                />
-                            </View>
-                        </View>
-                    }
                     rightComponent={<ScanButton />}
                     navigation={navigation}
                 />
@@ -390,6 +363,41 @@ export default class OpenChannel extends React.Component<
                     keyboardShouldPersistTaps="handled"
                     ref={this.scrollViewRef}
                 >
+                    <Tab
+                        value={connectPeerOnly ? 1 : 0}
+                        onChange={(e) =>
+                            this.setState({
+                                connectPeerOnly: e === 0 ? false : true
+                            })
+                        }
+                        indicatorStyle={{
+                            backgroundColor: themeColor('text'),
+                            height: 3
+                        }}
+                        variant="primary"
+                    >
+                        <Tab.Item
+                            title={
+                                additionalChannels.length > 0
+                                    ? localeString(
+                                          'views.OpenChannel.openChannels'
+                                      )
+                                    : localeString(
+                                          'views.OpenChannel.openChannel'
+                                      )
+                            }
+                            titleStyle={styles.tabTitleStyle}
+                            style={{ backgroundColor: themeColor('secondary') }}
+                        />
+                        <Tab.Item
+                            title={localeString(
+                                'views.OpenChannel.connectPeer'
+                            )}
+                            titleStyle={styles.tabTitleStyle}
+                            style={{ backgroundColor: themeColor('secondary') }}
+                        />
+                    </Tab>
+
                     {!!suggestImport && (
                         <View style={styles.clipboardImport}>
                             <Text style={styles.textWhite}>
@@ -1077,6 +1085,10 @@ const styles = StyleSheet.create({
     textWhite: {
         color: 'white',
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    tabTitleStyle: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 12
     },
     content: {
         paddingTop: 20,
