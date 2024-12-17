@@ -238,7 +238,7 @@ export default class CLNRest {
         this.postRequest('/v1/invoice', {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
-            amount_msat: Number(data.value) * 1000,
+            amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
             expiry: Number(data.expiry),
             exposeprivatechannels: true
         });
