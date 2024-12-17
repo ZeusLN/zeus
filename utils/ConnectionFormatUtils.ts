@@ -1,4 +1,5 @@
 import Base64Utils from './Base64Utils';
+import { Implementations } from '../stores/SettingsStore';
 
 class ConnectionFormatUtils {
     processLndConnectUrl = (input: string) => {
@@ -154,12 +155,14 @@ class ConnectionFormatUtils {
 
         const enableTor: boolean = host.includes('.onion');
 
+        const implementation: Implementations = 'cln-rest';
+
         return {
             host,
             port,
             rune,
             enableTor,
-            implementation: 'cln-rest'
+            implementation
         };
     };
 }
