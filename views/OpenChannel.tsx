@@ -387,14 +387,18 @@ export default class OpenChannel extends React.Component<
                                       )
                             }
                             titleStyle={styles.tabTitleStyle}
-                            style={{ backgroundColor: themeColor('secondary') }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary')
+                            }}
                         />
                         <Tab.Item
                             title={localeString(
                                 'views.OpenChannel.connectPeer'
                             )}
                             titleStyle={styles.tabTitleStyle}
-                            style={{ backgroundColor: themeColor('secondary') }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary')
+                            }}
                         />
                     </Tab>
 
