@@ -73,8 +73,17 @@ export enum CommitmentType {
      * channel before its maturity date.
      */
     SCRIPT_ENFORCED_LEASE = 'SCRIPT_ENFORCED_LEASE',
-    /** SIMPLE_TAPROOT - TODO(roasbeef): need script enforce mirror type for the above as well? */
+    /**
+     * SIMPLE_TAPROOT - A channel that uses musig2 for the funding output, and the new tapscript
+     * features where relevant.
+     */
     SIMPLE_TAPROOT = 'SIMPLE_TAPROOT',
+    /**
+     * SIMPLE_TAPROOT_OVERLAY - Identical to the SIMPLE_TAPROOT channel type, but with extra functionality.
+     * This channel type also commits to additional meta data in the tapscript
+     * leaves for the scripts in a channel.
+     */
+    SIMPLE_TAPROOT_OVERLAY = 'SIMPLE_TAPROOT_OVERLAY',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -1030,6 +1039,8 @@ export interface Channel {
      * the channel's operation.
      */
     memo: string;
+    /** Custom channel data that might be populated in custom channels. */
+    customChannelData: Uint8Array | string;
 }
 
 export interface ListChannelsRequest {
@@ -1359,9 +1370,39 @@ export interface ChannelOpenUpdate {
     channelPoint: ChannelPoint | undefined;
 }
 
+export interface CloseOutput {
+    /**
+     * The amount in satoshi of this close output. This amount is the final
+     * commitment balance of the channel and the actual amount paid out on chain
+     * might be smaller due to subtracted fees.
+     */
+    amountSat: string;
+    /** The pkScript of the close output. */
+    pkScript: Uint8Array | string;
+    /** Whether this output is for the local or remote node. */
+    isLocal: boolean;
+    /**
+     * The TLV encoded custom channel data records for this output, which might
+     * be set for custom channels.
+     */
+    customChannelData: Uint8Array | string;
+}
+
 export interface ChannelCloseUpdate {
     closingTxid: Uint8Array | string;
     success: boolean;
+    /**
+     * The local channel close output. If the local channel balance was dust to
+     * begin with, this output will not be set.
+     */
+    localCloseOutput: CloseOutput | undefined;
+    /**
+     * The remote channel close output. If the remote channel balance was dust
+     * to begin with, this output will not be set.
+     */
+    remoteCloseOutput: CloseOutput | undefined;
+    /** Any additional outputs that might be added for custom channel types. */
+    additionalOutputs: CloseOutput[];
 }
 
 export interface CloseChannelRequest {
@@ -1994,6 +2035,8 @@ export interface PendingChannelsResponse_PendingChannel {
      * impacts the channel's operation.
      */
     memo: string;
+    /** Custom channel data that might be populated in custom channels. */
+    customChannelData: Uint8Array | string;
 }
 
 export interface PendingChannelsResponse_PendingOpenChannel {
@@ -2215,6 +2258,11 @@ export interface ChannelBalanceResponse {
     pendingOpenLocalBalance: Amount | undefined;
     /** Sum of channels pending remote balances. */
     pendingOpenRemoteBalance: Amount | undefined;
+    /**
+     * Custom channel data that might be populated if there are custom channels
+     * present.
+     */
+    customChannelData: Uint8Array | string;
 }
 
 export interface QueryRoutesRequest {
@@ -2510,6 +2558,16 @@ export interface Route {
     totalFeesMsat: string;
     /** The total amount in millisatoshis. */
     totalAmtMsat: string;
+    /**
+     * The actual on-chain amount that was sent out to the first hop. This value is
+     * only different from the total_amt_msat field if this is a custom channel
+     * payment and the value transported in the HTLC is different from the BTC
+     * amount in the HTLC. If this value is zero, then this is an old payment that
+     * didn't have this value yet and can be ignored.
+     */
+    firstHopAmountMsat: string;
+    /** Custom channel data that might be populated in custom channels. */
+    customChannelData: Uint8Array | string;
 }
 
 export interface NodeInfoRequest {
@@ -3093,6 +3151,8 @@ export interface InvoiceHTLC {
     mppTotalAmtMsat: string;
     /** Details relevant to AMP HTLCs, only populated if this is an AMP HTLC. */
     amp: AMP | undefined;
+    /** Custom channel data that might be populated in custom channels. */
+    customChannelData: Uint8Array | string;
 }
 
 export interface InvoiceHTLC_CustomRecordsEntry {
@@ -3275,6 +3335,11 @@ export interface Payment {
      */
     paymentIndex: string;
     failureReason: PaymentFailureReason;
+    /**
+     * The custom TLV records that were sent to the first hop as part of the HTLC
+     * wire message for this payment.
+     */
+    firstHopCustomRecords: { [key: string]: Uint8Array | string };
 }
 
 export enum Payment_PaymentStatus {
@@ -3293,6 +3358,11 @@ export enum Payment_PaymentStatus {
     /** INITIATED - Payment is created and has not attempted any HTLCs. */
     INITIATED = 'INITIATED',
     UNRECOGNIZED = 'UNRECOGNIZED'
+}
+
+export interface Payment_FirstHopCustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
 }
 
 export interface HTLCAttempt {

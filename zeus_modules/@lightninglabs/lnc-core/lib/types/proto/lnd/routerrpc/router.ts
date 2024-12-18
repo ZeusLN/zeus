@@ -8,6 +8,7 @@ import type {
     Failure,
     HTLCAttempt,
     ChannelPoint,
+    AliasMap,
     Payment
 } from '../lightning';
 
@@ -63,9 +64,20 @@ export enum PaymentState {
 }
 
 export enum ResolveHoldForwardAction {
+    /**
+     * SETTLE - SETTLE is an action that is used to settle an HTLC instead of forwarding
+     * it.
+     */
     SETTLE = 'SETTLE',
+    /** FAIL - FAIL is an action that is used to fail an HTLC backwards. */
     FAIL = 'FAIL',
+    /** RESUME - RESUME is an action that is used to resume a forward HTLC. */
     RESUME = 'RESUME',
+    /**
+     * RESUME_MODIFIED - RESUME_MODIFIED is an action that is used to resume a hold forward HTLC
+     * with modifications specified during interception.
+     */
+    RESUME_MODIFIED = 'RESUME_MODIFIED',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -210,9 +222,22 @@ export interface SendPaymentRequest {
      * being sent.
      */
     cancelable: boolean;
+    /**
+     * An optional field that can be used to pass an arbitrary set of TLV records
+     * to the first hop peer of this payment. This can be used to pass application
+     * specific data during the payment attempt. Record types are required to be in
+     * the custom range >= 65536. When using REST, the values must be encoded as
+     * base64.
+     */
+    firstHopCustomRecords: { [key: string]: Uint8Array | string };
 }
 
 export interface SendPaymentRequest_DestCustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
+}
+
+export interface SendPaymentRequest_FirstHopCustomRecordsEntry {
     key: string;
     value: Uint8Array | string;
 }
@@ -300,6 +325,19 @@ export interface SendToRouteRequest {
      * routes, incorrect payment details, or insufficient funds.
      */
     skipTempErr: boolean;
+    /**
+     * An optional field that can be used to pass an arbitrary set of TLV records
+     * to the first hop peer of this payment. This can be used to pass application
+     * specific data during the payment attempt. Record types are required to be in
+     * the custom range >= 65536. When using REST, the values must be encoded as
+     * base64.
+     */
+    firstHopCustomRecords: { [key: string]: Uint8Array | string };
+}
+
+export interface SendToRouteRequest_FirstHopCustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
 }
 
 export interface SendToRouteResponse {
@@ -536,6 +574,19 @@ export interface BuildRouteRequest {
      * This is also called payment secret in specifications (e.g. BOLT 11).
      */
     paymentAddr: Uint8Array | string;
+    /**
+     * An optional field that can be used to pass an arbitrary set of TLV records
+     * to the first hop peer of this payment. This can be used to pass application
+     * specific data during the payment attempt. Record types are required to be in
+     * the custom range >= 65536. When using REST, the values must be encoded as
+     * base64.
+     */
+    firstHopCustomRecords: { [key: string]: Uint8Array | string };
+}
+
+export interface BuildRouteRequest_FirstHopCustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
 }
 
 export interface BuildRouteResponse {
@@ -693,9 +744,16 @@ export interface ForwardHtlcInterceptRequest {
      * channel from force-closing.
      */
     autoFailHeight: number;
+    /** The custom records of the peer's incoming p2p wire message. */
+    inWireCustomRecords: { [key: string]: Uint8Array | string };
 }
 
 export interface ForwardHtlcInterceptRequest_CustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
+}
+
+export interface ForwardHtlcInterceptRequest_InWireCustomRecordsEntry {
     key: string;
     value: Uint8Array | string;
 }
@@ -704,6 +762,8 @@ export interface ForwardHtlcInterceptRequest_CustomRecordsEntry {
  * ForwardHtlcInterceptResponse enables the caller to resolve a previously hold
  * forward. The caller can choose either to:
  * - `Resume`: Execute the default behavior (usually forward).
+ * - `ResumeModified`: Execute the default behavior (usually forward) with HTLC
+ * field modifications.
  * - `Reject`: Fail the htlc backwards.
  * - `Settle`: Settle this htlc with a given preimage.
  */
@@ -734,6 +794,28 @@ export interface ForwardHtlcInterceptResponse {
      * default value for this field.
      */
     failureCode: Failure_FailureCode;
+    /**
+     * The amount that was set on the p2p wire message of the incoming HTLC.
+     * This field is ignored if the action is not RESUME_MODIFIED or the amount
+     * is zero.
+     */
+    inAmountMsat: string;
+    /**
+     * The amount to set on the p2p wire message of the resumed HTLC. This field
+     * is ignored if the action is not RESUME_MODIFIED or the amount is zero.
+     */
+    outAmountMsat: string;
+    /**
+     * Any custom records that should be set on the p2p wire message message of
+     * the resumed HTLC. This field is ignored if the action is not
+     * RESUME_MODIFIED.
+     */
+    outWireCustomRecords: { [key: string]: Uint8Array | string };
+}
+
+export interface ForwardHtlcInterceptResponse_OutWireCustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
 }
 
 export interface UpdateChanStatusRequest {
@@ -742,6 +824,22 @@ export interface UpdateChanStatusRequest {
 }
 
 export interface UpdateChanStatusResponse {}
+
+export interface AddAliasesRequest {
+    aliasMaps: AliasMap[];
+}
+
+export interface AddAliasesResponse {
+    aliasMaps: AliasMap[];
+}
+
+export interface DeleteAliasesRequest {
+    aliasMaps: AliasMap[];
+}
+
+export interface DeleteAliasesResponse {
+    aliasMaps: AliasMap[];
+}
 
 /**
  * Router is a service that offers advanced interaction with the router
@@ -930,6 +1028,26 @@ export interface Router {
     updateChanStatus(
         request?: DeepPartial<UpdateChanStatusRequest>
     ): Promise<UpdateChanStatusResponse>;
+    /**
+     * XAddLocalChanAliases is an experimental API that creates a set of new
+     * channel SCID alias mappings. The final total set of aliases in the manager
+     * after the add operation is returned. This is only a locally stored alias,
+     * and will not be communicated to the channel peer via any message. Therefore,
+     * routing over such an alias will only work if the peer also calls this same
+     * RPC on their end. If an alias already exists, an error is returned
+     */
+    xAddLocalChanAliases(
+        request?: DeepPartial<AddAliasesRequest>
+    ): Promise<AddAliasesResponse>;
+    /**
+     * XDeleteLocalChanAliases is an experimental API that deletes a set of alias
+     * mappings. The final total set of aliases in the manager after the delete
+     * operation is returned. The deletion will not be communicated to the channel
+     * peer via any message.
+     */
+    xDeleteLocalChanAliases(
+        request?: DeepPartial<DeleteAliasesRequest>
+    ): Promise<DeleteAliasesResponse>;
 }
 
 type Builtin =

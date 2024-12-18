@@ -104,30 +104,37 @@ service TaprootAssets {
     */
     rpc BurnAsset (BurnAssetRequest) returns (BurnAssetResponse);
 
+    /* tapcli: `assets listburns`
+    ListBurns lists the asset burns that this wallet has performed. These assets
+    are not recoverable in any way. Filters may be applied to return more
+    specific results.
+    */
+    rpc ListBurns (ListBurnsRequest) returns (ListBurnsResponse);
+
     /* tapcli: `getinfo`
     GetInfo returns the information for the node.
     */
     rpc GetInfo (GetInfoRequest) returns (GetInfoResponse);
-
-    /*
-    SubscribeSendAssetEventNtfns registers a subscription to the event
-    notification stream which relates to the asset sending process.
-    */
-    rpc SubscribeSendAssetEventNtfns (SubscribeSendAssetEventNtfnsRequest)
-        returns (stream SendAssetEvent);
-
-    /*
-    SubscribeReceiveAssetEventNtfns registers a subscription to the event
-    notification stream which relates to the asset receive process.
-    */
-    rpc SubscribeReceiveAssetEventNtfns (SubscribeReceiveAssetEventNtfnsRequest)
-        returns (stream ReceiveAssetEvent);
 
     /* tapcli: `assets meta`
     FetchAssetMeta allows a caller to fetch the reveal meta data for an asset
     either by the asset ID for that asset, or a meta hash.
     */
     rpc FetchAssetMeta (FetchAssetMetaRequest) returns (AssetMeta);
+
+    /* tapcli: `events receive`
+    SubscribeReceiveEvents allows a caller to subscribe to receive events for
+    incoming asset transfers.
+    */
+    rpc SubscribeReceiveEvents (SubscribeReceiveEventsRequest)
+        returns (stream ReceiveEvent);
+
+    /* tapcli: `events send`
+    SubscribeSendEvents allows a caller to subscribe to send events for outgoing
+    asset transfers.
+    */
+    rpc SubscribeSendEvents (SubscribeSendEventsRequest)
+        returns (stream SendEvent);
 }
 
 enum AssetType {
@@ -152,6 +159,12 @@ enum AssetMetaType {
     should be interpreted as opaque blobs.
     */
     META_TYPE_OPAQUE = 0;
+
+    /*
+    JSON is used for asset meta blobs that are to be interpreted as valid JSON
+    strings.
+    */
+    META_TYPE_JSON = 1;
 }
 
 message AssetMeta {
@@ -176,6 +189,13 @@ message ListAssetRequest {
     bool with_witness = 1;
     bool include_spent = 2;
     bool include_leased = 3;
+
+    // List assets that aren't confirmed yet. Only freshly minted assets will
+    // show in the asset list with a block height of 0. All other forms of
+    // unconfirmed assets will not appear in the list until the transaction is
+    // confirmed (check either transfers or receives for unconfirmed outbound or
+    // inbound assets).
+    bool include_unconfirmed_mints = 4;
 }
 
 message AnchorInfo {
@@ -233,9 +253,77 @@ message GenesisInfo {
     the genesis transaction.
     */
     uint32 output_index = 6;
+}
 
-    // The version of the Taproot Asset commitment that created this asset.
-    int32 version = 7;
+message GroupKeyRequest {
+    // The internal key for the asset group before any tweaks have been applied.
+    KeyDescriptor raw_key = 1;
+
+    /*
+    The genesis of the group anchor asset, which is used to derive the single
+    tweak for the group key. For a new group key, this will be the genesis of
+    new_asset.
+    */
+    GenesisInfo anchor_genesis = 2;
+
+    /*
+    The optional root of a tapscript tree that will be used when constructing a
+    new asset group key. This enables future issuance authorized with a script
+    witness.
+    */
+    bytes tapscript_root = 3;
+
+    /*
+    The serialized asset which we are requesting group membership for. A
+    successful request will produce a witness that authorizes this asset to be a
+    member of this asset group.
+    */
+    bytes new_asset = 4;
+}
+
+message TxOut {
+    // The value of the output being spent.
+    int64 value = 1;
+
+    // The script of the output being spent.
+    bytes pk_script = 2;
+}
+
+message GroupVirtualTx {
+    /*
+    The virtual transaction that represents the genesis state transition of a
+    grouped asset.
+    */
+    bytes transaction = 1;
+
+    /*
+    The transaction output that represents a grouped asset. The tweaked
+    group key is set as the PkScript of this output. This is used in combination
+    with Tx to produce an asset group witness.
+    */
+    TxOut prev_out = 2;
+
+    /*
+    The asset ID of the grouped asset in a GroupKeyRequest. This ID is
+    needed to construct a sign descriptor, as it is the single tweak for the
+    group internal key.
+    */
+    bytes genesis_id = 3;
+
+    /*
+    The tweaked group key for a specific GroupKeyRequest. This is used to
+    construct a complete group key after producing an asset group witness.
+    */
+    bytes tweaked_key = 4;
+}
+
+message GroupWitness {
+    // The asset ID of the pending asset that should be assigned this asset
+    // group witness.
+    bytes genesis_id = 1;
+
+    // The serialized witness stack for the asset group.
+    repeated bytes witness = 2;
 }
 
 message AssetGroup {
@@ -254,7 +342,11 @@ message AssetGroup {
     */
     bytes asset_witness = 3;
 
-    // TODO(jhb): update to include tapscript_root
+    /*
+    The root hash of a tapscript tree, which enables future issuance authorized
+    with a script witness.
+    */
+    bytes tapscript_root = 4;
 }
 
 message GroupKeyReveal {
@@ -268,6 +360,22 @@ message GroupKeyReveal {
 message GenesisReveal {
     // The base genesis information in the genesis reveal.
     GenesisInfo genesis_base_reveal = 1;
+}
+
+message DecimalDisplay {
+    /*
+    Decimal display dictates the number of decimal places to shift the amount to
+    the left converting from Taproot Asset integer representation to a
+    UX-recognizable fractional quantity.
+
+    For example, if the decimal_display value is 2 and there's 100 of those
+    assets, then a wallet would display the amount as "1.00". This field is
+    intended as information for wallets that display balances and has no impact
+    on the behavior of the daemon or any other part of the protocol. This value
+    is encoded in the MetaData field as a JSON field, therefore it is only
+    compatible with assets that have a JSON MetaData field.
+    */
+    uint32 decimal_display = 1;
 }
 
 enum AssetVersion {
@@ -328,6 +436,29 @@ message Asset {
     // Indicates whether this transfer was an asset burn. If true, the number of
     // assets in this output are destroyed and can no longer be spent.
     bool is_burn = 17;
+
+    // Indicates whether this script key has either been derived by the local
+    // wallet or was explicitly declared to be known by using the
+    // DeclareScriptKey RPC. Knowing the key conceptually means the key belongs
+    // to the local wallet or is at least known by a software that operates on
+    // the local wallet. The flag is never serialized in proofs, so this is
+    // never explicitly set for keys foreign to the local wallet. Therefore, if
+    // this method returns true for a script key, it means the asset with the
+    // script key will be shown in the wallet balance.
+    bool script_key_declared_known = 18;
+
+    // Indicates whether the script key is known to have a Tapscript spend path,
+    // meaning that the Taproot merkle root tweak is not empty. This will only
+    // ever be true if either script_key_is_local or script_key_internals_known
+    // is true as well, since the presence of a Tapscript spend path cannot be
+    // determined for script keys that aren't known to the wallet of the local
+    // tapd node.
+    bool script_key_has_script_path = 19;
+
+    // This field defines a decimal display value that may be present. If this
+    // field is null, it means the presence of a decimal display field is
+    // unknown in the current context.
+    DecimalDisplay decimal_display = 20;
 }
 
 message PrevWitness {
@@ -344,6 +475,15 @@ message SplitCommitment {
 
 message ListAssetResponse {
     repeated Asset assets = 1;
+
+    // This is a count of unconfirmed outgoing transfers. Unconfirmed transfers
+    // do not appear as assets in this endpoint response.
+    uint64 unconfirmed_transfers = 2;
+
+    // This is a count of freshly minted assets that haven't been confirmed on
+    // chain yet. These assets will appear in the asset list with a block height
+    // of 0 if include_unconfirmed_mints is set to true in the request.
+    uint64 unconfirmed_mints = 3;
 }
 
 message ListUtxosRequest {
@@ -372,6 +512,13 @@ message ManagedUtxo {
 
     // The assets held at this UTXO.
     repeated Asset assets = 6;
+
+    // The lease owner for this UTXO. If blank the UTXO isn't leased.
+    bytes lease_owner = 7;
+
+    // The expiry time as a unix time stamp for this lease. If blank the utxo
+    // isn't leased.
+    int64 lease_expiry_unix = 8;
 }
 
 message ListUtxosResponse {
@@ -435,6 +582,9 @@ message ListBalancesRequest {
     // group key filter may be provided to query the balance of a specific
     // asset group.
     bytes group_key_filter = 4;
+
+    // An option to include previous leased assets in the balances.
+    bool include_leased = 5;
 }
 
 message AssetBalance {
@@ -460,11 +610,37 @@ message ListBalancesResponse {
 }
 
 message ListTransfersRequest {
+    // anchor_txid specifies the hexadecimal encoded txid string of the anchor
+    // transaction for which to retrieve transfers. An empty value indicates
+    // that this parameter should be disregarded in transfer selection.
+    string anchor_txid = 1;
 }
 
 message ListTransfersResponse {
     // The unordered list of outgoing asset transfers.
     repeated AssetTransfer transfers = 1;
+}
+
+// ChainHash represents a hash value, typically a double SHA-256 of some data.
+// Common examples include block hashes and transaction hashes.
+//
+// This versatile message type is used in various Bitcoin-related messages and
+// structures, providing two different formats of the same hash to accommodate
+// both developer and user needs.
+message ChainHash {
+    // The raw hash value in byte format.
+    //
+    // This format is optimized for programmatic use, particularly for Go
+    // developers, enabling easy integration with other RPC calls or binary
+    // operations.
+    bytes hash = 1;
+
+    // The byte-reversed hash value as a hexadecimal string.
+    //
+    // This format is intended for human interaction, making it easy to copy,
+    // paste, and use in contexts like command-line arguments or configuration
+    // files.
+    string hash_str = 2;
 }
 
 message AssetTransfer {
@@ -483,6 +659,11 @@ message AssetTransfer {
 
     // Describes the set of newly created asset outputs.
     repeated TransferOutput outputs = 6;
+
+    // The block hash of the blockchain block that contains the anchor
+    // transaction. If this value is unset, the anchor transaction is
+    // unconfirmed.
+    ChainHash anchor_tx_block_hash = 7;
 }
 
 message TransferInput {
@@ -529,24 +710,26 @@ enum OutputType {
     // output. In either case, the asset of this output has a tx witness.
     OUTPUT_TYPE_SPLIT_ROOT = 1;
 
-    // OUTPUT_TYPE_PASSIVE_ASSETS_ONLY indicates that this output only carries
-    // passive assets and therefore the asset in this output is nil. The passive
-    // assets themselves are signed in their own virtual transactions and
-    // are not present in this packet.
-    OUTPUT_TYPE_PASSIVE_ASSETS_ONLY = 2;
+    reserved 2;
 
-    // OUTPUT_TYPE_PASSIVE_SPLIT_ROOT is a split root output that carries the
-    // change from a split or a tombstone from a non-interactive full value send
-    // output, as well as passive assets.
-    OUTPUT_TYPE_PASSIVE_SPLIT_ROOT = 3;
+    reserved 3;
 
-    // OUTPUT_TYPE_SIMPLE_PASSIVE_ASSETS is a plain full-value interactive send
-    // output that also carries passive assets. This is a special case where we
-    // send the full value of a single asset in a commitment to a new script
-    // key, but also carry passive assets in the same output. This is useful for
-    // key rotation (send-to-self) scenarios or asset burns where we burn the
-    // full supply of a single asset within a commitment.
-    OUTPUT_TYPE_SIMPLE_PASSIVE_ASSETS = 4;
+    reserved 4;
+}
+
+// ProofDeliveryStatus is an enum that describes the status of the delivery of
+// a proof associated with an asset transfer output.
+enum ProofDeliveryStatus {
+    // Delivery is not applicable; the proof will not be delivered.
+    PROOF_DELIVERY_STATUS_NOT_APPLICABLE = 0;
+
+    // The proof has been successfully delivered.
+    PROOF_DELIVERY_STATUS_COMPLETE = 1;
+
+    // The proof is pending delivery. This status indicates that the proof has
+    // not yet been delivered successfully. One or more attempts at proof
+    // delivery may have been made.
+    PROOF_DELIVERY_STATUS_PENDING = 2;
 }
 
 message TransferOutput {
@@ -567,6 +750,13 @@ message TransferOutput {
     OutputType output_type = 7;
 
     AssetVersion asset_version = 8;
+
+    uint64 lock_time = 9;
+
+    uint64 relative_lock_time = 10;
+
+    // The delivery status of the proof associated with this output.
+    ProofDeliveryStatus proof_delivery_status = 11;
 }
 
 message StopRequest {
@@ -583,6 +773,19 @@ message DebugLevelRequest {
 }
 message DebugLevelResponse {
     string sub_systems = 1;
+}
+
+enum AddrVersion {
+    // ADDR_VERSION_UNSPECIFIED is the default value for an address version in
+    // an RPC message. It is unmarshalled to the latest address version.
+    ADDR_VERSION_UNSPECIFIED = 0;
+
+    // ADDR_VERSION_V0 is the initial address version.
+    ADDR_VERSION_V0 = 1;
+
+    // ADDR_VERSION_V1 is the address version that uses V2 Taproot Asset
+    // commitments.
+    ADDR_VERSION_V1 = 2;
 }
 
 message Addr {
@@ -630,6 +833,9 @@ message Addr {
 
     // The asset version of the address.
     AssetVersion asset_version = 11;
+
+    // The version of the address.
+    AddrVersion address_version = 12;
 }
 
 message QueryAddrRequest {
@@ -699,6 +905,11 @@ message NewAddrRequest {
     The asset version to use when sending/receiving to/from this address.
     */
     AssetVersion asset_version = 7;
+
+    /*
+    The version of this address.
+    */
+    AddrVersion address_version = 8;
 }
 
 message ScriptKey {
@@ -743,6 +954,26 @@ message KeyDescriptor {
     The key locator that identifies which key to use for signing.
     */
     KeyLocator key_loc = 2;
+}
+
+message TapscriptFullTree {
+    /*
+    The complete, ordered list of all tap leaves of the tree.
+    */
+    repeated TapLeaf all_leaves = 1;
+}
+
+message TapLeaf {
+    // The script of the tap leaf.
+    bytes script = 2;
+}
+
+message TapBranch {
+    // The TapHash of the left child of the root hash of a Tapscript tree.
+    bytes left_taphash = 1;
+
+    // The TapHash of the right child of the root hash of a Tapscript tree.
+    bytes right_taphash = 2;
 }
 
 message DecodeAddrRequest {
@@ -947,83 +1178,6 @@ message GetInfoResponse {
     bool sync_to_chain = 8;
 }
 
-message SubscribeSendAssetEventNtfnsRequest {
-}
-
-message SendAssetEvent {
-    oneof event {
-        // An event which indicates that a send state is about to be executed.
-        ExecuteSendStateEvent execute_send_state_event = 1;
-
-        // An event which indicates that the proof transfer backoff wait period
-        // will start imminently.
-        ProofTransferBackoffWaitEvent proof_transfer_backoff_wait_event = 2;
-    }
-}
-
-message ExecuteSendStateEvent {
-    // Execute timestamp (microseconds).
-    int64 timestamp = 1;
-
-    // The send state that is about to be executed.
-    string send_state = 2;
-}
-
-// ProofTransferType is the type of proof transfer attempt. The transfer is
-// either a proof delivery to the transfer counterparty or receiving a proof
-// from the transfer counterparty. Note that the transfer counterparty is
-// usually the proof courier service.
-enum ProofTransferType {
-    // This value indicates that the proof transfer attempt is a delivery to the
-    // transfer counterparty.
-    PROOF_TRANSFER_TYPE_SEND = 0;
-
-    // This value indicates that the proof transfer attempt is a receive from
-    // the transfer counterparty.
-    PROOF_TRANSFER_TYPE_RECEIVE = 1;
-}
-
-message ProofTransferBackoffWaitEvent {
-    // Transfer attempt timestamp (microseconds).
-    int64 timestamp = 1;
-
-    // Backoff is the active backoff wait duration.
-    int64 backoff = 2;
-
-    // Tries counter is the number of tries we've made so far during the
-    // course of the current backoff procedure to deliver the proof to the
-    // receiver.
-    int64 tries_counter = 3;
-
-    // The type of proof transfer attempt.
-    ProofTransferType transfer_type = 4;
-}
-
-message SubscribeReceiveAssetEventNtfnsRequest {
-}
-
-message AssetReceiveCompleteEvent {
-    // Event creation timestamp.
-    int64 timestamp = 1;
-
-    // The address that received the asset.
-    Addr address = 2;
-
-    // The outpoint of the transaction that was used to receive the asset.
-    string outpoint = 3;
-}
-
-message ReceiveAssetEvent {
-    oneof event {
-        // An event which indicates that the proof transfer backoff wait period
-        // will start imminently.
-        ProofTransferBackoffWaitEvent proof_transfer_backoff_wait_event = 1;
-
-        // An event which indicates that an asset receive process has finished.
-        AssetReceiveCompleteEvent asset_receive_complete_event = 2;
-    }
-}
-
 message FetchAssetMetaRequest {
     oneof asset {
         // The asset ID of the asset to fetch the meta for.
@@ -1055,6 +1209,9 @@ message BurnAssetRequest {
     // the burn. This needs to be set to the value "assets will be destroyed"
     // for the burn to succeed.
     string confirmation_text = 4;
+
+    // A note that may contain user defined metadata related to this burn.
+    string note = 5;
 }
 
 message BurnAssetResponse {
@@ -1063,6 +1220,38 @@ message BurnAssetResponse {
 
     // The burn transition proof for the asset burn output.
     DecodedProof burn_proof = 2;
+}
+
+message ListBurnsRequest {
+    // The asset id of the burnt asset.
+    bytes asset_id = 1;
+
+    // The tweaked group key of the group this asset belongs to.
+    bytes tweaked_group_key = 3;
+
+    // The txid of the transaction that the burn was anchored to.
+    bytes anchor_txid = 4;
+}
+
+message AssetBurn {
+    // A note that may contain user defined metadata related to this burn.
+    string note = 1;
+
+    // The asset id of the burnt asset.
+    bytes asset_id = 2;
+
+    // The tweaked group key of the group this asset belongs to.
+    bytes tweaked_group_key = 3;
+
+    // The amount of burnt assets.
+    uint64 amount = 4;
+
+    // The txid of the transaction that the burn was anchored to.
+    bytes anchor_txid = 5;
+}
+
+message ListBurnsResponse {
+    repeated AssetBurn burns = 1;
 }
 
 message OutPoint {
@@ -1075,4 +1264,169 @@ message OutPoint {
     The index of the output on the transaction.
     */
     uint32 output_index = 2;
+}
+
+message SubscribeReceiveEventsRequest {
+    // Filter receives by a specific address. Leave empty to get all receive
+    // events for all addresses.
+    string filter_addr = 1;
+
+    // The start time as a Unix timestamp in microseconds. If not set (default
+    // value 0), the daemon will start streaming events from the current time.
+    int64 start_timestamp = 2;
+}
+
+message ReceiveEvent {
+    // Event creation timestamp (Unix timestamp in microseconds).
+    int64 timestamp = 1;
+
+    // The address that received the asset.
+    taprpc.Addr address = 2;
+
+    // The outpoint of the transaction that was used to receive the asset.
+    string outpoint = 3;
+
+    // The status of the event. If error below is set, then the status is the
+    // state that lead to the error during its execution.
+    AddrEventStatus status = 4;
+
+    // The height of the block the asset receive transaction was mined in. This
+    // is only set if the status is ADDR_EVENT_STATUS_TRANSACTION_CONFIRMED or
+    // later.
+    uint32 confirmation_height = 5;
+
+    // An optional error, indicating that executing the status above failed.
+    string error = 6;
+}
+
+message SubscribeSendEventsRequest {
+    // Filter send events by a specific recipient script key. Leave empty to get
+    // all receive events for all parcels.
+    bytes filter_script_key = 1;
+}
+
+enum SendState {
+    // Input coin selection to pick out which asset inputs should be spent is
+    // executed during this state.
+    SEND_STATE_VIRTUAL_INPUT_SELECT = 0;
+
+    // The virtual transaction is signed during this state.
+    SEND_STATE_VIRTUAL_SIGN = 1;
+
+    // The Bitcoin anchor transaction is signed during this state.
+    SEND_STATE_ANCHOR_SIGN = 2;
+
+    // The outbound packet is written to the database during this state,
+    // including the partial proof suffixes. Only parcels that complete this
+    // state can be resumed on restart.
+    SEND_STATE_LOG_COMMITMENT = 3;
+
+    // The Bitcoin anchor transaction is broadcast to the network during this
+    // state.
+    SEND_STATE_BROADCAST = 4;
+
+    // The on-chain anchor transaction needs to reach at least 1 confirmation.
+    // This state waits for the confirmation.
+    SEND_STATE_WAIT_CONFIRMATION = 5;
+
+    // The anchor transaction was confirmed in a block and the full proofs can
+    // now be constructed during this stage.
+    SEND_STATE_STORE_PROOFS = 6;
+
+    // The full proofs are sent to the recipient(s) with the proof courier
+    // service during this state.
+    SEND_STATE_TRANSFER_PROOFS = 7;
+
+    // The send state machine has completed the send process.
+    SEND_STATE_COMPLETED = 8;
+}
+
+enum ParcelType {
+    // The parcel is an address parcel.
+    PARCEL_TYPE_ADDRESS = 0;
+
+    // The parcel type is a pre-signed parcel where the virtual transactions are
+    // signed outside of the send state machine. Parcels of this type will only
+    // get send states starting from SEND_STATE_ANCHOR_SIGN.
+    PARCEL_TYPE_PRE_SIGNED = 1;
+
+    // The parcel is pending and was resumed on the latest restart of the
+    // daemon. The original parcel type (address or pre-signed) is not known
+    // anymore, as it's not relevant for the remaining steps. Parcels of this
+    // type will only get send states starting from SEND_STATE_BROADCAST.
+    PARCEL_TYPE_PENDING = 2;
+
+    // The parcel type is a pre-anchored parcel where the full anchor
+    // transaction and all proofs are already available. Parcels of this type
+    // will only get send states starting from SEND_STATE_LOG_COMMITMENT.
+    PARCEL_TYPE_PRE_ANCHORED = 3;
+}
+
+message SendEvent {
+    // Execute timestamp (Unix timestamp in microseconds).
+    int64 timestamp = 1;
+
+    // The send state that was executed successfully. If error below is set,
+    // then the send_state is the state that lead to the error during its
+    // execution.
+    string send_state = 2;
+
+    // The type of the outbound send parcel.
+    ParcelType parcel_type = 3;
+
+    // The list of addresses the parcel sends to (recipient addresses only, not
+    // including change going back to own wallet). This is only set for parcels
+    // of type PARCEL_TYPE_ADDRESS.
+    repeated taprpc.Addr addresses = 4;
+
+    // The virtual packets that are part of the parcel.
+    repeated bytes virtual_packets = 5;
+
+    // The passive virtual packets that are carried along with the parcel. This
+    // is empty if there were no other assets in the input commitment that is
+    // being spent with the "active" virtual packets above.
+    repeated bytes passive_virtual_packets = 6;
+
+    // The Bitcoin on-chain anchor transaction that commits the sent assets
+    // on-chain. This is only set after the send state SEND_STATE_ANCHOR_SIGN.
+    AnchorTransaction anchor_transaction = 7;
+
+    // The final transfer as it will be stored in the database. This is only set
+    // after the send state SEND_STATE_LOG_COMMITMENT.
+    AssetTransfer transfer = 8;
+
+    // An optional error, indicating that executing the send_state failed.
+    string error = 9;
+}
+
+message AnchorTransaction {
+    bytes anchor_psbt = 1;
+
+    /*
+    The index of the (added) change output or -1 if no change was left over.
+    */
+    int32 change_output_index = 2;
+
+    /*
+    The total number of satoshis in on-chain fees paid by the anchor
+    transaction.
+    */
+    int64 chain_fees_sats = 3;
+
+    /*
+    The fee rate in sat/kWU that was targeted by the anchor transaction.
+    */
+    int32 target_fee_rate_sat_kw = 4;
+
+    /*
+    The list of UTXO lock leases that were acquired for the inputs in the funded
+    PSBT packet from lnd. Only inputs added to the PSBT by this RPC are locked,
+    inputs that were already present in the PSBT are not locked.
+    */
+    repeated taprpc.OutPoint lnd_locked_utxos = 5;
+
+    /*
+    The final, signed anchor transaction that was broadcast to the network.
+    */
+    bytes final_tx = 6;
 }
