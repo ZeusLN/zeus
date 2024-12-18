@@ -471,11 +471,13 @@ export default class WalletConfiguration extends React.Component<
         let nodes: Node[];
         let originalNode: Node;
         if (settings.nodes) {
-            nodes = settings.nodes;
+            nodes = [...settings.nodes];
             if (index != null) {
                 originalNode = nodes[index];
+                nodes[index] = node;
+            } else {
+                nodes.push(node);
             }
-            nodes[index != null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
