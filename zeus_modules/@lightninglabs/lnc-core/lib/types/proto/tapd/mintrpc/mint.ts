@@ -1,5 +1,16 @@
 /* eslint-disable */
-import type { AssetVersion, AssetType, AssetMeta } from '../taprootassets';
+import type {
+    AssetVersion,
+    AssetType,
+    AssetMeta,
+    KeyDescriptor,
+    ScriptKey,
+    GroupKeyRequest,
+    GroupVirtualTx,
+    TapscriptFullTree,
+    TapBranch,
+    GroupWitness
+} from '../taprootassets';
 
 export enum BatchState {
     BATCH_STATE_UNKNOWN = 'BATCH_STATE_UNKNOWN',
@@ -36,13 +47,38 @@ export interface PendingAsset {
      * for future asset issuance.
      */
     newGroupedAsset: boolean;
-    /** The specific group key this asset should be minted with. */
+    /** The specific existing group key this asset should be minted with. */
     groupKey: Uint8Array | string;
     /**
      * The name of the asset in the batch that will anchor a new asset group.
      * This asset will be minted with the same group key as the anchor asset.
      */
     groupAnchor: string;
+    /**
+     * The optional key that will be used as the internal key for an asset group
+     * created with this asset.
+     */
+    groupInternalKey: KeyDescriptor | undefined;
+    /**
+     * The optional root of a tapscript tree that will be used when constructing a
+     * new asset group key. This enables future issuance authorized with a script
+     * witness.
+     */
+    groupTapscriptRoot: Uint8Array | string;
+    /**
+     * The optional script key to use for the new asset. If no script key is given,
+     * a BIP-86 key will be derived from the underlying wallet.
+     */
+    scriptKey: ScriptKey | undefined;
+}
+
+export interface UnsealedAsset {
+    /** The pending asset with an unsealed asset group. */
+    asset: PendingAsset | undefined;
+    /** The group key request for the asset. */
+    groupKeyRequest: GroupKeyRequest | undefined;
+    /** The group virtual transaction for the asset. */
+    groupVirtualTx: GroupVirtualTx | undefined;
 }
 
 export interface MintAsset {
@@ -72,13 +108,42 @@ export interface MintAsset {
      * an existing asset group.
      */
     groupedAsset: boolean;
-    /** The specific group key this asset should be minted with. */
+    /** The specific existing group key this asset should be minted with. */
     groupKey: Uint8Array | string;
     /**
      * The name of the asset in the batch that will anchor a new asset group.
      * This asset will be minted with the same group key as the anchor asset.
      */
     groupAnchor: string;
+    /**
+     * The optional key that will be used as the internal key for an asset group
+     * created with this asset.
+     */
+    groupInternalKey: KeyDescriptor | undefined;
+    /**
+     * The optional root of a tapscript tree that will be used when constructing a
+     * new asset group key. This enables future issuance authorized with a script
+     * witness.
+     */
+    groupTapscriptRoot: Uint8Array | string;
+    /**
+     * The optional script key to use for the new asset. If no script key is given,
+     * a BIP-86 key will be derived from the underlying wallet.
+     */
+    scriptKey: ScriptKey | undefined;
+    /**
+     * Decimal display dictates the number of decimal places to shift the amount to
+     * the left converting from Taproot Asset integer representation to a
+     * UX-recognizable fractional quantity.
+     *
+     * For example, if the decimal_display value is 2 and there's 100 of those
+     * assets, then a wallet would display the amount as "1.00". This field is
+     * intended as information for wallets that display balances and has no impact
+     * on the behavior of the daemon or any other part of the protocol. This value
+     * is encoded in the MetaData field as a JSON field, therefore it is only
+     * compatible with assets that have a JSON MetaData field.
+     */
+    decimalDisplay: number;
 }
 
 export interface MintAssetRequest {
@@ -113,6 +178,61 @@ export interface MintingBatch {
     state: BatchState;
     /** The assets that are part of the batch. */
     assets: PendingAsset[];
+    /** The time the batch was created as a Unix timestamp (in seconds). */
+    createdAt: string;
+    /** The current height of the block chain at the time of the batch creation. */
+    heightHint: number;
+    /**
+     * The genesis transaction as a PSBT packet. Only populated if the batch has
+     * been committed.
+     */
+    batchPsbt: Uint8Array | string;
+}
+
+export interface VerboseBatch {
+    /** The minting batch, without any assets. */
+    batch: MintingBatch | undefined;
+    /** The assets that are part of the batch. */
+    unsealedAssets: UnsealedAsset[];
+}
+
+export interface FundBatchRequest {
+    /**
+     * If true, then the assets currently in the batch won't be returned in the
+     * response. This is mainly to avoid a lot of data being transmitted and
+     * possibly printed on the command line in the case of a very large batch.
+     */
+    shortResponse: boolean;
+    /** The optional fee rate to use for the minting transaction, in sat/kw. */
+    feeRate: number;
+    /**
+     * An ordered list of TapLeafs, which will be used to construct a
+     * Tapscript tree.
+     */
+    fullTree: TapscriptFullTree | undefined;
+    /** A TapBranch that represents a Tapscript tree managed externally. */
+    branch: TapBranch | undefined;
+}
+
+export interface FundBatchResponse {
+    /** The funded batch. */
+    batch: MintingBatch | undefined;
+}
+
+export interface SealBatchRequest {
+    /**
+     * If true, then the assets currently in the batch won't be returned in the
+     * response. This is mainly to avoid a lot of data being transmitted and
+     * possibly printed on the command line in the case of a very large batch.
+     */
+    shortResponse: boolean;
+    /** The assetID, witness pairs that authorize asset membership in a group. */
+    groupWitnesses: GroupWitness[];
+}
+
+export interface SealBatchResponse {
+    /** The sealed batch. */
+    batch: MintingBatch | undefined;
 }
 
 export interface FinalizeBatchRequest {
@@ -124,6 +244,13 @@ export interface FinalizeBatchRequest {
     shortResponse: boolean;
     /** The optional fee rate to use for the minting transaction, in sat/kw. */
     feeRate: number;
+    /**
+     * An ordered list of TapLeafs, which will be used to construct a
+     * Tapscript tree.
+     */
+    fullTree: TapscriptFullTree | undefined;
+    /** A TapBranch that represents a Tapscript tree managed externally. */
+    branch: TapBranch | undefined;
 }
 
 export interface FinalizeBatchResponse {
@@ -149,10 +276,39 @@ export interface ListBatchRequest {
      * encoded string (use this for REST).
      */
     batchKeyStr: string | undefined;
+    /**
+     * If true, pending asset group information will be shown for the pending
+     * batch.
+     */
+    verbose: boolean;
 }
 
 export interface ListBatchResponse {
-    batches: MintingBatch[];
+    batches: VerboseBatch[];
+}
+
+export interface SubscribeMintEventsRequest {
+    /**
+     * If true, then the assets currently in the batch won't be returned in the
+     * event's batch. This is mainly to avoid a lot of data being transmitted and
+     * possibly printed on the command line in the case of a very large batch.
+     */
+    shortResponse: boolean;
+}
+
+export interface MintEvent {
+    /** Execute timestamp (Unix timestamp in microseconds). */
+    timestamp: string;
+    /**
+     * The last state of the batch that was successfully executed. If error
+     * below is set, then the batch_state is the state that lead to the error
+     * during its execution.
+     */
+    batchState: BatchState;
+    /** The batch that the event is for. */
+    batch: MintingBatch | undefined;
+    /** An optional error, indicating that executing the batch_state failed. */
+    error: string;
 }
 
 export interface Mint {
@@ -167,6 +323,28 @@ export interface Mint {
     mintAsset(
         request?: DeepPartial<MintAssetRequest>
     ): Promise<MintAssetResponse>;
+    /**
+     * tapcli `assets mint fund`
+     * FundBatch will attempt to fund the current pending batch with a genesis
+     * input, or create a new funded batch if no batch exists yet. This RPC is only
+     * needed if a custom witness is needed to finalize the batch. Otherwise,
+     * FinalizeBatch can be called directly.
+     */
+    fundBatch(
+        request?: DeepPartial<FundBatchRequest>
+    ): Promise<FundBatchResponse>;
+    /**
+     * tapcli `assets mint seal`
+     * SealBatch will attempt to seal the current pending batch by creating and
+     * validating asset group witness for all assets in the batch. If a witness
+     * is not provided, a signature will be derived to serve as the witness. This
+     * RPC is only needed if any assets in the batch have a custom asset group key
+     * that require an external signer. Otherwise, FinalizeBatch can be called
+     * directly.
+     */
+    sealBatch(
+        request?: DeepPartial<SealBatchRequest>
+    ): Promise<SealBatchResponse>;
     /**
      * tapcli: `assets mint finalize`
      * FinalizeBatch will attempt to finalize the current pending batch.
@@ -189,6 +367,16 @@ export interface Mint {
     listBatches(
         request?: DeepPartial<ListBatchRequest>
     ): Promise<ListBatchResponse>;
+    /**
+     * tapcli: `events mint`
+     * SubscribeMintEvents allows a caller to subscribe to mint events for asset
+     * creation batches.
+     */
+    subscribeMintEvents(
+        request?: DeepPartial<SubscribeMintEventsRequest>,
+        onMessage?: (msg: MintEvent) => void,
+        onError?: (err: Error) => void
+    ): void;
 }
 
 type Builtin =

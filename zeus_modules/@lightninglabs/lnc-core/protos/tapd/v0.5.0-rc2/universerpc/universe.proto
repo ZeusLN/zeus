@@ -7,6 +7,13 @@ package universerpc;
 option go_package = "github.com/lightninglabs/taproot-assets/taprpc/universerpc";
 
 service Universe {
+    /* tapcli: `universe multiverse`
+    MultiverseRoot returns the root of the multiverse tree. This is useful to
+    determine the equality of two multiverse trees, since the root can directly
+    be compared to another multiverse root to find out if a sync is required.
+    */
+    rpc MultiverseRoot (MultiverseRootRequest) returns (MultiverseRootResponse);
+
     /* tapcli: `universe roots`
     AssetRoots queries for the known Universe roots associated with each known
     asset. These roots represent the supply/audit state for each known asset.
@@ -64,6 +71,13 @@ service Universe {
     updated asset_id/group_key.
     */
     rpc InsertProof (AssetProof) returns (AssetProofResponse);
+
+    /* tapcli: `universe proofs push`
+    PushProof attempts to query the local universe for a proof specified by a
+    UniverseKey. If found, a connection is made to a remote Universe server to
+    attempt to upload the asset leaf.
+    */
+    rpc PushProof (PushProofRequest) returns (PushProofResponse);
 
     // TODO(roasbeef): rename resp to UniverseStateUpdate? ^
 
@@ -140,6 +154,22 @@ service Universe {
     */
     rpc QueryFederationSyncConfig (QueryFederationSyncConfigRequest)
         returns (QueryFederationSyncConfigResponse);
+}
+
+message MultiverseRootRequest {
+    // The proof type to calculate the multiverse root for.
+    ProofType proof_type = 1;
+
+    // An optional list of universe IDs to include in the multiverse root. If
+    // none are specified, then all known universes of the given proof type are
+    // included. NOTE: The proof type within the IDs must either be unspecified
+    // or match the proof type above.
+    repeated ID specific_ids = 2;
+}
+
+message MultiverseRootResponse {
+    // The root of the multiverse tree.
+    MerkleSumNode multiverse_root = 1;
 }
 
 message AssetRootRequest {
@@ -317,7 +347,7 @@ message UniverseKey {
 }
 
 message AssetProofResponse {
-    // The request original request for the issuance proof.
+    // The original request for the issuance proof.
     UniverseKey req = 1;
 
     // The Universe root that includes this asset leaf.
@@ -345,6 +375,19 @@ message AssetProof {
 
     // The asset leaf to insert into the Universe tree.
     AssetLeaf asset_leaf = 4;
+}
+
+message PushProofRequest {
+    // The ID of the asset to push the proof for.
+    UniverseKey key = 1;
+
+    // The universe server to push the proof to.
+    UniverseFederationServer server = 2;
+}
+
+message PushProofResponse {
+    // The ID of the asset a push was requested for.
+    UniverseKey key = 1;
 }
 
 message InfoRequest {

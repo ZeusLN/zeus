@@ -47,6 +47,23 @@ export enum AssetTypeFilter {
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
+export interface MultiverseRootRequest {
+    /** The proof type to calculate the multiverse root for. */
+    proofType: ProofType;
+    /**
+     * An optional list of universe IDs to include in the multiverse root. If
+     * none are specified, then all known universes of the given proof type are
+     * included. NOTE: The proof type within the IDs must either be unspecified
+     * or match the proof type above.
+     */
+    specificIds: ID[];
+}
+
+export interface MultiverseRootResponse {
+    /** The root of the multiverse tree. */
+    multiverseRoot: MerkleSumNode | undefined;
+}
+
 export interface AssetRootRequest {
     /**
      * If true, then the response will include the amounts for each asset ID
@@ -199,7 +216,7 @@ export interface UniverseKey {
 }
 
 export interface AssetProofResponse {
-    /** The request original request for the issuance proof. */
+    /** The original request for the issuance proof. */
     req: UniverseKey | undefined;
     /** The Universe root that includes this asset leaf. */
     universeRoot: UniverseRoot | undefined;
@@ -227,6 +244,18 @@ export interface AssetProof {
     key: UniverseKey | undefined;
     /** The asset leaf to insert into the Universe tree. */
     assetLeaf: AssetLeaf | undefined;
+}
+
+export interface PushProofRequest {
+    /** The ID of the asset to push the proof for. */
+    key: UniverseKey | undefined;
+    /** The universe server to push the proof to. */
+    server: UniverseFederationServer | undefined;
+}
+
+export interface PushProofResponse {
+    /** The ID of the asset a push was requested for. */
+    key: UniverseKey | undefined;
 }
 
 export interface InfoRequest {}
@@ -440,6 +469,15 @@ export interface QueryFederationSyncConfigResponse {
 
 export interface Universe {
     /**
+     * tapcli: `universe multiverse`
+     * MultiverseRoot returns the root of the multiverse tree. This is useful to
+     * determine the equality of two multiverse trees, since the root can directly
+     * be compared to another multiverse root to find out if a sync is required.
+     */
+    multiverseRoot(
+        request?: DeepPartial<MultiverseRootRequest>
+    ): Promise<MultiverseRootResponse>;
+    /**
      * tapcli: `universe roots`
      * AssetRoots queries for the known Universe roots associated with each known
      * asset. These roots represent the supply/audit state for each known asset.
@@ -502,6 +540,15 @@ export interface Universe {
      * updated asset_id/group_key.
      */
     insertProof(request?: DeepPartial<AssetProof>): Promise<AssetProofResponse>;
+    /**
+     * tapcli: `universe proofs push`
+     * PushProof attempts to query the local universe for a proof specified by a
+     * UniverseKey. If found, a connection is made to a remote Universe server to
+     * attempt to upload the asset leaf.
+     */
+    pushProof(
+        request?: DeepPartial<PushProofRequest>
+    ): Promise<PushProofResponse>;
     /**
      * tapcli: `universe info`
      * Info returns a set of information about the current state of the Universe.

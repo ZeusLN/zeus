@@ -6,6 +6,7 @@ syntax = "proto3";
 // different golang and RPC package names to fix protobuf namespace conflicts.
 package looprpc;
 import "common.proto";
+import "reservation.proto";
 
 option go_package = "github.com/lightninglabs/loop/swapserverrpc";
 
@@ -50,6 +51,9 @@ service SwapServer {
     // FetchL402 is a simple non-l402-allowlisted request that is required
     // in order to force the creation of an l402.
     rpc FetchL402 (FetchL402Request) returns (FetchL402Response);
+
+    rpc SubscribeNotifications (SubscribeNotificationsRequest)
+        returns (stream SubscribeNotificationsResponse);
 }
 
 /**
@@ -284,6 +288,12 @@ message ServerLoopInQuoteRequest {
     //    loopd/v0.10.0-beta/commit=3b635821
     //    litd/v0.2.0-alpha/commit=326d754
     string user_agent = 6;
+
+    // The number of static address deposits the client wants to quote for.
+    // If the number of deposits exceeds one the server will apply a per-input
+    // service fee. This is to cover for the increased on-chain fee the server
+    // has to pay when the sweeping transaction is broadcast.
+    uint32 num_static_address_deposits = 7;
 }
 
 message ServerLoopInQuoteResponse {
@@ -514,6 +524,7 @@ message ServerProbeRequest {
     // The protocol version that the client adheres to.
     ProtocolVersion protocol_version = 1;
 
+    // The probe amount.
     uint64 amt = 2;
 
     // The target node for the probe.
@@ -638,18 +649,41 @@ message ServerPushKeyRes {
 }
 
 // FetchL402Request is an empty request sent from the client to the server to
-// fetch the lnd l402.
+// fetch the lnd L402.
 message FetchL402Request {
 }
 
 // FetchL402Response is an empty response sent from the server to the client to
-// confirm the lnd l402.
+// confirm the lnd L402.
 message FetchL402Response {
 }
 
-// StaticAddressProtocolVersion represents the static address protocol version
-// the client adheres to.
-enum StaticAddressProtocolVersion {
-    // V0 is the initially released static address protocol version.
-    V0 = 0;
+// SubscribeNotificationsRequest is a request to subscribe to notifications.
+message SubscribeNotificationsRequest {
+}
+
+// SubscribeNotificationsResponse is a response to a
+// SubscribeNotificationsRequest.
+message SubscribeNotificationsResponse {
+    oneof notification {
+        ServerReservationNotification reservation_notification = 1;
+        ServerStaticLoopInSweepNotification static_loop_in_sweep = 2;
+    }
+}
+
+// ServerStaticLoopInSweepNotification is a request from the server to the
+// client to cosign a transaction that contains deposits from a finished static
+// loop ins.
+message ServerStaticLoopInSweepNotification {
+    // The psbt of the sweep transaction.
+    bytes sweep_tx_psbt = 1;
+
+    // The swap hash the deposits are associated with.
+    bytes swap_hash = 2;
+
+    // The map of deposit txid:idx to the nonce used by the server.
+    map<string, bytes> deposit_to_nonces = 3;
+
+    // The prevout information of the sweep txn.
+    repeated PrevoutInfo prevout_info = 4;
 }
