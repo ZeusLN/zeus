@@ -957,7 +957,6 @@
     "views.Transaction.title": "Giao dịch",
     "views.Transaction.totalFees": "Tổng Phí",
     "views.Transaction.transactionHash": "Mã băm Giao dịch",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Mã băm Khối",
     "views.Transaction.blockHeight": "Chiều cao Khối",
     "views.Transaction.numConf": "Số lượng Xác nhận",
