@@ -11,6 +11,8 @@ import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/storeInstances';
 
+const keySendMessageType = '34349334';
+
 interface preimageBuffer {
     data: Array<number>;
     type: string;
@@ -79,17 +81,23 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getMemo(): string | undefined {
-        if (this.getPaymentRequest) {
+        if (
+            this.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
+                keySendMessageType
+            ]
+        ) {
+            const customRecords = this.htlcs[0].route.hops[0].custom_records;
+            return Base64Utils.base64ToUtf8(customRecords[keySendMessageType]);
+        } else if (this.getPaymentRequest) {
             try {
                 const decoded: any = bolt11.decode(this.getPaymentRequest);
                 for (let i = 0; i < decoded.tags.length; i++) {
                     const tag = decoded.tags[i];
-                    switch (tag.tagName) {
-                        case 'description':
-                            return tag.data;
-                    }
+                    if (tag.tagName === 'description') return tag.data;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.log('Error decoding payment request:', e);
+            }
         }
         return undefined;
     }
