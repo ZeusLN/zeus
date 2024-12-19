@@ -957,7 +957,6 @@
     "views.Transaction.title": "פעולה",
     "views.Transaction.totalFees": "סך עמלות",
     "views.Transaction.transactionHash": "גיבוב פעולה",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "גיבוב בלוק",
     "views.Transaction.blockHeight": "גובה בלוק",
     "views.Transaction.numConf": "מספר אישורים",
