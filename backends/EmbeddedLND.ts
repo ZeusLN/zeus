@@ -98,7 +98,10 @@ export default class EmbeddedLND extends LND {
             preimage: data.preimage,
             route_hints: data.route_hints
         });
-    getPayments = async () => await listPayments();
+    getPayments = async (params?: {
+        maxPayments?: number;
+        reversed?: boolean;
+    }) => await listPayments(params);
     getNewAddress = async (data: any) =>
         await newAddress(data.type, data.account);
     getNewChangeAddress = async (data: any) =>
