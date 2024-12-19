@@ -957,7 +957,6 @@
     "views.Transaction.title": "تراکنش",
     "views.Transaction.totalFees": "کارمزد کل",
     "views.Transaction.transactionHash": "هش تراکنش",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "هش بلوک",
     "views.Transaction.blockHeight": "ارتفاع بلوک",
     "views.Transaction.numConf": "تعداد تائیدیه‌ها",
