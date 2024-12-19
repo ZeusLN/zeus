@@ -957,7 +957,6 @@
     "views.Transaction.title": "トランザクション",
     "views.Transaction.totalFees": "合計手数料",
     "views.Transaction.transactionHash": "トランザクションハッシュ",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "ブロックハッシュ",
     "views.Transaction.blockHeight": "ブロック高さ",
     "views.Transaction.numConf": "承認数",
