@@ -957,7 +957,6 @@
     "views.Transaction.title": "交易",
     "views.Transaction.totalFees": "总费用",
     "views.Transaction.transactionHash": "交易哈希",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "区块哈希",
     "views.Transaction.blockHeight": "区块高度",
     "views.Transaction.numConf": "确认数",
