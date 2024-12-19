@@ -957,7 +957,6 @@
     "views.Transaction.title": "Transaksjon",
     "views.Transaction.totalFees": "Totale avgifter",
     "views.Transaction.transactionHash": "Transaksjons-hash",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Blokk-hash",
     "views.Transaction.blockHeight": "Blokkhøyde",
     "views.Transaction.numConf": "Antall bekreftelser",
