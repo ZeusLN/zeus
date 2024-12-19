@@ -1,0 +1,480 @@
+syntax = "proto3";
+
+import "taprootassets.proto";
+
+package assetwalletrpc;
+
+option go_package = "github.com/lightninglabs/taproot-assets/taprpc/assetwalletrpc";
+
+service AssetWallet {
+    /*
+    FundVirtualPsbt selects inputs from the available asset commitments to fund
+    a virtual transaction matching the template.
+    */
+    rpc FundVirtualPsbt (FundVirtualPsbtRequest)
+        returns (FundVirtualPsbtResponse);
+
+    /*
+    SignVirtualPsbt signs the inputs of a virtual transaction and prepares the
+    commitments of the inputs and outputs.
+    */
+    rpc SignVirtualPsbt (SignVirtualPsbtRequest)
+        returns (SignVirtualPsbtResponse);
+
+    /*
+    AnchorVirtualPsbts merges and then commits multiple virtual transactions in
+    a single BTC level anchor transaction. This RPC should be used if the BTC
+    level anchor transaction of the assets to be spent are encumbered by a
+    normal key and don't require any special spending conditions. For any custom
+    spending conditions on the BTC level, the two RPCs CommitVirtualPsbts and
+    PublishAndLogTransfer should be used instead (which in combination do the
+    same as this RPC but allow for more flexibility).
+    */
+    rpc AnchorVirtualPsbts (AnchorVirtualPsbtsRequest)
+        returns (taprpc.SendAssetResponse);
+
+    /*
+    CommitVirtualPsbts creates the output commitments and proofs for the given
+    virtual transactions by committing them to the BTC level anchor transaction.
+    In addition, the BTC level anchor transaction is funded and prepared up to
+    the point where it is ready to be signed.
+    */
+    rpc CommitVirtualPsbts (CommitVirtualPsbtsRequest)
+        returns (CommitVirtualPsbtsResponse);
+
+    /*
+    PublishAndLogTransfer accepts a fully committed and signed anchor
+    transaction and publishes it to the Bitcoin network. It also logs the
+    transfer of the given active and passive assets in the database and ships
+    any outgoing proofs to the counterparties.
+    */
+    rpc PublishAndLogTransfer (PublishAndLogRequest)
+        returns (taprpc.SendAssetResponse);
+
+    /*
+    NextInternalKey derives the next internal key for the given key family and
+    stores it as an internal key in the database to make sure it is identified
+    as a local key later on when importing proofs. While an internal key can
+    also be used as the internal key of a script key, it is recommended to use
+    the NextScriptKey RPC instead, to make sure the tweaked Taproot output key
+    is also recognized as a local key.
+    */
+    rpc NextInternalKey (NextInternalKeyRequest)
+        returns (NextInternalKeyResponse);
+
+    /*
+    NextScriptKey derives the next script key (and its corresponding internal
+    key) and stores them both in the database to make sure they are identified
+    as local keys later on when importing proofs.
+    */
+    rpc NextScriptKey (NextScriptKeyRequest) returns (NextScriptKeyResponse);
+
+    /*
+    QueryInternalKey returns the key descriptor for the given internal key.
+    */
+    rpc QueryInternalKey (QueryInternalKeyRequest)
+        returns (QueryInternalKeyResponse);
+
+    /*
+    QueryScriptKey returns the full script key descriptor for the given tweaked
+    script key.
+    */
+    rpc QueryScriptKey (QueryScriptKeyRequest) returns (QueryScriptKeyResponse);
+
+    /* tapcli: `proofs proveownership`
+    ProveAssetOwnership creates an ownership proof embedded in an asset
+    transition proof. That ownership proof is a signed virtual transaction
+    spending the asset with a valid witness to prove the prover owns the keys
+    that can spend the asset.
+    */
+    rpc ProveAssetOwnership (ProveAssetOwnershipRequest)
+        returns (ProveAssetOwnershipResponse);
+
+    /* tapcli: `proofs verifyownership`
+    VerifyAssetOwnership verifies the asset ownership proof embedded in the
+    given transition proof of an asset and returns true if the proof is valid.
+    */
+    rpc VerifyAssetOwnership (VerifyAssetOwnershipRequest)
+        returns (VerifyAssetOwnershipResponse);
+
+    /*
+    RemoveUTXOLease removes the lease/lock/reservation of the given managed
+    UTXO.
+    */
+    rpc RemoveUTXOLease (RemoveUTXOLeaseRequest)
+        returns (RemoveUTXOLeaseResponse);
+
+    /*
+    DeclareScriptKey declares a new script key to the wallet. This is useful
+    when the script key contains scripts, which would mean it wouldn't be
+    recognized by the wallet automatically. Declaring a script key will make any
+    assets sent to the script key be recognized as being local assets.
+    */
+    rpc DeclareScriptKey (DeclareScriptKeyRequest)
+        returns (DeclareScriptKeyResponse);
+}
+
+enum CoinSelectType {
+    /*
+    Use the default coin selection type, which currently allows script keys and
+    key spend paths.
+    */
+    COIN_SELECT_DEFAULT = 0;
+
+    /*
+    Explicitly only select inputs that are known to be BIP-086 compliant (have
+    a key-spend path only and no script tree).
+    */
+    COIN_SELECT_BIP86_ONLY = 1;
+
+    /*
+    Allow the selection of inputs that have a script tree spend path as well as
+    a key spend path.
+    */
+    COIN_SELECT_SCRIPT_TREES_ALLOWED = 2;
+}
+
+message FundVirtualPsbtRequest {
+    oneof template {
+        /*
+        Use an existing PSBT packet as the template for the funded PSBT.
+        */
+        bytes psbt = 1;
+
+        /*
+        Use the asset outputs and optional asset inputs from this raw template.
+        */
+        TxTemplate raw = 2;
+    }
+
+    /*
+    Specify the type of coins that should be selected. Defaults to allowing both
+    script trees and BIP-086 compliant inputs.
+    */
+    CoinSelectType coin_select_type = 3;
+}
+
+message FundVirtualPsbtResponse {
+    /*
+    The funded but not yet signed virtual PSBT packet.
+    */
+    bytes funded_psbt = 1;
+
+    /*
+    The index of the added change output or -1 if no change was left over.
+    */
+    int32 change_output_index = 2;
+
+    /*
+    The list of passive virtual transactions that are anchored in the same BTC
+    level anchor transaction inputs as the funded "active" asset above. These
+    assets can be ignored when using the AnchorVirtualPsbts RPC, since they are
+    retrieved, signed and committed automatically in that method. But the
+    passive assets have to be included in the CommitVirtualPsbts RPC which is
+    used when custom BTC level anchor transactions are created.
+    The main difference to the "active" asset above is that the passive assets
+    will not get their own entry in the transfer table of the database, since
+    they are just carried along and not directly affected by the direct user
+    action.
+    */
+    repeated bytes passive_asset_psbts = 3;
+}
+
+message TxTemplate {
+    /*
+    An optional list of inputs to use. Every input must be an asset UTXO known
+    to the wallet. The sum of all inputs must be greater than or equal to the
+    sum of all outputs.
+
+    If no inputs are specified, asset coin selection will be performed instead
+    and inputs of sufficient value will be added to the resulting PSBT.
+    */
+    repeated PrevId inputs = 1;
+
+    /*
+    A map of all Taproot Asset addresses mapped to the anchor transaction's
+    output index that should be sent to.
+    */
+    map<string, uint64> recipients = 2;
+}
+
+message PrevId {
+    /*
+    The bitcoin anchor output on chain that contains the input asset.
+    */
+    taprpc.OutPoint outpoint = 1;
+
+    /*
+    The asset ID of the previous asset tree.
+    */
+    bytes id = 2;
+
+    /*
+    The tweaked Taproot output key committing to the possible spending
+    conditions of the asset.
+    */
+    bytes script_key = 3;
+}
+
+message SignVirtualPsbtRequest {
+    /*
+    The PSBT of the virtual transaction that should be signed. The PSBT must
+    contain all required inputs, outputs, UTXO data and custom fields required
+    to identify the signing key.
+    */
+    bytes funded_psbt = 1;
+}
+
+message SignVirtualPsbtResponse {
+    /*
+    The signed virtual transaction in PSBT format.
+    */
+    bytes signed_psbt = 1;
+
+    /*
+    The indices of signed inputs.
+    */
+    repeated uint32 signed_inputs = 2;
+}
+
+message AnchorVirtualPsbtsRequest {
+    /*
+    The list of virtual transactions that should be merged and committed to in
+    the BTC level anchor transaction.
+    */
+    repeated bytes virtual_psbts = 1;
+}
+
+message CommitVirtualPsbtsRequest {
+    /*
+    The list of virtual transactions that should be mapped to the given BTC
+    level anchor transaction template. The virtual transactions are expected to
+    be signed (or use ASSET_VERSION_V1 with segregated witness to allow for
+    signing after committing) and ready to be committed to the anchor
+    transaction.
+    */
+    repeated bytes virtual_psbts = 1;
+
+    /*
+    The list of passive virtual transactions that are anchored in the same BTC
+    level anchor transaction inputs as the "active" assets above. These can be
+    obtained by calling FundVirtualPsbt and using the passive assets returned.
+    The virtual transactions are expected to be signed (or use ASSET_VERSION_V1
+    with segregated witness to allow for signing after committing) and ready to
+    be committed to the anchor transaction.
+    The main difference to the "active" assets above is that the passive assets
+    will not get their own entry in the transfer table of the database, since
+    they are just carried along and not directly affected by the direct user
+    action.
+    */
+    repeated bytes passive_asset_psbts = 2;
+
+    /*
+    The template of the BTC level anchor transaction that the virtual
+    transactions should be mapped to. The template is expected to already
+    contain all asset related inputs and outputs corresponding to the virtual
+    transactions given above. This can be achieved by using
+    tapfreighter.PrepareAnchoringTemplate for example.
+    */
+    bytes anchor_psbt = 3;
+
+    oneof anchor_change_output {
+        /*
+        Use the existing output within the anchor PSBT with the specified
+        index as the change output. Any leftover change will be added to the
+        already specified amount of that output. To add a new change output to
+        the PSBT, set the "add" field below instead.
+        */
+        int32 existing_output_index = 4;
+
+        /*
+        Add a new P2TR change output to the PSBT if required.
+        */
+        bool add = 5;
+    }
+
+    oneof fees {
+        /*
+        The target number of blocks that the transaction should be confirmed in.
+        */
+        uint32 target_conf = 6;
+
+        /*
+        The fee rate, expressed in sat/vbyte, that should be used to fund the
+        BTC level anchor transaction.
+        */
+        uint64 sat_per_vbyte = 7;
+    }
+}
+
+message CommitVirtualPsbtsResponse {
+    /*
+    The funded BTC level anchor transaction with all outputs updated to commit
+    to the virtual transactions given. The transaction is ready to be signed,
+    unless some of the asset inputs don't belong to this daemon, in which case
+    the anchor input derivation info must be added to those inputs first.
+    */
+    bytes anchor_psbt = 1;
+
+    /*
+    The updated virtual transactions that now contain the state transition
+    proofs for being committed to the BTC level anchor transaction above. If the
+    assets in the virtual transaction outputs are ASSET_VERSION_V1 and not yet
+    signed, then the proofs need to be updated to include the witness before
+    they become fully valid.
+    */
+    repeated bytes virtual_psbts = 2;
+
+    /*
+    The updated passive virtual transactions that were committed to the same BTC
+    level anchor transaction as the "active" virtual transactions given. If the
+    assets in the virtual transaction outputs are ASSET_VERSION_V1 and not yet
+    signed, then the proofs need to be updated to include the witness before
+    they become fully valid.
+    */
+    repeated bytes passive_asset_psbts = 4;
+
+    /*
+    The index of the (added) change output or -1 if no change was left over.
+    */
+    int32 change_output_index = 5;
+
+    /*
+    The list of UTXO lock leases that were acquired for the inputs in the funded
+    PSBT packet from lnd. Only inputs added to the PSBT by this RPC are locked,
+    inputs that were already present in the PSBT are not locked.
+    */
+    repeated taprpc.OutPoint lnd_locked_utxos = 6;
+}
+
+message PublishAndLogRequest {
+    /*
+    The funded BTC level anchor transaction with all outputs updated to commit
+    to the virtual transactions given. The transaction is ready to be signed,
+    unless some of the asset inputs don't belong to this daemon, in which case
+    the anchor input derivation info must be added to those inputs first.
+    */
+    bytes anchor_psbt = 1;
+
+    /*
+    The updated virtual transactions that contain the state transition proofs
+    of being committed to the BTC level anchor transaction above.
+    */
+    repeated bytes virtual_psbts = 2;
+
+    /*
+    The updated passive virtual transactions that contain the state transition
+    proofs of being committed to the BTC level anchor transaction above.
+    */
+    repeated bytes passive_asset_psbts = 3;
+
+    /*
+    The index of the (added) change output or -1 if no change was left over.
+    */
+    int32 change_output_index = 4;
+
+    /*
+    The list of UTXO lock leases that were acquired for the inputs in the funded
+    PSBT packet from lnd. Only inputs added to the PSBT by this RPC are locked,
+    inputs that were already present in the PSBT are not locked.
+    */
+    repeated taprpc.OutPoint lnd_locked_utxos = 5;
+}
+
+message NextInternalKeyRequest {
+    uint32 key_family = 1;
+}
+
+message NextInternalKeyResponse {
+    taprpc.KeyDescriptor internal_key = 1;
+}
+
+message NextScriptKeyRequest {
+    uint32 key_family = 1;
+}
+
+message NextScriptKeyResponse {
+    taprpc.ScriptKey script_key = 1;
+}
+
+message QueryInternalKeyRequest {
+    // The internal key to look for. This can either be the 32-byte x-only raw
+    // internal key or the 33-byte raw internal key with the parity byte.
+    bytes internal_key = 1;
+}
+
+message QueryInternalKeyResponse {
+    taprpc.KeyDescriptor internal_key = 1;
+}
+
+message QueryScriptKeyRequest {
+    // The tweaked script key to look for. This can either be the 32-byte
+    // x-only tweaked script key or the 33-byte tweaked script key with the
+    // parity byte.
+    bytes tweaked_script_key = 1;
+}
+
+message QueryScriptKeyResponse {
+    taprpc.ScriptKey script_key = 1;
+}
+
+message ProveAssetOwnershipRequest {
+    bytes asset_id = 1;
+
+    bytes script_key = 2;
+
+    taprpc.OutPoint outpoint = 3;
+
+    // An optional 32-byte challenge that may be used to bind the generated
+    // proof. This challenge needs to be also presented on the
+    // VerifyAssetOwnership RPC in order to check the proof against it.
+    bytes challenge = 4;
+}
+
+message ProveAssetOwnershipResponse {
+    bytes proof_with_witness = 1;
+}
+
+message VerifyAssetOwnershipRequest {
+    bytes proof_with_witness = 1;
+
+    // An optional 32-byte challenge that may be used to check the ownership
+    // proof against. This challenge must match the one that the prover used
+    // on the ProveAssetOwnership RPC.
+    bytes challenge = 2;
+}
+
+message VerifyAssetOwnershipResponse {
+    bool valid_proof = 1;
+
+    // The outpoint the proof commits to.
+    taprpc.OutPoint outpoint = 2;
+
+    // The outpoint in the human-readable form "hash:index".
+    string outpoint_str = 3;
+
+    // The block hash the output is part of.
+    bytes block_hash = 4;
+
+    // The block hash as hexadecimal string of the byte-reversed hash.
+    string block_hash_str = 5;
+
+    // The block height of the block the output is part of.
+    uint32 block_height = 6;
+}
+
+message RemoveUTXOLeaseRequest {
+    // The outpoint of the UTXO to remove the lease for.
+    taprpc.OutPoint outpoint = 1;
+}
+
+message RemoveUTXOLeaseResponse {
+}
+
+message DeclareScriptKeyRequest {
+    taprpc.ScriptKey script_key = 1;
+}
+
+message DeclareScriptKeyResponse {
+    taprpc.ScriptKey script_key = 1;
+}
