@@ -957,7 +957,6 @@
     "views.Transaction.title": "Transakcija",
     "views.Transaction.totalFees": "Ukupne naknade",
     "views.Transaction.transactionHash": "Hash transakcije",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Hash bloka",
     "views.Transaction.blockHeight": "Visina bloka",
     "views.Transaction.numConf": "Broj potvrda",
