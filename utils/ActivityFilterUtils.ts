@@ -31,7 +31,7 @@ class ActivityFilterUtils {
                 (activity) =>
                     !(
                         (activity instanceof Transaction &&
-                            Number(activity.getAmount) < 0) ||
+                            Number(activity.getAmount) <= 0) ||
                         activity instanceof Payment
                     )
             );
@@ -42,7 +42,7 @@ class ActivityFilterUtils {
                 (activity) =>
                     !(
                         (activity instanceof Transaction &&
-                            Number(activity.getAmount) > 0) ||
+                            Number(activity.getAmount) >= 0) ||
                         (activity instanceof Invoice && activity.isPaid)
                     )
             );
