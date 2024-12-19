@@ -374,12 +374,12 @@ export default class Activity extends React.PureComponent<
                                 subTitle = (
                                     <Text>
                                         {localeString('general.lightning')}
-                                        {item.memo ? ': ' : ''}
-                                        {item.memo ? (
+                                        {item.getMemo ? ': ' : ''}
+                                        {item.getMemo ? (
                                             <Text
                                                 style={{ fontStyle: 'italic' }}
                                             >
-                                                {item.memo}
+                                                {item.getMemo}
                                             </Text>
                                         ) : (
                                             ''
