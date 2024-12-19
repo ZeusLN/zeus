@@ -957,7 +957,6 @@
     "views.Transaction.title": "Tranzacție",
     "views.Transaction.totalFees": "Total Comisioane",
     "views.Transaction.transactionHash": "Hash Tranzacției",
-    "views.Transaction.note": "Nota de tranzacție",
     "views.Transaction.blockHash": "Hash bloc",
     "views.Transaction.blockHeight": "Înălțime bloc",
     "views.Transaction.numConf": "Număr Confirmări",
