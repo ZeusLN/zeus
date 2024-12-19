@@ -443,9 +443,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {
-                await login({ login: username, password }).then(async () => {
-                    BalanceStore.getLightningBalance(true);
-                });
+                try {
+                    await login({ login: username, password });
+                    await BalanceStore.getLightningBalance(true);
+                } catch (connectionError) {
+                    console.log('LNDHub connection failed:', connectionError);
+                    return;
+                }
             } else {
                 BalanceStore.getLightningBalance(true);
             }
@@ -455,22 +459,33 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 error = await connect();
             }
             if (!error) {
-                await BackendUtils.checkPerms();
-                await NodeInfoStore.getNodeInfo();
-                if (BackendUtils.supportsAccounts())
-                    await UTXOsStore.listAccounts();
-                await BalanceStore.getCombinedBalance();
-                if (BackendUtils.supportsChannelManagement())
-                    ChannelsStore.getChannels();
+                try {
+                    await BackendUtils.checkPerms();
+                    await NodeInfoStore.getNodeInfo();
+                    if (BackendUtils.supportsAccounts())
+                        await UTXOsStore.listAccounts();
+                    await BalanceStore.getCombinedBalance();
+                    if (BackendUtils.supportsChannelManagement())
+                        ChannelsStore.getChannels();
+                } catch (connectionError) {
+                    console.log('LNC connection failed:', connectionError);
+                    return;
+                }
             }
         } else {
-            await NodeInfoStore.getNodeInfo();
-            if (BackendUtils.supportsAccounts()) {
-                UTXOsStore.listAccounts();
+            try {
+                await NodeInfoStore.getNodeInfo();
+                if (BackendUtils.supportsAccounts()) {
+                    UTXOsStore.listAccounts();
+                }
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannels();
+            } catch (connectionError) {
+                console.log('Node connection failed:', connectionError);
+                NodeInfoStore.getNodeInfoError();
+                setConnectingStatus(false);
+                return;
             }
-
-            await BalanceStore.getCombinedBalance();
-            ChannelsStore.getChannels();
         }
 
         if (
