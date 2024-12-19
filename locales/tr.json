@@ -957,7 +957,6 @@
     "views.Transaction.title": "İşlem",
     "views.Transaction.totalFees": "Toplam ücret",
     "views.Transaction.transactionHash": "İşlem hashi",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Blok hashi",
     "views.Transaction.blockHeight": "Block Yüksekliği",
     "views.Transaction.numConf": "Onay sayısı",
