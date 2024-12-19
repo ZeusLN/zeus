@@ -957,7 +957,6 @@
     "views.Transaction.title": "Транзакция",
     "views.Transaction.totalFees": "Всего Комиссий",
     "views.Transaction.transactionHash": "Хэш Транзакции",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Хэш блока",
     "views.Transaction.blockHeight": "Высота блока",
     "views.Transaction.numConf": "Количество Подтверждений",
