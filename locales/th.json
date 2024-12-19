@@ -957,7 +957,6 @@
     "views.Transaction.title": "ธุรกรรม",
     "views.Transaction.totalFees": "ค่าธรรมเนียมโดยรวม",
     "views.Transaction.transactionHash": "แฮชของธุรกรรม",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "แฮชของบล็อก",
     "views.Transaction.blockHeight": "บล็อกที่",
     "views.Transaction.numConf": "จำนวนการยืนยัน",
