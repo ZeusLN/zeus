@@ -72,7 +72,10 @@ export default class LightningAddressSettings extends React.Component<
                 : false,
             nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
             nostrRelays: settings.lightningAddress?.nostrRelays || [],
-            notifications: settings.lightningAddress?.notifications || 1
+            notifications:
+                settings.lightningAddress?.notifications !== undefined
+                    ? settings.lightningAddress.notifications
+                    : 1
         });
     }
 
