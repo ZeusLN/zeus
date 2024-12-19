@@ -957,7 +957,6 @@
     "views.Transaction.title": "Transacción",
     "views.Transaction.totalFees": "Comisiones Totales",
     "views.Transaction.transactionHash": "Hash de Transacción",
-    "views.Transaction.note": "Nota de transacción",
     "views.Transaction.blockHash": "Hash de Bloque",
     "views.Transaction.blockHeight": "Altura de Bloque",
     "views.Transaction.numConf": "Número de Confirmaciones",
