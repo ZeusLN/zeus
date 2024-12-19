@@ -957,7 +957,6 @@
     "views.Transaction.title": "Συναλλαγή",
     "views.Transaction.totalFees": "Συνολικά τέλη",
     "views.Transaction.transactionHash": "Hash συναλλαγής",
-    "views.Transaction.note": "Σημείωση συναλλαγής",
     "views.Transaction.blockHash": "Κατακερματισμός Block",
     "views.Transaction.blockHeight": "Block Height",
     "views.Transaction.numConf": "Αριθμός επιβεβαιώσεων",
