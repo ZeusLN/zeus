@@ -1,4 +1,5 @@
 import CLNRest from './CLNRest';
+import AddressUtils from '../utils/AddressUtils';
 
 const api = new CLNRest();
 
@@ -139,7 +140,20 @@ export const getChainTransactions = async () => {
         api.postRequest('/v1/listtransactions'),
         api.postRequest('/v1/getinfo')
     ]);
-    const [sqlResult, listTxsResult, getinfoResult] = results;
+    const [sqlResult, listTxsResult, getinfoResult]: any = results;
+
+    listTxsResult?.value?.transactions?.forEach((tx: any) => {
+        const addresses: Array<string> = [];
+        tx.outputs.forEach((output: any) => {
+            try {
+                const address = AddressUtils.scriptPubKeyToAddress(
+                    output.scriptPubKey
+                );
+                if (address) addresses.push(address);
+            } catch (e) {}
+        });
+        tx.dest_addresses = addresses;
+    });
 
     // If getinfo fails, return blank txs
     if (getinfoResult.status !== 'fulfilled') {
@@ -218,7 +232,7 @@ export const getChainTransactions = async () => {
                     num_confirmations: getinfo.blockheight - withdrawal[6],
                     time_stamp: withdrawal[5],
                     txid: tx.hash,
-                    note: 'on-chain withdrawal'
+                    dest_addresses: tx.dest_addresses
                 };
             }
 
@@ -229,7 +243,7 @@ export const getChainTransactions = async () => {
                     num_confirmations: getinfo.blockheight - deposit[6],
                     time_stamp: deposit[5],
                     txid: tx.hash,
-                    note: 'on-chain deposit'
+                    dest_addresses: tx.dest_addresses
                 };
             }
 

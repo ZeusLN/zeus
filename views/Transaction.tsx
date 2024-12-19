@@ -76,7 +76,6 @@ export default class TransactionView extends React.Component<
             num_confirmations,
             time_stamp,
             destAddresses,
-            note,
             getFee,
             getFeePercentage,
             status,
@@ -321,21 +320,6 @@ export default class TransactionView extends React.Component<
 
                     {!!destAddresses && (
                         <React.Fragment>{addresses}</React.Fragment>
-                    )}
-                    {!!note && (
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.note')}
-                            value={
-                                <Text
-                                    style={{
-                                        ...styles.valueWithLink,
-                                        color: themeColor('highlight')
-                                    }}
-                                >
-                                    {note}
-                                </Text>
-                            }
-                        />
                     )}
 
                     {raw_tx_hex && (

@@ -957,7 +957,6 @@
     "views.Transaction.title": "Transaction",
     "views.Transaction.totalFees": "Total Fees",
     "views.Transaction.transactionHash": "Transaction Hash",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Block Hash",
     "views.Transaction.blockHeight": "Block Height",
     "views.Transaction.numConf": "Number of Confirmations",
