@@ -1,18 +1,31 @@
 import * as React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Image,
+    StyleSheet,
+    FlatListProps
+} from 'react-native';
+
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import cloneDeep from 'lodash/cloneDeep';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    INTERFACE_KEYS,
+    Node
+} from '../../stores/SettingsStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 
 import { getPhoto } from '../../utils/PhotoUtils';
@@ -22,8 +35,13 @@ import BackendUtils from '../../utils/BackendUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import cloneDeep from 'lodash/cloneDeep';
+
+interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
+    data: T[];
+    keyExtractor: (item: T, index: number) => string;
+    renderItem: (info: DragListRenderItemInfo<T>) => React.ReactElement | null;
+    onReordered?: (fromIndex: number, toIndex: number) => Promise<void> | void;
+}
 
 interface NodesProps {
     nodes: any[];
@@ -42,6 +60,8 @@ interface NodesState {
     selectedNode: number;
     loading: boolean;
 }
+
+const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 
 @inject('BalanceStore', 'NodeInfoStore', 'ChannelsStore', 'SettingsStore')
 @observer
@@ -187,11 +207,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 {loading && <LoadingIndicator />}
                 {!loading && !!nodes && nodes.length > 0 && (
                     <View style={{ marginBottom: 50 }}>
-                        <DragList
+                        <TypedDragList
                             onReordered={onReordered}
                             data={nodes}
-                            keyExtractor={(item: any) => {
-                                return JSON.stringify(item);
+                            keyExtractor={(item, index) => {
+                                return JSON.stringify(item) + index;
                             }}
                             // keyExtractor={(item) => item}
                             renderItem={({
