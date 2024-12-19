@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { observer, inject } from 'mobx-react';
 import {
     TouchableOpacity,
     View,
     StyleSheet,
     Animated,
     Easing,
-    ScrollView
+    ScrollView,
+    FlatListProps
 } from 'react-native';
+
+import { observer, inject } from 'mobx-react';
 import Svg, { Text } from 'react-native-svg';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from 'react-native-elements';
@@ -25,6 +27,8 @@ import { Row } from '../../components/layout/Row';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
+
 import FiatStore from '../../stores/FiatStore';
 import { CURRENCY_KEYS } from '../../stores/SettingsStore';
 
@@ -33,7 +37,12 @@ import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
 
-import { numberWithCommas } from '../../utils/UnitsUtils';
+interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
+    data: T[];
+    keyExtractor: (item: T, index: number) => string;
+    renderItem: (info: DragListRenderItemInfo<T>) => React.ReactElement | null;
+    onReordered?: (fromIndex: number, toIndex: number) => Promise<void> | void;
+}
 
 interface CurrencyConverterProps {
     navigation: StackNavigationProp<any, any>;
@@ -52,6 +61,8 @@ const EMOJI_REPLACEMENTS = {
     XAU: 'Au',
     XAG: 'Ag'
 };
+
+const TypedDragList = DragList as unknown as React.ComponentType<Props<string>>;
 
 @inject('FiatStore')
 @observer
@@ -498,10 +509,10 @@ export default class CurrencyConverter extends React.Component<
                                 paddingBottom: 10
                             }}
                         >
-                            <DragList
+                            <TypedDragList
                                 onReordered={this.onReordered}
                                 data={Object.keys(inputValues)}
-                                keyExtractor={(item: any) => item}
+                                keyExtractor={(item) => String(item)}
                                 scrollEnabled={false}
                                 renderItem={({
                                     item,
