@@ -224,7 +224,10 @@ export interface ILndMobileInjections {
             amount?: Long,
             routeHints?: lnrpc.IRouteHint[]
         ) => Promise<lnrpc.QueryRoutesResponse>;
-        listPayments: () => Promise<lnrpc.ListPaymentsResponse>;
+        listPayments: (params?: {
+            maxPayments?: number;
+            reversed?: boolean;
+        }) => Promise<lnrpc.ListPaymentsResponse>;
         subscribeChannelGraph: () => Promise<string>;
         sendKeysendPaymentV2: ({
             amt,
