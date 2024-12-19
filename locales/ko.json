@@ -957,7 +957,6 @@
     "views.Transaction.title": "트랜잭션",
     "views.Transaction.totalFees": "총 수수료",
     "views.Transaction.transactionHash": "트랜잭션 해시",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "블록 해시",
     "views.Transaction.blockHeight": "블록 높이",
     "views.Transaction.numConf": "블록 승인 횟수",
