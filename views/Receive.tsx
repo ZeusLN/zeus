@@ -661,12 +661,14 @@ export default class Receive extends React.Component<
                                 e
                             );
                             if (error === 'EOF') {
+                                this.listener?.remove();
                                 return;
                             } else if (error) {
                                 console.error(
                                     'Got error from SubscribeInvoices',
                                     [error]
                                 );
+                                this.listener?.remove();
                                 return;
                             }
 
@@ -695,10 +697,11 @@ export default class Receive extends React.Component<
                                         invoice.r_preimage
                                     )
                                 });
-                                this.listener = null;
+                                this.listener?.remove();
                             }
                         } catch (error) {
                             console.error(error);
+                            this.listener?.remove();
                         }
                     }
                 );
@@ -714,12 +717,14 @@ export default class Receive extends React.Component<
                                 e
                             );
                             if (error === 'EOF') {
+                                this.listenerSecondary?.remove();
                                 return;
                             } else if (error) {
                                 console.error(
                                     'Got error from SubscribeTransactions',
                                     [error]
                                 );
+                                this.listenerSecondary?.remove();
                                 return;
                             }
 
@@ -747,10 +752,11 @@ export default class Receive extends React.Component<
                                         type: 'onchain',
                                         tx: transaction.tx_hash
                                     });
-                                this.listenerSecondary = null;
+                                this.listenerSecondary?.remove();
                             }
                         } catch (error) {
                             console.error(error);
+                            this.listenerSecondary?.remove();
                         }
                     }
                 );
@@ -769,8 +775,21 @@ export default class Receive extends React.Component<
                     eventName,
                     (event: any) => {
                         if (event.result) {
+                            if (
+                                typeof event.result === 'string' &&
+                                event.result.includes(
+                                    'rpc error: code = Canceled'
+                                )
+                            ) {
+                                this.listener?.remove();
+                                return;
+                            }
                             try {
                                 const result = JSON.parse(event.result);
+                                if (result === 'EOF') {
+                                    this.listener?.remove();
+                                    return;
+                                }
                                 if (result.settled) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
                                     if (orderId)
@@ -784,10 +803,11 @@ export default class Receive extends React.Component<
                                             tx: result.payment_request,
                                             preimage: result.r_preimage
                                         });
-                                    this.listener = null;
+                                    this.listener?.remove();
                                 }
                             } catch (error) {
                                 console.error(error);
+                                this.listener?.remove();
                             }
                         }
                     }
@@ -801,8 +821,21 @@ export default class Receive extends React.Component<
                     eventName2,
                     (event: any) => {
                         if (event.result) {
+                            if (
+                                typeof event.result === 'string' &&
+                                event.result.includes(
+                                    'rpc error: code = Canceled'
+                                )
+                            ) {
+                                this.listenerSecondary?.remove();
+                                return;
+                            }
                             try {
                                 const result = JSON.parse(event.result);
+                                if (result === 'EOF') {
+                                    this.listenerSecondary?.remove();
+                                    return;
+                                }
                                 if (
                                     result.dest_addresses.includes(
                                         onChainAddress
@@ -822,10 +855,11 @@ export default class Receive extends React.Component<
                                             type: 'onchain',
                                             tx: result.tx_hash
                                         });
-                                    this.listenerSecondary = null;
+                                    this.listenerSecondary?.remove();
                                 }
                             } catch (error) {
                                 console.error(error);
+                                this.listenerSecondary?.remove();
                             }
                         }
                     }
