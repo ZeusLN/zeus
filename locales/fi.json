@@ -957,7 +957,6 @@
     "views.Transaction.title": "Siirtotapahtuma",
     "views.Transaction.totalFees": "Siirtomaksut yhteensä",
     "views.Transaction.transactionHash": "Siirtotapahtuman tiiviste",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Lohkon tiiviste",
     "views.Transaction.blockHeight": "Lohkon järjestysnumero",
     "views.Transaction.numConf": "Vahvistusten määrä",
