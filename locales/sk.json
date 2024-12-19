@@ -957,7 +957,6 @@
     "views.Transaction.title": "Transakcia",
     "views.Transaction.totalFees": "Celkové poplatky",
     "views.Transaction.transactionHash": "Hash transakcie",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Hash bloku",
     "views.Transaction.blockHeight": "Výška bloku",
     "views.Transaction.numConf": "Počet potvrdení ",
