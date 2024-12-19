@@ -957,7 +957,6 @@
     "views.Transaction.title": "Tranzakciók",
     "views.Transaction.totalFees": "Összdíj",
     "views.Transaction.transactionHash": "Tranzakciós Hash",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Blokk Hash",
     "views.Transaction.blockHeight": "Blokk Magasság",
     "views.Transaction.numConf": "Megerősítések száma",
