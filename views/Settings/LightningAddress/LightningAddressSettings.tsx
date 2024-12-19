@@ -109,7 +109,7 @@ export default class LightningAddressSettings extends React.Component<
                             }
                         }}
                         rightComponent={
-                            loading ? <LoadingIndicator size={32} /> : <></>
+                            loading ? <LoadingIndicator size={30} /> : <></>
                         }
                         navigation={navigation}
                     />
