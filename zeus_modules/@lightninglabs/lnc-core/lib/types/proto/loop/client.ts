@@ -185,6 +185,89 @@ export enum AutoReason {
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
+export enum DepositState {
+    /** UNKNOWN_STATE - UNKNOWN_STATE is the default state of a deposit. */
+    UNKNOWN_STATE = 'UNKNOWN_STATE',
+    /**
+     * DEPOSITED - DEPOSITED indicates that the deposit has been sufficiently confirmed on
+     * chain.
+     */
+    DEPOSITED = 'DEPOSITED',
+    /**
+     * WITHDRAWING - WITHDRAWING indicates that the deposit is currently being withdrawn. It
+     * flips to WITHDRAWN once the withdrawal transaction has been sufficiently
+     * confirmed.
+     */
+    WITHDRAWING = 'WITHDRAWING',
+    /** WITHDRAWN - WITHDRAWN indicates that the deposit has been withdrawn. */
+    WITHDRAWN = 'WITHDRAWN',
+    /**
+     * LOOPING_IN - LOOPING_IN indicates that the deposit is currently being used in a static
+     * address loop-in swap.
+     */
+    LOOPING_IN = 'LOOPING_IN',
+    /**
+     * LOOPED_IN - LOOPED_IN indicates that the deposit was used in a static address loop-in
+     * swap.
+     */
+    LOOPED_IN = 'LOOPED_IN',
+    /**
+     * SWEEP_HTLC_TIMEOUT - SWEEP_HTLC_TIMEOUT indicates that the deposit is part of an active loop-in
+     * of which the respective htlc was published by the server and the timeout
+     * path has opened up for the client to sweep.
+     */
+    SWEEP_HTLC_TIMEOUT = 'SWEEP_HTLC_TIMEOUT',
+    /**
+     * HTLC_TIMEOUT_SWEPT - HTLC_TIMEOUT_SWEPT indicates that the timeout path of the htlc has been
+     * swept by the client.
+     */
+    HTLC_TIMEOUT_SWEPT = 'HTLC_TIMEOUT_SWEPT',
+    /**
+     * PUBLISH_EXPIRED - PUBLISH_EXPIRED indicates that the deposit has expired and the sweep
+     * transaction has been published.
+     */
+    PUBLISH_EXPIRED = 'PUBLISH_EXPIRED',
+    /**
+     * WAIT_FOR_EXPIRY_SWEEP - WAIT_FOR_EXPIRY_SWEEP indicates that the deposit has expired and the sweep
+     * transaction has not yet been sufficiently confirmed.
+     */
+    WAIT_FOR_EXPIRY_SWEEP = 'WAIT_FOR_EXPIRY_SWEEP',
+    /**
+     * EXPIRED - EXPIRED indicates that the deposit has expired and the sweep transaction
+     * has been sufficiently confirmed.
+     */
+    EXPIRED = 'EXPIRED',
+    UNRECOGNIZED = 'UNRECOGNIZED'
+}
+
+export enum StaticAddressLoopInSwapState {
+    /** UNKNOWN_STATIC_ADDRESS_SWAP_STATE -  */
+    UNKNOWN_STATIC_ADDRESS_SWAP_STATE = 'UNKNOWN_STATIC_ADDRESS_SWAP_STATE',
+    /** INIT_HTLC -  */
+    INIT_HTLC = 'INIT_HTLC',
+    /** SIGN_HTLC_TX -  */
+    SIGN_HTLC_TX = 'SIGN_HTLC_TX',
+    /** MONITOR_INVOICE_HTLC_TX -  */
+    MONITOR_INVOICE_HTLC_TX = 'MONITOR_INVOICE_HTLC_TX',
+    /** PAYMENT_RECEIVED -  */
+    PAYMENT_RECEIVED = 'PAYMENT_RECEIVED',
+    /** SWEEP_STATIC_ADDRESS_HTLC_TIMEOUT -  */
+    SWEEP_STATIC_ADDRESS_HTLC_TIMEOUT = 'SWEEP_STATIC_ADDRESS_HTLC_TIMEOUT',
+    /** MONITOR_HTLC_TIMEOUT_SWEEP -  */
+    MONITOR_HTLC_TIMEOUT_SWEEP = 'MONITOR_HTLC_TIMEOUT_SWEEP',
+    /** HTLC_STATIC_ADDRESS_TIMEOUT_SWEPT -  */
+    HTLC_STATIC_ADDRESS_TIMEOUT_SWEPT = 'HTLC_STATIC_ADDRESS_TIMEOUT_SWEPT',
+    /** SUCCEEDED -  */
+    SUCCEEDED = 'SUCCEEDED',
+    /** SUCCEEDED_TRANSITIONING_FAILED -  */
+    SUCCEEDED_TRANSITIONING_FAILED = 'SUCCEEDED_TRANSITIONING_FAILED',
+    /** UNLOCK_DEPOSITS -  */
+    UNLOCK_DEPOSITS = 'UNLOCK_DEPOSITS',
+    /** FAILED_STATIC_ADDRESS_SWAP -  */
+    FAILED_STATIC_ADDRESS_SWAP = 'FAILED_STATIC_ADDRESS_SWAP',
+    UNRECOGNIZED = 'UNRECOGNIZED'
+}
+
 export interface LoopOutRequest {
     /** Requested swap amount in sat. This does not include the swap and miner fee. */
     amt: string;
@@ -554,6 +637,12 @@ export interface QuoteRequest {
      * probing and payment.
      */
     private: boolean;
+    /**
+     * Static address deposit outpoints that will be quoted for. This option only
+     * pertains to loop in swaps. Either this or the amt parameter can be set at
+     * the same time.
+     */
+    depositOutpoints: string[];
 }
 
 export interface InQuoteResponse {
@@ -612,6 +701,10 @@ export interface TokensResponse {
     /** List of all tokens the daemon knows of, including old/expired tokens. */
     tokens: L402Token[];
 }
+
+export interface FetchL402TokenRequest {}
+
+export interface FetchL402TokenResponse {}
 
 export interface L402Token {
     /** The base macaroon that was baked by the auth server. */
@@ -974,6 +1067,232 @@ export interface InstantOut {
     sweepTxId: string;
 }
 
+export interface NewStaticAddressRequest {
+    /** The client's public key for the 2-of-2 MuSig2 taproot static address. */
+    clientKey: Uint8Array | string;
+}
+
+export interface NewStaticAddressResponse {
+    /** The taproot static address. */
+    address: string;
+    /** The CSV expiry of the static address. */
+    expiry: number;
+}
+
+export interface ListUnspentDepositsRequest {
+    /** The number of minimum confirmations a utxo must have to be listed. */
+    minConfs: number;
+    /**
+     * The number of maximum confirmations a utxo may have to be listed. A zero
+     * value indicates that there is no maximum.
+     */
+    maxConfs: number;
+}
+
+export interface ListUnspentDepositsResponse {
+    /** A list of utxos behind the static address. */
+    utxos: Utxo[];
+}
+
+export interface Utxo {
+    /** The static address of the utxo. */
+    staticAddress: string;
+    /** The value of the unspent coin in satoshis. */
+    amountSat: string;
+    /** The outpoint in the form txid:index. */
+    outpoint: string;
+    /** The number of confirmations for the Utxo. */
+    confirmations: string;
+}
+
+export interface WithdrawDepositsRequest {
+    /** The outpoints of the deposits to withdraw. */
+    outpoints: OutPoint[];
+    /** If set to true, all deposits will be withdrawn. */
+    all: boolean;
+    /** The address to withdraw the funds to. */
+    destAddr: string;
+    /** The fee rate in sat/vbyte to use for the withdrawal transaction. */
+    satPerVbyte: string;
+}
+
+export interface WithdrawDepositsResponse {
+    /** The transaction hash of the withdrawal transaction. */
+    withdrawalTxHash: string;
+    /** The pkscript of the withdrawal transaction. */
+    pkScript: string;
+}
+
+export interface OutPoint {
+    /** Raw bytes representing the transaction id. */
+    txidBytes: Uint8Array | string;
+    /** Reversed, hex-encoded string representing the transaction id. */
+    txidStr: string;
+    /** The index of the output on the transaction. */
+    outputIndex: number;
+}
+
+export interface ListStaticAddressDepositsRequest {
+    /** Filters the list of all stored deposits by deposit state. */
+    stateFilter: DepositState;
+    /** Filters the list of all stored deposits by the outpoint. */
+    outpoints: string[];
+}
+
+export interface ListStaticAddressDepositsResponse {
+    /** A list of all deposits that match the filtered state. */
+    filteredDeposits: Deposit[];
+}
+
+export interface ListStaticAddressSwapsRequest {}
+
+export interface ListStaticAddressSwapsResponse {
+    /** A list of all swaps known static address loop-in swaps. */
+    swaps: StaticAddressLoopInSwap[];
+}
+
+export interface StaticAddressSummaryRequest {}
+
+export interface StaticAddressSummaryResponse {
+    /** The static address of the client. */
+    staticAddress: string;
+    /** The CSV expiry of the static address. */
+    relativeExpiryBlocks: string;
+    /** The total number of deposits. */
+    totalNumDeposits: number;
+    /** The total value of unconfirmed deposits. */
+    valueUnconfirmedSatoshis: string;
+    /** The total value of confirmed deposits. */
+    valueDepositedSatoshis: string;
+    /** The total value of all expired deposits. */
+    valueExpiredSatoshis: string;
+    /** The total value of all deposits that have been withdrawn. */
+    valueWithdrawnSatoshis: string;
+    /** The total value of all loop-ins that have been finalized. */
+    valueLoopedInSatoshis: string;
+    /** The total value of all htlc timeout sweeps that the client swept. */
+    valueHtlcTimeoutSweepsSatoshis: string;
+}
+
+export interface Deposit {
+    /** The identifier of the deposit. */
+    id: Uint8Array | string;
+    /** The state of the deposit. */
+    state: DepositState;
+    /** The outpoint of the deposit in format txid:index. */
+    outpoint: string;
+    /** The value of the deposit in satoshis. */
+    value: string;
+    /** The block height at which the deposit was confirmed. */
+    confirmationHeight: string;
+    /**
+     * The number of blocks that are left until the deposit cannot be used for a
+     * loop-in swap anymore.
+     */
+    blocksUntilExpiry: string;
+}
+
+export interface StaticAddressLoopInSwap {
+    /** The swap hash of the swap. It represents the unique identifier of the swap. */
+    swapHash: Uint8Array | string;
+    /**  */
+    depositOutpoints: string[];
+    /**  */
+    state: StaticAddressLoopInSwapState;
+    /**
+     * The swap amount of the swap. It is the sum of the values of the deposit
+     * outpoints that were used for this swap.
+     */
+    swapAmountSatoshis: string;
+    /**
+     * The invoiced swap amount. It is the swap amount minus the quoted server
+     * fees.
+     */
+    paymentRequestAmountSatoshis: string;
+}
+
+export interface StaticAddressLoopInRequest {
+    /** The outpoints of the deposits to loop-in. */
+    outpoints: string[];
+    /**
+     * Maximum satoshis we are willing to pay the server for the swap. This value
+     * is not disclosed in the swap initiation call, but if the server asks for a
+     * higher fee, we abort the swap. Typically this value is taken from the
+     * response of the GetQuote call.
+     */
+    maxSwapFeeSatoshis: string;
+    /**
+     * Optionally the client can specify the last hop pubkey when requesting a
+     * loop-in quote. This is useful to get better off-chain routing fee from the
+     * server.
+     */
+    lastHop: Uint8Array | string;
+    /**
+     * An optional label for this swap. This field is limited to 500 characters and
+     * may not be one of the reserved values in loop/labels Reserved list.
+     */
+    label: string;
+    /**
+     * An optional identification string that will be appended to the user agent
+     * string sent to the server to give information about the usage of loop. This
+     * initiator part is meant for user interfaces to add their name to give the
+     * full picture of the binary used (loopd, LiT) and the method used for
+     * triggering the swap (loop CLI, autolooper, LiT UI, other 3rd party UI).
+     */
+    initiator: string;
+    /** Optional route hints to reach the destination through private channels. */
+    routeHints: RouteHint[];
+    /**
+     * Private indicates whether the destination node should be considered private.
+     * In which case, loop will generate hop hints to assist with probing and
+     * payment.
+     */
+    private: boolean;
+    /**
+     * The swap payment timeout allows the user to specify an upper limit for the
+     * amount of time the server is allowed to take to fulfill the off-chain swap
+     * payment. If the timeout is reached the swap will be aborted on the server
+     * side and the client can retry the swap with different parameters.
+     */
+    paymentTimeoutSeconds: number;
+}
+
+export interface StaticAddressLoopInResponse {
+    /** The swap hash that identifies this swap. */
+    swapHash: Uint8Array | string;
+    /** The state the swap is in. */
+    state: string;
+    /** The amount of the swap. */
+    amount: string;
+    /** The htlc cltv expiry height of the swap. */
+    htlcCltv: number;
+    /** The quoted swap fee in satoshis. */
+    quotedSwapFeeSatoshis: string;
+    /** The maximum total swap fee the client is willing to pay for the swap. */
+    maxSwapFeeSatoshis: string;
+    /** The block height at which the swap was initiated. */
+    initiationHeight: number;
+    /** The static address protocol version. */
+    protocolVersion: string;
+    /** An optional label for this swap. */
+    label: string;
+    /**
+     * An optional identification string that will be appended to the user agent
+     * string sent to the server to give information about the usage of loop. This
+     * initiator part is meant for user interfaces to add their name to give the
+     * full picture of the binary used (loopd, LiT) and the method used for
+     * triggering the swap (loop CLI, autolooper, LiT UI, other 3rd party UI).
+     */
+    initiator: string;
+    /**
+     * The swap payment timeout allows the user to specify an upper limit for the
+     * amount of time the server is allowed to take to fulfill the off-chain swap
+     * payment. If the timeout is reached the swap will be aborted on the server
+     * side and the client can retry the swap with different parameters.
+     */
+    paymentTimeoutSeconds: number;
+}
+
 /**
  * SwapClient is a service that handles the client side process of onchain/offchain
  * swaps. The service is designed for a single client.
@@ -1076,6 +1395,14 @@ export interface SwapClient {
         request?: DeepPartial<TokensRequest>
     ): Promise<TokensResponse>;
     /**
+     * loop: `fetchl402`
+     * FetchL402Token fetches an L402 token from the server, this is required in
+     * order to receive reservation notifications from the server.
+     */
+    fetchL402Token(
+        request?: DeepPartial<FetchL402TokenRequest>
+    ): Promise<FetchL402TokenResponse>;
+    /**
      * loop: `getinfo`
      * GetInfo gets basic information about the loop daemon.
      */
@@ -1139,6 +1466,58 @@ export interface SwapClient {
     listInstantOuts(
         request?: DeepPartial<ListInstantOutsRequest>
     ): Promise<ListInstantOutsResponse>;
+    /**
+     * loop: `static newstaticaddress`
+     * NewStaticAddress requests a new static address for loop-ins from the server.
+     */
+    newStaticAddress(
+        request?: DeepPartial<NewStaticAddressRequest>
+    ): Promise<NewStaticAddressResponse>;
+    /**
+     * loop: `static listunspentdeposits`
+     * ListUnspentDeposits returns a list of utxos deposited at a static address.
+     */
+    listUnspentDeposits(
+        request?: DeepPartial<ListUnspentDepositsRequest>
+    ): Promise<ListUnspentDepositsResponse>;
+    /**
+     * loop:`static withdraw`
+     * WithdrawDeposits withdraws a selection or all deposits of a static address.
+     */
+    withdrawDeposits(
+        request?: DeepPartial<WithdrawDepositsRequest>
+    ): Promise<WithdrawDepositsResponse>;
+    /**
+     * loop:`listdeposits`
+     * ListStaticAddressDeposits returns a list of filtered static address
+     * deposits.
+     */
+    listStaticAddressDeposits(
+        request?: DeepPartial<ListStaticAddressDepositsRequest>
+    ): Promise<ListStaticAddressDepositsResponse>;
+    /**
+     * loop:`listswaps`
+     * ListStaticAddressSwaps returns a list of filtered static address
+     * swaps.
+     */
+    listStaticAddressSwaps(
+        request?: DeepPartial<ListStaticAddressSwapsRequest>
+    ): Promise<ListStaticAddressSwapsResponse>;
+    /**
+     * loop:`static summary`
+     * GetStaticAddressSummary returns a summary of static address related
+     * statistics.
+     */
+    getStaticAddressSummary(
+        request?: DeepPartial<StaticAddressSummaryRequest>
+    ): Promise<StaticAddressSummaryResponse>;
+    /**
+     * loop:`static`
+     * StaticAddressLoopIn initiates a static address loop-in swap.
+     */
+    staticAddressLoopIn(
+        request?: DeepPartial<StaticAddressLoopInRequest>
+    ): Promise<StaticAddressLoopInResponse>;
 }
 
 type Builtin =

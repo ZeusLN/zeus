@@ -11,8 +11,6 @@ export enum ChannelType {
      * outputs that pay directly to the channel initiator (the seller).
      */
     SCRIPT_ENFORCED_LEASE = 'SCRIPT_ENFORCED_LEASE',
-    /** SIMPLE_TAPROOT - A channel type that uses a Pay-to-Taproot output for the funding output. */
-    SIMPLE_TAPROOT = 'SIMPLE_TAPROOT',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 
@@ -62,8 +60,6 @@ export enum OrderChannelType {
      * channel initiator/seller.
      */
     ORDER_CHANNEL_TYPE_SCRIPT_ENFORCED = 'ORDER_CHANNEL_TYPE_SCRIPT_ENFORCED',
-    /** ORDER_CHANNEL_TYPE_SIMPLE_TAPROOT - A channel type that uses a Pay-to-Taproot output for the funding output. */
-    ORDER_CHANNEL_TYPE_SIMPLE_TAPROOT = 'ORDER_CHANNEL_TYPE_SIMPLE_TAPROOT',
     UNRECOGNIZED = 'UNRECOGNIZED'
 }
 

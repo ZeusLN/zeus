@@ -121,6 +121,57 @@ export interface LookupInvoiceMsg {
     lookupModifier: LookupModifier;
 }
 
+/** CircuitKey is a unique identifier for an HTLC. */
+export interface CircuitKey {
+    /** The id of the channel that the is part of this circuit. */
+    chanId: string;
+    /** The index of the incoming htlc in the incoming channel. */
+    htlcId: string;
+}
+
+export interface HtlcModifyRequest {
+    /**
+     * The invoice the intercepted HTLC is attempting to settle. The HTLCs in
+     * the invoice are only HTLCs that have already been accepted or settled,
+     * not including the current intercepted HTLC.
+     */
+    invoice: Invoice | undefined;
+    /** The unique identifier of the HTLC of this intercepted HTLC. */
+    exitHtlcCircuitKey: CircuitKey | undefined;
+    /** The amount in milli-satoshi that the exit HTLC is attempting to pay. */
+    exitHtlcAmt: string;
+    /** The absolute expiry height of the exit HTLC. */
+    exitHtlcExpiry: number;
+    /** The current block height. */
+    currentHeight: number;
+    /** The wire message custom records of the exit HTLC. */
+    exitHtlcWireCustomRecords: { [key: string]: Uint8Array | string };
+}
+
+export interface HtlcModifyRequest_ExitHtlcWireCustomRecordsEntry {
+    key: string;
+    value: Uint8Array | string;
+}
+
+export interface HtlcModifyResponse {
+    /** The circuit key of the HTLC that the client wants to modify. */
+    circuitKey: CircuitKey | undefined;
+    /**
+     * The modified amount in milli-satoshi that the exit HTLC is paying. This
+     * value can be different from the actual on-chain HTLC amount, in case the
+     * HTLC carries other valuable items, as can be the case with custom channel
+     * types.
+     */
+    amtPaid?: string | undefined;
+    /**
+     * This flag indicates whether the HTLCs associated with the invoices should
+     * be cancelled. The interceptor client may set this field if some
+     * unexpected behavior is encountered. Setting this will ignore the amt_paid
+     * field.
+     */
+    cancelSet: boolean;
+}
+
 /**
  * Invoices is a service that can be used to create, accept, settle and cancel
  * invoices.
@@ -162,10 +213,21 @@ export interface Invoices {
         request?: DeepPartial<SettleInvoiceMsg>
     ): Promise<SettleInvoiceResp>;
     /**
-     * LookupInvoiceV2 attempts to look up at invoice. An invoice can be refrenced
+     * LookupInvoiceV2 attempts to look up at invoice. An invoice can be referenced
      * using either its payment hash, payment address, or set ID.
      */
     lookupInvoiceV2(request?: DeepPartial<LookupInvoiceMsg>): Promise<Invoice>;
+    /**
+     * HtlcModifier is a bidirectional streaming RPC that allows a client to
+     * intercept and modify the HTLCs that attempt to settle the given invoice. The
+     * server will send HTLCs of invoices to the client and the client can modify
+     * some aspects of the HTLC in order to pass the invoice acceptance tests.
+     */
+    htlcModifier(
+        request?: DeepPartial<HtlcModifyResponse>,
+        onMessage?: (msg: HtlcModifyRequest) => void,
+        onError?: (err: Error) => void
+    ): void;
 }
 
 type Builtin =

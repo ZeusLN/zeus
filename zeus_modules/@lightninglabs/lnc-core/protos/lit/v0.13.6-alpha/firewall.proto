@@ -1,0 +1,237 @@
+syntax = "proto3";
+
+package litrpc;
+
+option go_package = "github.com/lightninglabs/lightning-terminal/litrpc";
+
+service Firewall {
+    /* litcli: `actions`
+    ListActions will return a list of actions that have been performed on the
+    node. The actions that will be persisted depends on the value of the
+    `--firewall.request-logger.level` config option. The default value of the
+    option is the "interceptor" mode which will persist only the actions (with
+    all request parameters) made with macaroons with caveats that force them
+    to be checked by an rpc middleware interceptor. If the "all" mode is used
+    then all actions will be persisted but only full request parameters will
+    only be stored if the actions are interceptor actions, otherwise only the
+    URI and timestamp of the actions will be stored. The "full" mode will
+    persist all request data for all actions.
+    */
+    rpc ListActions (ListActionsRequest) returns (ListActionsResponse);
+
+    /* litcli: `privacy`
+    PrivacyMapConversion can be used map real values to their pseudo
+    counterpart and vice versa.
+    */
+    rpc PrivacyMapConversion (PrivacyMapConversionRequest)
+        returns (PrivacyMapConversionResponse);
+}
+
+message PrivacyMapConversionRequest {
+    /*
+    If set to true, then the input string will be taken as the real value and
+    the response will the the pseudo value it if exists. Otherwise, the input
+    string will be assumed to be the pseudo value.
+    */
+    bool real_to_pseudo = 1;
+
+    /*
+    Deprecated, use group_id.
+    The session ID under which to search for the real-pseudo pair.
+    */
+    bytes session_id = 2 [deprecated = true];
+
+    /*
+    The input to be converted into the real or pseudo value.
+    */
+    string input = 3;
+
+    /*
+    The group ID under which to search for the real-pseudo pair.
+    */
+    bytes group_id = 4;
+}
+
+message PrivacyMapConversionResponse {
+    /*
+    The resulting real or pseudo output.
+    */
+    string output = 1;
+}
+
+message ListActionsRequest {
+    /*
+    The feature name which the filter the actions by. If left empty, all feature
+    actions will be returned.
+    */
+    string feature_name = 1;
+
+    /*
+    The actor name to filter on. If left empty, all actor actions will be
+    returned.
+    */
+    string actor_name = 2;
+
+    /*
+    The method name to filter on. If left empty, actions for any method will be
+    returned.
+    */
+    string method_name = 3;
+
+    /*
+    The action state to filter on. If set to zero, actions for any state will
+    be returned.
+    */
+    ActionState state = 4;
+
+    /*
+    The index of an action that will be used as the start of a query to
+    determine which actions should be returned in the response.
+    */
+    uint64 index_offset = 5;
+
+    /*
+    The max number of actions to return in the response to this query.
+    */
+    uint64 max_num_actions = 6;
+
+    /*
+    If set, the actions returned will result from seeking backwards from the
+    specified index offset. This can be used to paginate backwards.
+    */
+    bool reversed = 7;
+
+    /*
+    Set to true if the total number of all actions that match the given filters
+    should be counted and returned in the request. Note that setting this will
+    significantly decrease the performance of the query if there are many
+    actions in the db.
+    */
+    bool count_total = 8;
+
+    /*
+    The session ID to filter on. If left empty, actions for any session will
+    be returned.
+    */
+    bytes session_id = 9;
+
+    /*
+    If specified, then only actions created after the given timestamp will be
+    considered.
+    */
+    uint64 start_timestamp = 10 [jstype = JS_STRING];
+
+    /*
+    If specified, then only actions created before the given timestamp will be
+    considered.
+    */
+    uint64 end_timestamp = 11 [jstype = JS_STRING];
+
+    /*
+    If specified, then only actions under the given group will be queried.
+    */
+    bytes group_id = 12;
+}
+
+message ListActionsResponse {
+    /*
+    A list of actions performed by the autopilot server.
+    */
+    repeated Action actions = 1;
+
+    /*
+    The index of the last item in the set of returned actions. This can be used
+    to seek further, pagination style.
+    */
+    uint64 last_index_offset = 2;
+
+    /*
+    The total number of actions that matched the filter in the request. It is
+    only set if count_total was set in the request.
+    */
+    uint64 total_count = 3;
+}
+
+message Action {
+    /*
+    The name of the actor that initiated the action.
+    */
+    string actor_name = 1;
+
+    /*
+    The name of the feature that triggered the action.
+    */
+    string feature_name = 2;
+
+    /*
+    A human readable reason that the action was performed.
+    */
+    string trigger = 3;
+
+    /*
+    A human readable string describing the intended outcome successfully
+    performing the action.
+    */
+    string intent = 4;
+
+    /*
+    Structured info added by the action performer.
+    */
+    string structured_json_data = 5;
+
+    /*
+    The URI of the method called.
+    */
+    string rpc_method = 6;
+
+    /*
+    The parameters of the method call in compact json form.
+    */
+    string rpc_params_json = 7;
+
+    /*
+    The unix timestamp in seconds at which the action was attempted.
+    */
+    uint64 timestamp = 8 [jstype = JS_STRING];
+
+    /*
+    The action state. See ActionState for the meaning of each state.
+    */
+    ActionState state = 9;
+
+    /*
+    If the state is Error, then this string will show the human readable reason
+    for why the action errored out.
+    */
+    string error_reason = 10;
+
+    /*
+    The ID of the session under which the action was performed.
+    */
+    bytes session_id = 11;
+}
+
+enum ActionState {
+    /*
+    No state was assigned to the action. This should never be the case.
+    */
+    STATE_UNKNOWN = 0;
+
+    /*
+    Pending means that the request resulting in the action being created
+    came through but that no response came back from the appropriate backend.
+    This means that the Action is either still being processed or that it
+    did not successfully complete.
+    */
+    STATE_PENDING = 1;
+
+    /*
+    Done means that the action successfully completed.
+    */
+    STATE_DONE = 2;
+
+    /*
+    Error means that the Action did not successfully complete.
+    */
+    STATE_ERROR = 3;
+}
