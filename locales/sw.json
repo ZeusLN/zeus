@@ -957,7 +957,6 @@
     "views.Transaction.title": "Miamala",
     "views.Transaction.totalFees": "Ada Jumla",
     "views.Transaction.transactionHash": "Hash ya Miamala",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Hash ya Kizuizi",
     "views.Transaction.blockHeight": "Kimo cha Kizuizi",
     "views.Transaction.numConf": "Idadi ya Uthibitishaji",
