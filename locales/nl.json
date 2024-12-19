@@ -957,7 +957,6 @@
     "views.Transaction.title": "Transactie",
     "views.Transaction.totalFees": "Totaal aan fees",
     "views.Transaction.transactionHash": "Transactie Hash",
-    "views.Transaction.note": "Transaction Note",
     "views.Transaction.blockHash": "Blok Hash",
     "views.Transaction.blockHeight": "Blok Hoogte",
     "views.Transaction.numConf": "Aantal Bevestigingen",
