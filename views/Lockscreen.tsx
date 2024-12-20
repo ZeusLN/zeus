@@ -253,7 +253,12 @@ export default class Lockscreen extends React.Component<
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
             } else {
-                setPosStatus('inactive');
+                if (
+                    (SettingsStore.settings?.pos?.posEnabled ||
+                        PosEnabled.Disabled) !== PosEnabled.Disabled
+                ) {
+                    setPosStatus('inactive');
+                }
                 this.resetAuthenticationAttempts();
                 const pendingNavigation = route.params?.pendingNavigation;
                 this.proceed(
