@@ -1767,13 +1767,21 @@ export default class SettingsStore {
                     this.refreshToken = data.refresh_token;
                     resolve(data);
                 })
-                .catch(() => {
-                    // handle error
+                .catch((error: any) => {
                     this.loading = false;
                     this.error = true;
-                    this.errorMsg = localeString(
-                        'stores.SettingsStore.lndhubLoginError'
-                    );
+                    if (
+                        typeof error.message === 'string' &&
+                        error.message.includes('"bad auth"')
+                    ) {
+                        this.errorMsg = localeString(
+                            'stores.SettingsStore.lndhubLoginError'
+                        );
+                    } else {
+                        this.errorMsg = localeString(
+                            'stores.SettingsStore.lndhubConnectError'
+                        );
+                    }
                     resolve();
                 });
         });
