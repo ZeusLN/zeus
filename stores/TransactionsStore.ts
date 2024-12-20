@@ -566,7 +566,7 @@ export default class TransactionsStore {
         const isKeysend =
             result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
                 keySendPreimageType
-            ];
+            ] != null;
 
         // TODO add message for in-flight transactions
         if (

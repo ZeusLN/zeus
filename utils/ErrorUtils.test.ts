@@ -1,10 +1,7 @@
 import { errorToUserFriendly } from './ErrorUtils';
 
 jest.mock('./LocaleUtils', () => ({
-    localeString: (key: string) => {
-        const EN = require('../locales/en.json');
-        return EN[key];
-    }
+    localeString: (key: string) => require('../locales/en.json')[key]
 }));
 
 describe('ErrorUtils', () => {
@@ -95,6 +92,21 @@ describe('ErrorUtils', () => {
                 )
             ).toEqual(
                 'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
+            );
+        });
+
+        it('Handles partial error message matches', () => {
+            expect(
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message:
+                            'Error: Failed to connect to /can-be-any-host:8082',
+                        name: 'test'
+                    }),
+                    false
+                )
+            ).toEqual(
+                'Unable to connect to node. Please verify the host and port are correct and the service is running.'
             );
         });
 

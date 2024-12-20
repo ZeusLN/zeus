@@ -5,6 +5,8 @@ const userFriendlyErrors: any = {
         'error.torBootstrap',
     'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")':
         'error.torBootstrap',
+    'Error: Failed to connect to': 'error.nodeConnectError',
+    'Error: Unable to resolve host': 'error.nodeConnectError',
     FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
     FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
     FAILURE_REASON_ERROR: 'error.failureReasonError',
@@ -48,13 +50,19 @@ const errorToUserFriendly = (
         errorMsg = errorMsg.charAt(0).toUpperCase() + errorMsg.slice(1);
     }
 
+    const matchingPattern = Object.keys(userFriendlyErrors).find((pattern) =>
+        errorMsg.includes(pattern)
+    );
+
+    let localeKey = matchingPattern
+        ? userFriendlyErrors[matchingPattern]
+        : null;
+
     if (localize) {
         const localeString = require('./LocaleUtils').localeString;
-        let baseError =
-            localeString(userFriendlyErrors[errorMsg])?.replace(
-                'Zeus',
-                'ZEUS'
-            ) || errorMsg;
+        let baseError = localeKey
+            ? localeString(localeKey)?.replace('Zeus', 'ZEUS')
+            : errorMsg;
 
         if (
             errorContext?.includes('Keysend') &&
@@ -69,7 +77,7 @@ const errorToUserFriendly = (
         return baseError;
     } else {
         const EN = require('../locales/en.json');
-        return EN[userFriendlyErrors[errorMsg]] || errorMsg;
+        return localeKey ? EN[localeKey] : errorMsg;
     }
 };
 
