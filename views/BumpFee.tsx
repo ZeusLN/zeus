@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableWithoutFeedback, View } from 'react-native';
+import { StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -14,6 +14,7 @@ import {
     ErrorMessage
 } from '../components/SuccessErrorMessage';
 import Switch from '../components/Switch';
+import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 
 import FeeStore from '../stores/FeeStore';
@@ -39,8 +40,9 @@ interface BumpFeeState {
     outpoint: string;
     target_conf: string;
     sat_per_vbyte: string;
-    force: boolean;
+    immediate: boolean;
     target_type: number;
+    budget: string;
 }
 
 @inject('FeeStore', 'SettingsStore')
@@ -56,8 +58,9 @@ export default class BumpFee extends React.PureComponent<
             outpoint,
             target_conf: '1',
             sat_per_vbyte: '1',
-            force: false,
-            target_type: 0
+            immediate: false,
+            target_type: 0,
+            budget: ''
         };
     }
 
@@ -73,8 +76,14 @@ export default class BumpFee extends React.PureComponent<
 
     render() {
         const { FeeStore, SettingsStore, navigation, route } = this.props;
-        const { outpoint, target_conf, sat_per_vbyte, force, target_type } =
-            this.state;
+        const {
+            outpoint,
+            target_conf,
+            sat_per_vbyte,
+            immediate,
+            target_type,
+            budget
+        } = this.state;
 
         const {
             bumpFeeOpeningChannel,
@@ -282,32 +291,64 @@ export default class BumpFee extends React.PureComponent<
                         </>
                     )}
 
-                    <>
+                    <Text
+                        style={{
+                            ...styles.text,
+                            color: themeColor('secondaryText')
+                        }}
+                        infoModalText={[
+                            localeString('views.BumpFee.budget.explainer1'),
+                            localeString('views.BumpFee.budget.explainer2')
+                        ]}
+                    >
+                        {`${localeString(
+                            'views.BumpFee.budget'
+                        )} (${localeString('general.optional')})`}
+                    </Text>
+                    <TextInput
+                        value={budget}
+                        onChangeText={(text: string) => {
+                            if (!isNaN(Number(text))) {
+                                this.setState({
+                                    budget: text
+                                });
+                            }
+                        }}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="numeric"
+                    />
+
+                    <View style={{ marginTop: 20, marginBottom: 10 }}>
                         <Text
                             style={{
                                 ...styles.text,
                                 color: themeColor('secondaryText')
                             }}
+                            infoModalText={localeString(
+                                'views.BumpFee.immediate.explainer'
+                            )}
                         >
-                            {localeString('general.force')}
+                            {localeString('general.immediate')}
                         </Text>
                         <View
                             style={{
                                 flex: 1,
                                 flexDirection: 'row',
-                                justifyContent: 'flex-end'
+                                justifyContent: 'flex-end',
+                                top: 5
                             }}
                         >
                             <Switch
-                                value={force}
+                                value={immediate}
                                 onValueChange={() => {
                                     this.setState({
-                                        force: !force
+                                        immediate: !immediate
                                     });
                                 }}
                             />
                         </View>
-                    </>
+                    </View>
 
                     <View style={{ marginTop: 20 }}>
                         <Button
@@ -322,12 +363,14 @@ export default class BumpFee extends React.PureComponent<
                                         ? {
                                               outpoint,
                                               sat_per_vbyte,
-                                              force
+                                              immediate,
+                                              budget
                                           }
                                         : {
                                               outpoint,
                                               target_conf,
-                                              force
+                                              immediate,
+                                              budget
                                           }
                                 )
                             }
