@@ -31,13 +31,16 @@ interface BumpFeeProps {
         'BumpFee',
         {
             outpoint: string;
-            channel: boolean;
+            chan_point: string;
+            pendingOpen: boolean;
+            forceClose: boolean;
         }
     >;
 }
 
 interface BumpFeeState {
     outpoint: string;
+    chan_point: string;
     target_conf: string;
     sat_per_vbyte: string;
     immediate: boolean;
@@ -54,8 +57,10 @@ export default class BumpFee extends React.PureComponent<
     constructor(props: any) {
         super(props);
         const outpoint = this.props.route.params?.outpoint ?? '';
+        const chan_point = this.props.route.params?.chan_point ?? '';
         this.state = {
             outpoint,
+            chan_point,
             target_conf: '1',
             sat_per_vbyte: '1',
             immediate: false,
@@ -78,6 +83,7 @@ export default class BumpFee extends React.PureComponent<
         const { FeeStore, SettingsStore, navigation, route } = this.props;
         const {
             outpoint,
+            chan_point,
             target_conf,
             sat_per_vbyte,
             immediate,
@@ -87,6 +93,7 @@ export default class BumpFee extends React.PureComponent<
 
         const {
             bumpFeeOpeningChannel,
+            bumpForceCloseFee,
             bumpFeeSuccess,
             bumpFeeError,
             bumpFeeErrorMsg,
@@ -96,7 +103,8 @@ export default class BumpFee extends React.PureComponent<
         const { privacy } = settings;
         const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
-        const isChannel = route.params?.channel;
+        const pendingOpen = route.params?.pendingOpen;
+        const forceClose = route.params?.forceClose;
 
         const feeRateButton = () => (
             <Text
@@ -136,7 +144,9 @@ export default class BumpFee extends React.PureComponent<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: isChannel
+                        text: forceClose
+                            ? localeString('views.BumpFee.titleClose')
+                            : pendingOpen
                             ? localeString('views.BumpFee.titleAlt')
                             : localeString('views.BumpFee.title'),
                         style: {
@@ -168,54 +178,95 @@ export default class BumpFee extends React.PureComponent<
                         />
                     )}
 
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                        infoModalText={[
-                            localeString('views.BumpFee.outpoint.explainer1'),
-                            localeString('views.BumpFee.outpoint.explainer2'),
-                            localeString('views.BumpFee.outpoint.explainer3'),
-                            localeString('views.BumpFee.outpoint.explainer4'),
-                            localeString('views.BumpFee.outpoint.explainer5')
-                        ]}
-                        infoModalLink="https://docs.zeusln.app/for-users/getting-started/tips/#what-is-an-outpoint"
-                    >
-                        {localeString('general.outpoint')}
-                    </Text>
-                    <TextInput
-                        placeholder={'4a5e1e...eda33b:0'}
-                        value={outpoint}
-                        onChangeText={(text: string) =>
-                            this.setState({
-                                outpoint: text
-                            })
-                        }
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                    />
+                    {!forceClose && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                                infoModalText={[
+                                    localeString(
+                                        'views.BumpFee.outpoint.explainer1'
+                                    ),
+                                    localeString(
+                                        'views.BumpFee.outpoint.explainer2'
+                                    ),
+                                    localeString(
+                                        'views.BumpFee.outpoint.explainer3'
+                                    ),
+                                    localeString(
+                                        'views.BumpFee.outpoint.explainer4'
+                                    ),
+                                    localeString(
+                                        'views.BumpFee.outpoint.explainer5'
+                                    )
+                                ]}
+                                infoModalLink="https://docs.zeusln.app/for-users/getting-started/tips/#what-is-an-outpoint"
+                            >
+                                {localeString('general.outpoint')}
+                            </Text>
+                            <TextInput
+                                placeholder={'4a5e1e...eda33b:0'}
+                                value={outpoint}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        outpoint: text
+                                    })
+                                }
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                        </>
+                    )}
 
-                    <ButtonGroup
-                        onPress={(target_type: number) => {
-                            this.setState({ target_type });
-                        }}
-                        selectedIndex={target_type}
-                        buttons={buttons}
-                        selectedButtonStyle={{
-                            backgroundColor: themeColor('highlight'),
-                            borderRadius: 12
-                        }}
-                        containerStyle={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 12,
-                            borderColor: themeColor('secondary'),
-                            marginBottom: 15
-                        }}
-                        innerBorderStyle={{
-                            color: themeColor('secondary')
-                        }}
-                    />
+                    {forceClose && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.Channel.channelPoint')}
+                            </Text>
+                            <TextInput
+                                placeholder={'4a5e1e...eda33b:0'}
+                                value={chan_point}
+                                onChangeText={(text: string) =>
+                                    this.setState({
+                                        chan_point: text
+                                    })
+                                }
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                locked
+                            />
+                        </>
+                    )}
+
+                    {!forceClose && (
+                        <ButtonGroup
+                            onPress={(target_type: number) => {
+                                this.setState({ target_type });
+                            }}
+                            selectedIndex={target_type}
+                            buttons={buttons}
+                            selectedButtonStyle={{
+                                backgroundColor: themeColor('highlight'),
+                                borderRadius: 12
+                            }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary'),
+                                marginBottom: 15
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                        />
+                    )}
 
                     {target_type === 0 && (
                         <>
@@ -225,7 +276,11 @@ export default class BumpFee extends React.PureComponent<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('views.OpenChannel.satsPerVbyte')}
+                                {forceClose
+                                    ? localeString('views.BumpFee.startingFee')
+                                    : localeString(
+                                          'views.OpenChannel.satsPerVbyte'
+                                      )}
                             </Text>
                             {enableMempoolRates ? (
                                 <TouchableWithoutFeedback
@@ -361,26 +416,35 @@ export default class BumpFee extends React.PureComponent<
                     <View style={{ marginTop: 20 }}>
                         <Button
                             title={
-                                isChannel
+                                forceClose
+                                    ? localeString('views.BumpFee.titleClose')
+                                    : pendingOpen
                                     ? localeString('views.BumpFee.titleAlt')
                                     : localeString('views.BumpFee.title')
                             }
                             onPress={() =>
-                                bumpFeeOpeningChannel(
-                                    target_type === 0
-                                        ? {
-                                              outpoint,
-                                              sat_per_vbyte,
-                                              immediate,
-                                              budget
-                                          }
-                                        : {
-                                              outpoint,
-                                              target_conf,
-                                              immediate,
-                                              budget
-                                          }
-                                )
+                                forceClose
+                                    ? bumpForceCloseFee({
+                                          chan_point,
+                                          starting_feerate: sat_per_vbyte,
+                                          immediate,
+                                          budget
+                                      })
+                                    : bumpFeeOpeningChannel(
+                                          target_type === 0
+                                              ? {
+                                                    outpoint,
+                                                    sat_per_vbyte,
+                                                    immediate,
+                                                    budget
+                                                }
+                                              : {
+                                                    outpoint,
+                                                    target_conf,
+                                                    immediate,
+                                                    budget
+                                                }
+                                      )
                             }
                             noUppercase
                         />

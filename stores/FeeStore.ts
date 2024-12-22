@@ -245,6 +245,30 @@ export default class FeeStore {
     };
 
     @action
+    public bumpForceCloseFee = (params?: any) => {
+        this.loading = true;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
+        const [funding_txid_str, output_index] = params.chan_point.split(':');
+        BackendUtils.bumpForceCloseFee({
+            ...params,
+            chan_point: {
+                funding_txid_str,
+                output_index: Number(output_index) || 0
+            }
+        })
+            .then(() => {
+                this.bumpFeeSuccess = true;
+                this.loading = false;
+            })
+            .catch((err: Error) => {
+                this.bumpFeeError = true;
+                this.bumpFeeErrorMsg = errorToUserFriendly(err);
+                this.loading = false;
+            });
+    };
+
+    @action
     public bumpFeeOpeningChannel = (params?: any) => {
         this.loading = true;
         this.bumpFeeSuccess = false;

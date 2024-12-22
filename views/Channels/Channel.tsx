@@ -279,7 +279,6 @@ export default class ChannelView extends React.Component<
             closeHeight ||
             closing
         );
-        const bumpable: boolean = pendingOpen;
 
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
@@ -738,14 +737,28 @@ export default class ChannelView extends React.Component<
                             csv_delay={csv_delay}
                         />
                     )}
-                    {BackendUtils.supportsBumpFee() && bumpable && (
+                    {BackendUtils.supportsBumpFee() && pendingOpen && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.BumpFee.titleAlt')}
                                 onPress={() =>
                                     navigation.navigate('BumpFee', {
                                         outpoint: channel.channel_point,
-                                        channel: true
+                                        pendingOpen: true
+                                    })
+                                }
+                                noUppercase
+                            />
+                        </View>
+                    )}
+                    {BackendUtils.supportsBumpFee() && forceClose && (
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString('views.BumpFee.titleClose')}
+                                onPress={() =>
+                                    navigation.navigate('BumpFee', {
+                                        chan_point: channel.channel_point,
+                                        forceClose: true
                                     })
                                 }
                                 noUppercase
