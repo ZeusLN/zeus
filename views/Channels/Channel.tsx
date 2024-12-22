@@ -405,18 +405,28 @@ export default class ChannelView extends React.Component<
                             value={shortChannelId}
                         />
                     )}
-                    {!!alias_scids && alias_scids.length > 0 && (
-                        <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
-                            )}
-                        />
-                    )}
+                    {!!alias_scids &&
+                        alias_scids.length > 0 &&
+                        // hide if single SCID that matches channel ID
+                        !(
+                            alias_scids.length === 1 &&
+                            alias_scids[0].toString() === channelId
+                        ) && (
+                            <KeyValue
+                                keyValue={
+                                    alias_scids.length > 1
+                                        ? localeString(
+                                              'views.Channel.aliasScids'
+                                          )
+                                        : localeString(
+                                              'views.Channel.aliasScid'
+                                          )
+                                }
+                                value={PrivacyUtils.sensitiveValue(
+                                    alias_scids.join(', ')
+                                )}
+                            />
+                        )}
                     {!!peer_scid_alias && (
                         <KeyValue
                             keyValue={localeString(
