@@ -32,6 +32,7 @@ interface BumpFeeProps {
             outpoint: string;
             chan_point: string;
             pendingOpen: boolean;
+            pendingClose: boolean;
             forceClose: boolean;
         }
     >;
@@ -90,6 +91,7 @@ export default class BumpFee extends React.PureComponent<
         } = FeeStore;
 
         const pendingOpen = route.params?.pendingOpen;
+        const pendingClose = route.params?.pendingClose;
         const forceClose = route.params?.forceClose;
 
         const feeRateButton = () => (
@@ -131,6 +133,8 @@ export default class BumpFee extends React.PureComponent<
                     leftComponent="Back"
                     centerComponent={{
                         text: forceClose
+                            ? localeString('views.BumpFee.titleForceClose')
+                            : pendingClose
                             ? localeString('views.BumpFee.titleClose')
                             : pendingOpen
                             ? localeString('views.BumpFee.titleAlt')
@@ -370,6 +374,10 @@ export default class BumpFee extends React.PureComponent<
                         <Button
                             title={
                                 forceClose
+                                    ? localeString(
+                                          'views.BumpFee.titleForceClose'
+                                      )
+                                    : pendingClose
                                     ? localeString('views.BumpFee.titleClose')
                                     : pendingOpen
                                     ? localeString('views.BumpFee.titleAlt')

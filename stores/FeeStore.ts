@@ -289,8 +289,11 @@ export default class FeeStore {
                 // if output isn't correct (it'll be index 0 or 1), try alternate input
                 // NOTE: this will only work for single-party funded channels
                 if (
-                    err.toString() ===
-                    'Error: the passed output does not belong to the wallet'
+                    err
+                        .toString()
+                        .includes(
+                            'the passed output does not belong to the wallet'
+                        )
                 ) {
                     const newOutputIndex = output_index === '0' ? 1 : 0;
                     this.bumpFeeErrorMsg = `${err}. Retrying with input ${newOutputIndex}`;
