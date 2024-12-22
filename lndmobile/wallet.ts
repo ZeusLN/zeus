@@ -13,20 +13,20 @@ import Base64Utils from '../utils/Base64Utils';
 export const bumpFee = async ({
     outpoint,
     target_conf,
-    force,
+    immediate,
     sat_per_vbyte,
     budget
 }: {
     outpoint: lnrpc.OutPoint;
     target_conf?: number;
-    force?: boolean;
+    immediate?: boolean;
     sat_per_vbyte?: Long;
     budget?: Long;
 }): Promise<walletrpc.BumpFeeResponse> => {
     const options: walletrpc.IBumpFeeRequest = {
         outpoint,
         target_conf,
-        force,
+        immediate,
         sat_per_vbyte: sat_per_vbyte
             ? Long.fromValue(sat_per_vbyte)
             : undefined,
@@ -40,6 +40,41 @@ export const bumpFee = async ({
         request: walletrpc.BumpFeeRequest,
         response: walletrpc.BumpFeeResponse,
         method: 'WalletKitBumpFee',
+        options
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
+export const bumpForceCloseFee = async ({
+    chan_point,
+    immediate,
+    starting_feerate,
+    budget
+}: {
+    chan_point: lnrpc.ChannelPoint;
+    immediate?: boolean;
+    starting_feerate?: Long;
+    budget?: Long;
+}): Promise<walletrpc.BumpForceCloseFeeResponse> => {
+    const options: walletrpc.IBumpForceCloseFeeRequest = {
+        chan_point,
+        immediate,
+        starting_feerate: starting_feerate
+            ? Long.fromValue(starting_feerate)
+            : undefined,
+        budget: budget ? Long.fromValue(budget) : undefined
+    };
+    const response = await sendCommand<
+        walletrpc.IBumpForceCloseFeeRequest,
+        walletrpc.BumpForceCloseFeeRequest,
+        walletrpc.BumpForceCloseFeeResponse
+    >({
+        request: walletrpc.BumpForceCloseFeeRequest,
+        response: walletrpc.BumpForceCloseFeeResponse,
+        method: 'WalletKitBumpForceCloseFee',
         options
     });
     return response;
