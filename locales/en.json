@@ -1002,6 +1002,7 @@
     "views.BumpFee.title": "Speed up transaction",
     "views.BumpFee.titleAlt": "Speed up channel open",
     "views.BumpFee.titleClose": "Speed up channel close",
+    "views.BumpFee.titleForceClose": "Speed up channel force close",
     "views.BumpFee.targetConfs": "Target confirmations",
     "views.BumpFee.success": "Successfully bumped fee!",
     "views.BumpFee.error": "Error bumping fee",
