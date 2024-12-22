@@ -428,7 +428,7 @@ export default class BumpFee extends React.PureComponent<
                                           chan_point,
                                           starting_feerate: sat_per_vbyte,
                                           immediate,
-                                          budget
+                                          budget: budget ? budget : undefined
                                       })
                                     : bumpFeeOpeningChannel(
                                           target_type === 0
@@ -436,13 +436,17 @@ export default class BumpFee extends React.PureComponent<
                                                     outpoint,
                                                     sat_per_vbyte,
                                                     immediate,
-                                                    budget
+                                                    budget: budget
+                                                        ? budget
+                                                        : undefined
                                                 }
                                               : {
                                                     outpoint,
                                                     target_conf,
                                                     immediate,
-                                                    budget
+                                                    budget: budget
+                                                        ? budget
+                                                        : undefined
                                                 }
                                       )
                             }
