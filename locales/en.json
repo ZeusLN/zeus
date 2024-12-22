@@ -941,7 +941,7 @@
     "views.Settings.AddContact.pubkey": "Public key",
     "views.Settings.AddContact.nip05": "NIP-05",
     "views.Settings.AddContact.nostrNpub": "Nostr npub",
-    "views.Settings.AddContact.addExtraField": "add extra field",
+    "views.Settings.AddContact.addExtraField": "Add extra field",
     "views.Settings.AddContact.saveContact": "Save Contact",
     "views.Settings.AddContact.deleteContact": "Delete Contact",
     "views.Settings.Contacts.multipleAddresses": "multiple addresses",
