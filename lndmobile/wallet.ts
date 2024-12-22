@@ -14,18 +14,23 @@ export const bumpFee = async ({
     outpoint,
     target_conf,
     force,
-    sat_per_vbyte
+    sat_per_vbyte,
+    budget
 }: {
     outpoint: lnrpc.OutPoint;
     target_conf?: number;
     force?: boolean;
     sat_per_vbyte?: Long;
+    budget?: Long;
 }): Promise<walletrpc.BumpFeeResponse> => {
     const options: walletrpc.IBumpFeeRequest = {
         outpoint,
         target_conf,
         force,
-        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
+        sat_per_vbyte: sat_per_vbyte
+            ? Long.fromValue(sat_per_vbyte)
+            : undefined,
+        budget: budget ? Long.fromValue(budget) : undefined
     };
     const response = await sendCommand<
         walletrpc.IBumpFeeRequest,
