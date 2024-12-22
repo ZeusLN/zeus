@@ -248,6 +248,7 @@ export default class ChannelView extends React.Component<
             shortChannelId,
             initiator,
             alias_scids,
+            peer_scid_alias,
             local_chan_reserve_sat,
             remote_chan_reserve_sat,
             displayName,
@@ -414,6 +415,14 @@ export default class ChannelView extends React.Component<
                             value={PrivacyUtils.sensitiveValue(
                                 alias_scids.join(', ')
                             )}
+                        />
+                    )}
+                    {!!peer_scid_alias && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Channel.peerAliasScid'
+                            )}
+                            value={PrivacyUtils.sensitiveValue(peer_scid_alias)}
                         />
                     )}
                     {zero_conf && (
