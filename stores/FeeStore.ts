@@ -82,7 +82,12 @@ export default class FeeStore {
         this.fees = {};
         this.loadingFees = false;
         this.bumpFeeSuccess = false;
+        this.resetErrors();
+    };
+
+    resetErrors = () => {
         this.bumpFeeError = false;
+        this.bumpFeeErrorMsg = '';
     };
 
     @action

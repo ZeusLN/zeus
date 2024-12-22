@@ -69,6 +69,10 @@ export default class BumpFee extends React.PureComponent<
         };
     }
 
+    UNSAFE_componentWillMount(): void {
+        this.props.FeeStore.resetErrors();
+    }
+
     render() {
         const { FeeStore, navigation, route } = this.props;
         const {
