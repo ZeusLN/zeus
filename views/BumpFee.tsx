@@ -173,6 +173,14 @@ export default class BumpFee extends React.PureComponent<
                             ...styles.text,
                             color: themeColor('secondaryText')
                         }}
+                        infoModalText={[
+                            localeString('views.BumpFee.outpoint.explainer1'),
+                            localeString('views.BumpFee.outpoint.explainer2'),
+                            localeString('views.BumpFee.outpoint.explainer3'),
+                            localeString('views.BumpFee.outpoint.explainer4'),
+                            localeString('views.BumpFee.outpoint.explainer5')
+                        ]}
+                        infoModalLink="https://docs.zeusln.app/for-users/getting-started/tips/#what-is-an-outpoint"
                     >
                         {localeString('general.outpoint')}
                     </Text>
