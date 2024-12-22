@@ -43,6 +43,7 @@ const {
     signMessageNodePubkey,
     verifyMessageNodePubkey,
     bumpFee,
+    bumpForceCloseFee,
     fundPsbt,
     signPsbt,
     finalizePsbt,
@@ -273,6 +274,7 @@ export default class EmbeddedLND extends LND {
 
     getUTXOs = async (data: any) => await listUnspent(data);
     bumpFee = async (data: any) => await bumpFee(data);
+    bumpForceCloseFee = async (data: any) => await bumpForceCloseFee(data);
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
     listAccounts = async () => await listAccounts();

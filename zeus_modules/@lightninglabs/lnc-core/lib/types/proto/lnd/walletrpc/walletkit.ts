@@ -3,6 +3,7 @@ import type {
     CoinSelectionStrategy,
     Utxo,
     OutPoint,
+    ChannelPoint,
     TransactionDetails,
     Transaction as Transaction1
 } from '../lightning';
@@ -529,6 +530,7 @@ export interface ImportAccountRequest {
      * import the account as is.
      */
     dryRun: boolean;
+    birthdayHeight: number;
 }
 
 export interface ImportAccountResponse {
@@ -548,11 +550,21 @@ export interface ImportAccountResponse {
     dryRunInternalAddrs: string[];
 }
 
+export interface RescanRequest {
+    startHeight: number;
+}
+
+export interface RescanResponse {
+    status: string;
+}
+
 export interface ImportPublicKeyRequest {
     /** A compressed public key represented as raw bytes. */
     publicKey: Uint8Array | string;
     /** The type of address that will be generated from the public key. */
     addressType: AddressType;
+    rescan: boolean;
+    birthdayHeight: number;
 }
 
 export interface ImportPublicKeyResponse {}
@@ -814,6 +826,46 @@ export interface BumpFeeRequest {
 
 export interface BumpFeeResponse {
     /** The status of the bump fee operation. */
+    status: string;
+}
+
+export interface BumpForceCloseFeeRequest {
+    /**
+     * The channel point which force close transaction we are attempting to
+     * bump the fee rate for.
+     */
+    chanPoint: ChannelPoint | undefined;
+    /**
+     * Optional. The deadline delta in number of blocks that the anchor output
+     * should be spent within to bump the closing transaction.
+     */
+    deadlineDelta: number;
+    /**
+     * Optional. The starting fee rate, expressed in sat/vbyte. This value will be
+     * used by the sweeper's fee function as its starting fee rate. When not set,
+     * the sweeper will use the estimated fee rate using the target_conf as the
+     * starting fee rate.
+     */
+    startingFeerate: string;
+    /**
+     * Optional. Whether this cpfp transaction will be triggered immediately. When
+     * set to true, the sweeper will consider all currently registered sweeps and
+     * trigger new batch transactions including the sweeping of the anchor output
+     * related to the selected force close transaction.
+     */
+    immediate: boolean;
+    /**
+     * Optional. The max amount in sats that can be used as the fees. For already
+     * registered anchor outputs if not set explicitly the old value will be used.
+     * For channel force closes which have no HTLCs in their commitment transaction
+     * this value has to be set to an appropriate amount to pay for the cpfp
+     * transaction of the force closed channel otherwise the fee bumping will fail.
+     */
+    budget: string;
+}
+
+export interface BumpForceCloseFeeResponse {
+    /** The status of the force close fee bump operation. */
     status: string;
 }
 
@@ -1312,6 +1364,14 @@ export interface WalletKit {
      */
     bumpFee(request?: DeepPartial<BumpFeeRequest>): Promise<BumpFeeResponse>;
     /**
+     * lncli: `wallet bumpforceclosefee`
+     * BumpForceCloseFee is an endpoint that allows users to bump the fee of a
+     * channel force close. This only works for channels with option_anchors.
+     */
+    bumpForceCloseFee(
+        request?: DeepPartial<BumpForceCloseFeeRequest>
+    ): Promise<BumpForceCloseFeeResponse>;
+    /**
      * lncli: `wallet listsweeps`
      * ListSweeps returns a list of the sweep transactions our node has produced.
      * Note that these sweeps may not be confirmed yet, as we record sweeps on
@@ -1393,6 +1453,7 @@ export interface WalletKit {
     finalizePsbt(
         request?: DeepPartial<FinalizePsbtRequest>
     ): Promise<FinalizePsbtResponse>;
+    rescan(request?: DeepPartial<RescanRequest>): Promise<RescanResponse>;
 }
 
 type Builtin =

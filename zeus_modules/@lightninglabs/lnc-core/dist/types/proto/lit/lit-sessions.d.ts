@@ -124,10 +124,32 @@ export interface Session {
      * not revoked. Readers should instead first check the session_state field.
      */
     revokedAt: string;
+    /**
+     * The ID of the group of Session's that this Session is linked to. If this
+     * session is not linked to any older Session, then this value will be the
+     * same as the ID.
+     */
+    groupId: Uint8Array | string;
+    /**
+     * Configurations for each individual feature mapping from the feature name to
+     * a JSON-serialized configuration.
+     */
+    featureConfigs: {
+        [key: string]: string;
+    };
+    /**
+     * Privacy flags used for the session that determine how the privacy mapper
+     * operates.
+     */
+    privacyFlags: string;
 }
 export interface Session_AutopilotFeatureInfoEntry {
     key: string;
     value: RulesMap | undefined;
+}
+export interface Session_FeatureConfigsEntry {
+    key: string;
+    value: string;
 }
 export interface MacaroonRecipe {
     /** A list of permissions that should be included in the macaroon. */
@@ -172,6 +194,7 @@ export interface RuleValue {
     sendToSelf: SendToSelf | undefined;
     channelRestrict: ChannelRestrict | undefined;
     peerRestrict: PeerRestrict | undefined;
+    channelConstraint: ChannelConstraint | undefined;
 }
 export interface RateLimit {
     /** The rate limit for read-only calls. */
@@ -239,6 +262,18 @@ export interface ChannelRestrict {
 export interface PeerRestrict {
     /** A list of peer IDs that the Autopilot should _not_ perform any actions on. */
     peerIds: string[];
+}
+export interface ChannelConstraint {
+    /** The minimum channel size autopilot has to set for a channel. */
+    minCapacitySat: string;
+    /** The maximum channel size autopilot can set for a channel. */
+    maxCapacitySat: string;
+    /** The maximum push amount for a channel. */
+    maxPushSat: string;
+    /** Indicates whether opening of private channels is allowed. */
+    privateAllowed: boolean;
+    /** Indicates whether opening of public channels is allowed. */
+    publicAllowed: boolean;
 }
 /**
  * Sessions is a service that gives access to the core functionalities of the

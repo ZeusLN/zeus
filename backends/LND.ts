@@ -584,6 +584,8 @@ export default class LND {
         this.postRequest('/v1/funding/step', data);
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
+    bumpForceCloseFee = (data: any) =>
+        this.postRequest('/v2/wallet/BumpForceCloseFee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
     listAddresses = () => this.getRequest('/v2/wallet/addresses');
     importAccount = (data: any) =>

@@ -1,4 +1,10 @@
 import type { AssetType, Asset } from '../taprootassets';
+export declare enum ProofType {
+    PROOF_TYPE_UNSPECIFIED = "PROOF_TYPE_UNSPECIFIED",
+    PROOF_TYPE_ISSUANCE = "PROOF_TYPE_ISSUANCE",
+    PROOF_TYPE_TRANSFER = "PROOF_TYPE_TRANSFER",
+    UNRECOGNIZED = "UNRECOGNIZED"
+}
 export declare enum UniverseSyncMode {
     /**
      * SYNC_ISSUANCE_ONLY - A sync node that indicates that only new asset creation (minting) proofs
@@ -20,6 +26,12 @@ export declare enum AssetQuerySort {
     SORT_BY_TOTAL_SYNCS = "SORT_BY_TOTAL_SYNCS",
     SORT_BY_TOTAL_PROOFS = "SORT_BY_TOTAL_PROOFS",
     SORT_BY_GENESIS_HEIGHT = "SORT_BY_GENESIS_HEIGHT",
+    SORT_BY_TOTAL_SUPPLY = "SORT_BY_TOTAL_SUPPLY",
+    UNRECOGNIZED = "UNRECOGNIZED"
+}
+export declare enum SortDirection {
+    SORT_DIRECTION_ASC = "SORT_DIRECTION_ASC",
+    SORT_DIRECTION_DESC = "SORT_DIRECTION_DESC",
     UNRECOGNIZED = "UNRECOGNIZED"
 }
 export declare enum AssetTypeFilter {
@@ -28,8 +40,33 @@ export declare enum AssetTypeFilter {
     FILTER_ASSET_COLLECTIBLE = "FILTER_ASSET_COLLECTIBLE",
     UNRECOGNIZED = "UNRECOGNIZED"
 }
-/** TODO(roasbeef): filter by asset ID, etc? */
+export interface MultiverseRootRequest {
+    /** The proof type to calculate the multiverse root for. */
+    proofType: ProofType;
+    /**
+     * An optional list of universe IDs to include in the multiverse root. If
+     * none are specified, then all known universes of the given proof type are
+     * included. NOTE: The proof type within the IDs must either be unspecified
+     * or match the proof type above.
+     */
+    specificIds: ID[];
+}
+export interface MultiverseRootResponse {
+    /** The root of the multiverse tree. */
+    multiverseRoot: MerkleSumNode | undefined;
+}
 export interface AssetRootRequest {
+    /**
+     * If true, then the response will include the amounts for each asset ID
+     * of grouped assets.
+     */
+    withAmountsById: boolean;
+    /** The offset for the page. */
+    offset: number;
+    /** The length limit for the page. */
+    limit: number;
+    /** The direction of the page. */
+    direction: SortDirection;
 }
 export interface MerkleSumNode {
     /** The MS-SMT root hash for the branch node. */
@@ -53,6 +90,7 @@ export interface ID {
      * REST).
      */
     groupKeyStr: string | undefined;
+    proofType: ProofType;
 }
 export interface UniverseRoot {
     id: ID | undefined;
@@ -63,6 +101,22 @@ export interface UniverseRoot {
     mssmtRoot: MerkleSumNode | undefined;
     /** The name of the asset. */
     assetName: string;
+    /**
+     * A map of hex encoded asset IDs to the number of units minted for that
+     * asset. This only contains more than one entry for grouped assets and in
+     * that case represents the whole list of assets currently known to exist
+     * within the group. For single (non-grouped) assets, this is equal to the
+     * asset ID above and the sum in the mssmt_root. A hex encoded string is
+     * used as the map key because gRPC does not support using raw bytes for a
+     * map key.
+     */
+    amountsByAssetId: {
+        [key: string]: string;
+    };
+}
+export interface UniverseRoot_AmountsByAssetIdEntry {
+    key: string;
+    value: string;
 }
 export interface AssetRootResponse {
     /**
@@ -82,8 +136,10 @@ export interface AssetRootQuery {
     id: ID | undefined;
 }
 export interface QueryRootResponse {
-    /** The asset root for the given asset ID or group key. */
-    assetRoot: UniverseRoot | undefined;
+    /** The issuance universe root for the given asset ID or group key. */
+    issuanceRoot: UniverseRoot | undefined;
+    /** The transfer universe root for the given asset ID or group key. */
+    transferRoot: UniverseRoot | undefined;
 }
 export interface DeleteRootQuery {
     /** An ID value to uniquely identify a Universe root. */
@@ -103,6 +159,16 @@ export interface AssetKey {
     scriptKeyBytes: Uint8Array | string | undefined;
     scriptKeyStr: string | undefined;
 }
+export interface AssetLeafKeysRequest {
+    /** The ID of the asset to query for. */
+    id: ID | undefined;
+    /** The offset for the page. */
+    offset: number;
+    /** The length limit for the page. */
+    limit: number;
+    /** The direction of the page. */
+    direction: SortDirection;
+}
 export interface AssetLeafKeyResponse {
     /** The set of asset leaf keys for the given asset ID or group key. */
     assetKeys: AssetKey[];
@@ -111,10 +177,11 @@ export interface AssetLeaf {
     /** The asset included in the leaf. */
     asset: Asset | undefined;
     /**
-     * The asset issuance proof, which proves that the asset specified above
-     * was issued properly.
+     * The asset issuance or transfer proof, which proves that the asset
+     * specified above was issued or transferred properly. This is always just
+     * an individual mint/transfer proof and never a proof file.
      */
-    issuanceProof: Uint8Array | string;
+    proof: Uint8Array | string;
 }
 export interface AssetLeafResponse {
     /** The set of asset leaves for the given asset ID or group key. */
@@ -127,7 +194,7 @@ export interface UniverseKey {
     leafKey: AssetKey | undefined;
 }
 export interface AssetProofResponse {
-    /** The request original request for the issuance proof. */
+    /** The original request for the issuance proof. */
     req: UniverseKey | undefined;
     /** The Universe root that includes this asset leaf. */
     universeRoot: UniverseRoot | undefined;
@@ -138,12 +205,32 @@ export interface AssetProofResponse {
     universeInclusionProof: Uint8Array | string;
     /** The asset leaf itself, which includes the asset and the issuance proof. */
     assetLeaf: AssetLeaf | undefined;
+    /**
+     * MultiverseRoot is the root of the multiverse tree that includes this
+     * asset leaf.
+     */
+    multiverseRoot: MerkleSumNode | undefined;
+    /**
+     * MultiverseInclusionProof is the inclusion proof for the asset leaf in the
+     * multiverse.
+     */
+    multiverseInclusionProof: Uint8Array | string;
 }
 export interface AssetProof {
     /** The ID of the asset to insert the proof for. */
     key: UniverseKey | undefined;
     /** The asset leaf to insert into the Universe tree. */
     assetLeaf: AssetLeaf | undefined;
+}
+export interface PushProofRequest {
+    /** The ID of the asset to push the proof for. */
+    key: UniverseKey | undefined;
+    /** The universe server to push the proof to. */
+    server: UniverseFederationServer | undefined;
+}
+export interface PushProofResponse {
+    /** The ID of the asset a push was requested for. */
+    key: UniverseKey | undefined;
 }
 export interface InfoRequest {
 }
@@ -154,8 +241,6 @@ export interface InfoResponse {
      * servers when they are exposed under different hostnames/ports.
      */
     runtimeId: string;
-    /** The number of assets known to this Universe server. */
-    numAssets: string;
 }
 export interface SyncTarget {
     id: ID | undefined;
@@ -209,6 +294,7 @@ export interface DeleteFederationServerResponse {
 }
 export interface StatsResponse {
     numTotalAssets: string;
+    numTotalGroups: string;
     numTotalSyncs: string;
     numTotalProofs: string;
 }
@@ -219,18 +305,49 @@ export interface AssetStatsQuery {
     sortBy: AssetQuerySort;
     offset: number;
     limit: number;
+    direction: SortDirection;
 }
 export interface AssetStatsSnapshot {
-    assetId: Uint8Array | string;
+    /**
+     * The group key of the asset group. If this is empty, then the asset is
+     * not part of a group.
+     */
     groupKey: Uint8Array | string;
+    /**
+     * The total supply of the asset group. If the asset is not part of an asset
+     * group then this is always zero.
+     */
+    groupSupply: string;
+    /**
+     * The group anchor that was used to group assets together into an asset
+     * group. This is only set if the asset is part of an asset group.
+     */
+    groupAnchor: AssetStatsAsset | undefined;
+    /**
+     * If the asset is not part of an asset group, then this is the asset the
+     * stats below refer to.
+     */
+    asset: AssetStatsAsset | undefined;
+    /**
+     * The total number of syncs either for the asset group or the single asset
+     * if it is not part of a group.
+     */
+    totalSyncs: string;
+    /**
+     * The total number of proofs either for the asset group or the single asset
+     * if it is not part of a group.
+     */
+    totalProofs: string;
+}
+export interface AssetStatsAsset {
+    assetId: Uint8Array | string;
     genesisPoint: string;
     totalSupply: string;
     assetName: string;
     assetType: AssetType;
     genesisHeight: number;
     genesisTimestamp: string;
-    totalSyncs: string;
-    totalProofs: string;
+    anchorPoint: string;
 }
 export interface UniverseAssetStats {
     assetStats: AssetStatsSnapshot[];
@@ -248,7 +365,68 @@ export interface GroupedUniverseEvents {
     syncEvents: string;
     newProofEvents: string;
 }
+export interface SetFederationSyncConfigRequest {
+    globalSyncConfigs: GlobalFederationSyncConfig[];
+    assetSyncConfigs: AssetFederationSyncConfig[];
+}
+export interface SetFederationSyncConfigResponse {
+}
+/**
+ * GlobalFederationSyncConfig is a global proof type specific configuration
+ * for universe federation syncing.
+ */
+export interface GlobalFederationSyncConfig {
+    /** proof_type is the universe proof type which this config applies to. */
+    proofType: ProofType;
+    /**
+     * allow_sync_insert is a boolean that indicates whether leaves from
+     * universes of the given proof type have may be inserted via federation
+     * sync.
+     */
+    allowSyncInsert: boolean;
+    /**
+     * allow_sync_export is a boolean that indicates whether leaves from
+     * universes of the given proof type have may be exported via federation
+     * sync.
+     */
+    allowSyncExport: boolean;
+}
+/**
+ * AssetFederationSyncConfig is an asset universe specific configuration for
+ * federation syncing.
+ */
+export interface AssetFederationSyncConfig {
+    /** id is the ID of the universe to configure. */
+    id: ID | undefined;
+    /**
+     * allow_sync_insert is a boolean that indicates whether leaves from
+     * universes of the given proof type have may be inserted via federation
+     * sync.
+     */
+    allowSyncInsert: boolean;
+    /**
+     * allow_sync_export is a boolean that indicates whether leaves from
+     * universes of the given proof type have may be exported via federation
+     * sync.
+     */
+    allowSyncExport: boolean;
+}
+export interface QueryFederationSyncConfigRequest {
+    /** Target universe ID(s). */
+    id: ID[];
+}
+export interface QueryFederationSyncConfigResponse {
+    globalSyncConfigs: GlobalFederationSyncConfig[];
+    assetSyncConfigs: AssetFederationSyncConfig[];
+}
 export interface Universe {
+    /**
+     * tapcli: `universe multiverse`
+     * MultiverseRoot returns the root of the multiverse tree. This is useful to
+     * determine the equality of two multiverse trees, since the root can directly
+     * be compared to another multiverse root to find out if a sync is required.
+     */
+    multiverseRoot(request?: DeepPartial<MultiverseRootRequest>): Promise<MultiverseRootResponse>;
     /**
      * tapcli: `universe roots`
      * AssetRoots queries for the known Universe roots associated with each known
@@ -271,12 +449,12 @@ export interface Universe {
      * tapcli: `universe keys`
      * AssetLeafKeys queries for the set of Universe keys associated with a given
      * asset_id or group_key. Each key takes the form: (outpoint, script_key),
-     * where outpoint is an outpoint in the Bitcoin blockcahin that anchors a
+     * where outpoint is an outpoint in the Bitcoin blockchain that anchors a
      * valid Taproot Asset commitment, and script_key is the script_key of
      * the asset within the Taproot Asset commitment for the given asset_id or
      * group_key.
      */
-    assetLeafKeys(request?: DeepPartial<ID>): Promise<AssetLeafKeyResponse>;
+    assetLeafKeys(request?: DeepPartial<AssetLeafKeysRequest>): Promise<AssetLeafKeyResponse>;
     /**
      * tapcli: `universe leaves`
      * AssetLeaves queries for the set of asset leaves (the values in the Universe
@@ -304,6 +482,13 @@ export interface Universe {
      * updated asset_id/group_key.
      */
     insertProof(request?: DeepPartial<AssetProof>): Promise<AssetProofResponse>;
+    /**
+     * tapcli: `universe proofs push`
+     * PushProof attempts to query the local universe for a proof specified by a
+     * UniverseKey. If found, a connection is made to a remote Universe server to
+     * attempt to upload the asset leaf.
+     */
+    pushProof(request?: DeepPartial<PushProofRequest>): Promise<PushProofResponse>;
     /**
      * tapcli: `universe info`
      * Info returns a set of information about the current state of the Universe.
@@ -359,6 +544,17 @@ export interface Universe {
      * period, grouped by day.
      */
     queryEvents(request?: DeepPartial<QueryEventsRequest>): Promise<QueryEventsResponse>;
+    /**
+     * SetFederationSyncConfig sets the configuration of the universe federation
+     * sync.
+     */
+    setFederationSyncConfig(request?: DeepPartial<SetFederationSyncConfigRequest>): Promise<SetFederationSyncConfigResponse>;
+    /**
+     * tapcli: `universe federation config info`
+     * QueryFederationSyncConfig queries the universe federation sync configuration
+     * settings.
+     */
+    queryFederationSyncConfig(request?: DeepPartial<QueryFederationSyncConfigRequest>): Promise<QueryFederationSyncConfigResponse>;
 }
 declare type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 declare type DeepPartial<T> = T extends Builtin ? T : T extends Array<infer U> ? Array<DeepPartial<U>> : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>> : T extends {} ? {
