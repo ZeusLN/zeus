@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, TouchableWithoutFeedback, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
+import OnchainFeeInput from '../components/OnchainFeeInput';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import {
@@ -18,7 +19,6 @@ import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 
 import FeeStore from '../stores/FeeStore';
-import SettingsStore from '../stores/SettingsStore';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -26,7 +26,6 @@ import { localeString } from '../utils/LocaleUtils';
 interface BumpFeeProps {
     navigation: StackNavigationProp<any, any>;
     FeeStore: FeeStore;
-    SettingsStore: SettingsStore;
     route: Route<
         'BumpFee',
         {
@@ -48,7 +47,7 @@ interface BumpFeeState {
     budget: string;
 }
 
-@inject('FeeStore', 'SettingsStore')
+@inject('FeeStore')
 @observer
 export default class BumpFee extends React.PureComponent<
     BumpFeeProps,
@@ -69,18 +68,8 @@ export default class BumpFee extends React.PureComponent<
         };
     }
 
-    UNSAFE_componentWillMount() {
-        this.props.FeeStore.resetFees();
-    }
-
-    handleOnNavigateBack = (sat_per_vbyte: string) => {
-        this.setState({
-            sat_per_vbyte
-        });
-    };
-
     render() {
-        const { FeeStore, SettingsStore, navigation, route } = this.props;
+        const { FeeStore, navigation, route } = this.props;
         const {
             outpoint,
             chan_point,
@@ -99,9 +88,6 @@ export default class BumpFee extends React.PureComponent<
             bumpFeeErrorMsg,
             loading
         } = FeeStore;
-        const { settings } = SettingsStore;
-        const { privacy } = settings;
-        const enableMempoolRates = privacy && privacy.enableMempoolRates;
 
         const pendingOpen = route.params?.pendingOpen;
         const forceClose = route.params?.forceClose;
@@ -282,48 +268,15 @@ export default class BumpFee extends React.PureComponent<
                                           'views.OpenChannel.satsPerVbyte'
                                       )}
                             </Text>
-                            {enableMempoolRates ? (
-                                <TouchableWithoutFeedback
-                                    onPress={() =>
-                                        navigation.navigate('EditFee', {
-                                            onNavigateBack:
-                                                this.handleOnNavigateBack
-                                        })
-                                    }
-                                >
-                                    <View
-                                        style={{
-                                            ...styles.editFeeBox,
-                                            borderColor:
-                                                'rgba(255, 217, 63, .6)',
-                                            borderWidth: 3
-                                        }}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text'),
-                                                fontSize: 18
-                                            }}
-                                        >
-                                            {sat_per_vbyte}
-                                        </Text>
-                                    </View>
-                                </TouchableWithoutFeedback>
-                            ) : (
-                                <View style={styles.targetForm}>
-                                    <TextInput
-                                        keyboardType="numeric"
-                                        placeholder={'2'}
-                                        value={sat_per_vbyte}
-                                        onChangeText={(text: string) =>
-                                            this.setState({
-                                                sat_per_vbyte: text
-                                            })
-                                        }
-                                    />
-                                </View>
-                            )}
+                            <OnchainFeeInput
+                                fee={sat_per_vbyte}
+                                onChangeFee={(text: string) => {
+                                    this.setState({
+                                        sat_per_vbyte: text
+                                    });
+                                }}
+                                navigation={navigation}
+                            />
                         </>
                     )}
 
