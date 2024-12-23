@@ -248,6 +248,7 @@ export default class ChannelView extends React.Component<
             shortChannelId,
             initiator,
             alias_scids,
+            peer_scid_alias,
             local_chan_reserve_sat,
             remote_chan_reserve_sat,
             displayName,
@@ -404,16 +405,34 @@ export default class ChannelView extends React.Component<
                             value={shortChannelId}
                         />
                     )}
-                    {!!alias_scids && alias_scids.length > 0 && (
+                    {!!alias_scids &&
+                        alias_scids.length > 0 &&
+                        // hide if single SCID that matches channel ID
+                        !(
+                            alias_scids.length === 1 &&
+                            alias_scids[0].toString() === channelId
+                        ) && (
+                            <KeyValue
+                                keyValue={
+                                    alias_scids.length > 1
+                                        ? localeString(
+                                              'views.Channel.aliasScids'
+                                          )
+                                        : localeString(
+                                              'views.Channel.aliasScid'
+                                          )
+                                }
+                                value={PrivacyUtils.sensitiveValue(
+                                    alias_scids.join(', ')
+                                )}
+                            />
+                        )}
+                    {!!peer_scid_alias && (
                         <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
+                            keyValue={localeString(
+                                'views.Channel.peerAliasScid'
                             )}
+                            value={PrivacyUtils.sensitiveValue(peer_scid_alias)}
                         />
                     )}
                     {zero_conf && (
