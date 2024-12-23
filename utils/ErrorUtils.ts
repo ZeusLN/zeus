@@ -19,11 +19,7 @@ const userFriendlyErrors: any = {
 
 const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
 
-const errorToUserFriendly = (
-    error: Error,
-    localize = true,
-    errorContext?: string[]
-) => {
+const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     let errorMessage: string = error?.message;
     let errorObject: any;
 
@@ -58,27 +54,20 @@ const errorToUserFriendly = (
         ? userFriendlyErrors[matchingPattern]
         : null;
 
-    if (localize) {
-        const localeString = require('./LocaleUtils').localeString;
-        let baseError = localeKey
-            ? localeString(localeKey)?.replace('Zeus', 'ZEUS')
-            : errorMsg;
+    const localeString = require('./LocaleUtils').localeString;
+    let baseError = localeKey
+        ? localeString(localeKey)?.replace('Zeus', 'ZEUS')
+        : errorMsg;
 
-        if (
-            errorContext?.includes('Keysend') &&
-            errorMsg === 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'
-        ) {
-            baseError +=
-                ' ' +
-                localeString(
-                    'error.failureReasonIncorrectPaymentDetailsKeysend'
-                );
-        }
-        return baseError;
-    } else {
-        const EN = require('../locales/en.json');
-        return localeKey ? EN[localeKey] : errorMsg;
+    if (
+        errorContext?.includes('Keysend') &&
+        errorMsg === 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'
+    ) {
+        baseError +=
+            ' ' +
+            localeString('error.failureReasonIncorrectPaymentDetailsKeysend');
     }
+    return baseError;
 };
 
 export { errorToUserFriendly };

@@ -16,8 +16,7 @@ describe('ErrorUtils', () => {
                         "details": []
                     }`,
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual('transaction output is dust');
             expect(
@@ -29,8 +28,7 @@ describe('ErrorUtils', () => {
                         "details": []
                     }`,
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual(
                 'proto: (line 1:126): invalid value for uint64 type: 0.1'
@@ -47,8 +45,7 @@ describe('ErrorUtils', () => {
                         }
                         `,
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual('invoice is already paid');
             expect(
@@ -63,8 +60,7 @@ describe('ErrorUtils', () => {
                         }
                         `,
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual(
                 'Host unreachable. Try restarting your node or its Tor process.'
@@ -75,11 +71,10 @@ describe('ErrorUtils', () => {
                         message:
                             'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for bootstrap")',
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual(
-                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
+                'Error starting up Tor on your phone. Try restarting ZEUS. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
             );
             expect(
                 errorToUserFriendly(
@@ -87,11 +82,10 @@ describe('ErrorUtils', () => {
                         message:
                             'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")',
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual(
-                'Error starting up Tor on your phone. Try restarting Zeus. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
+                'Error starting up Tor on your phone. Try restarting ZEUS. If the problem persists consider using the Orbot app to connect to Tor, or using an alternative connection method like Lightning Node Connect or Tailscale.'
             );
         });
 
@@ -102,8 +96,7 @@ describe('ErrorUtils', () => {
                         message:
                             'Error: Failed to connect to /can-be-any-host:8082',
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual(
                 'Unable to connect to node. Please verify the host and port are correct and the service is running.'
@@ -117,7 +110,6 @@ describe('ErrorUtils', () => {
                         message: 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS',
                         name: 'test'
                     }),
-                    true,
                     ['UnhandledContext']
                 )
             ).toEqual(
@@ -132,7 +124,6 @@ describe('ErrorUtils', () => {
                         message: 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS',
                         name: 'test'
                     }),
-                    true,
                     ['Keysend']
                 )
             ).toEqual(
@@ -146,23 +137,21 @@ describe('ErrorUtils', () => {
                     Object.assign(new Error(), {
                         message: 'Random message',
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual('Random message');
         });
 
         it('Return string if error is sent as a string', () => {
-            expect(
-                errorToUserFriendly(new Error('Payment timed out'), false)
-            ).toEqual('Payment timed out');
+            expect(errorToUserFriendly(new Error('Payment timed out'))).toEqual(
+                'Payment timed out'
+            );
         });
 
         it('Handles PascalCased LSP error messages', () => {
             expect(
                 errorToUserFriendly(
-                    new Error('ChannelExpiryBlocksTooHighInCreateOrderRequest'),
-                    false
+                    new Error('ChannelExpiryBlocksTooHighInCreateOrderRequest')
                 )
             ).toEqual('Channel expiry blocks too high in create order request');
         });

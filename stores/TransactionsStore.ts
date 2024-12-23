@@ -590,7 +590,6 @@ export default class TransactionsStore {
                       )
                     : errorToUserFriendly(
                           result.failure_reason,
-                          true,
                           isKeysend ? ['Keysend'] : undefined
                       )) || errorToUserFriendly(result.payment_error);
         }
