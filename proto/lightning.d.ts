@@ -48446,6 +48446,25 @@ export namespace walletrpc {
         ): Promise<walletrpc.BumpFeeResponse>;
 
         /**
+         * Calls BumpForceCloseFee.
+         * @param request BumpForceCloseFeeRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and BumpForceCloseFeeResponse
+         */
+        public bumpForceCloseFee(
+            request: walletrpc.IBumpForceCloseFeeRequest,
+            callback: walletrpc.WalletKit.BumpForceCloseFeeCallback
+        ): void;
+
+        /**
+         * Calls BumpForceCloseFee.
+         * @param request BumpForceCloseFeeRequest message or plain object
+         * @returns Promise
+         */
+        public bumpForceCloseFee(
+            request: walletrpc.IBumpForceCloseFeeRequest
+        ): Promise<walletrpc.BumpForceCloseFeeResponse>;
+
+        /**
          * Calls ListSweeps.
          * @param request ListSweepsRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and ListSweepsResponse
@@ -48779,6 +48798,16 @@ export namespace walletrpc {
         type BumpFeeCallback = (
             error: Error | null,
             response?: walletrpc.BumpFeeResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#bumpForceCloseFee}.
+         * @param error Error, if any
+         * @param [response] BumpForceCloseFeeResponse
+         */
+        type BumpForceCloseFeeCallback = (
+            error: Error | null,
+            response?: walletrpc.BumpForceCloseFeeResponse
         ) => void;
 
         /**
@@ -54500,6 +54529,256 @@ export namespace walletrpc {
 
         /**
          * Gets the default type url for BumpFeeResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a BumpForceCloseFeeRequest. */
+    interface IBumpForceCloseFeeRequest {
+        /** BumpForceCloseFeeRequest chan_point */
+        chan_point?: lnrpc.IChannelPoint | null;
+
+        /** BumpForceCloseFeeRequest deadline_delta */
+        deadline_delta?: number | null;
+
+        /** BumpForceCloseFeeRequest starting_feerate */
+        starting_feerate?: Long | null;
+
+        /** BumpForceCloseFeeRequest immediate */
+        immediate?: boolean | null;
+
+        /** BumpForceCloseFeeRequest budget */
+        budget?: Long | null;
+    }
+
+    /** Represents a BumpForceCloseFeeRequest. */
+    class BumpForceCloseFeeRequest implements IBumpForceCloseFeeRequest {
+        /**
+         * Constructs a new BumpForceCloseFeeRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IBumpForceCloseFeeRequest);
+
+        /** BumpForceCloseFeeRequest chan_point. */
+        public chan_point?: lnrpc.IChannelPoint | null;
+
+        /** BumpForceCloseFeeRequest deadline_delta. */
+        public deadline_delta: number;
+
+        /** BumpForceCloseFeeRequest starting_feerate. */
+        public starting_feerate: Long;
+
+        /** BumpForceCloseFeeRequest immediate. */
+        public immediate: boolean;
+
+        /** BumpForceCloseFeeRequest budget. */
+        public budget: Long;
+
+        /**
+         * Creates a new BumpForceCloseFeeRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BumpForceCloseFeeRequest instance
+         */
+        public static create(
+            properties?: walletrpc.IBumpForceCloseFeeRequest
+        ): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeRequest message. Does not implicitly {@link walletrpc.BumpForceCloseFeeRequest.verify|verify} messages.
+         * @param message BumpForceCloseFeeRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IBumpForceCloseFeeRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeRequest message, length delimited. Does not implicitly {@link walletrpc.BumpForceCloseFeeRequest.verify|verify} messages.
+         * @param message BumpForceCloseFeeRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IBumpForceCloseFeeRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BumpForceCloseFeeRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BumpForceCloseFeeRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Decodes a BumpForceCloseFeeRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BumpForceCloseFeeRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Verifies a BumpForceCloseFeeRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BumpForceCloseFeeRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BumpForceCloseFeeRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Creates a plain object from a BumpForceCloseFeeRequest message. Also converts values to other types if specified.
+         * @param message BumpForceCloseFeeRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.BumpForceCloseFeeRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BumpForceCloseFeeRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BumpForceCloseFeeRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a BumpForceCloseFeeResponse. */
+    interface IBumpForceCloseFeeResponse {
+        /** BumpForceCloseFeeResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a BumpForceCloseFeeResponse. */
+    class BumpForceCloseFeeResponse implements IBumpForceCloseFeeResponse {
+        /**
+         * Constructs a new BumpForceCloseFeeResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IBumpForceCloseFeeResponse);
+
+        /** BumpForceCloseFeeResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new BumpForceCloseFeeResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BumpForceCloseFeeResponse instance
+         */
+        public static create(
+            properties?: walletrpc.IBumpForceCloseFeeResponse
+        ): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeResponse message. Does not implicitly {@link walletrpc.BumpForceCloseFeeResponse.verify|verify} messages.
+         * @param message BumpForceCloseFeeResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IBumpForceCloseFeeResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeResponse message, length delimited. Does not implicitly {@link walletrpc.BumpForceCloseFeeResponse.verify|verify} messages.
+         * @param message BumpForceCloseFeeResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IBumpForceCloseFeeResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BumpForceCloseFeeResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BumpForceCloseFeeResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Decodes a BumpForceCloseFeeResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BumpForceCloseFeeResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Verifies a BumpForceCloseFeeResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BumpForceCloseFeeResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BumpForceCloseFeeResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Creates a plain object from a BumpForceCloseFeeResponse message. Also converts values to other types if specified.
+         * @param message BumpForceCloseFeeResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.BumpForceCloseFeeResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BumpForceCloseFeeResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BumpForceCloseFeeResponse
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */
