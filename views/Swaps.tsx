@@ -29,6 +29,7 @@ import AddressUtils from '../utils/AddressUtils';
 
 import SwapStore, { HOST } from '../stores/SwapStore';
 import UnitsStore from '../stores/UnitsStore';
+import InvoicesStore from '../stores/InvoicesStore';
 
 import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
@@ -39,6 +40,7 @@ interface SwapPaneProps {
     navigation: StackNavigationProp<any, any>;
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;
+    InvoicesStore: InvoicesStore;
 }
 
 interface SwapPaneState {
@@ -47,13 +49,13 @@ interface SwapPaneState {
     inputSats: number | any;
     outputSats: number | any;
     invoice: string;
-    isValidLightningInvoice: boolean;
+    isValid: boolean;
     apiError: any;
     apiUpdates: any;
     response: any;
 }
 
-@inject('SwapStore', 'UnitsStore')
+@inject('SwapStore', 'UnitsStore', 'InvoicesStore')
 @observer
 export default class SwapPane extends React.PureComponent<
     SwapPaneProps,
@@ -65,7 +67,7 @@ export default class SwapPane extends React.PureComponent<
         inputSats: 0,
         outputSats: 0,
         invoice: '',
-        isValidLightningInvoice: false,
+        isValid: false,
         apiUpdates: '',
         apiError: null,
         response: null
@@ -76,7 +78,7 @@ export default class SwapPane extends React.PureComponent<
     }
 
     render() {
-        const { SwapStore, UnitsStore, navigation } = this.props;
+        const { SwapStore, UnitsStore, navigation, InvoicesStore } = this.props;
         const {
             reverse,
             serviceFeeSats,
@@ -85,7 +87,7 @@ export default class SwapPane extends React.PureComponent<
             apiError,
             apiUpdates,
             invoice,
-            isValidLightningInvoice
+            isValid
         } = this.state;
         const { subInfo, reverseInfo, loading } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
@@ -369,6 +371,8 @@ export default class SwapPane extends React.PureComponent<
                                             _,
                                             satAmount: string | number
                                         ) => {
+                                            this.setState({ apiError: '' });
+
                                             // remove commas
                                             const sanitizedSatAmount =
                                                 units !== 'BTC'
@@ -481,6 +485,8 @@ export default class SwapPane extends React.PureComponent<
                                                 _,
                                                 satAmount: string | number
                                             ) => {
+                                                this.setState({ apiError: '' });
+
                                                 // remove commas
                                                 const sanitizedSatAmount =
                                                     units !== 'BTC'
@@ -612,17 +618,27 @@ export default class SwapPane extends React.PureComponent<
                             </View>
                             <TextInput
                                 onChangeText={(text: string) => {
-                                    const isValidLightningInvoice = text
-                                        ? AddressUtils.isValidLightningPaymentRequest(
-                                              text
-                                          )
-                                        : false;
+                                    let isValid;
+                                    if (reverse) {
+                                        isValid = text
+                                            ? AddressUtils.isValidBitcoinAddress(
+                                                  text,
+                                                  true
+                                              )
+                                            : false;
+                                    } else {
+                                        isValid = text
+                                            ? AddressUtils.isValidLightningPaymentRequest(
+                                                  text
+                                              )
+                                            : false;
+                                    }
 
                                     this.setState({
                                         invoice: text,
                                         apiError: '',
                                         apiUpdates: '',
-                                        isValidLightningInvoice
+                                        isValid
                                     });
                                 }}
                                 placeholder={
@@ -650,19 +666,82 @@ export default class SwapPane extends React.PureComponent<
                                 }}
                             >
                                 <Button
-                                    onPress={() => {
-                                        navigation.navigate('Receive', {
-                                            amount:
+                                    onPress={async () => {
+                                        SwapStore.loading = true;
+                                        try {
+                                            const amount =
                                                 units === 'sats'
                                                     ? outputSats
                                                     : units === 'BTC'
                                                     ? new BigNumber(outputSats)
                                                           .div(SATS_PER_BTC)
                                                           .toFixed(8)
-                                                    : '',
-                                            selectedIndex: reverse ? 2 : 1,
-                                            autoGenerate: true
-                                        });
+                                                    : '';
+
+                                            if (!amount) {
+                                                this.setState({
+                                                    apiError:
+                                                        'Please enter a amount!'
+                                                });
+                                                SwapStore.loading = false;
+                                                return;
+                                            }
+
+                                            await InvoicesStore.createUnifiedInvoice(
+                                                {
+                                                    memo: '',
+                                                    value:
+                                                        amount.toString() ||
+                                                        '0',
+                                                    expiry: '3600'
+                                                }
+                                            );
+
+                                            if (reverse) {
+                                                if (
+                                                    InvoicesStore.onChainAddress
+                                                ) {
+                                                    this.setState({
+                                                        invoice:
+                                                            InvoicesStore.onChainAddress,
+                                                        apiError: '',
+                                                        isValid: true
+                                                    });
+                                                } else {
+                                                    this.setState({
+                                                        apiError:
+                                                            'Failed to retrieve on-chain address'
+                                                    });
+                                                }
+                                            } else {
+                                                if (
+                                                    InvoicesStore.payment_request
+                                                ) {
+                                                    this.setState({
+                                                        invoice:
+                                                            InvoicesStore.payment_request,
+                                                        isValid: true,
+                                                        apiError: ''
+                                                    });
+                                                } else {
+                                                    this.setState({
+                                                        apiError:
+                                                            'Failed to retrieve Lightning payment request'
+                                                    });
+                                                }
+                                            }
+                                            SwapStore.loading = false;
+                                        } catch (error: any) {
+                                            console.error(
+                                                'Error generating invoice:',
+                                                error
+                                            );
+                                            this.setState({
+                                                apiError:
+                                                    'Failed to generate invoice'
+                                            });
+                                            SwapStore.loading = false;
+                                        }
                                     }}
                                     title={
                                         !reverse
@@ -684,13 +763,13 @@ export default class SwapPane extends React.PureComponent<
                                 <Button
                                     title={localeString('views.Swaps.initiate')}
                                     onPress={() => {
-                                        this.props.SwapStore.loading = true;
+                                        SwapStore.loading = true;
                                         createSubmarineSwap(invoice);
                                     }}
                                     containerStyle={{
                                         marginTop: 10
                                     }}
-                                    disabled={!isValidLightningInvoice}
+                                    disabled={!isValid}
                                 />
                             </View>
                         </>
