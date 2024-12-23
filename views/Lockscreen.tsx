@@ -9,7 +9,7 @@ import {
     Text,
     View
 } from 'react-native';
-import { Route } from '@react-navigation/native';
+import { Route, CommonActions } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
@@ -84,17 +84,29 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    proceed = (targetScreen?: string, navigationParams?: any) => {
+    proceed = (targetScreen?: string, triggerSettingsRefresh: boolean = false) => {
         const { SettingsStore, navigation } = this.props;
         if (targetScreen) {
-            navigation.popTo(targetScreen, navigationParams);
+            navigation.popTo(targetScreen, { triggerSettingsRefresh });
         } else if (
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
-            navigation.popTo('Wallets');
+            navigation.popTo('Wallets', { triggerSettingsRefresh: true });
         } else {
-            navigation.pop();
+            const navigationState = navigation.getState();
+            navigation.dispatch(
+                CommonActions.reset({
+                    ...navigationState,
+                    index: 0,
+                    routes: [
+                        {
+                            ...navigationState.routes[0],
+                            params: { triggerSettingsRefresh }
+                        }
+                    ]
+                })
+            );
         }
     };
 
@@ -149,6 +161,17 @@ export default class Lockscreen extends React.Component<
                 );
                 return;
             }
+        }
+
+        if (
+            posEnabled !== PosEnabled.Disabled &&
+            SettingsStore.posStatus === 'active' &&
+            !attemptAdminLogin &&
+            !deletePin &&
+            !deleteDuressPin
+        ) {
+            SettingsStore.setLoginStatus(true);
+            this.proceed('Wallet', true);
         }
 
         if (settings.authenticationAttempts) {

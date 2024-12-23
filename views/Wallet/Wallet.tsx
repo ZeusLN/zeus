@@ -197,16 +197,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.handleBackButton.bind(this)
         );
 
-        const { SettingsStore } = this.props;
+        const { SettingsStore, navigation } = this.props;
+        const { triggerSettingsRefresh } =
+            navigation.getState().routes[navigation.getState().index].params ||
+            {};
 
         if (
             this.state.initialLoad ||
             SettingsStore.posWasEnabled ||
-            SettingsStore.comingFromLockscreen
+            triggerSettingsRefresh
         ) {
             this.getSettingsAndNavigate();
             SettingsStore.posWasEnabled = false;
-            SettingsStore.comingFromLockscreen = false;
+            if (triggerSettingsRefresh) {
+                navigation.setParams({ triggerSettingsRefresh: false });
+            }
         }
     };
 
