@@ -268,7 +268,8 @@ export default class ChannelView extends React.Component<
             closing,
             zero_conf,
             getCommitmentType,
-            pending_htlcs
+            pending_htlcs,
+            blocks_til_maturity
         } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
@@ -280,7 +281,6 @@ export default class ChannelView extends React.Component<
             closeHeight ||
             closing
         );
-        const bumpable: boolean = pendingOpen;
 
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
@@ -757,20 +757,56 @@ export default class ChannelView extends React.Component<
                             csv_delay={csv_delay}
                         />
                     )}
-                    {BackendUtils.supportsBumpFee() && bumpable && (
+                    {BackendUtils.supportsBumpFee() && pendingOpen && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.BumpFee.titleAlt')}
                                 onPress={() =>
                                     navigation.navigate('BumpFee', {
                                         outpoint: channel.channel_point,
-                                        channel: true
+                                        pendingOpen: true
                                     })
                                 }
                                 noUppercase
                             />
                         </View>
                     )}
+                    {BackendUtils.supportsBumpFee() &&
+                        (pendingClose || closing) &&
+                        closing_txid && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.BumpFee.titleClose'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate('BumpFee', {
+                                            outpoint: `${closing_txid}:0`,
+                                            pendingClose: true
+                                        })
+                                    }
+                                    noUppercase
+                                />
+                            </View>
+                        )}
+                    {BackendUtils.supportsBumpFee() &&
+                        forceClose &&
+                        !blocks_til_maturity && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.BumpFee.titleClose'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate('BumpFee', {
+                                            chan_point: channel.channel_point,
+                                            forceClose: true
+                                        })
+                                    }
+                                    noUppercase
+                                />
+                            </View>
+                        )}
                     {!closeHeight &&
                         !closing_txid &&
                         !pendingClose &&

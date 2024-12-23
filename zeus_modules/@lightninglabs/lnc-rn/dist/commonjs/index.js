@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", {
 var _exportNames = {};
 exports.default = void 0;
 var _lnc = _interopRequireDefault(require("./lnc"));
-var _lncCore = require("@lightninglabs/lnc-core");
+var _lncCore = require("../../../@lightninglabs/lnc-core");
 Object.keys(_lncCore).forEach(function (key) {
   if (key === "default" || key === "__esModule") return;
   if (Object.prototype.hasOwnProperty.call(_exportNames, key)) return;

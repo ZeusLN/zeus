@@ -1,6 +1,7 @@
 import { NativeModules, NativeEventEmitter } from 'react-native';
 
-import LNC, { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-rn';
+import LNC from '../zeus_modules/@lightninglabs/lnc-rn';
+import { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-core';
 
 import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import CredentialStore from './LNC/credentialStore';
@@ -111,7 +112,7 @@ export default class LightningNodeConnect {
             .closedChannels({})
             .then((data: lnrpc.ClosedChannelsResponse) => snakeize(data));
     getChannelInfo = async (chanId: string) => {
-        const request: lnrpc.ChanInfoRequest = { chanId };
+        const request: lnrpc.ChanInfoRequest = { chanId, chanPoint: '' };
         return await this.lnc.lnd.lightning
             .getChanInfo(request)
             .then((data: lnrpc.ChannelEdge) => snakeize(data));
@@ -456,6 +457,12 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.walletKit
             .bumpFee(snakeize(req))
             .then((data: walletrpc.BumpFeeResponse) => snakeize(data));
+    bumpForceCloseFee = async (req: walletrpc.BumpForceCloseFeeRequest) =>
+        await this.lnc.lnd.walletKit
+            .bumpForceCloseFee(snakeize(req))
+            .then((data: walletrpc.BumpForceCloseFeeResponse) =>
+                snakeize(data)
+            );
     listAccounts = async () =>
         await this.lnc.lnd.walletKit
             .listAccounts({})

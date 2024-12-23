@@ -84,6 +84,7 @@ import {
     signMessage,
     signMessageNodePubkey,
     bumpFee,
+    bumpForceCloseFee,
     fundPsbt,
     signPsbt,
     finalizePsbt,
@@ -393,15 +394,28 @@ export interface ILndMobileInjections {
         ) => Promise<lnrpc.SignMessageResponse>;
         bumpFee: ({
             outpoint,
-            target_conf,
-            force,
-            sat_per_vbyte
+            immediate,
+            sat_per_vbyte,
+            budget
         }: {
             outpoint: lnrpc.OutPoint;
-            target_conf?: number;
-            force?: boolean;
+            immediate?: boolean;
             sat_per_vbyte?: Long;
+            budget?: Long;
         }) => Promise<walletrpc.BumpFeeResponse>;
+        bumpForceCloseFee: ({
+            chan_point,
+            target_conf,
+            immediate,
+            starting_feerate,
+            budget
+        }: {
+            chan_point: lnrpc.OutPoint;
+            target_conf?: number;
+            immediate?: boolean;
+            starting_feerate?: Long;
+            budget?: Long;
+        }) => Promise<walletrpc.BumpForceCloseFeeResponse>;
         fundPsbt: ({
             account,
             psbt,
@@ -550,6 +564,7 @@ export default {
         signMessage,
         signMessageNodePubkey,
         bumpFee,
+        bumpForceCloseFee,
         fundPsbt,
         signPsbt,
         finalizePsbt,
