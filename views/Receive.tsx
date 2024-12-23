@@ -1514,12 +1514,14 @@ export default class Receive extends React.Component<
                         posStatus === 'active' ||
                         hideRightHeaderComponent ? undefined : route.params
                               ?.selectedIndex === 2 ? (
-                            BackendUtils.supportsAddressTypeSelection() ? (
+                            BackendUtils.supportsAddressTypeSelection() &&
+                            account === 'default' ? (
                                 <SettingsButton />
                             ) : undefined
                         ) : haveInvoice ? (
                             selectedIndex === 2 ? (
-                                BackendUtils.supportsAddressTypeSelection() ? (
+                                BackendUtils.supportsAddressTypeSelection() &&
+                                account === 'default' ? (
                                     <SettingsButton />
                                 ) : (
                                     <ClearButton />
@@ -1529,6 +1531,7 @@ export default class Receive extends React.Component<
                             )
                         ) : !creatingInvoice &&
                           BackendUtils.supportsAddressTypeSelection() &&
+                          account === 'default' &&
                           (selectedIndex === 2 || selectedIndex === 1) ? (
                             <SettingsButton />
                         ) : undefined
