@@ -49,7 +49,7 @@ interface SwapPaneState {
     inputSats: number | any;
     outputSats: number | any;
     invoice: string;
-    isValidLightningInvoice: boolean;
+    isValid: boolean;
     apiError: any;
     apiUpdates: any;
     response: any;
@@ -67,7 +67,7 @@ export default class SwapPane extends React.PureComponent<
         inputSats: 0,
         outputSats: 0,
         invoice: '',
-        isValidLightningInvoice: false,
+        isValid: false,
         apiUpdates: '',
         apiError: null,
         response: null
@@ -87,7 +87,7 @@ export default class SwapPane extends React.PureComponent<
             apiError,
             apiUpdates,
             invoice,
-            isValidLightningInvoice
+            isValid
         } = this.state;
         const { subInfo, reverseInfo, loading } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
@@ -618,17 +618,27 @@ export default class SwapPane extends React.PureComponent<
                             </View>
                             <TextInput
                                 onChangeText={(text: string) => {
-                                    const isValidLightningInvoice = text
-                                        ? AddressUtils.isValidLightningPaymentRequest(
-                                              text
-                                          )
-                                        : false;
+                                    let isValid;
+                                    if (reverse) {
+                                        isValid = text
+                                            ? AddressUtils.isValidBitcoinAddress(
+                                                  text,
+                                                  true
+                                              )
+                                            : false;
+                                    } else {
+                                        isValid = text
+                                            ? AddressUtils.isValidLightningPaymentRequest(
+                                                  text
+                                              )
+                                            : false;
+                                    }
 
                                     this.setState({
                                         invoice: text,
                                         apiError: '',
                                         apiUpdates: '',
-                                        isValidLightningInvoice
+                                        isValid
                                     });
                                 }}
                                 placeholder={
@@ -694,7 +704,8 @@ export default class SwapPane extends React.PureComponent<
                                                     this.setState({
                                                         invoice:
                                                             InvoicesStore.onChainAddress,
-                                                        apiError: ''
+                                                        apiError: '',
+                                                        isValid: true
                                                     });
                                                 } else {
                                                     this.setState({
@@ -709,8 +720,7 @@ export default class SwapPane extends React.PureComponent<
                                                     this.setState({
                                                         invoice:
                                                             InvoicesStore.payment_request,
-                                                        isValidLightningInvoice:
-                                                            true,
+                                                        isValid: true,
                                                         apiError: ''
                                                     });
                                                 } else {
@@ -759,7 +769,7 @@ export default class SwapPane extends React.PureComponent<
                                     containerStyle={{
                                         marginTop: 10
                                     }}
-                                    disabled={!isValidLightningInvoice}
+                                    disabled={!isValid}
                                 />
                             </View>
                         </>
