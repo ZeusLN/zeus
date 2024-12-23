@@ -571,6 +571,7 @@ export default class WalletConfiguration extends React.Component<
         navigation.navigate('WalletConfiguration', {
             node,
             newEntry: true,
+            active: false,
             saved: false,
             index: nodes!.length
         });
