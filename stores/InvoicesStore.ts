@@ -268,7 +268,9 @@ export default class InvoicesStore {
                         hop_hints: [
                             {
                                 node_id: routeHintChannel.remotePubkey,
-                                chan_id: routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
+                                chan_id:
+                                    routeHintChannel.peer_scid_alias ||
+                                    routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
                                 fee_base_msat: Number(
                                     remotePolicy?.fee_base_msat
                                 ),
