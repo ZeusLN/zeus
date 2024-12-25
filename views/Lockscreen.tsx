@@ -414,23 +414,7 @@ export default class Lockscreen extends React.Component<
                     deletePin ||
                     deleteDuressPin ||
                     attemptAdminLogin) && (
-                    <Header
-                        leftComponent="Back"
-                        centerComponent={
-                            passphrase
-                                ? {
-                                      text: localeString(
-                                          'views.Lockscreen.enterPassphrase'
-                                      ),
-                                      style: {
-                                          color: themeColor('text'),
-                                          fontFamily: 'PPNeueMontreal-Book'
-                                      }
-                                  }
-                                : undefined
-                        }
-                        navigation={navigation}
-                    />
+                    <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
                     <View
@@ -450,6 +434,18 @@ export default class Lockscreen extends React.Component<
                                 message={this.generateErrorMessage()}
                             />
                         )}
+                        <View style={{ marginBottom: 40 }}>
+                            <Text
+                                style={{
+                                    ...styles.mainText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Lockscreen.enterPassphrase'
+                                )}
+                            </Text>
+                        </View>
                         <View style={styles.inputContainer}>
                             <TextInput
                                 placeholder={'****************'}
