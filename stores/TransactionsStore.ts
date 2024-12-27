@@ -566,7 +566,7 @@ export default class TransactionsStore {
         const isKeysend =
             result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
                 keySendPreimageType
-            ];
+            ] != null;
 
         // TODO add message for in-flight transactions
         if (
@@ -590,7 +590,6 @@ export default class TransactionsStore {
                       )
                     : errorToUserFriendly(
                           result.failure_reason,
-                          true,
                           isKeysend ? ['Keysend'] : undefined
                       )) || errorToUserFriendly(result.payment_error);
         }
