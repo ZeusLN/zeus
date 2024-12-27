@@ -95,6 +95,7 @@ const handleAnything = async (
     setAmount?: string,
     isClipboardValue?: boolean
 ): Promise<any> => {
+    data = data.trim();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     const { value, amount, lightning, offer }: any =
