@@ -367,7 +367,10 @@ export default class EditFee extends React.Component<
                                         keyboardType="numeric"
                                         value={this.state.customFee}
                                         onChangeText={(text: string) => {
-                                            text = text.replace(/[^0-9]*/g, '');
+                                            text =
+                                                text
+                                                    .replace(/[^0-9]*/g, '')
+                                                    .replace(/^0+/, '') || '0';
                                             this.setState({
                                                 customFee: text,
                                                 fee: text,
