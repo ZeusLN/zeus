@@ -100,7 +100,9 @@ export default class Security extends React.Component<
             scramblePin: settings.scramblePin ?? true,
             loginBackground: settings.loginBackground ?? false,
             isBiometryEnabled: biometricsStatus.isBiometryEnabled,
-            supportedBiometryType: biometricsStatus.supportedBiometryType
+            supportedBiometryType: biometricsStatus.supportedBiometryType,
+            pinExists: !!settings.pin,
+            passphraseExists: !!settings.passphrase
         });
 
         if (settings.pin) {
