@@ -865,7 +865,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 )}
                                         </>
                                     )}
-                                    {posStatus !== 'active' && (
+                                    {posStatus !== 'active' && !error && (
                                         <Tab.Screen
                                             name="Camera"
                                             component={CameraScreen}
