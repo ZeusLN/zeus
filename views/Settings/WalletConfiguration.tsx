@@ -621,18 +621,22 @@ export default class WalletConfiguration extends React.Component<
             : undefined;
     }
 
-    setWalletConfigurationAsActive = () => {
+    setWalletConfigurationAsActive = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { updateSettings, setConnectingStatus, setInitialStart } =
+            SettingsStore;
         const { index } = this.state;
 
-        updateSettings({
+        await updateSettings({
             selectedNode: index
         });
 
         this.setState({
             active: true
         });
+
+        setConnectingStatus(true);
+        setInitialStart(false);
 
         navigation.popTo('Wallet', { refresh: true });
     };
