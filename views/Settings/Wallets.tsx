@@ -20,13 +20,10 @@ import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
-import BalanceStore from '../../stores/BalanceStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, {
     INTERFACE_KEYS,
     Node
 } from '../../stores/SettingsStore';
-import ChannelsStore from '../../stores/ChannelsStore';
 
 import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -49,9 +46,6 @@ interface NodesProps {
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
-    BalanceStore: BalanceStore;
-    NodeInfoStore: NodeInfoStore;
-    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -63,7 +57,7 @@ interface NodesState {
 
 const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 
-@inject('BalanceStore', 'NodeInfoStore', 'ChannelsStore', 'SettingsStore')
+@inject('SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
@@ -118,13 +112,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     );
 
     render() {
-        const {
-            navigation,
-            BalanceStore,
-            NodeInfoStore,
-            ChannelsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { loading, nodes, selectedNode } = this.state;
         const {
             updateSettings,
@@ -263,9 +251,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 nodes,
                                                 selectedNode: index
                                             }).then(() => {
-                                                BalanceStore.reset();
-                                                NodeInfoStore.reset();
-                                                ChannelsStore.reset();
                                                 setConnectingStatus(true);
                                                 setInitialStart(false);
                                                 navigation.popTo('Wallet', {
