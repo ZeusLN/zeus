@@ -1015,7 +1015,7 @@
     "views.BumpFee.budget": "Rozpočet (sats)",
     "views.BumpFee.budget.explainer1": "Maximální částka v satoshi, kterou lze použít jako poplatky.  Nastavení této hodnoty vyšší, než je hodnota vstupu, může vyústit v CPFP – jeden nebo více utxo peněženky bude použito k zaplacení poplatků stanovených rozpočtem.",
     "views.BumpFee.budget.explainer2": "Pokud není nastaveno, bude pro nové vstupy ve výchozím nastavení 50 % hodnoty vstupu považováno za rozpočet pro navýšení poplatků; u stávajících vstupů budou zachovány jejich současné rozpočty.",
-    "views.BumpFee.immediate.explainer": "Whether this input will be swept immediately. When enabled, the sweeper will sweep this input without waiting for the next batch.",
+    "views.BumpFee.immediate.explainer": "Určuje, zda bude tento výstup přenesen okamžitě. Pokud je nastavení povoleno, přenašeč přenese vstup bez čekání na další dávku.",
     "views.BumpFee.startingFee": "Zahajovací poplatek (sat/vbyte)",
     "views.Sync.title": "Synchronizace peněženky",
     "views.Sync.currentBlockHeight": "Aktuální výška bloku",
