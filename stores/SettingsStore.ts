@@ -1,6 +1,7 @@
 import { action, observable } from 'mobx';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import isEqual from 'lodash/isEqual';
 
@@ -11,6 +12,12 @@ import { getSupportedBiometryType } from '../utils/BiometricUtils';
 
 // lndhub
 import LoginRequest from './../models/LoginRequest';
+
+import { LEGACY_NOTES_KEY, MODERN_NOTES_KEY } from './NotesStore';
+import { LEGACY_CONTACTS_KEY, MODERN_CONTACTS_KEY } from './ContactStore';
+
+const LEGACY_STORAGE_KEY = 'zeus-settings';
+const MODERN_STORAGE_KEY = 'zeus-settings-v2';
 
 export interface Node {
     host?: string;
@@ -1090,8 +1097,6 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
     'testnet.blixtwallet.com'
 ];
 
-const STORAGE_KEY = 'zeus-settings';
-
 const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 export default class SettingsStore {
@@ -1384,232 +1389,220 @@ export default class SettingsStore {
         return this.macaroonHex || this.accessKey ? true : false;
     }
 
+    async legacySettingsMigrations(settings: string) {
+        const newSettings = JSON.parse(settings) as Settings;
+        if (!newSettings.fiatRatesSource) {
+            newSettings.fiatRatesSource = DEFAULT_FIAT_RATES_SOURCE;
+        }
+
+        // migrate fiat settings from older versions
+        if (!newSettings.fiat || newSettings.fiat === 'Disabled') {
+            newSettings.fiat = DEFAULT_FIAT;
+            newSettings.fiatEnabled = false;
+        } else if (newSettings.fiatEnabled == null) {
+            newSettings.fiatEnabled = true;
+        }
+
+        // set default LSPs if not defined
+        if (newSettings.enableLSP === undefined) {
+            newSettings.enableLSP = true;
+        }
+        if (!newSettings.lspMainnet) {
+            newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
+        }
+        if (!newSettings.lspTestnet) {
+            newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
+        }
+
+        // default Lightning Address settings
+        if (!newSettings.lightningAddress) {
+            newSettings.lightningAddress = {
+                enabled: false,
+                automaticallyAccept: true,
+                automaticallyAcceptAttestationLevel: 2,
+                automaticallyRequestOlympusChannels: false, // deprecated
+                routeHints: false,
+                allowComments: true,
+                nostrPrivateKey: '',
+                nostrRelays: DEFAULT_NOSTR_RELAYS,
+                notifications: 0
+            };
+        }
+
+        // migrate locale to ISO 639-1
+        if (
+            newSettings.locale != null &&
+            localeMigrationMapping[newSettings.locale]
+        ) {
+            newSettings.locale = localeMigrationMapping[newSettings.locale];
+        }
+
+        const MOD_KEY = 'lsp-taproot-mod';
+        const mod = await EncryptedStorage.getItem(MOD_KEY);
+        if (!mod) {
+            newSettings.requestSimpleTaproot = true;
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY, 'true');
+        }
+
+        const MOD_KEY2 = 'lsp-preview-mod';
+        const mod2 = await EncryptedStorage.getItem(MOD_KEY2);
+        if (!mod2) {
+            if (newSettings?.lspMainnet === 'https://lsp-preview.lnolymp.us') {
+                newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
+            }
+            if (newSettings?.lspTestnet === 'https://testnet-lsp.lnolymp.us') {
+                newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
+            }
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY2, 'true');
+        }
+
+        const MOD_KEY3 = 'neutrino-peers-mod1';
+        const mod3 = await EncryptedStorage.getItem(MOD_KEY3);
+        if (!mod3) {
+            const neutrinoPeersMainnetOld = [
+                'btcd1.lnolymp.us',
+                'btcd2.lnolymp.us',
+                'btcd-mainnet.lightning.computer',
+                'node.eldamar.icu',
+                'noad.sathoarder.com'
+            ];
+            if (
+                JSON.stringify(newSettings?.neutrinoPeersMainnet) ===
+                JSON.stringify(neutrinoPeersMainnetOld)
+            ) {
+                newSettings.neutrinoPeersMainnet =
+                    DEFAULT_NEUTRINO_PEERS_MAINNET;
+            }
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY3, 'true');
+        }
+
+        const MOD_KEY4 = 'lsps1-hosts1';
+        const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
+        if (!mod4) {
+            if (!newSettings?.lsps1HostMainnet) {
+                newSettings.lsps1HostMainnet = DEFAULT_LSPS1_HOST_MAINNET;
+            }
+            if (!newSettings?.lsps1HostTestnet) {
+                newSettings.lsps1HostTestnet = DEFAULT_LSPS1_HOST_TESTNET;
+            }
+            if (!newSettings?.lsps1PubkeyMainnet) {
+                newSettings.lsps1PubkeyMainnet = DEFAULT_LSPS1_PUBKEY_MAINNET;
+            }
+            if (!newSettings?.lsps1PubkeyTestnet) {
+                newSettings.lsps1PubkeyTestnet = DEFAULT_LSPS1_PUBKEY_TESTNET;
+            }
+            if (!newSettings?.lsps1RestMainnet) {
+                newSettings.lsps1RestMainnet = DEFAULT_LSPS1_REST_MAINNET;
+            }
+            if (!newSettings?.lsps1RestTestnet) {
+                newSettings.lsps1RestTestnet = DEFAULT_LSPS1_REST_TESTNET;
+            }
+
+            if (!newSettings?.lsps1Token) {
+                newSettings.lsps1Token = '';
+            }
+
+            if (!newSettings?.lsps1ShowPurchaseButton) {
+                newSettings.lsps1ShowPurchaseButton = true;
+            }
+
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY4, 'true');
+        }
+
+        const MOD_KEY5 = 'millisat_amounts';
+        const mod5 = await EncryptedStorage.getItem(MOD_KEY5);
+        if (!mod5) {
+            if (!newSettings?.display.showMillisatoshiAmounts) {
+                newSettings.display.showMillisatoshiAmounts = true;
+            }
+
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY5, 'true');
+        }
+
+        const MOD_KEY6 = 'egs-host';
+        const mod6 = await EncryptedStorage.getItem(MOD_KEY6);
+        if (!mod6) {
+            if (!newSettings?.speedloader) {
+                newSettings.speedloader = DEFAULT_SPEEDLOADER;
+                newSettings.customSpeedloader = '';
+            }
+
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY6, 'true');
+        }
+
+        // switch off bimodal pathfinding while bug exists
+        // https://github.com/lightningnetwork/lnd/issues/9085
+        const MOD_KEY7 = 'bimodal-bug-9085';
+        const mod7 = await EncryptedStorage.getItem(MOD_KEY7);
+        if (!mod7) {
+            if (newSettings?.bimodalPathfinding) {
+                newSettings.bimodalPathfinding = false;
+            }
+
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY7, 'true');
+        }
+
+        const MOD_KEY8 = 'nostr-relays-2024';
+        const mod8 = await EncryptedStorage.getItem(MOD_KEY8);
+        if (!mod8) {
+            if (
+                JSON.stringify(newSettings?.lightningAddress?.nostrRelays) ===
+                JSON.stringify(DEFAULT_NOSTR_RELAYS_2023)
+            ) {
+                newSettings.lightningAddress.nostrRelays = DEFAULT_NOSTR_RELAYS;
+            }
+
+            this.setSettings(JSON.stringify(newSettings));
+            await EncryptedStorage.setItem(MOD_KEY8, 'true');
+        }
+
+        // migrate old POS squareEnabled setting to posEnabled
+        if (newSettings?.pos?.squareEnabled) {
+            newSettings.pos.posEnabled = PosEnabled.Square;
+            newSettings.pos.squareEnabled = false;
+        }
+
+        if (!newSettings.neutrinoPeersMainnet) {
+            newSettings.neutrinoPeersMainnet = DEFAULT_NEUTRINO_PEERS_MAINNET;
+        }
+        if (!newSettings.neutrinoPeersTestnet) {
+            newSettings.neutrinoPeersTestnet = DEFAULT_NEUTRINO_PEERS_TESTNET;
+        }
+
+        if (newSettings.payments == null) {
+            newSettings.payments = {
+                slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
+            };
+        } else if (newSettings.payments.slideToPayThreshold == null) {
+            newSettings.payments.slideToPayThreshold =
+                DEFAULT_SLIDE_TO_PAY_THRESHOLD;
+        }
+
+        return newSettings;
+    }
+
     @action
     public async getSettings(silentUpdate: boolean = false) {
         if (!silentUpdate) this.loading = true;
         try {
-            // Retrieve the settings
-            const settings = await EncryptedStorage.getItem(STORAGE_KEY);
-            if (settings) {
-                const newSettings = JSON.parse(settings) as Settings;
-                if (!newSettings.fiatRatesSource) {
-                    newSettings.fiatRatesSource = DEFAULT_FIAT_RATES_SOURCE;
-                }
+            const modernSettings: any = await Keychain.getInternetCredentials(
+                MODERN_STORAGE_KEY
+            );
 
-                // migrate fiat settings from older versions
-                if (!newSettings.fiat || newSettings.fiat === 'Disabled') {
-                    newSettings.fiat = DEFAULT_FIAT;
-                    newSettings.fiatEnabled = false;
-                } else if (newSettings.fiatEnabled == null) {
-                    newSettings.fiatEnabled = true;
-                }
-
-                // set default LSPs if not defined
-                if (newSettings.enableLSP === undefined) {
-                    newSettings.enableLSP = true;
-                }
-                if (!newSettings.lspMainnet) {
-                    newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
-                }
-                if (!newSettings.lspTestnet) {
-                    newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
-                }
-
-                // default Lightning Address settings
-                if (!newSettings.lightningAddress) {
-                    newSettings.lightningAddress = {
-                        enabled: false,
-                        automaticallyAccept: true,
-                        automaticallyAcceptAttestationLevel: 2,
-                        automaticallyRequestOlympusChannels: false, // deprecated
-                        routeHints: false,
-                        allowComments: true,
-                        nostrPrivateKey: '',
-                        nostrRelays: DEFAULT_NOSTR_RELAYS,
-                        notifications: 0
-                    };
-                }
-
-                // migrate locale to ISO 639-1
-                if (
-                    newSettings.locale != null &&
-                    localeMigrationMapping[newSettings.locale]
-                ) {
-                    newSettings.locale =
-                        localeMigrationMapping[newSettings.locale];
-                }
-
-                const MOD_KEY = 'lsp-taproot-mod';
-                const mod = await EncryptedStorage.getItem(MOD_KEY);
-                if (!mod) {
-                    newSettings.requestSimpleTaproot = true;
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY, 'true');
-                }
-
-                const MOD_KEY2 = 'lsp-preview-mod';
-                const mod2 = await EncryptedStorage.getItem(MOD_KEY2);
-                if (!mod2) {
-                    if (
-                        newSettings?.lspMainnet ===
-                        'https://lsp-preview.lnolymp.us'
-                    ) {
-                        newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
-                    }
-                    if (
-                        newSettings?.lspTestnet ===
-                        'https://testnet-lsp.lnolymp.us'
-                    ) {
-                        newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
-                    }
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY2, 'true');
-                }
-
-                const MOD_KEY3 = 'neutrino-peers-mod1';
-                const mod3 = await EncryptedStorage.getItem(MOD_KEY3);
-                if (!mod3) {
-                    const neutrinoPeersMainnetOld = [
-                        'btcd1.lnolymp.us',
-                        'btcd2.lnolymp.us',
-                        'btcd-mainnet.lightning.computer',
-                        'node.eldamar.icu',
-                        'noad.sathoarder.com'
-                    ];
-                    if (
-                        JSON.stringify(newSettings?.neutrinoPeersMainnet) ===
-                        JSON.stringify(neutrinoPeersMainnetOld)
-                    ) {
-                        newSettings.neutrinoPeersMainnet =
-                            DEFAULT_NEUTRINO_PEERS_MAINNET;
-                    }
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY3, 'true');
-                }
-
-                const MOD_KEY4 = 'lsps1-hosts1';
-                const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
-                if (!mod4) {
-                    if (!newSettings?.lsps1HostMainnet) {
-                        newSettings.lsps1HostMainnet =
-                            DEFAULT_LSPS1_HOST_MAINNET;
-                    }
-                    if (!newSettings?.lsps1HostTestnet) {
-                        newSettings.lsps1HostTestnet =
-                            DEFAULT_LSPS1_HOST_TESTNET;
-                    }
-                    if (!newSettings?.lsps1PubkeyMainnet) {
-                        newSettings.lsps1PubkeyMainnet =
-                            DEFAULT_LSPS1_PUBKEY_MAINNET;
-                    }
-                    if (!newSettings?.lsps1PubkeyTestnet) {
-                        newSettings.lsps1PubkeyTestnet =
-                            DEFAULT_LSPS1_PUBKEY_TESTNET;
-                    }
-                    if (!newSettings?.lsps1RestMainnet) {
-                        newSettings.lsps1RestMainnet =
-                            DEFAULT_LSPS1_REST_MAINNET;
-                    }
-                    if (!newSettings?.lsps1RestTestnet) {
-                        newSettings.lsps1RestTestnet =
-                            DEFAULT_LSPS1_REST_TESTNET;
-                    }
-
-                    if (!newSettings?.lsps1Token) {
-                        newSettings.lsps1Token = '';
-                    }
-
-                    if (!newSettings?.lsps1ShowPurchaseButton) {
-                        newSettings.lsps1ShowPurchaseButton = true;
-                    }
-
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY4, 'true');
-                }
-
-                const MOD_KEY5 = 'millisat_amounts';
-                const mod5 = await EncryptedStorage.getItem(MOD_KEY5);
-                if (!mod5) {
-                    if (!newSettings?.display.showMillisatoshiAmounts) {
-                        newSettings.display.showMillisatoshiAmounts = true;
-                    }
-
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY5, 'true');
-                }
-
-                const MOD_KEY6 = 'egs-host';
-                const mod6 = await EncryptedStorage.getItem(MOD_KEY6);
-                if (!mod6) {
-                    if (!newSettings?.speedloader) {
-                        newSettings.speedloader = DEFAULT_SPEEDLOADER;
-                        newSettings.customSpeedloader = '';
-                    }
-
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY6, 'true');
-                }
-
-                // switch off bimodal pathfinding while bug exists
-                // https://github.com/lightningnetwork/lnd/issues/9085
-                const MOD_KEY7 = 'bimodal-bug-9085';
-                const mod7 = await EncryptedStorage.getItem(MOD_KEY7);
-                if (!mod7) {
-                    if (newSettings?.bimodalPathfinding) {
-                        newSettings.bimodalPathfinding = false;
-                    }
-
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY7, 'true');
-                }
-
-                const MOD_KEY8 = 'nostr-relays-2024';
-                const mod8 = await EncryptedStorage.getItem(MOD_KEY8);
-                if (!mod8) {
-                    if (
-                        JSON.stringify(
-                            newSettings?.lightningAddress?.nostrRelays
-                        ) === JSON.stringify(DEFAULT_NOSTR_RELAYS_2023)
-                    ) {
-                        newSettings.lightningAddress.nostrRelays =
-                            DEFAULT_NOSTR_RELAYS;
-                    }
-
-                    this.setSettings(JSON.stringify(newSettings));
-                    await EncryptedStorage.setItem(MOD_KEY8, 'true');
-                }
-
-                // migrate old POS squareEnabled setting to posEnabled
-                if (newSettings?.pos?.squareEnabled) {
-                    newSettings.pos.posEnabled = PosEnabled.Square;
-                    newSettings.pos.squareEnabled = false;
-                }
-
-                if (!newSettings.neutrinoPeersMainnet) {
-                    newSettings.neutrinoPeersMainnet =
-                        DEFAULT_NEUTRINO_PEERS_MAINNET;
-                }
-                if (!newSettings.neutrinoPeersTestnet) {
-                    newSettings.neutrinoPeersTestnet =
-                        DEFAULT_NEUTRINO_PEERS_TESTNET;
-                }
-
-                if (newSettings.payments == null) {
-                    newSettings.payments = {
-                        slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
-                    };
-                } else if (newSettings.payments.slideToPayThreshold == null) {
-                    newSettings.payments.slideToPayThreshold =
-                        DEFAULT_SLIDE_TO_PAY_THRESHOLD;
-                }
-
-                if (!isEqual(this.settings, newSettings)) {
-                    this.settings = newSettings;
-                }
+            if (modernSettings.password) {
+                console.log('attempting to load modern settings');
+                this.settings = JSON.parse(modernSettings.password);
 
                 const node: any =
-                    newSettings.nodes?.length &&
-                    newSettings.nodes[newSettings.selectedNode || 0];
+                    this.settings.nodes?.length &&
+                    this.settings.nodes[this.settings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;
                     this.port = node.port;
@@ -1635,7 +1628,133 @@ export default class SettingsStore {
                     this.embeddedLndNetwork = node.embeddedLndNetwork;
                 }
             } else {
-                console.log('No settings stored');
+                console.log('attempting to load legacy settings');
+
+                // Retrieve the settings
+                const settings = await EncryptedStorage.getItem(
+                    LEGACY_STORAGE_KEY
+                );
+                if (settings) {
+                    const newSettings = await this.legacySettingsMigrations(
+                        settings
+                    );
+
+                    if (!isEqual(this.settings, newSettings)) {
+                        this.settings = newSettings;
+                    }
+
+                    // Settings migration
+                    console.log('Attemping settings migration');
+                    const writeSuccess = await Keychain.setInternetCredentials(
+                        MODERN_STORAGE_KEY,
+                        MODERN_STORAGE_KEY,
+                        JSON.stringify(newSettings)
+                    );
+                    console.log('Settings migration status', writeSuccess);
+
+                    // Contacts migration
+                    try {
+                        const contacts = await EncryptedStorage.getItem(
+                            LEGACY_CONTACTS_KEY
+                        );
+                        if (contacts) {
+                            console.log('Attemping contacts migration');
+                            const writeSuccess =
+                                await Keychain.setInternetCredentials(
+                                    MODERN_CONTACTS_KEY,
+                                    MODERN_CONTACTS_KEY,
+                                    contacts
+                                );
+                            console.log(
+                                'Contacts migration status',
+                                writeSuccess
+                            );
+                        }
+                    } catch (error) {
+                        console.error(
+                            'Error loading contacts from encrypted storage',
+                            error
+                        );
+                    }
+
+                    // Notes migration
+                    try {
+                        const storedKeys = await EncryptedStorage.getItem(
+                            LEGACY_NOTES_KEY
+                        );
+                        if (storedKeys) {
+                            const noteKeys = JSON.parse(storedKeys);
+                            console.log('Attemping notes migration');
+                            const writeSuccess =
+                                await Keychain.setInternetCredentials(
+                                    MODERN_NOTES_KEY,
+                                    MODERN_NOTES_KEY,
+                                    storedKeys
+                                );
+                            console.log(
+                                'Notes keys migration status',
+                                writeSuccess
+                            );
+
+                            // Load all legacy notes
+                            await Promise.all(
+                                noteKeys.map(async (key: string) => {
+                                    const note = await EncryptedStorage.getItem(
+                                        key
+                                    );
+                                    if (note) {
+                                        const writeSuccess =
+                                            await Keychain.setInternetCredentials(
+                                                key,
+                                                key,
+                                                note
+                                            );
+                                        console.log(
+                                            `Notes keys migration status: ${key}`,
+                                            writeSuccess
+                                        );
+                                    }
+                                })
+                            );
+                        }
+                    } catch (error) {
+                        console.error(
+                            'Error loading note keys from encrypted storage',
+                            error
+                        );
+                    }
+
+                    const node: any =
+                        newSettings.nodes?.length &&
+                        newSettings.nodes[newSettings.selectedNode || 0];
+                    if (node) {
+                        this.host = node.host;
+                        this.port = node.port;
+                        this.url = node.url;
+                        this.username = node.username;
+                        this.password = node.password;
+                        this.lndhubUrl = node.lndhubUrl;
+                        this.macaroonHex = node.macaroonHex;
+                        this.rune = node.rune;
+                        this.accessKey = node.accessKey;
+                        this.dismissCustodialWarning =
+                            node.dismissCustodialWarning;
+                        this.implementation = node.implementation || 'lnd';
+                        this.certVerification = node.certVerification || false;
+                        this.enableTor = node.enableTor;
+                        // LNC
+                        this.pairingPhrase = node.pairingPhrase;
+                        this.mailboxServer = node.mailboxServer;
+                        this.customMailboxServer = node.customMailboxServer;
+                        // Embeded lnd
+                        this.seedPhrase = node.seedPhrase;
+                        this.walletPassword = node.walletPassword;
+                        this.adminMacaroon = node.adminMacaroon;
+                        this.embeddedLndNetwork = node.embeddedLndNetwork;
+                    }
+                } else {
+                    console.log('No settings stored');
+                }
             }
         } catch (error) {
             console.error('Could not load settings', error);
@@ -1649,7 +1768,7 @@ export default class SettingsStore {
     @action
     public async setSettings(settings: string) {
         this.loading = true;
-        await EncryptedStorage.setItem(STORAGE_KEY, settings);
+        await EncryptedStorage.setItem(LEGACY_STORAGE_KEY, settings);
         this.loading = false;
         return settings;
     }

@@ -8,7 +8,7 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -18,7 +18,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 import { Row } from '../components/layout/Row';
 
-import ContactStore from '../stores/ContactStore';
+import ContactStore, { MODERN_CONTACTS_KEY } from '../stores/ContactStore';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -101,12 +101,11 @@ export default class ContactDetails extends React.Component<
             try {
                 const { contactId, nostrContact, isNostrContact } =
                     this.props.route.params ?? {};
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
+                const contactsString: any =
+                    await Keychain.getInternetCredentials(MODERN_CONTACTS_KEY);
 
-                if (contactsString && contactId) {
-                    const existingContact = JSON.parse(contactsString);
+                if (contactsString.password && contactId) {
+                    const existingContact = JSON.parse(contactsString.password);
                     const contact = existingContact.find(
                         (contact: Contact) =>
                             contact.contactId === contactId ||
@@ -145,12 +144,14 @@ export default class ContactDetails extends React.Component<
     saveUpdatedContact = async (updatedContact: Contact) => {
         const { ContactStore } = this.props;
         try {
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
+            const contactsString: any = await Keychain.getInternetCredentials(
+                MODERN_CONTACTS_KEY
             );
 
-            if (contactsString) {
-                const existingContacts: Contact[] = JSON.parse(contactsString);
+            if (contactsString.password) {
+                const existingContacts: Contact[] = JSON.parse(
+                    contactsString.password
+                );
 
                 // Find the index of the contact with the same name
                 const contactIndex = existingContacts.findIndex(
@@ -162,8 +163,9 @@ export default class ContactDetails extends React.Component<
                     existingContacts[contactIndex] = updatedContact;
 
                     // Save the updated contacts back to storage
-                    await EncryptedStorage.setItem(
-                        'zeus-contacts',
+                    await Keychain.setInternetCredentials(
+                        MODERN_CONTACTS_KEY,
+                        MODERN_CONTACTS_KEY,
                         JSON.stringify(existingContacts)
                     );
 
@@ -179,18 +181,21 @@ export default class ContactDetails extends React.Component<
     importToContacts = async () => {
         const { contact } = this.state;
 
-        const contactsString = await EncryptedStorage.getItem('zeus-contacts');
+        const contactsString: any = await Keychain.getInternetCredentials(
+            MODERN_CONTACTS_KEY
+        );
 
-        const existingContacts: Contact[] = contactsString
-            ? JSON.parse(contactsString)
+        const existingContacts: Contact[] = contactsString.password
+            ? JSON.parse(contactsString.password)
             : [];
 
         const updatedContacts = [...existingContacts, contact].sort((a, b) =>
             a.name.localeCompare(b.name)
         );
 
-        await EncryptedStorage.setItem(
-            'zeus-contacts',
+        await Keychain.setInternetCredentials(
+            MODERN_CONTACTS_KEY,
+            MODERN_CONTACTS_KEY,
             JSON.stringify(updatedContacts)
         );
 
