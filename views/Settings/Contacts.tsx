@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { SearchBar, Divider } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -23,7 +23,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import Contact from '../../models/Contact';
 
-import ContactStore from '../../stores/ContactStore';
+import ContactStore, { MODERN_CONTACTS_KEY } from '../../stores/ContactStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
@@ -429,8 +429,9 @@ export default class Contacts extends React.Component<
                                         deletionAwaitingConfirmation: true
                                     });
                                 } else {
-                                    await EncryptedStorage.setItem(
-                                        'zeus-contacts',
+                                    await Keychain.setInternetCredentials(
+                                        MODERN_CONTACTS_KEY,
+                                        MODERN_CONTACTS_KEY,
                                         JSON.stringify([])
                                     );
                                     this.setState({

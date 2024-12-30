@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -30,7 +30,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-import ContactStore from '../stores/ContactStore';
+import ContactStore, { MODERN_CONTACTS_KEY } from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
@@ -407,11 +407,11 @@ export default class NostrContacts extends React.Component<
             );
 
             // Retrieve existing contacts from Encrypted storage
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
+            const contactsString: any = await Keychain.getInternetCredentials(
+                MODERN_CONTACTS_KEY
             );
-            const existingContacts: any = contactsString
-                ? JSON.parse(contactsString)
+            const existingContacts: any = contactsString.password
+                ? JSON.parse(contactsString.password)
                 : [];
 
             // Merge existing contacts with the new contacts
@@ -421,8 +421,9 @@ export default class NostrContacts extends React.Component<
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             // Save the updated contacts to encrypted storage
-            await EncryptedStorage.setItem(
-                'zeus-contacts',
+            await Keychain.setInternetCredentials(
+                MODERN_CONTACTS_KEY,
+                MODERN_CONTACTS_KEY,
                 JSON.stringify(updatedContacts)
             );
 

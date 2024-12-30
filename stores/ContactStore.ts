@@ -1,7 +1,10 @@
 import { action, observable } from 'mobx';
 import { v4 as uuidv4 } from 'uuid';
 import Contact from '../models/Contact';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import * as Keychain from 'react-native-keychain';
+
+export const LEGACY_CONTACTS_KEY = 'zeus-contacts';
+export const MODERN_CONTACTS_KEY = 'zeus-contacts-v2';
 
 export default class ContactStore {
     @observable public loading: boolean = true;
@@ -13,11 +16,13 @@ export default class ContactStore {
         try {
             this.loading = true;
             console.log('LOADING CONTACTS.....');
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
+            const contactsString: any = await Keychain.getInternetCredentials(
+                MODERN_CONTACTS_KEY
             );
-            if (contactsString) {
-                const allContacts: Contact[] = JSON.parse(contactsString);
+            if (contactsString.password) {
+                const allContacts: Contact[] = JSON.parse(
+                    contactsString.password
+                );
                 this.contacts = allContacts;
                 this.loading = false;
             } else {
@@ -39,11 +44,11 @@ export default class ContactStore {
         try {
             const compactedContactDetails =
                 this.compactContactArrays(contactDetails);
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
+            const contactsString: any = await Keychain.getInternetCredentials(
+                MODERN_CONTACTS_KEY
             );
-            const existingContacts: Contact[] = contactsString
-                ? JSON.parse(contactsString)
+            const existingContacts: Contact[] = contactsString.password
+                ? JSON.parse(contactsString.password)
                 : [];
 
             if (isEdit && this.prefillContact && !isNostrContact) {
@@ -57,8 +62,9 @@ export default class ContactStore {
                 updatedContacts.sort((a, b) => a.name.localeCompare(b.name));
 
                 // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
+                await Keychain.setInternetCredentials(
+                    MODERN_CONTACTS_KEY,
+                    MODERN_CONTACTS_KEY,
                     JSON.stringify(updatedContacts)
                 );
 
@@ -80,8 +86,9 @@ export default class ContactStore {
                 );
 
                 // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
+                await Keychain.setInternetCredentials(
+                    MODERN_CONTACTS_KEY,
+                    MODERN_CONTACTS_KEY,
                     JSON.stringify(updatedContacts)
                 );
 
@@ -111,11 +118,10 @@ export default class ContactStore {
     public deleteContact = async (navigation: any) => {
         if (this.prefillContact) {
             try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
-                const existingContacts: Contact[] = contactsString
-                    ? JSON.parse(contactsString)
+                const contactsString: any =
+                    await Keychain.getInternetCredentials(MODERN_CONTACTS_KEY);
+                const existingContacts: Contact[] = contactsString.password
+                    ? JSON.parse(contactsString.password)
                     : [];
 
                 const updatedContacts = existingContacts.filter(
@@ -123,8 +129,9 @@ export default class ContactStore {
                         contact.contactId !== this.prefillContact.contactId
                 );
 
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
+                await Keychain.setInternetCredentials(
+                    MODERN_CONTACTS_KEY,
+                    MODERN_CONTACTS_KEY,
                     JSON.stringify(updatedContacts)
                 );
 
