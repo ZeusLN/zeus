@@ -1,6 +1,5 @@
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import * as CryptoJS from 'crypto-js';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -18,7 +17,15 @@ import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
+import Storage from '../storage';
+
 const BACKUPS_HOST = 'https://backups.lnolymp.us';
+
+export const LEGACY_LAST_CHANNEL_BACKUP_STATUS = 'LAST_CHANNEL_BACKUP_STATUS';
+export const LEGACY_LAST_CHANNEL_BACKUP_TIME = 'LAST_CHANNEL_BACKUP_TIME';
+
+export const LAST_CHANNEL_BACKUP_STATUS = 'zeus-last-channel-backup-status';
+export const LAST_CHANNEL_BACKUP_TIME = 'zeus-last-channel-backup-time';
 
 export default class ChannelBackupStore {
     @observable public channelEventsSubscription: any;
@@ -44,11 +51,8 @@ export default class ChannelBackupStore {
     };
 
     logBackupStatus = async (status: string) => {
-        await EncryptedStorage.setItem('LAST_CHANNEL_BACKUP_STATUS', status);
-        await EncryptedStorage.setItem(
-            'LAST_CHANNEL_BACKUP_TIME',
-            `${new Date()}`
-        );
+        await Storage.setItem('LAST_CHANNEL_BACKUP_STATUS', status);
+        await Storage.setItem('LAST_CHANNEL_BACKUP_TIME', `${new Date()}`);
     };
 
     @action
@@ -317,10 +321,8 @@ export default class ChannelBackupStore {
     public initSubscribeChannelEvents = async () => {
         // Check if latest channel backup status is success
         // or if it's over three days ago and trigger backup
-        const status = await EncryptedStorage.getItem(
-            'LAST_CHANNEL_BACKUP_STATUS'
-        );
-        const time = await EncryptedStorage.getItem('LAST_CHANNEL_BACKUP_TIME');
+        const status = await Storage.getItem(LAST_CHANNEL_BACKUP_STATUS);
+        const time = await Storage.getItem(LAST_CHANNEL_BACKUP_TIME);
         if (status && status === 'ERROR') this.backupChannels();
         if (time) {
             const ONE_HOUR = 60 * 60 * 1000; /* ms */

@@ -8,7 +8,6 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import * as Keychain from 'react-native-keychain';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -31,6 +30,8 @@ import QR from '../assets/images/SVG/QR.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
+
+import Storage from '../storage';
 
 import Contact from '../models/Contact';
 
@@ -101,11 +102,12 @@ export default class ContactDetails extends React.Component<
             try {
                 const { contactId, nostrContact, isNostrContact } =
                     this.props.route.params ?? {};
-                const contactsString: any =
-                    await Keychain.getInternetCredentials(MODERN_CONTACTS_KEY);
+                const contactsString: any = await Storage.getItem(
+                    MODERN_CONTACTS_KEY
+                );
 
-                if (contactsString.password && contactId) {
-                    const existingContact = JSON.parse(contactsString.password);
+                if (contactsString && contactId) {
+                    const existingContact = JSON.parse(contactsString);
                     const contact = existingContact.find(
                         (contact: Contact) =>
                             contact.contactId === contactId ||
@@ -144,14 +146,12 @@ export default class ContactDetails extends React.Component<
     saveUpdatedContact = async (updatedContact: Contact) => {
         const { ContactStore } = this.props;
         try {
-            const contactsString: any = await Keychain.getInternetCredentials(
+            const contactsString: any = await Storage.getItem(
                 MODERN_CONTACTS_KEY
             );
 
-            if (contactsString.password) {
-                const existingContacts: Contact[] = JSON.parse(
-                    contactsString.password
-                );
+            if (contactsString) {
+                const existingContacts: Contact[] = JSON.parse(contactsString);
 
                 // Find the index of the contact with the same name
                 const contactIndex = existingContacts.findIndex(
@@ -163,10 +163,9 @@ export default class ContactDetails extends React.Component<
                     existingContacts[contactIndex] = updatedContact;
 
                     // Save the updated contacts back to storage
-                    await Keychain.setInternetCredentials(
+                    await Storage.setItem(
                         MODERN_CONTACTS_KEY,
-                        MODERN_CONTACTS_KEY,
-                        JSON.stringify(existingContacts)
+                        existingContacts
                     );
 
                     console.log('Contact updated successfully!');
@@ -181,23 +180,17 @@ export default class ContactDetails extends React.Component<
     importToContacts = async () => {
         const { contact } = this.state;
 
-        const contactsString: any = await Keychain.getInternetCredentials(
-            MODERN_CONTACTS_KEY
-        );
+        const contactsString: any = await Storage.getItem(MODERN_CONTACTS_KEY);
 
-        const existingContacts: Contact[] = contactsString.password
-            ? JSON.parse(contactsString.password)
+        const existingContacts: Contact[] = contactsString
+            ? JSON.parse(contactsString)
             : [];
 
         const updatedContacts = [...existingContacts, contact].sort((a, b) =>
             a.name.localeCompare(b.name)
         );
 
-        await Keychain.setInternetCredentials(
-            MODERN_CONTACTS_KEY,
-            MODERN_CONTACTS_KEY,
-            JSON.stringify(updatedContacts)
-        );
+        await Storage.setItem(MODERN_CONTACTS_KEY, updatedContacts);
 
         console.log('Contact imported successfully!');
         this.props.navigation.popTo('Contacts');

@@ -1,5 +1,4 @@
 import { action, observable } from 'mobx';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,6 +9,8 @@ import SettingsStore, { PosEnabled } from './SettingsStore';
 import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+
+import Storage from '../storage';
 
 export interface orderPaymentInfo {
     orderId: string;
@@ -22,8 +23,11 @@ export interface orderPaymentInfo {
     preimage?: string;
 }
 
-const POS_HIDDEN_KEY = 'pos-hidden';
-const POS_STANDALONE_KEY = 'pos-standalone';
+export const LEGACY_POS_HIDDEN_KEY = 'pos-hidden';
+export const LEGACY_POS_STANDALONE_KEY = 'pos-standalone';
+
+export const POS_HIDDEN_KEY = 'zeus-pos-hidden';
+export const POS_STANDALONE_KEY = 'zeus-pos-standalone';
 
 export default class PosStore {
     @observable public currentOrder: Order | null = null;
@@ -51,13 +55,10 @@ export default class PosStore {
 
     @action
     public hideOrder = async (orderId: string) => {
-        const hiddenOrdersItem = await EncryptedStorage.getItem(POS_HIDDEN_KEY);
+        const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
         const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
         hiddenOrders.push(orderId);
-        await EncryptedStorage.setItem(
-            POS_HIDDEN_KEY,
-            JSON.stringify(hiddenOrders)
-        );
+        await Storage.setItem(POS_HIDDEN_KEY, hiddenOrders);
     };
 
     @action
@@ -85,19 +86,16 @@ export default class PosStore {
         tx,
         preimage
     }: orderPaymentInfo) =>
-        EncryptedStorage.setItem(
-            `pos-${orderId}`,
-            JSON.stringify({
-                orderId,
-                orderTotal,
-                orderTip,
-                exchangeRate,
-                rate,
-                type,
-                tx,
-                preimage
-            })
-        );
+        Storage.setItem(`pos-${orderId}`, {
+            orderId,
+            orderTotal,
+            orderTip,
+            exchangeRate,
+            rate,
+            type,
+            tx,
+            preimage
+        });
 
     @action
     public clearCurrentOrder = () => (this.currentOrder = null);
@@ -235,9 +233,9 @@ export default class PosStore {
             this.openOrders.push(updateOrder);
         }
 
-        await EncryptedStorage.setItem(
+        await Storage.setItem(
             POS_STANDALONE_KEY,
-            JSON.stringify(this.openOrders.concat(this.paidOrders))
+            this.openOrders.concat(this.paidOrders)
         );
 
         this.clearCurrentOrder();
@@ -265,10 +263,10 @@ export default class PosStore {
         this.loading = true;
         this.error = false;
 
-        const soOrders = await EncryptedStorage.getItem(POS_STANDALONE_KEY);
+        const soOrders = await Storage.getItem(POS_STANDALONE_KEY);
 
         // fetch hidden orders - orders customers couldn't pay
-        const hiddenOrdersItem = await EncryptedStorage.getItem(POS_HIDDEN_KEY);
+        const hiddenOrdersItem = await Storage.getItem(POS_HIDDEN_KEY);
         const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
 
         const orders = JSON.parse(soOrders || '[]').map(
@@ -277,9 +275,7 @@ export default class PosStore {
 
         const enrichedOrders = await Promise.all(
             orders.map(async (order: any) => {
-                const payment = await EncryptedStorage.getItem(
-                    `pos-${order.id}`
-                );
+                const payment = await Storage.getItem(`pos-${order.id}`);
                 // mark order if hidden
                 if (hiddenOrders.includes(order.id)) {
                     order.hidden = true;
@@ -356,14 +352,14 @@ export default class PosStore {
                         });
 
                     // fetch hidden orders - orders customers couldn't pay
-                    const hiddenOrdersItem = await EncryptedStorage.getItem(
+                    const hiddenOrdersItem = await Storage.getItem(
                         POS_HIDDEN_KEY
                     );
                     const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
 
                     const enrichedOrders = await Promise.all(
                         orders.map(async (order: any) => {
-                            const payment = await EncryptedStorage.getItem(
+                            const payment = await Storage.getItem(
                                 `pos-${order.id}`
                             );
                             // mark order if hidden
@@ -478,14 +474,14 @@ export default class PosStore {
                         'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
 
                     // fetch hidden orders - orders customers couldn't pay
-                    const hiddenOrdersItem = await EncryptedStorage.getItem(
+                    const hiddenOrdersItem = await Storage.getItem(
                         POS_HIDDEN_KEY
                     );
                     const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
 
                     const enrichedOrders = await Promise.all(
                         orders.map(async (order: any) => {
-                            const payment = await EncryptedStorage.getItem(
+                            const payment = await Storage.getItem(
                                 `pos-${order.id}`
                             );
                             let tip;
@@ -548,7 +544,7 @@ export default class PosStore {
     public getOrderPaymentById = async (
         orderId: string
     ): Promise<Order | undefined> => {
-        const payment = await EncryptedStorage.getItem(`pos-${orderId}`);
+        const payment = await Storage.getItem(`pos-${orderId}`);
 
         if (payment) {
             return JSON.parse(payment);

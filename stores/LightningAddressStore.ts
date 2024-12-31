@@ -1,7 +1,6 @@
 import { Platform } from 'react-native';
 import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { Notifications } from 'react-native-notifications';
 
 import BigNumber from 'bignumber.js';
@@ -25,12 +24,17 @@ import Base64Utils from '../utils/Base64Utils';
 import { sleep } from '../utils/SleepUtils';
 import { localeString } from '../utils/LocaleUtils';
 
+import Storage from '../storage';
+
 const LNURL_HOST = 'https://zeuspay.com/api';
 const LNURL_SOCKET_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
-const ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
-const HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
+export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
+export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
+
+export const ADDRESS_ACTIVATED_STRING = 'zeuspay-lightning-address';
+export const HASHES_STORAGE_STRING = 'zeuspay-lightning-address-hashes';
 
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
@@ -65,20 +69,14 @@ export default class LightningAddressStore {
     @action
     public deleteAndGenerateNewPreimages = async () => {
         this.loading = true;
-        await EncryptedStorage.setItem(
-            HASHES_STORAGE_STRING,
-            JSON.stringify('')
-        );
+        await Storage.setItem(HASHES_STORAGE_STRING, '');
         this.generatePreimages(true);
     };
 
     @action
     public DEV_deleteLocalHashes = async () => {
         this.loading = true;
-        await EncryptedStorage.setItem(
-            HASHES_STORAGE_STRING,
-            JSON.stringify('')
-        );
+        await Storage.setItem(HASHES_STORAGE_STRING, '');
         await this.status();
         this.loading = false;
     };
@@ -86,7 +84,7 @@ export default class LightningAddressStore {
     @action
     public getPreimageMap = async () => {
         this.loading = true;
-        const map = await EncryptedStorage.getItem(HASHES_STORAGE_STRING);
+        const map = await Storage.getItem(HASHES_STORAGE_STRING);
 
         if (map) {
             this.preimageMap = JSON.parse(map);
@@ -100,7 +98,7 @@ export default class LightningAddressStore {
     @action
     public getLightningAddressActivated = async () => {
         this.loading = true;
-        const lightningAddressActivated = await EncryptedStorage.getItem(
+        const lightningAddressActivated = await Storage.getItem(
             ADDRESS_ACTIVATED_STRING
         );
 
@@ -114,7 +112,7 @@ export default class LightningAddressStore {
     };
 
     setLightningAddress = async (handle: string, domain: string) => {
-        await EncryptedStorage.setItem(ADDRESS_ACTIVATED_STRING, 'true');
+        await Storage.setItem(ADDRESS_ACTIVATED_STRING, true);
         this.lightningAddressActivated = true;
         this.lightningAddressHandle = handle;
         this.lightningAddressDomain = domain;
@@ -123,16 +121,13 @@ export default class LightningAddressStore {
 
     deleteHash = async (hash: string) => {
         const hashesString =
-            (await EncryptedStorage.getItem(HASHES_STORAGE_STRING)) || '{}';
+            (await Storage.getItem(HASHES_STORAGE_STRING)) || '{}';
 
         const oldHashes = JSON.parse(hashesString);
         delete oldHashes[hash];
         const newHashes = oldHashes;
 
-        return await EncryptedStorage.setItem(
-            HASHES_STORAGE_STRING,
-            JSON.stringify(newHashes)
-        );
+        return await Storage.setItem(HASHES_STORAGE_STRING, newHashes);
     };
 
     @action
@@ -172,9 +167,7 @@ export default class LightningAddressStore {
             }
         }
 
-        const hashesString = await EncryptedStorage.getItem(
-            HASHES_STORAGE_STRING
-        );
+        const hashesString = await Storage.getItem(HASHES_STORAGE_STRING);
 
         let newHashes;
         if (hashesString) {
@@ -189,10 +182,7 @@ export default class LightningAddressStore {
             };
         }
 
-        await EncryptedStorage.setItem(
-            HASHES_STORAGE_STRING,
-            JSON.stringify(newHashes)
-        );
+        await Storage.setItem(HASHES_STORAGE_STRING, newHashes);
 
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -931,7 +921,7 @@ export default class LightningAddressStore {
     @action
     public updatePushCredentials = async () => {
         const DEVICE_TOKEN_KEY = 'zeus-notification-device-token';
-        const token = await EncryptedStorage.getItem(DEVICE_TOKEN_KEY);
+        const token = await Storage.getItem(DEVICE_TOKEN_KEY);
 
         // only push update if the device token has changed
         if (this.deviceToken && (!token || this.deviceToken !== token)) {
@@ -939,10 +929,7 @@ export default class LightningAddressStore {
                 device_token: this.deviceToken,
                 device_platform: Platform.OS
             }).then(async () => {
-                await EncryptedStorage.setItem(
-                    DEVICE_TOKEN_KEY,
-                    this.deviceToken
-                );
+                await Storage.setItem(DEVICE_TOKEN_KEY, this.deviceToken);
             });
         }
     };

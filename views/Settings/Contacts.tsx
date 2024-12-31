@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { SearchBar, Divider } from 'react-native-elements';
-import * as Keychain from 'react-native-keychain';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -20,6 +19,8 @@ import Header from '../../components/Header';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
+import Storage from '../../storage';
 
 import Contact from '../../models/Contact';
 
@@ -429,10 +430,9 @@ export default class Contacts extends React.Component<
                                         deletionAwaitingConfirmation: true
                                     });
                                 } else {
-                                    await Keychain.setInternetCredentials(
+                                    await Storage.setItem(
                                         MODERN_CONTACTS_KEY,
-                                        MODERN_CONTACTS_KEY,
-                                        JSON.stringify([])
+                                        []
                                     );
                                     this.setState({
                                         deletionAwaitingConfirmation: false

@@ -23,7 +23,6 @@ import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 import { StackNavigationProp } from '@react-navigation/stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -50,6 +49,8 @@ import {
 import { localeString } from '../../utils/LocaleUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+
+import Storage from '../../storage';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
@@ -413,14 +414,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
             }
             if (recovery) {
-                const isBackedUp = await EncryptedStorage.getItem(
-                    'backup-complete'
-                );
+                const isBackedUp = await Storage.getItem('backup-complete');
                 if (!isBackedUp) {
-                    await EncryptedStorage.setItem(
-                        'backup-complete',
-                        JSON.stringify(true)
-                    );
+                    await Storage.setItem('backup-complete', true);
                 }
                 if (isSyncing) return;
                 try {

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { TouchableOpacity, View } from 'react-native';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -11,6 +10,8 @@ import Button from '../components/Button';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import Storage from '../storage';
 
 import NotesStore from '../stores/NotesStore';
 import TextInput from '../components/TextInput';
@@ -46,7 +47,7 @@ export default class AddNotes extends React.Component<
     }
     async componentDidMount() {
         const { noteKey } = this.state;
-        const storedNotes = await EncryptedStorage.getItem(noteKey!);
+        const storedNotes = await Storage.getItem(noteKey!);
         if (storedNotes) {
             this.setState({ notes: storedNotes, isNoteStored: true });
         }
@@ -60,7 +61,7 @@ export default class AddNotes extends React.Component<
 
         const saveNote = async () => {
             if (noteKey) {
-                EncryptedStorage.setItem(noteKey, notes || '');
+                Storage.setItem(noteKey, notes || '');
                 await storeNoteKeys(noteKey, notes || '');
             }
 

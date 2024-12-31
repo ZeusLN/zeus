@@ -1,10 +1,13 @@
 import { action, observable } from 'mobx';
 import Product from '../models/Product';
 import ProductCategory from '../models/ProductCategory';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Storage from '../storage';
 
-const CATEGORY_KEY = 'zeus-product-categories';
-const PRODUCT_KEY = 'zeus-products';
+export const LEGACY_CATEGORY_KEY = 'zeus-product-categories';
+export const LEGACY_PRODUCT_KEY = 'zeus-products';
+
+export const CATEGORY_KEY = 'zeus-product-categories-v2';
+export const PRODUCT_KEY = 'zeus-products-v2';
 
 export default class InventoryStore {
     @observable categories: Array<ProductCategory> = [];
@@ -16,12 +19,12 @@ export default class InventoryStore {
         this.loading = true;
         try {
             // Retrieve the categories
-            const categories = await EncryptedStorage.getItem(CATEGORY_KEY);
+            const categories = await Storage.getItem(CATEGORY_KEY);
             if (categories) {
                 this.categories = JSON.parse(categories) || [];
             }
             // Retrieve the products
-            const products = await EncryptedStorage.getItem(PRODUCT_KEY);
+            const products = await Storage.getItem(PRODUCT_KEY);
             if (products) {
                 this.products = JSON.parse(products) || [];
             }
@@ -40,7 +43,7 @@ export default class InventoryStore {
     @action
     public async setCategories(categories: string) {
         this.loading = true;
-        await EncryptedStorage.setItem(CATEGORY_KEY, categories);
+        await Storage.setItem(CATEGORY_KEY, categories);
         this.loading = false;
         return categories;
     }
@@ -90,7 +93,7 @@ export default class InventoryStore {
     @action
     public async setProducts(products: string) {
         this.loading = true;
-        await EncryptedStorage.setItem(PRODUCT_KEY, products);
+        await Storage.setItem(PRODUCT_KEY, products);
         this.loading = false;
         return products;
     }

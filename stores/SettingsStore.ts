@@ -1,7 +1,6 @@
 import { action, observable } from 'mobx';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import isEqual from 'lodash/isEqual';
 
@@ -11,14 +10,16 @@ import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 
-// lndhub
-import LoginRequest from './../models/LoginRequest';
+import Storage from '../storage';
 
-import { LEGACY_NOTES_KEY, MODERN_NOTES_KEY } from './NotesStore';
-import { LEGACY_CONTACTS_KEY, MODERN_CONTACTS_KEY } from './ContactStore';
+// lndhub
+import LoginRequest from '../models/LoginRequest';
 
 const LEGACY_STORAGE_KEY = 'zeus-settings';
-const MODERN_STORAGE_KEY = 'zeus-settings-v2';
+export const MODERN_STORAGE_KEY = 'zeus-settings-v2';
+
+export const LEGACY_CURRENCY_CODES_KEY = 'currency-codes';
+export const CURRENCY_CODES_KEY = 'zeus-currency-codes';
 
 export interface Node {
     host?: string;
@@ -1394,41 +1395,13 @@ export default class SettingsStore {
     public async getSettings(silentUpdate: boolean = false) {
         if (!silentUpdate) this.loading = true;
         try {
-            const modernSettings: any = await Keychain.getInternetCredentials(
+            const modernSettings: any = await Storage.getItem(
                 MODERN_STORAGE_KEY
             );
 
-            if (modernSettings.password) {
+            if (modernSettings) {
                 console.log('attempting to load modern settings');
-                this.settings = JSON.parse(modernSettings.password);
-
-                const node: any =
-                    this.settings.nodes?.length &&
-                    this.settings.nodes[this.settings.selectedNode || 0];
-                if (node) {
-                    this.host = node.host;
-                    this.port = node.port;
-                    this.url = node.url;
-                    this.username = node.username;
-                    this.password = node.password;
-                    this.lndhubUrl = node.lndhubUrl;
-                    this.macaroonHex = node.macaroonHex;
-                    this.rune = node.rune;
-                    this.accessKey = node.accessKey;
-                    this.dismissCustodialWarning = node.dismissCustodialWarning;
-                    this.implementation = node.implementation || 'lnd';
-                    this.certVerification = node.certVerification || false;
-                    this.enableTor = node.enableTor;
-                    // LNC
-                    this.pairingPhrase = node.pairingPhrase;
-                    this.mailboxServer = node.mailboxServer;
-                    this.customMailboxServer = node.customMailboxServer;
-                    // Embeded lnd
-                    this.seedPhrase = node.seedPhrase;
-                    this.walletPassword = node.walletPassword;
-                    this.adminMacaroon = node.adminMacaroon;
-                    this.embeddedLndNetwork = node.embeddedLndNetwork;
-                }
+                this.settings = JSON.parse(modernSettings);
             } else {
                 console.log('attempting to load legacy settings');
 
@@ -1446,118 +1419,38 @@ export default class SettingsStore {
                         this.settings = newSettings;
                     }
 
-                    // Settings migration
-                    console.log('Attemping settings migration');
-                    const writeSuccess = await Keychain.setInternetCredentials(
-                        MODERN_STORAGE_KEY,
-                        MODERN_STORAGE_KEY,
-                        JSON.stringify(newSettings)
-                    );
-                    console.log('Settings migration status', writeSuccess);
-
-                    // Contacts migration
-                    try {
-                        const contacts = await EncryptedStorage.getItem(
-                            LEGACY_CONTACTS_KEY
-                        );
-                        if (contacts) {
-                            console.log('Attemping contacts migration');
-                            const writeSuccess =
-                                await Keychain.setInternetCredentials(
-                                    MODERN_CONTACTS_KEY,
-                                    MODERN_CONTACTS_KEY,
-                                    contacts
-                                );
-                            console.log(
-                                'Contacts migration status',
-                                writeSuccess
-                            );
-                        }
-                    } catch (error) {
-                        console.error(
-                            'Error loading contacts from encrypted storage',
-                            error
-                        );
-                    }
-
-                    // Notes migration
-                    try {
-                        const storedKeys = await EncryptedStorage.getItem(
-                            LEGACY_NOTES_KEY
-                        );
-                        if (storedKeys) {
-                            const noteKeys = JSON.parse(storedKeys);
-                            console.log('Attemping notes migration');
-                            const writeSuccess =
-                                await Keychain.setInternetCredentials(
-                                    MODERN_NOTES_KEY,
-                                    MODERN_NOTES_KEY,
-                                    storedKeys
-                                );
-                            console.log(
-                                'Notes keys migration status',
-                                writeSuccess
-                            );
-
-                            // Load all legacy notes
-                            await Promise.all(
-                                noteKeys.map(async (key: string) => {
-                                    const note = await EncryptedStorage.getItem(
-                                        key
-                                    );
-                                    if (note) {
-                                        const writeSuccess =
-                                            await Keychain.setInternetCredentials(
-                                                key,
-                                                key,
-                                                note
-                                            );
-                                        console.log(
-                                            `Notes keys migration status: ${key}`,
-                                            writeSuccess
-                                        );
-                                    }
-                                })
-                            );
-                        }
-                    } catch (error) {
-                        console.error(
-                            'Error loading note keys from encrypted storage',
-                            error
-                        );
-                    }
-
-                    const node: any =
-                        newSettings.nodes?.length &&
-                        newSettings.nodes[newSettings.selectedNode || 0];
-                    if (node) {
-                        this.host = node.host;
-                        this.port = node.port;
-                        this.url = node.url;
-                        this.username = node.username;
-                        this.password = node.password;
-                        this.lndhubUrl = node.lndhubUrl;
-                        this.macaroonHex = node.macaroonHex;
-                        this.rune = node.rune;
-                        this.accessKey = node.accessKey;
-                        this.dismissCustodialWarning =
-                            node.dismissCustodialWarning;
-                        this.implementation = node.implementation || 'lnd';
-                        this.certVerification = node.certVerification || false;
-                        this.enableTor = node.enableTor;
-                        // LNC
-                        this.pairingPhrase = node.pairingPhrase;
-                        this.mailboxServer = node.mailboxServer;
-                        this.customMailboxServer = node.customMailboxServer;
-                        // Embeded lnd
-                        this.seedPhrase = node.seedPhrase;
-                        this.walletPassword = node.walletPassword;
-                        this.adminMacaroon = node.adminMacaroon;
-                        this.embeddedLndNetwork = node.embeddedLndNetwork;
-                    }
+                    await MigrationsUtils.storageMigrationV2(newSettings);
                 } else {
                     console.log('No settings stored');
                 }
+            }
+
+            const node: any =
+                this.settings.nodes?.length &&
+                this.settings.nodes[this.settings.selectedNode || 0];
+            if (node) {
+                this.host = node.host;
+                this.port = node.port;
+                this.url = node.url;
+                this.username = node.username;
+                this.password = node.password;
+                this.lndhubUrl = node.lndhubUrl;
+                this.macaroonHex = node.macaroonHex;
+                this.rune = node.rune;
+                this.accessKey = node.accessKey;
+                this.dismissCustodialWarning = node.dismissCustodialWarning;
+                this.implementation = node.implementation || 'lnd';
+                this.certVerification = node.certVerification || false;
+                this.enableTor = node.enableTor;
+                // LNC
+                this.pairingPhrase = node.pairingPhrase;
+                this.mailboxServer = node.mailboxServer;
+                this.customMailboxServer = node.customMailboxServer;
+                // Embeded lnd
+                this.seedPhrase = node.seedPhrase;
+                this.walletPassword = node.walletPassword;
+                this.adminMacaroon = node.adminMacaroon;
+                this.embeddedLndNetwork = node.embeddedLndNetwork;
             }
         } catch (error) {
             console.error('Could not load settings', error);
