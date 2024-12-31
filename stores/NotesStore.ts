@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import * as Keychain from 'react-native-keychain';
+import Storage from '../storage';
 
 export const LEGACY_NOTES_KEY = 'note-Keys';
 export const MODERN_NOTES_KEY = 'zeus-notes-v2';
@@ -38,19 +38,15 @@ export default class NotesStore {
     public async loadNoteKeys() {
         console.log('Loading notes...');
         try {
-            const storedKeys: any = await Keychain.getInternetCredentials(
-                MODERN_NOTES_KEY
-            );
-            if (storedKeys.password) {
-                this.noteKeys = JSON.parse(storedKeys.password);
+            const storedKeys: any = await Storage.getItem(MODERN_NOTES_KEY);
+            if (storedKeys) {
+                this.noteKeys = JSON.parse(storedKeys);
                 // Load all notes
                 await Promise.all(
                     this.noteKeys.map(async (key) => {
-                        const note: any = await Keychain.getInternetCredentials(
-                            key
-                        );
-                        if (note.password) {
-                            this.notes[key] = note.password;
+                        const note: any = await Storage.getItem(key);
+                        if (note) {
+                            this.notes[key] = note;
                         }
                     })
                 );
@@ -65,11 +61,7 @@ export default class NotesStore {
 
     writeNoteKeysToLocalStorage = async () => {
         try {
-            await Keychain.setInternetCredentials(
-                MODERN_NOTES_KEY,
-                MODERN_NOTES_KEY,
-                JSON.stringify(this.noteKeys)
-            );
+            await Storage.setItem(MODERN_NOTES_KEY, this.noteKeys);
         } catch (error) {
             console.error('Error saving to encrypted storage');
         }

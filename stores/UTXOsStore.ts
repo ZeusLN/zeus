@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Storage from '../storage';
 
 import SettingsStore from './SettingsStore';
 
@@ -9,6 +9,9 @@ import Account from '../models/Account';
 import Utxo from '../models/Utxo';
 
 import { walletrpc } from '../proto/lightning';
+
+export const LEGACY_HIDDEN_ACCOUNTS_KEY = 'hidden-accounts';
+export const HIDDEN_ACCOUNTS_KEY = 'zeus-hidden-accounts';
 
 export default class UTXOsStore {
     // utxos
@@ -94,17 +97,12 @@ export default class UTXOsStore {
     public hideAccount = async (name: string) => {
         let hiddenAccounts: Array<string> = [];
         try {
-            const hiddenString = await EncryptedStorage.getItem(
-                'hidden-accounts'
-            );
+            const hiddenString = await Storage.getItem(HIDDEN_ACCOUNTS_KEY);
             hiddenAccounts = JSON.parse(hiddenString || '[]');
 
             if (!hiddenAccounts.includes(name)) hiddenAccounts.push(name);
 
-            await EncryptedStorage.setItem(
-                'hidden-accounts',
-                JSON.stringify(hiddenAccounts)
-            );
+            await Storage.setItem(HIDDEN_ACCOUNTS_KEY, hiddenAccounts);
 
             this.listAccounts();
         } catch (error) {
@@ -115,19 +113,14 @@ export default class UTXOsStore {
     public unhideAccount = async (name: string) => {
         let hiddenAccounts: Array<string> = [];
         try {
-            const hiddenString = await EncryptedStorage.getItem(
-                'hidden-accounts'
-            );
+            const hiddenString = await Storage.getItem(HIDDEN_ACCOUNTS_KEY);
             hiddenAccounts = JSON.parse(hiddenString || '[]');
 
             if (hiddenAccounts.includes(name)) {
                 hiddenAccounts = hiddenAccounts.filter((item) => item !== name);
             }
 
-            await EncryptedStorage.setItem(
-                'hidden-accounts',
-                JSON.stringify(hiddenAccounts)
-            );
+            await Storage.setItem(HIDDEN_ACCOUNTS_KEY, hiddenAccounts);
 
             this.listAccounts();
         } catch (error) {
@@ -139,9 +132,7 @@ export default class UTXOsStore {
     public listAccounts = async (data?: any) => {
         let hiddenAccounts: Array<string> = [];
         try {
-            const hiddenString = await EncryptedStorage.getItem(
-                'hidden-accounts'
-            );
+            const hiddenString = await Storage.getItem(HIDDEN_ACCOUNTS_KEY);
             if (hiddenString) {
                 hiddenAccounts = JSON.parse(hiddenString);
             }

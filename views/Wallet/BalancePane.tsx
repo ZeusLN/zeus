@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { LinearProgress } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -16,8 +15,10 @@ import WalletHeader from '../../components/WalletHeader';
 import Amount from '../../components/Amount';
 import Conversion from '../../components/Conversion';
 
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import Storage from '../../storage';
 
 import BalanceStore from '../../stores/BalanceStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -51,7 +52,7 @@ export default class BalancePane extends React.PureComponent<
     };
 
     async UNSAFE_componentWillMount() {
-        const isBackedUp = await EncryptedStorage.getItem('backup-complete');
+        const isBackedUp = await Storage.getItem('backup-complete');
         if (isBackedUp !== 'true') {
             this.setState({
                 showBackupPrompt: true

@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from 'react-native-elements';
-import * as Keychain from 'react-native-keychain';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -28,6 +27,8 @@ import AddressUtils from '../utils/AddressUtils';
 import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import Storage from '../storage';
 
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 import ContactStore, { MODERN_CONTACTS_KEY } from '../stores/ContactStore';
@@ -407,11 +408,11 @@ export default class NostrContacts extends React.Component<
             );
 
             // Retrieve existing contacts from Encrypted storage
-            const contactsString: any = await Keychain.getInternetCredentials(
+            const contactsString: any = await Storage.getItem(
                 MODERN_CONTACTS_KEY
             );
-            const existingContacts: any = contactsString.password
-                ? JSON.parse(contactsString.password)
+            const existingContacts: any = contactsString
+                ? JSON.parse(contactsString)
                 : [];
 
             // Merge existing contacts with the new contacts
@@ -421,11 +422,7 @@ export default class NostrContacts extends React.Component<
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             // Save the updated contacts to encrypted storage
-            await Keychain.setInternetCredentials(
-                MODERN_CONTACTS_KEY,
-                MODERN_CONTACTS_KEY,
-                JSON.stringify(updatedContacts)
-            );
+            await Storage.setItem(MODERN_CONTACTS_KEY, updatedContacts);
 
             console.log('Contacts imported successfully!');
 
