@@ -381,56 +381,56 @@ export default class LightningAddress extends React.Component<
                             !lightningAddressHandle &&
                             hasChannels && (
                                 <>
-                                    <View
-                                        style={{ flex: 1, ...styles.wrapper }}
-                                    >
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.chooseHandle'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'row'
-                                            }}
-                                        >
-                                            <TextInput
-                                                value={newLightningAddress}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        newLightningAddress:
-                                                            text
-                                                    });
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
+                                    <View style={{ flex: 1 }}>
+                                        <View style={styles.wrapper}>
+                                            <Text
                                                 style={{
-                                                    flex: 1,
+                                                    ...styles.text,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.chooseHandle'
+                                                )}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    display: 'flex',
                                                     flexDirection: 'row'
                                                 }}
-                                            />
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontSize: 20,
-                                                        marginLeft: 5
+                                            >
+                                                <TextInput
+                                                    value={newLightningAddress}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            newLightningAddress:
+                                                                text
+                                                        });
                                                     }}
-                                                >
-                                                    @zeuspay.com
-                                                </Text>
-                                            </Row>
+                                                    autoCapitalize="none"
+                                                    autoCorrect={false}
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row'
+                                                    }}
+                                                />
+                                                <Row>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontSize: 20,
+                                                            marginLeft: 5
+                                                        }}
+                                                    >
+                                                        @zeuspay.com
+                                                    </Text>
+                                                </Row>
+                                            </View>
                                         </View>
 
                                         <>
