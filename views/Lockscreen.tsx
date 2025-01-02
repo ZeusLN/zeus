@@ -378,7 +378,7 @@ export default class Lockscreen extends React.Component<
         let incorrect = '';
 
         if (passphrase) {
-            incorrect = localeString('views.Lockscreen.incorrect');
+            incorrect = localeString('views.Lockscreen.incorrectPassword');
         } else {
             incorrect = localeString('views.Lockscreen.incorrectPin');
         }
@@ -441,9 +441,7 @@ export default class Lockscreen extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {localeString(
-                                    'views.Lockscreen.enterPassphrase'
-                                )}
+                                {localeString('views.Lockscreen.enterPassword')}
                             </Text>
                         </View>
                         <View style={styles.inputContainer}>
