@@ -40,6 +40,7 @@ import {
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 import { Row } from '../../components/layout/Row';
+import ShowHideToggle from '../../components/ShowHideToggle';
 
 import SettingsStore, {
     INTERFACE_KEYS,
@@ -88,6 +89,7 @@ interface WalletConfigurationState {
     lndhubUrl: string; // lndhub
     username: string | undefined; // lndhub
     password: string | undefined; // lndhub, eclair
+    hidden: boolean;
     existingAccount: boolean; // lndhub
     dismissCustodialWarning: boolean;
     implementation: Implementations;
@@ -155,6 +157,7 @@ export default class WalletConfiguration extends React.Component<
         showCertModal: false,
         username: '',
         password: '',
+        hidden: true,
         accessKey: '',
         photo: undefined,
         // lnc
@@ -1275,17 +1278,42 @@ export default class WalletConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.password'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            placeholder={'...'}
-                                            value={password}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    password: text.trim(),
-                                                    saved: false
-                                                });
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
                                             }}
-                                            locked={loading}
-                                        />
+                                        >
+                                            <TextInput
+                                                placeholder={'...'}
+                                                value={password}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        password: text.trim(),
+                                                        saved: false
+                                                    });
+                                                }}
+                                                locked={loading}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
+                                                autoCapitalize="none"
+                                                style={{
+                                                    flex: 1,
+                                                    marginRight: 15
+                                                }}
+                                            />
+                                            <ShowHideToggle
+                                                onPress={() =>
+                                                    this.setState({
+                                                        hidden: !this.state
+                                                            .hidden
+                                                    })
+                                                }
+                                            />
+                                        </View>
                                     </>
                                 )}
                             </>
@@ -1374,19 +1402,40 @@ export default class WalletConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.password'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            placeholder={'...'}
-                                            value={password}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    password: text.trim(),
-                                                    saved: false
-                                                })
-                                            }
-                                            locked={loading}
-                                            secureTextEntry={saved}
-                                            autoCapitalize="none"
-                                        />
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            <TextInput
+                                                placeholder={'...'}
+                                                value={password}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        password: text.trim(),
+                                                        saved: false
+                                                    })
+                                                }
+                                                locked={loading}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
+                                                autoCapitalize="none"
+                                                style={{
+                                                    flex: 1,
+                                                    marginRight: 15
+                                                }}
+                                            />
+                                            <ShowHideToggle
+                                                onPress={() =>
+                                                    this.setState({
+                                                        hidden: !this.state
+                                                            .hidden
+                                                    })
+                                                }
+                                            />
+                                        </View>
 
                                         {saved && (
                                             <CollapsedQR
