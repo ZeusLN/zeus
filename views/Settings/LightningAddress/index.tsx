@@ -416,18 +416,20 @@ export default class LightningAddress extends React.Component<
                                                         flexDirection: 'row'
                                                     }}
                                                 />
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontSize: 20,
-                                                        marginLeft: 5
-                                                    }}
-                                                >
-                                                    @zeuspay.com
-                                                </Text>
+                                                <Row>
+                                                    <Text
+                                                        style={{
+                                                            ...styles.text,
+                                                            color: themeColor(
+                                                                'text'
+                                                            ),
+                                                            fontSize: 20,
+                                                            marginLeft: 5
+                                                        }}
+                                                    >
+                                                        @zeuspay.com
+                                                    </Text>
+                                                </Row>
                                             </View>
                                         </View>
 
@@ -537,30 +539,26 @@ export default class LightningAddress extends React.Component<
                                             </ListItem>
                                         </>
                                     </View>
-                                    <View>
-                                        <View
-                                            style={{ bottom: 15, margin: 10 }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    'views.Settings.LightningAddress.create'
-                                                )}
-                                                onPress={() =>
-                                                    create(
-                                                        newLightningAddress,
-                                                        nostrPublicKey,
-                                                        nostrPrivateKey,
-                                                        nostrRelays
-                                                    ).then(() => status())
-                                                }
-                                                disabled={
-                                                    !nostrPublicKey ||
-                                                    !nostrNpub ||
-                                                    !nostrRelays ||
-                                                    nostrRelays.length === 0
-                                                }
-                                            />
-                                        </View>
+                                    <View style={{ bottom: 15, margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Settings.LightningAddress.create'
+                                            )}
+                                            onPress={() =>
+                                                create(
+                                                    newLightningAddress,
+                                                    nostrPublicKey,
+                                                    nostrPrivateKey,
+                                                    nostrRelays
+                                                ).then(() => status())
+                                            }
+                                            disabled={
+                                                !nostrPublicKey ||
+                                                !nostrNpub ||
+                                                !nostrRelays ||
+                                                nostrRelays.length === 0
+                                            }
+                                        />
                                     </View>
                                 </>
                             )}
