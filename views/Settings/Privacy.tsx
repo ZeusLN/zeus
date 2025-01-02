@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { ScrollView, View } from 'react-native';
-import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -102,7 +101,7 @@ export default class Privacy extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView
-                    style={{ flex: 1, margin: 10 }}
+                    style={{ flex: 1, paddingHorizontal: 15, marginTop: 5 }}
                     keyboardShouldPersistTaps="handled"
                 >
                     <DropdownSetting
@@ -160,32 +159,29 @@ export default class Privacy extends React.Component<
                         </>
                     )}
 
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
                         }}
                     >
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontSize: 17,
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                            infoModalText={localeString(
-                                'views.Settings.Privacy.clipboard.explainer'
-                            ).replace('Zeus', 'ZEUS')}
-                        >
-                            {localeString('views.Settings.Privacy.clipboard')}
-                        </Text>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                                infoModalText={localeString(
+                                    'views.Settings.Privacy.clipboard.explainer'
+                                ).replace('Zeus', 'ZEUS')}
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.clipboard'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={clipboard}
                                 onValueChange={async () => {
@@ -204,38 +200,35 @@ export default class Privacy extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
+                    </View>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
                         }}
                     >
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontSize: 17,
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                            infoModalText={[
-                                localeString(
-                                    'views.Settings.Privacy.lurkerMode.explainer1'
-                                ),
-                                localeString(
-                                    'views.Settings.Privacy.lurkerMode.explainer2'
-                                )
-                            ]}
-                        >
-                            {localeString('views.Settings.Privacy.lurkerMode')}
-                        </Text>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                                infoModalText={[
+                                    localeString(
+                                        'views.Settings.Privacy.lurkerMode.explainer1'
+                                    ),
+                                    localeString(
+                                        'views.Settings.Privacy.lurkerMode.explainer2'
+                                    )
+                                ]}
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.lurkerMode'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={lurkerMode}
                                 onValueChange={async () => {
@@ -254,31 +247,27 @@ export default class Privacy extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
-                    <ListItem
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
+                    </View>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
                         }}
                     >
-                        <ListItem.Title
-                            style={{
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                left: -10
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Privacy.enableMempoolRates'
-                            )}
-                        </ListItem.Title>
-                        <View
-                            style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                justifyContent: 'flex-end'
-                            }}
-                        >
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Privacy.enableMempoolRates'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
                                 onValueChange={async () => {
@@ -298,7 +287,7 @@ export default class Privacy extends React.Component<
                                 }}
                             />
                         </View>
-                    </ListItem>
+                    </View>
                 </ScrollView>
             </Screen>
         );

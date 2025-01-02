@@ -2053,59 +2053,73 @@ export default class Receive extends React.Component<
                                     <>
                                         {BackendUtils.supportsLSPs() &&
                                             !lspNotConfigured && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            ...styles.secondaryText,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            top: 20
-                                                        }}
-                                                        infoModalText={[
-                                                            localeString(
-                                                                'views.Receive.lspSwitchExplainer1'
-                                                            ),
-                                                            localeString(
-                                                                'views.Receive.lspSwitchExplainer2'
-                                                            )
-                                                        ]}
-                                                        infoModalAdditionalButtons={[
-                                                            {
-                                                                title: localeString(
-                                                                    'general.learnMore'
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        marginBottom: 15
+                                                    }}
+                                                >
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text
+                                                            style={{
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                            infoModalText={[
+                                                                localeString(
+                                                                    'views.Receive.lspSwitchExplainer1'
                                                                 ),
-                                                                callback: () =>
-                                                                    navigation.navigate(
-                                                                        'LspExplanationOverview'
-                                                                    )
-                                                            }
-                                                        ]}
-                                                    >
-                                                        {localeString(
-                                                            'views.Settings.LSP.enableLSP'
-                                                        )}
-                                                    </Text>
-                                                    <Switch
-                                                        value={enableLSP}
-                                                        onValueChange={async () => {
-                                                            this.setState({
-                                                                enableLSP:
-                                                                    !enableLSP,
-                                                                lspIsActive:
-                                                                    !enableLSP &&
-                                                                    BackendUtils.supportsLSPs() &&
-                                                                    !lspNotConfigured
-                                                            });
-                                                            await updateSettings(
+                                                                localeString(
+                                                                    'views.Receive.lspSwitchExplainer2'
+                                                                )
+                                                            ]}
+                                                            infoModalAdditionalButtons={[
                                                                 {
-                                                                    enableLSP:
-                                                                        !enableLSP
+                                                                    title: localeString(
+                                                                        'general.learnMore'
+                                                                    ),
+                                                                    callback:
+                                                                        () =>
+                                                                            navigation.navigate(
+                                                                                'LspExplanationOverview'
+                                                                            )
                                                                 }
-                                                            );
+                                                            ]}
+                                                        >
+                                                            {localeString(
+                                                                'views.Settings.LSP.enableLSP'
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                    <View
+                                                        style={{
+                                                            alignSelf: 'center',
+                                                            marginLeft: 5
                                                         }}
-                                                    />
-                                                </>
+                                                    >
+                                                        <Switch
+                                                            value={enableLSP}
+                                                            onValueChange={async () => {
+                                                                this.setState({
+                                                                    enableLSP:
+                                                                        !enableLSP,
+                                                                    lspIsActive:
+                                                                        !enableLSP &&
+                                                                        BackendUtils.supportsLSPs() &&
+                                                                        !lspNotConfigured
+                                                                });
+                                                                await updateSettings(
+                                                                    {
+                                                                        enableLSP:
+                                                                            !enableLSP
+                                                                    }
+                                                                );
+                                                            }}
+                                                        />
+                                                    </View>
+                                                </View>
                                             )}
 
                                         {(!enableLSP || lspNotConfigured) && (
@@ -2567,39 +2581,54 @@ export default class Receive extends React.Component<
 
                                         {BackendUtils.isLNDBased() &&
                                             !lspIsActive && (
-                                                <>
-                                                    <Text
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        marginTop: 20
+                                                    }}
+                                                >
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text
+                                                            style={{
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                            infoModalText={[
+                                                                localeString(
+                                                                    'views.Receive.routeHintSwitchExplainer1'
+                                                                ),
+                                                                localeString(
+                                                                    'views.Receive.routeHintSwitchExplainer2'
+                                                                )
+                                                            ]}
+                                                        >
+                                                            {localeString(
+                                                                'views.Receive.routeHints'
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                    <View
                                                         style={{
-                                                            ...styles.secondaryText,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            top: 20
+                                                            alignSelf: 'center',
+                                                            marginLeft: 5
                                                         }}
-                                                        infoModalText={[
-                                                            localeString(
-                                                                'views.Receive.routeHintSwitchExplainer1'
-                                                            ),
-                                                            localeString(
-                                                                'views.Receive.routeHintSwitchExplainer2'
-                                                            )
-                                                        ]}
                                                     >
-                                                        {localeString(
-                                                            'views.Receive.routeHints'
-                                                        )}
-                                                    </Text>
-                                                    <Switch
-                                                        value={routeHints}
-                                                        onValueChange={() =>
-                                                            this.setState({
-                                                                routeHints:
-                                                                    !routeHints
-                                                            })
-                                                        }
-                                                        disabled={blindedPaths}
-                                                    />
-                                                </>
+                                                        <Switch
+                                                            value={routeHints}
+                                                            onValueChange={() =>
+                                                                this.setState({
+                                                                    routeHints:
+                                                                        !routeHints
+                                                                })
+                                                            }
+                                                            disabled={
+                                                                blindedPaths
+                                                            }
+                                                        />
+                                                    </View>
+                                                </View>
                                             )}
 
                                         {BackendUtils.isLNDBased() &&
@@ -2701,81 +2730,109 @@ export default class Receive extends React.Component<
 
                                         {BackendUtils.supportsAMP() &&
                                             !lspIsActive && (
-                                                <>
-                                                    <Text
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        marginTop: 20
+                                                    }}
+                                                >
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text
+                                                            style={{
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                            infoModalText={[
+                                                                localeString(
+                                                                    'views.Receive.ampSwitchExplainer1'
+                                                                ),
+                                                                localeString(
+                                                                    'views.Receive.ampSwitchExplainer2'
+                                                                )
+                                                            ]}
+                                                            infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                        >
+                                                            {localeString(
+                                                                'views.Receive.ampInvoice'
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                    <View
                                                         style={{
-                                                            ...styles.secondaryText,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            top: 20
+                                                            alignSelf: 'center',
+                                                            marginLeft: 5
                                                         }}
-                                                        infoModalText={[
-                                                            localeString(
-                                                                'views.Receive.ampSwitchExplainer1'
-                                                            ),
-                                                            localeString(
-                                                                'views.Receive.ampSwitchExplainer2'
-                                                            )
-                                                        ]}
-                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                     >
-                                                        {localeString(
-                                                            'views.Receive.ampInvoice'
-                                                        )}
-                                                    </Text>
-                                                    <Switch
-                                                        value={ampInvoice}
-                                                        onValueChange={() =>
-                                                            this.setState({
-                                                                ampInvoice:
-                                                                    !ampInvoice
-                                                            })
-                                                        }
-                                                        disabled={blindedPaths}
-                                                    />
-                                                </>
+                                                        <Switch
+                                                            value={ampInvoice}
+                                                            onValueChange={() =>
+                                                                this.setState({
+                                                                    ampInvoice:
+                                                                        !ampInvoice
+                                                                })
+                                                            }
+                                                            disabled={
+                                                                blindedPaths
+                                                            }
+                                                        />
+                                                    </View>
+                                                </View>
                                             )}
 
                                         {BackendUtils.supportsBolt11BlindedRoutes() &&
                                             !lspIsActive && (
-                                                <>
-                                                    <Text
+                                                <View
+                                                    style={{
+                                                        flexDirection: 'row',
+                                                        marginTop: 20
+                                                    }}
+                                                >
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text
+                                                            style={{
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                            infoModalText={[
+                                                                localeString(
+                                                                    'views.Receive.blindedPathsExplainer1'
+                                                                ),
+                                                                localeString(
+                                                                    'views.Receive.blindedPathsExplainer2'
+                                                                )
+                                                            ]}
+                                                            infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                        >
+                                                            {localeString(
+                                                                'views.Receive.blindedPaths'
+                                                            )}
+                                                        </Text>
+                                                    </View>
+                                                    <View
                                                         style={{
-                                                            ...styles.secondaryText,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            top: 20
+                                                            alignSelf: 'center',
+                                                            marginLeft: 5
                                                         }}
-                                                        infoModalText={[
-                                                            localeString(
-                                                                'views.Receive.blindedPathsExplainer1'
-                                                            ),
-                                                            localeString(
-                                                                'views.Receive.blindedPathsExplainer2'
-                                                            )
-                                                        ]}
-                                                        infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
                                                     >
-                                                        {localeString(
-                                                            'views.Receive.blindedPaths'
-                                                        )}
-                                                    </Text>
-                                                    <Switch
-                                                        value={blindedPaths}
-                                                        onValueChange={() =>
-                                                            this.setState({
-                                                                blindedPaths:
-                                                                    !blindedPaths,
-                                                                ampInvoice:
-                                                                    false,
-                                                                routeHints:
-                                                                    false
-                                                            })
-                                                        }
-                                                    />
-                                                </>
+                                                        <Switch
+                                                            value={blindedPaths}
+                                                            onValueChange={() =>
+                                                                this.setState({
+                                                                    blindedPaths:
+                                                                        !blindedPaths,
+                                                                    ampInvoice:
+                                                                        false,
+                                                                    routeHints:
+                                                                        false
+                                                                })
+                                                            }
+                                                        />
+                                                    </View>
+                                                </View>
                                             )}
 
                                         <View style={styles.button}>

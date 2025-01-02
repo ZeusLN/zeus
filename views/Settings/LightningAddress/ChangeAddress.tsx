@@ -10,6 +10,7 @@ import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import TextInput from '../../../components/TextInput';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
+import { Row } from '../../../components/layout/Row';
 
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
@@ -110,16 +111,20 @@ export default class ChangeAddress extends React.Component<
                                                     flexDirection: 'row'
                                                 }}
                                             />
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text'),
-                                                    fontSize: 20,
-                                                    marginLeft: 5
-                                                }}
-                                            >
-                                                @zeuspay.com
-                                            </Text>
+                                            <Row>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontSize: 20,
+                                                        marginLeft: 5
+                                                    }}
+                                                >
+                                                    @zeuspay.com
+                                                </Text>
+                                            </Row>
                                         </View>
                                     </View>
                                 </View>

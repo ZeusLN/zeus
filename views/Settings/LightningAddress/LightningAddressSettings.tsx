@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
-import { Row } from '../../../components/layout/Row';
 import Text from '../../../components/Text';
 import DropdownSetting from '../../../components/DropdownSetting';
 import Screen from '../../../components/Screen';
@@ -117,28 +116,31 @@ export default class LightningAddressSettings extends React.Component<
                         }
                         navigation={navigation}
                     />
-                    <ScrollView style={{ margin: 5 }}>
+                    <ScrollView style={{ paddingHorizontal: 15, marginTop: 5 }}>
                         {error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        <ListItem containerStyle={styles.listItem}>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    width: '85%'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.LightningAddressSettings.automaticallyAccept'
-                                )}
-                            </ListItem.Title>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddressSettings.automaticallyAccept'
+                                    )}
+                                </Text>
+                            </View>
                             <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
                                     value={automaticallyAccept}
@@ -165,14 +167,8 @@ export default class LightningAddressSettings extends React.Component<
                                     }}
                                 />
                             </View>
-                        </ListItem>
-                        <View
-                            style={{
-                                margin: 5,
-                                marginLeft: 15,
-                                marginRight: 15
-                            }}
-                        >
+                        </View>
+                        <View style={{ marginTop: 20 }}>
                             <DropdownSetting
                                 title={localeString(
                                     'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel'
@@ -205,11 +201,16 @@ export default class LightningAddressSettings extends React.Component<
                                 disabled={!automaticallyAccept}
                             />
                         </View>
-                        <ListItem containerStyle={styles.listItem}>
-                            <Row align="flex-end">
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('text'),
+                                        color: themeColor('secondaryText'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
@@ -224,50 +225,55 @@ export default class LightningAddressSettings extends React.Component<
                                 >
                                     {localeString('views.Receive.routeHints')}
                                 </Text>
-                                <View style={{ flex: 1 }}>
-                                    <Switch
-                                        value={routeHints}
-                                        onValueChange={async () => {
-                                            this.setState({
-                                                routeHints: !routeHints
-                                            });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    enabled,
-                                                    automaticallyAccept,
-                                                    automaticallyAcceptAttestationLevel,
-                                                    automaticallyRequestOlympusChannels:
-                                                        false, // deprecated
-                                                    routeHints: !routeHints,
-                                                    allowComments,
-                                                    nostrPrivateKey,
-                                                    nostrRelays,
-                                                    notifications
-                                                }
-                                            });
-                                        }}
-                                    />
-                                </View>
-                            </Row>
-                        </ListItem>
-                        <ListItem containerStyle={styles.listItem}>
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('text'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    width: '85%'
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.LightningAddressSettings.allowComments'
-                                )}
-                            </ListItem.Title>
+                            </View>
                             <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={routeHints}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            routeHints: !routeHints
+                                        });
+                                        await updateSettings({
+                                            lightningAddress: {
+                                                enabled,
+                                                automaticallyAccept,
+                                                automaticallyAcceptAttestationLevel,
+                                                automaticallyRequestOlympusChannels:
+                                                    false, // deprecated
+                                                routeHints: !routeHints,
+                                                allowComments,
+                                                nostrPrivateKey,
+                                                nostrRelays,
+                                                notifications
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 17
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddressSettings.allowComments'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
                                 <Switch
                                     value={allowComments}
@@ -300,14 +306,8 @@ export default class LightningAddressSettings extends React.Component<
                                     }}
                                 />
                             </View>
-                        </ListItem>
-                        <View
-                            style={{
-                                margin: 5,
-                                marginLeft: 15,
-                                marginRight: 15
-                            }}
-                        >
+                        </View>
+                        <View style={{ marginTop: 20 }}>
                             <DropdownSetting
                                 title={localeString(
                                     'views.Settings.LightningAddressSettings.notifications'
@@ -343,14 +343,16 @@ export default class LightningAddressSettings extends React.Component<
                         </View>
                         <ListItem
                             containerStyle={{
-                                backgroundColor: 'transparent'
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 20
                             }}
                             onPress={() => navigation.navigate('NostrKeys')}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text'),
+                                        color: themeColor('secondaryText'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -364,14 +366,16 @@ export default class LightningAddressSettings extends React.Component<
                         </ListItem>
                         <ListItem
                             containerStyle={{
-                                backgroundColor: 'transparent'
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 20
                             }}
                             onPress={() => navigation.navigate('NostrRelays')}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text'),
+                                        color: themeColor('secondaryText'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -387,14 +391,16 @@ export default class LightningAddressSettings extends React.Component<
                         </ListItem>
                         <ListItem
                             containerStyle={{
-                                backgroundColor: 'transparent'
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 20
                             }}
                             onPress={() => navigation.navigate('ChangeAddress')}
                         >
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('text'),
+                                        color: themeColor('secondaryText'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -414,10 +420,3 @@ export default class LightningAddressSettings extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    listItem: {
-        borderBottomWidth: 0,
-        backgroundColor: 'transparent'
-    }
-});
