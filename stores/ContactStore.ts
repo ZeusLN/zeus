@@ -37,6 +37,8 @@ export default class ContactStore {
         navigation: any
     ) => {
         try {
+            const compactedContactDetails =
+                this.compactContactArrays(contactDetails);
             const contactsString = await EncryptedStorage.getItem(
                 'zeus-contacts'
             );
@@ -47,7 +49,7 @@ export default class ContactStore {
             if (isEdit && this.prefillContact && !isNostrContact) {
                 const updatedContacts = existingContacts.map((contact) =>
                     contact.contactId === this.prefillContact.contactId
-                        ? { ...contact, ...contactDetails }
+                        ? { ...contact, ...compactedContactDetails }
                         : contact
                 );
 
@@ -68,7 +70,10 @@ export default class ContactStore {
                 // Creating a new contact
                 const contactId = uuidv4();
 
-                const newContact: Contact = { contactId, ...contactDetails };
+                const newContact: Contact = {
+                    contactId,
+                    ...compactedContactDetails
+                };
 
                 const updatedContacts = [...existingContacts, newContact].sort(
                     (a, b) => a.name.localeCompare(b.name)
@@ -90,6 +95,16 @@ export default class ContactStore {
         } catch (error) {
             console.log('Error saving contacts:', error);
         }
+    };
+
+    private compactContactArrays = (contactDetails: any) => {
+        const updatedDetails = { ...contactDetails };
+        Object.keys(contactDetails).forEach((key) => {
+            if (Array.isArray(contactDetails[key])) {
+                updatedDetails[key] = contactDetails[key].filter(Boolean);
+            }
+        });
+        return updatedDetails;
     };
 
     @action
@@ -116,6 +131,7 @@ export default class ContactStore {
                 console.log('Contact deleted successfully!');
 
                 this.loadContacts();
+                this.clearPrefillContact();
                 navigation.popTo('Contacts');
             } catch (error) {
                 console.log('Error deleting contact:', error);
@@ -127,12 +143,13 @@ export default class ContactStore {
     public setPrefillContact = (prefillContact: Contact | null) => {
         if (prefillContact) {
             this.prefillContact = {
-                lnAddress: prefillContact.lnAddress,
-                bolt12Address: prefillContact.bolt12Address,
-                onchainAddress: prefillContact.onchainAddress,
-                nip05: prefillContact.nip05,
-                nostrNpub: prefillContact.nostrNpub,
-                pubkey: prefillContact.pubkey,
+                lnAddress: prefillContact.lnAddress || [],
+                bolt12Address: prefillContact.bolt12Address || [],
+                bolt12Offer: prefillContact.bolt12Offer || [],
+                pubkey: prefillContact.pubkey || [],
+                onchainAddress: prefillContact.onchainAddress || [],
+                nip05: prefillContact.nip05 || [],
+                nostrNpub: prefillContact.nostrNpub || [],
                 name: prefillContact.name,
                 description: prefillContact.description,
                 photo: prefillContact.photo,
