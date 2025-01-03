@@ -242,6 +242,24 @@ RCT_EXPORT_METHOD(sweepRemoteClosed:(NSString *)seedPhrase
     }
 }
 
+// Swaps
+
+RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 transactionHash:(NSString *)transactionHash
+                 pubNonce:(NSString *)pubNonce)
+{
+    NSError *error;
+    LndmobileCreateClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce, &error);
+    if (error) {
+        NSLog(@"createClaimTransaction error   %@",   error);
+    }
+}
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

@@ -52,6 +52,18 @@ export interface ILndMobile {
         locale: string,
         translations: { [key: string]: string }
     ): void;
+
+    // Swaps
+    createClaimTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        privateKey: string,
+        servicePubKey: string,
+        transactionHash: string,
+        pubNonce: string
+    ): Promise<string>;
 }
 
 export interface ILndMobileTools {
