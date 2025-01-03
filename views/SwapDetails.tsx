@@ -5,12 +5,12 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { crypto } from 'bitcoinjs-lib';
 import bolt11 from 'bolt11';
-import { randomBytes } from 'crypto';
-import { Musig, SwapTreeSerializer, TaprootUtils } from 'boltz-core';
-import zkpInit from '@vulpemventures/secp256k1-zkp';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import EncryptedStorage from 'react-native-encrypted-storage';
+
+import lndMobile from '../lndmobile/LndMobileInjection';
+const { createClaimTransaction } = lndMobile.swaps;
 
 import Screen from '../components/Screen';
 import Header from '../components/Header';
@@ -294,59 +294,48 @@ export default class SwapDetails extends React.Component<
     };
 
     /**
-     * Create and send a claim transaction using Musig and TaprootUtils.
+     * Create and send a claim transaction
      */
     createClaimTransaction = async (
         claimTxDetails: any,
         createdResponse: any,
         keys: any,
-        endpoint: any
+        endpoint: string
     ) => {
-        const boltzPublicKey = Buffer.from(
-            createdResponse.claimPublicKey,
-            'hex'
-        );
-
-        // Initialize Musig
-
-        let musig: any;
         try {
-            musig = new Musig(await zkpInit(), keys, randomBytes(32), [
-                boltzPublicKey,
-                keys.publicKey
-            ]);
-        } catch (error) {
-            console.log(error);
+            const dObject = keys.__D;
+
+            // Extract keys, sort them numerically, and map to byte values
+            const dBytes = Object.keys(dObject)
+                .map((key) => parseInt(key, 10))
+                .sort((a, b) => a - b)
+                .map((key) => dObject[key]);
+
+            const privateKeyHex = dBytes
+                .map((byte) => byte.toString(16).padStart(2, '0'))
+                .join('');
+
+            const error = await createClaimTransaction({
+                endpoint,
+                swapId: createdResponse.id,
+                claimLeaf: createdResponse.swapTree.claimLeaf.output,
+                refundLeaf: createdResponse.swapTree.refundLeaf.output,
+                privateKey: privateKeyHex,
+                servicePubKey: createdResponse.claimPublicKey,
+                transactionHash: claimTxDetails.transactionHash,
+                pubNonce: claimTxDetails.pubNonce
+            });
+
+            if (!error) {
+                console.log('Claim transaction submitted successfully.');
+            } else {
+                console.log('Error submitting claim tx', error);
+            }
+
+            return;
+        } catch (e) {
+            console.log('Error creating claim tx ', e);
         }
-        // Tweak Musig
-        TaprootUtils.tweakMusig(
-            musig,
-            SwapTreeSerializer.deserializeSwapTree(createdResponse.swapTree)
-                .tree
-        );
-
-        // Aggregate nonces and initialize session
-        musig.aggregateNonces([
-            [boltzPublicKey, Buffer.from(claimTxDetails.pubNonce, 'hex')]
-        ]);
-        musig.initializeSession(
-            Buffer.from(claimTxDetails.transactionHash, 'hex')
-        );
-
-        // Post claim transaction
-        await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${endpoint}/swap/submarine/${createdResponse.id}/claim`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
-                pubNonce: Buffer.from(musig.getPublicNonce()).toString('hex'),
-                partialSignature: Buffer.from(musig.signPartial()).toString(
-                    'hex'
-                )
-            })
-        );
-
-        console.log('Claim transaction submitted successfully.');
     };
 
     render() {
