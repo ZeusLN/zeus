@@ -306,7 +306,7 @@ export default class SwapPane extends React.PureComponent<
         const errorInput =
             (inputSats !== 0 && inputSats < min) || inputSats > max;
         const errorOutput = outputSats < 0;
-        const error = errorInput || errorOutput;
+        const errorMsg = errorInput || errorOutput;
 
         return (
             <Screen>
@@ -755,7 +755,7 @@ export default class SwapPane extends React.PureComponent<
                                               )}`
                                     }
                                     secondary
-                                    disabled={error}
+                                    disabled={errorMsg}
                                 />
                             </View>
 

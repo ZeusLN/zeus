@@ -98,6 +98,11 @@ import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
 import { sweepRemoteClosed } from './chantools';
 import {
+    // swaps
+    createClaimTransaction
+} from './swaps';
+
+import {
     lnrpc,
     signrpc,
     invoicesrpc,
@@ -499,6 +504,27 @@ export interface ILndMobileInjections {
             publish: boolean,
             isTestNet: boolean
         ) => Promise<string>;
+    },
+    swaps: {
+        createClaimTransaction: ({
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            privateKey,
+            servicePubKey,
+            transactionHash,
+            pubNonce
+        }: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            privateKey: string;
+            servicePubKey: string;
+            transactionHash: string;
+            pubNonce: string;
+        }) => Promise<string>;
     };
 }
 
@@ -609,5 +635,8 @@ export default {
     },
     chantools: {
         sweepRemoteClosed
+    },
+    swaps: {
+        createClaimTransaction
     }
 } as ILndMobileInjections;
