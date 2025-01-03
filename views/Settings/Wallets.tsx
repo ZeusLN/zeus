@@ -213,7 +213,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                     selectedNode === index ||
                                     (!selectedNode && index === 0);
                                 if (nodeActive) {
-                                    nodeSubtitle = 'Active | ';
+                                    nodeSubtitle = `${localeString(
+                                        'general.active'
+                                    )} | `;
                                 }
 
                                 nodeSubtitle +=
