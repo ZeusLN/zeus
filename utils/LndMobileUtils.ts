@@ -7,7 +7,6 @@ import {
 import DeviceInfo from 'react-native-device-info';
 
 import { generateSecureRandom } from 'react-native-securerandom';
-import NetInfo from '@react-native-community/netinfo';
 
 // @ts-ignore:next-line
 import Ping from 'react-native-ping';
@@ -226,13 +225,11 @@ export async function expressGraphSync() {
         }
 
         try {
-            const connectionState = await NetInfo.fetch();
             const gossipStatus = await gossipSync(
                 stores.settingsStore?.settings?.speedloader === 'Custom'
                     ? stores.settingsStore?.settings?.customSpeedloader
                     : stores.settingsStore?.settings?.speedloader ||
-                          DEFAULT_SPEEDLOADER,
-                connectionState.type
+                          DEFAULT_SPEEDLOADER
             );
 
             clearInterval(timer);

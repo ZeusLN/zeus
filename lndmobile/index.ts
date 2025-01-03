@@ -87,10 +87,9 @@ export const startLnd = async (
  * @throws
  */
 export const gossipSync = async (
-    serviceUrl: string,
-    networkType: string
+    serviceUrl: string
 ): Promise<{ data: string }> => {
-    return await LndMobile.gossipSync(serviceUrl, networkType);
+    return await LndMobile.gossipSync(serviceUrl);
 };
 
 /**
