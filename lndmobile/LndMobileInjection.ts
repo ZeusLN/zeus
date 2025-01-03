@@ -96,6 +96,11 @@ import {
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
 import {
+    // swaps
+    createClaimTransaction
+} from './swaps';
+
+import {
     lnrpc,
     signrpc,
     invoicesrpc,
@@ -459,6 +464,27 @@ export interface ILndMobileInjections {
     scheduledSync: {
         checkScheduledSyncWorkStatus: () => Promise<WorkInfo>;
     };
+    swaps: {
+        createClaimTransaction: ({
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            privateKey,
+            servicePubKey,
+            transactionHash,
+            pubNonce
+        }: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            privateKey: string;
+            servicePubKey: string;
+            transactionHash: string;
+            pubNonce: string;
+        }) => Promise<string>;
+    };
 }
 
 // @ts-ignore:next-line
@@ -564,5 +590,8 @@ export default {
     },
     scheduledSync: {
         checkScheduledSyncWorkStatus
+    },
+    swaps: {
+        createClaimTransaction
     }
 } as ILndMobileInjections;

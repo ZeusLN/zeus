@@ -50,6 +50,18 @@ export interface ILndMobile {
     unbindLndMobileService(): Promise<void>; // TODO(hsjoberg): function looks broken
     sendPongToLndMobileservice(): Promise<{ data: string }>;
     checkLndMobileServiceConnected(): Promise<boolean>;
+
+    // Swaps
+    createClaimTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        privateKey: string,
+        servicePubKey: string,
+        transactionHash: string,
+        pubNonce: string
+    ): Promise<string>;
 }
 
 export interface ILndMobileTools {
