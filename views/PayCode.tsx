@@ -85,7 +85,7 @@ export default class PayCodeView extends React.Component<
                 >
                     {error_msg && <ErrorMessage message={error_msg} />}
                     <KeyValue
-                        keyValue={localeString('views.Channel.active')}
+                        keyValue={localeString('general.active')}
                         value={
                             active
                                 ? localeString('general.true')
