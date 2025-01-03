@@ -276,13 +276,13 @@ class LndMobile: RCTEventEmitter {
     }
   }
 
-@objc(gossipSync:networkType:resolver:rejecter:)
-  func gossipSync(serviceUrl: String, networkType: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+@objc(gossipSync:resolver:rejecter:)
+  func gossipSync(serviceUrl: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
    let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
    let lndPath = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
    let cachePath = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
 
-    Lnd.shared.gossipSync(serviceUrl, cacheDir: cachePath.path, dataDir: lndPath.path, networkType: networkType, callback: { (data, error) in
+    Lnd.shared.gossipSync(serviceUrl, cacheDir: cachePath.path, dataDir: lndPath.path, callback: { (data, error) in
      if let e = error {
        reject("error", e.localizedDescription, e)
        return
