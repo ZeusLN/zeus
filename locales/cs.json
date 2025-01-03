@@ -424,7 +424,7 @@
     "views.Channel.confirmClose": "Potvrdit zavření kanálu",
     "views.Channel.aliasScid": "SCID Alias",
     "views.Channel.aliasScids": "Aliasy SCID",
-    "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.peerAliasScid": "SCID Alias peeru",
     "views.Channel.closeHeight": "Výška zavření",
     "views.Channel.closeType": "Typ zavření",
     "views.Channel.openInitiator": "Iniciátor otevření",
