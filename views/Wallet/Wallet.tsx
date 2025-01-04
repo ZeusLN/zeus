@@ -519,6 +519,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
             );
             setConnectingStatus(false);
+            SettingsStore.setInitialStart(false);
         }
 
         if (BackendUtils.supportsLSPs()) {
