@@ -267,13 +267,12 @@ export default class Receive extends React.Component<
                 (settings?.invoices?.blindedPaths &&
                     BackendUtils.supportsBolt11BlindedRoutes()) ||
                 false,
-            enableLSP: settings?.enableLSP || true,
+            enableLSP: settings?.enableLSP,
             lspIsActive:
-                (settings?.enableLSP &&
-                    BackendUtils.supportsLSPs() &&
-                    !lspNotConfigured) ||
-                false,
-            lspNotConfigured: lspNotConfigured || true
+                settings?.enableLSP &&
+                BackendUtils.supportsLSPs() &&
+                !lspNotConfigured,
+            lspNotConfigured
         });
 
         const lnOnly =
