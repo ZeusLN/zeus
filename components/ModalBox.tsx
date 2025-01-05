@@ -19,6 +19,9 @@ import {
     StyleProp,
     LayoutChangeEvent
 } from 'react-native';
+import { inject, observer } from 'mobx-react';
+
+import SettingsStore from '../stores/SettingsStore';
 
 const {
     height: SCREEN_HEIGHT,
@@ -69,6 +72,7 @@ interface ModalBoxProps {
     children?: React.ReactNode;
     useNativeDriver?: boolean;
     onLayout?: (event: LayoutChangeEvent) => void;
+    SettingsStore?: SettingsStore;
 }
 
 interface ModalBoxState {
@@ -92,6 +96,8 @@ interface ModalBoxState {
     positionDest?: number;
 }
 
+@inject('SettingsStore')
+@observer
 export default class ModalBox extends React.PureComponent<
     ModalBoxProps,
     ModalBoxState
@@ -641,9 +647,10 @@ export default class ModalBox extends React.PureComponent<
      */
     render() {
         const visible =
-            this.state.isOpen ||
-            this.state.isAnimateOpen ||
-            this.state.isAnimateClose;
+            !this.props.SettingsStore!.loginRequired() &&
+            (this.state.isOpen ||
+                this.state.isAnimateOpen ||
+                this.state.isAnimateClose);
 
         if (!visible) return <View />;
 
