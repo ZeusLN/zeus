@@ -16,7 +16,7 @@ protobuf.util.Long = Long;
 protobuf.configure();
 
 import {AppRegistry} from 'react-native';
-import './shim.js'
+import './shim.js';
 import App from './App.tsx';
 import {name as appName} from './app.json';
 
