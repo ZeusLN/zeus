@@ -18,6 +18,7 @@ interface SetPassphraseProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
+    route: any;
 }
 
 interface SetPassphraseState {
@@ -74,7 +75,7 @@ export default class SetPassphrase extends React.Component<
     );
 
     saveSettings = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const { passphrase, passphraseConfirm } = this.state;
         const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
 
@@ -106,7 +107,9 @@ export default class SetPassphrase extends React.Component<
         await updateSettings({ passphrase }).then(() => {
             setLoginStatus(true);
             getSettings();
-            navigation.popTo('Security', { refresh: true });
+            navigation.popTo('Security', {
+                enableBiometrics: route.params?.forBiometrics
+            });
         });
     };
 

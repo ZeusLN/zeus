@@ -20,6 +20,7 @@ interface SecurityProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
+    route: any;
 }
 
 interface SecurityState {
@@ -30,7 +31,6 @@ interface SecurityState {
     passphraseExists: boolean;
     supportedBiometryType: BiometryType | undefined;
     isBiometryEnabled: boolean | undefined;
-    pendingBiometricsEnable: boolean;
 }
 
 const possibleSecurityItems = [
@@ -77,8 +77,7 @@ export default class Security extends React.Component<
         pinExists: false,
         passphraseExists: false,
         supportedBiometryType: undefined,
-        isBiometryEnabled: undefined,
-        pendingBiometricsEnable: false
+        isBiometryEnabled: undefined
     };
 
     componentDidMount() {
@@ -92,7 +91,7 @@ export default class Security extends React.Component<
     }
 
     checkSettings = async () => {
-        const { SettingsStore } = this.props;
+        const { SettingsStore, route } = this.props;
         const biometricsStatus = await SettingsStore.checkBiometricsStatus();
         const settings = await SettingsStore.getSettings();
 
@@ -151,70 +150,52 @@ export default class Security extends React.Component<
 
         // If user tried to enable biometrics, but was forced to first set up pin or password,
         // call handleBiometricsSwitchChange again
-        if (
-            this.state.pendingBiometricsEnable &&
-            (settings.pin || settings.passphrase)
-        ) {
+        if (route.params?.enableBiometrics) {
             this.handleBiometricsSwitchChange(true);
         }
     };
 
     async handleBiometricsSwitchChange(value: boolean): Promise<void> {
         const { SettingsStore, ModalStore, navigation } = this.props;
+        const { pin, passphrase } = SettingsStore.settings;
 
-        if (value) {
-            const settings = SettingsStore.settings;
-            if (!settings.pin && !settings.passphrase) {
-                this.setState({ pendingBiometricsEnable: true });
-                ModalStore.toggleInfoModal(
-                    localeString(
-                        'views.Settings.Security.BiometryRequiresPinOrPassword'
-                    ),
-                    undefined,
-                    [
-                        {
-                            title: localeString(
-                                'views.Settings.createYourPassword'
-                            ),
-                            callback: () => navigation.navigate('SetPassword')
-                        },
-                        {
-                            title: localeString('views.Settings.newPin'),
-                            callback: () => navigation.navigate('SetPin')
-                        }
-                    ]
-                );
-                return;
-            }
-
-            const isVerified = await verifyBiometry(
-                localeString('views.Settings.Security.Biometrics.prompt')
+        if (value && !pin && !passphrase) {
+            ModalStore.toggleInfoModal(
+                localeString(
+                    'views.Settings.Security.BiometryRequiresPinOrPassword'
+                ),
+                undefined,
+                [
+                    {
+                        title: localeString(
+                            'views.Settings.createYourPassword'
+                        ),
+                        callback: () =>
+                            navigation.navigate('SetPassword', {
+                                forBiometrics: true
+                            })
+                    },
+                    {
+                        title: localeString('views.Settings.newPin'),
+                        callback: () =>
+                            navigation.navigate('SetPin', {
+                                forBiometrics: true
+                            })
+                    }
+                ]
             );
+            return;
+        }
 
-            if (isVerified) {
-                this.setState({
-                    isBiometryEnabled: value,
-                    pendingBiometricsEnable: false
-                });
+        const isVerified = await verifyBiometry(
+            localeString('views.Settings.Security.Biometrics.prompt')
+        );
 
-                SettingsStore.updateSettings({
-                    isBiometryEnabled: value
-                });
-            }
-        } else {
-            const isVerified = await verifyBiometry(
-                localeString(`views.Settings.Security.Biometrics.prompt`)
-            );
-
-            if (isVerified) {
-                this.setState({
-                    isBiometryEnabled: value
-                });
-
-                SettingsStore.updateSettings({
-                    isBiometryEnabled: value
-                });
-            }
+        if (isVerified) {
+            this.setState({ isBiometryEnabled: value });
+            SettingsStore.updateSettings({
+                isBiometryEnabled: value
+            });
         }
     }
 

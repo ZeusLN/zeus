@@ -16,6 +16,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface SetPinProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: any;
 }
 
 interface SetPinState {
@@ -66,7 +67,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     };
 
     saveSettings = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const { pin, pinConfirm } = this.state;
         const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
 
@@ -95,7 +96,9 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         await updateSettings({ pin }).then(() => {
             setLoginStatus(true);
             getSettings();
-            navigation.popTo('Security');
+            navigation.popTo('Security', {
+                enableBiometrics: route.params?.forBiometrics
+            });
         });
     };
 
