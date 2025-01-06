@@ -20,7 +20,7 @@ interface SecurityProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
-    route: any;
+    route: { params?: { enableBiometrics?: boolean } };
 }
 
 interface SecurityState {
