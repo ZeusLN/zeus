@@ -66,7 +66,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         this.state = {
             order,
             selectedIndex: disableTips ? 3 : 0,
-            customPercentage: disableTips ? '0' : '21',
+            customPercentage: disableTips ? '0' : '',
             customAmount: '',
             customType: 'percentage',
             bitcoinUnits: 'sats',
