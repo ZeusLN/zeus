@@ -604,7 +604,7 @@ export default class InvoicesSettings extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: 450,
+                        height: BackendUtils.supportsTaproot() ? 450 : 350,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}
@@ -613,69 +613,77 @@ export default class InvoicesSettings extends React.Component<
                     position="bottom"
                     ref={this.modalBoxRef}
                 >
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 24,
-                            fontWeight: 'bold',
-                            paddingTop: 24,
-                            paddingBottom: 24
-                        }}
-                    >
-                        {localeString('views.Receive.addressType')}
-                    </Text>
-                    {_map(ADDRESS_TYPES, (d, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            onPress={async () => {
-                                this.setState({ addressType: d.value });
-                                await updateSettings({
-                                    invoices: {
-                                        addressType: d.value,
-                                        memo,
-                                        expiry,
-                                        timePeriod,
-                                        expirySeconds,
-                                        routeHints,
-                                        ampInvoice,
-                                        showCustomPreimageField
-                                    }
-                                });
-                                this.modalBoxRef.current?.close();
-                            }}
+                    <ScrollView>
+                        <Text
                             style={{
-                                backgroundColor: themeColor('secondary'),
-                                borderColor:
-                                    d.value === addressType
-                                        ? themeColor('highlight')
-                                        : themeColor('secondaryText'),
-                                borderRadius: 4,
-                                borderWidth: d.value === addressType ? 2 : 1,
-                                padding: 16,
-                                marginBottom: 24
+                                color: themeColor('text'),
+                                fontSize: 24,
+                                fontWeight: 'bold',
+                                paddingTop: 24,
+                                paddingBottom: 24
                             }}
                         >
-                            <Text
+                            {localeString('views.Receive.addressType')}
+                        </Text>
+                        {_map(ADDRESS_TYPES, (d, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                onPress={async () => {
+                                    // If same address type is selected, close modal
+                                    if (d.value === addressType) {
+                                        this.modalBoxRef.current?.close();
+                                        return;
+                                    }
+                                    this.setState({ addressType: d.value });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType: d.value,
+                                            memo,
+                                            expiry,
+                                            timePeriod,
+                                            expirySeconds,
+                                            routeHints,
+                                            ampInvoice,
+                                            showCustomPreimageField
+                                        }
+                                    });
+                                    this.modalBoxRef.current?.close();
+                                }}
                                 style={{
-                                    color: themeColor('text'),
-                                    fontSize: 16,
-                                    fontWeight: 'bold',
-                                    marginBottom: 4
+                                    backgroundColor: themeColor('secondary'),
+                                    borderColor:
+                                        d.value === addressType
+                                            ? themeColor('highlight')
+                                            : themeColor('secondaryText'),
+                                    borderRadius: 4,
+                                    borderWidth:
+                                        d.value === addressType ? 2 : 1,
+                                    padding: 16,
+                                    marginBottom: 24
                                 }}
                             >
-                                {d.key}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontSize: 16,
-                                    fontWeight: 'normal'
-                                }}
-                            >
-                                {d.description}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 16,
+                                        fontWeight: 'bold',
+                                        marginBottom: 4
+                                    }}
+                                >
+                                    {d.key}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 16,
+                                        fontWeight: 'normal'
+                                    }}
+                                >
+                                    {d.description}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </ModalBox>
             </Screen>
         );
