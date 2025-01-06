@@ -176,41 +176,45 @@ export default class Receive extends React.Component<
     ReceiveProps,
     ReceiveState
 > {
+    constructor(props: ReceiveProps) {
+        super(props);
+        this.state = {
+            selectedIndex: props.route.params?.selectedIndex ?? 0,
+            expirationIndex: 1,
+            addressType: '0',
+            memo: '',
+            value: '',
+            satAmount: '',
+            expiry: '3600',
+            timePeriod: 'Seconds',
+            expirySeconds: '3600',
+            customPreimage: '',
+            ampInvoice: false,
+            routeHints: false,
+            account: 'default',
+            blindedPaths: false,
+            nfcSupported: false,
+            // POS
+            orderId: '',
+            orderTip: '',
+            orderTotal: '',
+            exchangeRate: '',
+            rate: 0,
+            // LSP
+            needInbound: false,
+            enableLSP: true,
+            lspIsActive: false,
+            lspNotConfigured: true,
+            routeHintMode: RouteHintMode.Automatic,
+            selectedRouteHintChannels: undefined
+        };
+    }
+
     listener: any;
     listenerSecondary: any;
     lnInterval: any;
     onChainInterval: any;
     hopPickerRef: HopPicker | null;
-    state: ReceiveState = {
-        selectedIndex: 0,
-        expirationIndex: 1,
-        addressType: '0',
-        memo: '',
-        value: '',
-        satAmount: '',
-        expiry: '3600',
-        timePeriod: 'Seconds',
-        expirySeconds: '3600',
-        customPreimage: '',
-        ampInvoice: false,
-        routeHints: false,
-        account: 'default',
-        blindedPaths: false,
-        nfcSupported: false,
-        // POS
-        orderId: '',
-        orderTip: '',
-        orderTotal: '',
-        exchangeRate: '',
-        rate: 0,
-        // LSP
-        needInbound: false,
-        enableLSP: true,
-        lspIsActive: false,
-        lspNotConfigured: true,
-        routeHintMode: RouteHintMode.Automatic,
-        selectedRouteHintChannels: undefined
-    };
 
     async UNSAFE_componentWillMount() {
         const {
@@ -1507,12 +1511,29 @@ export default class Receive extends React.Component<
                         loading ||
                         watchedInvoicePaid ||
                         posStatus === 'active' ||
-                        hideRightHeaderComponent ? null : haveInvoice ? (
-                            <ClearButton />
-                        ) : (
+                        hideRightHeaderComponent ? undefined : route.params
+                              ?.selectedIndex === 2 ? (
                             BackendUtils.supportsAddressTypeSelection() &&
-                            !creatingInvoice && <SettingsButton />
-                        )
+                            account === 'default' ? (
+                                <SettingsButton />
+                            ) : undefined
+                        ) : haveInvoice ? (
+                            selectedIndex === 2 ? (
+                                BackendUtils.supportsAddressTypeSelection() &&
+                                account === 'default' ? (
+                                    <SettingsButton />
+                                ) : (
+                                    <ClearButton />
+                                )
+                            ) : (
+                                <ClearButton />
+                            )
+                        ) : !creatingInvoice &&
+                          BackendUtils.supportsAddressTypeSelection() &&
+                          account === 'default' &&
+                          (selectedIndex === 2 || selectedIndex === 1) ? (
+                            <SettingsButton />
+                        ) : undefined
                     }
                     navigation={navigation}
                 />
@@ -2049,509 +2070,92 @@ export default class Receive extends React.Component<
                                             )}
                                     </View>
                                 )}
-                                {!loading && !haveInvoice && !creatingInvoice && (
-                                    <>
-                                        {BackendUtils.supportsLSPs() &&
-                                            !lspNotConfigured && (
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        marginBottom: 15
-                                                    }}
-                                                >
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text
-                                                            style={{
-                                                                ...styles.secondaryText,
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                            infoModalText={[
-                                                                localeString(
-                                                                    'views.Receive.lspSwitchExplainer1'
-                                                                ),
-                                                                localeString(
-                                                                    'views.Receive.lspSwitchExplainer2'
-                                                                )
-                                                            ]}
-                                                            infoModalAdditionalButtons={[
-                                                                {
-                                                                    title: localeString(
-                                                                        'general.learnMore'
-                                                                    ),
-                                                                    callback:
-                                                                        () =>
-                                                                            navigation.navigate(
-                                                                                'LspExplanationOverview'
-                                                                            )
-                                                                }
-                                                            ]}
+                                {!loading &&
+                                    !haveInvoice &&
+                                    !creatingInvoice &&
+                                    route.params?.selectedIndex !== 2 && (
+                                        <>
+                                            {BackendUtils.supportsLSPs() &&
+                                                !lspNotConfigured && (
+                                                    <View
+                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+                                                            marginBottom: 15
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{ flex: 1 }}
                                                         >
-                                                            {localeString(
-                                                                'views.Settings.LSP.enableLSP'
-                                                            )}
-                                                        </Text>
-                                                    </View>
-                                                    <View
-                                                        style={{
-                                                            alignSelf: 'center',
-                                                            marginLeft: 5
-                                                        }}
-                                                    >
-                                                        <Switch
-                                                            value={enableLSP}
-                                                            onValueChange={async () => {
-                                                                this.setState({
-                                                                    enableLSP:
-                                                                        !enableLSP,
-                                                                    lspIsActive:
-                                                                        !enableLSP &&
-                                                                        BackendUtils.supportsLSPs() &&
-                                                                        !lspNotConfigured
-                                                                });
-                                                                await updateSettings(
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.secondaryText,
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    )
+                                                                }}
+                                                                infoModalText={[
+                                                                    localeString(
+                                                                        'views.Receive.lspSwitchExplainer1'
+                                                                    ),
+                                                                    localeString(
+                                                                        'views.Receive.lspSwitchExplainer2'
+                                                                    )
+                                                                ]}
+                                                                infoModalAdditionalButtons={[
                                                                     {
-                                                                        enableLSP:
-                                                                            !enableLSP
+                                                                        title: localeString(
+                                                                            'general.learnMore'
+                                                                        ),
+                                                                        callback:
+                                                                            () =>
+                                                                                navigation.navigate(
+                                                                                    'LspExplanationOverview'
+                                                                                )
                                                                     }
-                                                                );
+                                                                ]}
+                                                            >
+                                                                {localeString(
+                                                                    'views.Settings.LSP.enableLSP'
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                        <View
+                                                            style={{
+                                                                alignSelf:
+                                                                    'center',
+                                                                marginLeft: 5
                                                             }}
-                                                        />
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                        {(!enableLSP || lspNotConfigured) && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Receive.memo'
-                                                    )}
-                                                </Text>
-                                                <TextInput
-                                                    placeholder={localeString(
-                                                        'views.Receive.memoPlaceholder'
-                                                    )}
-                                                    value={memo}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) => {
-                                                        this.setState({
-                                                            memo: text
-                                                        });
-                                                        clearUnified();
-                                                    }}
-                                                />
-                                            </>
-                                        )}
-
-                                        <AmountInput
-                                            amount={value}
-                                            title={`${localeString(
-                                                'views.Receive.amount'
-                                            )} ${
-                                                lnurl &&
-                                                lnurl.minWithdrawable !==
-                                                    lnurl.maxWithdrawable
-                                                    ? ` (${Math.ceil(
-                                                          lnurl.minWithdrawable /
-                                                              1000
-                                                      )} - ${Math.floor(
-                                                          lnurl.maxWithdrawable /
-                                                              1000
-                                                      )})`
-                                                    : ''
-                                            }`}
-                                            locked={
-                                                lnurl &&
-                                                lnurl.minWithdrawable ===
-                                                    lnurl.maxWithdrawable
-                                                    ? true
-                                                    : false
-                                            }
-                                            onAmountChange={(
-                                                amount: string,
-                                                satAmount: string | number
-                                            ) => {
-                                                let needInbound = false;
-                                                if (
-                                                    lspIsActive &&
-                                                    satAmount != '0' &&
-                                                    new BigNumber(satAmount).gt(
-                                                        this.props.ChannelsStore
-                                                            .totalInbound
-                                                    )
-                                                ) {
-                                                    needInbound = true;
-                                                }
-                                                this.setState({
-                                                    value: amount,
-                                                    satAmount,
-                                                    needInbound
-                                                });
-                                            }}
-                                        />
-
-                                        {needInbound && (
-                                            <TouchableOpacity
-                                                onPress={() =>
-                                                    navigation.navigate(
-                                                        'LspExplanationFees'
-                                                    )
-                                                }
-                                            >
-                                                <View
-                                                    style={{
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'secondary'
-                                                            ),
-                                                        borderRadius: 10,
-                                                        borderColor:
-                                                            themeColor(
-                                                                'highlight'
-                                                            ),
-                                                        padding: 15,
-                                                        borderWidth: 0.5,
-                                                        top: 5,
-                                                        marginBottom: 20
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Medium',
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontSize: 15
-                                                        }}
-                                                    >
-                                                        {this.props
-                                                            .ChannelsStore
-                                                            .channels.length ===
-                                                        0
-                                                            ? localeString(
-                                                                  'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                                              )
-                                                            : localeString(
-                                                                  'views.Wallet.KeypadPane.lspExplainer'
-                                                              )}
-                                                    </Text>
-                                                    <Text
-                                                        style={{
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Medium',
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontSize: 15,
-                                                            top: 5,
-                                                            textAlign: 'right'
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'general.tapToLearnMore'
-                                                        )}
-                                                    </Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        )}
-
-                                        {implementation !== 'lndhub' && (
-                                            <>
-                                                <Text
-                                                    style={{
-                                                        ...styles.secondaryText,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Receive.expiration'
-                                                    )}
-                                                </Text>
-                                                <Row style={{ width: '100%' }}>
-                                                    <TextInput
-                                                        keyboardType="numeric"
-                                                        value={expiry}
-                                                        style={{
-                                                            width: '58%'
-                                                        }}
-                                                        onChangeText={(
-                                                            text: string
-                                                        ) => {
-                                                            let expirySeconds =
-                                                                '3600';
-                                                            if (
-                                                                timePeriod ===
-                                                                'Seconds'
-                                                            ) {
-                                                                expirySeconds =
-                                                                    text;
-                                                            } else if (
-                                                                timePeriod ===
-                                                                'Minutes'
-                                                            ) {
-                                                                expirySeconds =
-                                                                    new BigNumber(
-                                                                        text
-                                                                    )
-                                                                        .multipliedBy(
-                                                                            60
-                                                                        )
-                                                                        .toString();
-                                                            } else if (
-                                                                timePeriod ===
-                                                                'Hours'
-                                                            ) {
-                                                                expirySeconds =
-                                                                    new BigNumber(
-                                                                        text
-                                                                    )
-                                                                        .multipliedBy(
-                                                                            60 *
-                                                                                60
-                                                                        )
-                                                                        .toString();
-                                                            } else if (
-                                                                timePeriod ===
-                                                                'Days'
-                                                            ) {
-                                                                expirySeconds =
-                                                                    new BigNumber(
-                                                                        text
-                                                                    )
-                                                                        .multipliedBy(
-                                                                            60 *
-                                                                                60 *
-                                                                                24
-                                                                        )
-                                                                        .toString();
-                                                            } else if (
-                                                                timePeriod ===
-                                                                'Weeks'
-                                                            ) {
-                                                                expirySeconds =
-                                                                    new BigNumber(
-                                                                        text
-                                                                    )
-                                                                        .multipliedBy(
-                                                                            60 *
-                                                                                60 *
-                                                                                24 *
-                                                                                7
-                                                                        )
-                                                                        .toString();
-                                                            }
-
-                                                            if (
-                                                                expirySeconds ==
-                                                                '600'
-                                                            ) {
-                                                                this.setState({
-                                                                    expiry: text,
-                                                                    expirySeconds,
-                                                                    expirationIndex: 0
-                                                                });
-                                                            } else if (
-                                                                expirySeconds ==
-                                                                '3600'
-                                                            ) {
-                                                                this.setState({
-                                                                    expiry: text,
-                                                                    expirySeconds,
-                                                                    expirationIndex: 1
-                                                                });
-                                                            } else if (
-                                                                expirySeconds ==
-                                                                '86400'
-                                                            ) {
-                                                                this.setState({
-                                                                    expiry: text,
-                                                                    expirySeconds,
-                                                                    expirationIndex: 2
-                                                                });
-                                                            } else if (
-                                                                expirySeconds ==
-                                                                '604800'
-                                                            ) {
-                                                                this.setState({
-                                                                    expiry: text,
-                                                                    expirySeconds,
-                                                                    expirationIndex: 3
-                                                                });
-                                                            } else {
-                                                                this.setState({
-                                                                    expiry: text,
-                                                                    expirySeconds,
-                                                                    expirationIndex: 5
-                                                                });
-                                                            }
-                                                        }}
-                                                    />
-                                                    <View
-                                                        style={{
-                                                            flex: 1,
-                                                            // TODO
-                                                            top: -5
-                                                        }}
-                                                    >
-                                                        <DropdownSetting
-                                                            selectedValue={
-                                                                timePeriod
-                                                            }
-                                                            values={
-                                                                TIME_PERIOD_KEYS
-                                                            }
-                                                            onValueChange={async (
-                                                                value: string
-                                                            ) => {
-                                                                let expirySeconds =
-                                                                    '3600';
-                                                                if (
-                                                                    value ===
-                                                                    'Seconds'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        expiry;
-                                                                } else if (
-                                                                    value ===
-                                                                    'Minutes'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            expiry
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60
-                                                                            )
-                                                                            .toString();
-                                                                } else if (
-                                                                    value ===
-                                                                    'Hours'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            expiry
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60 *
-                                                                                    60
-                                                                            )
-                                                                            .toString();
-                                                                } else if (
-                                                                    value ===
-                                                                    'Days'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            expiry
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60 *
-                                                                                    60 *
-                                                                                    24
-                                                                            )
-                                                                            .toString();
-                                                                } else if (
-                                                                    value ===
-                                                                    'Weeks'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            expiry
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60 *
-                                                                                    60 *
-                                                                                    24 *
-                                                                                    7
-                                                                            )
-                                                                            .toString();
+                                                        >
+                                                            <Switch
+                                                                value={
+                                                                    enableLSP
                                                                 }
-
-                                                                let expirationIndex;
-                                                                if (
-                                                                    expirySeconds ===
-                                                                    '600'
-                                                                ) {
-                                                                    expirationIndex = 0;
-                                                                } else if (
-                                                                    expirySeconds ===
-                                                                    '3600'
-                                                                ) {
-                                                                    expirationIndex = 1;
-                                                                } else if (
-                                                                    expirySeconds ===
-                                                                    '86400'
-                                                                ) {
-                                                                    expirationIndex = 2;
-                                                                } else if (
-                                                                    expirySeconds ===
-                                                                    '604800'
-                                                                ) {
-                                                                    expirationIndex = 3;
-                                                                } else {
-                                                                    expirationIndex = 4;
-                                                                }
-
-                                                                this.setState({
-                                                                    timePeriod:
-                                                                        value,
-                                                                    expirySeconds,
-                                                                    expirationIndex
-                                                                });
-                                                            }}
-                                                        />
+                                                                onValueChange={async () => {
+                                                                    this.setState(
+                                                                        {
+                                                                            enableLSP:
+                                                                                !enableLSP,
+                                                                            lspIsActive:
+                                                                                !enableLSP &&
+                                                                                BackendUtils.supportsLSPs() &&
+                                                                                !lspNotConfigured
+                                                                        }
+                                                                    );
+                                                                    await updateSettings(
+                                                                        {
+                                                                            enableLSP:
+                                                                                !enableLSP
+                                                                        }
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </View>
                                                     </View>
-                                                </Row>
+                                                )}
 
-                                                <ButtonGroup
-                                                    onPress={
-                                                        this
-                                                            .updateExpirationIndex
-                                                    }
-                                                    selectedIndex={
-                                                        expirationIndex
-                                                    }
-                                                    buttons={expirationButtons}
-                                                    selectedButtonStyle={{
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'highlight'
-                                                            ),
-                                                        borderRadius: 12
-                                                    }}
-                                                    containerStyle={{
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'secondary'
-                                                            ),
-                                                        borderRadius: 12,
-                                                        borderWidth: 0,
-                                                        height: 30
-                                                    }}
-                                                    innerBorderStyle={{
-                                                        color: themeColor(
-                                                            'secondary'
-                                                        )
-                                                    }}
-                                                />
-                                            </>
-                                        )}
-
-                                        {BackendUtils.supportsCustomPreimages() &&
-                                            showCustomPreimageField && (
+                                            {(!enableLSP ||
+                                                lspNotConfigured) && (
                                                 <>
                                                     <Text
                                                         style={{
@@ -2562,78 +2166,145 @@ export default class Receive extends React.Component<
                                                         }}
                                                     >
                                                         {localeString(
-                                                            'views.Receive.customPreimage'
+                                                            'views.Receive.memo'
                                                         )}
                                                     </Text>
                                                     <TextInput
-                                                        value={customPreimage}
+                                                        placeholder={localeString(
+                                                            'views.Receive.memoPlaceholder'
+                                                        )}
+                                                        value={memo}
                                                         onChangeText={(
                                                             text: string
-                                                        ) =>
+                                                        ) => {
                                                             this.setState({
-                                                                customPreimage:
-                                                                    text
-                                                            })
-                                                        }
+                                                                memo: text
+                                                            });
+                                                            clearUnified();
+                                                        }}
                                                     />
                                                 </>
                                             )}
 
-                                        {BackendUtils.isLNDBased() &&
-                                            !lspIsActive && (
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        marginTop: 20
-                                                    }}
+                                            <AmountInput
+                                                amount={value}
+                                                title={`${localeString(
+                                                    'views.Receive.amount'
+                                                )} ${
+                                                    lnurl &&
+                                                    lnurl.minWithdrawable !==
+                                                        lnurl.maxWithdrawable
+                                                        ? ` (${Math.ceil(
+                                                              lnurl.minWithdrawable /
+                                                                  1000
+                                                          )} - ${Math.floor(
+                                                              lnurl.maxWithdrawable /
+                                                                  1000
+                                                          )})`
+                                                        : ''
+                                                }`}
+                                                locked={
+                                                    lnurl &&
+                                                    lnurl.minWithdrawable ===
+                                                        lnurl.maxWithdrawable
+                                                        ? true
+                                                        : false
+                                                }
+                                                onAmountChange={(
+                                                    amount: string,
+                                                    satAmount: string | number
+                                                ) => {
+                                                    let needInbound = false;
+                                                    if (
+                                                        lspIsActive &&
+                                                        satAmount != '0' &&
+                                                        new BigNumber(
+                                                            satAmount
+                                                        ).gt(
+                                                            this.props
+                                                                .ChannelsStore
+                                                                .totalInbound
+                                                        )
+                                                    ) {
+                                                        needInbound = true;
+                                                    }
+                                                    this.setState({
+                                                        value: amount,
+                                                        satAmount,
+                                                        needInbound
+                                                    });
+                                                }}
+                                            />
+
+                                            {needInbound && (
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'LspExplanationFees'
+                                                        )
+                                                    }
                                                 >
-                                                    <View style={{ flex: 1 }}>
+                                                    <View
+                                                        style={{
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'secondary'
+                                                                ),
+                                                            borderRadius: 10,
+                                                            borderColor:
+                                                                themeColor(
+                                                                    'highlight'
+                                                                ),
+                                                            padding: 15,
+                                                            borderWidth: 0.5,
+                                                            top: 5,
+                                                            marginBottom: 20
+                                                        }}
+                                                    >
                                                         <Text
                                                             style={{
-                                                                ...styles.secondaryText,
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Medium',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                fontSize: 15
+                                                            }}
+                                                        >
+                                                            {this.props
+                                                                .ChannelsStore
+                                                                .channels
+                                                                .length === 0
+                                                                ? localeString(
+                                                                      'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                                                  )
+                                                                : localeString(
+                                                                      'views.Wallet.KeypadPane.lspExplainer'
+                                                                  )}
+                                                        </Text>
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Medium',
                                                                 color: themeColor(
                                                                     'secondaryText'
-                                                                )
-                                                            }}
-                                                            infoModalText={[
-                                                                localeString(
-                                                                    'views.Receive.routeHintSwitchExplainer1'
                                                                 ),
-                                                                localeString(
-                                                                    'views.Receive.routeHintSwitchExplainer2'
-                                                                )
-                                                            ]}
+                                                                fontSize: 15,
+                                                                top: 5,
+                                                                textAlign:
+                                                                    'right'
+                                                            }}
                                                         >
                                                             {localeString(
-                                                                'views.Receive.routeHints'
+                                                                'general.tapToLearnMore'
                                                             )}
                                                         </Text>
                                                     </View>
-                                                    <View
-                                                        style={{
-                                                            alignSelf: 'center',
-                                                            marginLeft: 5
-                                                        }}
-                                                    >
-                                                        <Switch
-                                                            value={routeHints}
-                                                            onValueChange={() =>
-                                                                this.setState({
-                                                                    routeHints:
-                                                                        !routeHints
-                                                                })
-                                                            }
-                                                            disabled={
-                                                                blindedPaths
-                                                            }
-                                                        />
-                                                    </View>
-                                                </View>
+                                                </TouchableOpacity>
                                             )}
 
-                                        {BackendUtils.isLNDBased() &&
-                                            routeHints && (
-                                                <Row>
+                                            {implementation !== 'lndhub' && (
+                                                <>
                                                     <Text
                                                         style={{
                                                             ...styles.secondaryText,
@@ -2643,18 +2314,271 @@ export default class Receive extends React.Component<
                                                         }}
                                                     >
                                                         {localeString(
-                                                            'general.mode'
+                                                            'views.Receive.expiration'
                                                         )}
                                                     </Text>
+                                                    <Row
+                                                        style={{
+                                                            width: '100%'
+                                                        }}
+                                                    >
+                                                        <TextInput
+                                                            keyboardType="numeric"
+                                                            value={expiry}
+                                                            style={{
+                                                                width: '58%'
+                                                            }}
+                                                            onChangeText={(
+                                                                text: string
+                                                            ) => {
+                                                                let expirySeconds =
+                                                                    '3600';
+                                                                if (
+                                                                    timePeriod ===
+                                                                    'Seconds'
+                                                                ) {
+                                                                    expirySeconds =
+                                                                        text;
+                                                                } else if (
+                                                                    timePeriod ===
+                                                                    'Minutes'
+                                                                ) {
+                                                                    expirySeconds =
+                                                                        new BigNumber(
+                                                                            text
+                                                                        )
+                                                                            .multipliedBy(
+                                                                                60
+                                                                            )
+                                                                            .toString();
+                                                                } else if (
+                                                                    timePeriod ===
+                                                                    'Hours'
+                                                                ) {
+                                                                    expirySeconds =
+                                                                        new BigNumber(
+                                                                            text
+                                                                        )
+                                                                            .multipliedBy(
+                                                                                60 *
+                                                                                    60
+                                                                            )
+                                                                            .toString();
+                                                                } else if (
+                                                                    timePeriod ===
+                                                                    'Days'
+                                                                ) {
+                                                                    expirySeconds =
+                                                                        new BigNumber(
+                                                                            text
+                                                                        )
+                                                                            .multipliedBy(
+                                                                                60 *
+                                                                                    60 *
+                                                                                    24
+                                                                            )
+                                                                            .toString();
+                                                                } else if (
+                                                                    timePeriod ===
+                                                                    'Weeks'
+                                                                ) {
+                                                                    expirySeconds =
+                                                                        new BigNumber(
+                                                                            text
+                                                                        )
+                                                                            .multipliedBy(
+                                                                                60 *
+                                                                                    60 *
+                                                                                    24 *
+                                                                                    7
+                                                                            )
+                                                                            .toString();
+                                                                }
+
+                                                                if (
+                                                                    expirySeconds ==
+                                                                    '600'
+                                                                ) {
+                                                                    this.setState(
+                                                                        {
+                                                                            expiry: text,
+                                                                            expirySeconds,
+                                                                            expirationIndex: 0
+                                                                        }
+                                                                    );
+                                                                } else if (
+                                                                    expirySeconds ==
+                                                                    '3600'
+                                                                ) {
+                                                                    this.setState(
+                                                                        {
+                                                                            expiry: text,
+                                                                            expirySeconds,
+                                                                            expirationIndex: 1
+                                                                        }
+                                                                    );
+                                                                } else if (
+                                                                    expirySeconds ==
+                                                                    '86400'
+                                                                ) {
+                                                                    this.setState(
+                                                                        {
+                                                                            expiry: text,
+                                                                            expirySeconds,
+                                                                            expirationIndex: 2
+                                                                        }
+                                                                    );
+                                                                } else if (
+                                                                    expirySeconds ==
+                                                                    '604800'
+                                                                ) {
+                                                                    this.setState(
+                                                                        {
+                                                                            expiry: text,
+                                                                            expirySeconds,
+                                                                            expirationIndex: 3
+                                                                        }
+                                                                    );
+                                                                } else {
+                                                                    this.setState(
+                                                                        {
+                                                                            expiry: text,
+                                                                            expirySeconds,
+                                                                            expirationIndex: 5
+                                                                        }
+                                                                    );
+                                                                }
+                                                            }}
+                                                        />
+                                                        <View
+                                                            style={{
+                                                                flex: 1,
+                                                                // TODO
+                                                                top: -5
+                                                            }}
+                                                        >
+                                                            <DropdownSetting
+                                                                selectedValue={
+                                                                    timePeriod
+                                                                }
+                                                                values={
+                                                                    TIME_PERIOD_KEYS
+                                                                }
+                                                                onValueChange={async (
+                                                                    value: string
+                                                                ) => {
+                                                                    let expirySeconds =
+                                                                        '3600';
+                                                                    if (
+                                                                        value ===
+                                                                        'Seconds'
+                                                                    ) {
+                                                                        expirySeconds =
+                                                                            expiry;
+                                                                    } else if (
+                                                                        value ===
+                                                                        'Minutes'
+                                                                    ) {
+                                                                        expirySeconds =
+                                                                            new BigNumber(
+                                                                                expiry
+                                                                            )
+                                                                                .multipliedBy(
+                                                                                    60
+                                                                                )
+                                                                                .toString();
+                                                                    } else if (
+                                                                        value ===
+                                                                        'Hours'
+                                                                    ) {
+                                                                        expirySeconds =
+                                                                            new BigNumber(
+                                                                                expiry
+                                                                            )
+                                                                                .multipliedBy(
+                                                                                    60 *
+                                                                                        60
+                                                                                )
+                                                                                .toString();
+                                                                    } else if (
+                                                                        value ===
+                                                                        'Days'
+                                                                    ) {
+                                                                        expirySeconds =
+                                                                            new BigNumber(
+                                                                                expiry
+                                                                            )
+                                                                                .multipliedBy(
+                                                                                    60 *
+                                                                                        60 *
+                                                                                        24
+                                                                                )
+                                                                                .toString();
+                                                                    } else if (
+                                                                        value ===
+                                                                        'Weeks'
+                                                                    ) {
+                                                                        expirySeconds =
+                                                                            new BigNumber(
+                                                                                expiry
+                                                                            )
+                                                                                .multipliedBy(
+                                                                                    60 *
+                                                                                        60 *
+                                                                                        24 *
+                                                                                        7
+                                                                                )
+                                                                                .toString();
+                                                                    }
+
+                                                                    let expirationIndex;
+                                                                    if (
+                                                                        expirySeconds ===
+                                                                        '600'
+                                                                    ) {
+                                                                        expirationIndex = 0;
+                                                                    } else if (
+                                                                        expirySeconds ===
+                                                                        '3600'
+                                                                    ) {
+                                                                        expirationIndex = 1;
+                                                                    } else if (
+                                                                        expirySeconds ===
+                                                                        '86400'
+                                                                    ) {
+                                                                        expirationIndex = 2;
+                                                                    } else if (
+                                                                        expirySeconds ===
+                                                                        '604800'
+                                                                    ) {
+                                                                        expirationIndex = 3;
+                                                                    } else {
+                                                                        expirationIndex = 4;
+                                                                    }
+
+                                                                    this.setState(
+                                                                        {
+                                                                            timePeriod:
+                                                                                value,
+                                                                            expirySeconds,
+                                                                            expirationIndex
+                                                                        }
+                                                                    );
+                                                                }}
+                                                            />
+                                                        </View>
+                                                    </Row>
+
                                                     <ButtonGroup
                                                         onPress={
-                                                            setRouteHintMode
+                                                            this
+                                                                .updateExpirationIndex
                                                         }
                                                         selectedIndex={
-                                                            routeHintMode
+                                                            expirationIndex
                                                         }
                                                         buttons={
-                                                            routeHintModeButtons
+                                                            expirationButtons
                                                         }
                                                         selectedButtonStyle={{
                                                             backgroundColor:
@@ -2670,8 +2594,7 @@ export default class Receive extends React.Component<
                                                                 ),
                                                             borderRadius: 12,
                                                             borderWidth: 0,
-                                                            height: 30,
-                                                            flex: 1
+                                                            height: 30
                                                         }}
                                                         innerBorderStyle={{
                                                             color: themeColor(
@@ -2679,228 +2602,404 @@ export default class Receive extends React.Component<
                                                             )
                                                         }}
                                                     />
-                                                </Row>
+                                                </>
                                             )}
 
-                                        {BackendUtils.isLNDBased() &&
-                                            routeHints && (
-                                                <HopPicker
-                                                    ref={(ref) =>
-                                                        (this.hopPickerRef =
-                                                            ref)
-                                                    }
-                                                    onValueChange={(
-                                                        channels
-                                                    ) => {
-                                                        this.setState({
-                                                            selectedRouteHintChannels:
-                                                                channels
-                                                        });
-                                                    }}
-                                                    onCancel={() => {
-                                                        if (
-                                                            !selectedRouteHintChannels?.length
-                                                        ) {
-                                                            setRouteHintMode(
-                                                                RouteHintMode.Automatic
-                                                            );
+                                            {BackendUtils.supportsCustomPreimages() &&
+                                                showCustomPreimageField && (
+                                                    <>
+                                                        <Text
+                                                            style={{
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {localeString(
+                                                                'views.Receive.customPreimage'
+                                                            )}
+                                                        </Text>
+                                                        <TextInput
+                                                            value={
+                                                                customPreimage
+                                                            }
+                                                            onChangeText={(
+                                                                text: string
+                                                            ) =>
+                                                                this.setState({
+                                                                    customPreimage:
+                                                                        text
+                                                                })
+                                                            }
+                                                        />
+                                                    </>
+                                                )}
+
+                                            {BackendUtils.isLNDBased() &&
+                                                !lspIsActive && (
+                                                    <View
+                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+                                                            marginTop: 20
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.secondaryText,
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    )
+                                                                }}
+                                                                infoModalText={[
+                                                                    localeString(
+                                                                        'views.Receive.routeHintSwitchExplainer1'
+                                                                    ),
+                                                                    localeString(
+                                                                        'views.Receive.routeHintSwitchExplainer2'
+                                                                    )
+                                                                ]}
+                                                            >
+                                                                {localeString(
+                                                                    'views.Receive.routeHints'
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                        <View
+                                                            style={{
+                                                                alignSelf:
+                                                                    'center',
+                                                                marginLeft: 5
+                                                            }}
+                                                        >
+                                                            <Switch
+                                                                value={
+                                                                    routeHints
+                                                                }
+                                                                onValueChange={() =>
+                                                                    this.setState(
+                                                                        {
+                                                                            routeHints:
+                                                                                !routeHints
+                                                                        }
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    blindedPaths
+                                                                }
+                                                            />
+                                                        </View>
+                                                    </View>
+                                                )}
+
+                                            {BackendUtils.isLNDBased() &&
+                                                routeHints && (
+                                                    <Row>
+                                                        <Text
+                                                            style={{
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {localeString(
+                                                                'general.mode'
+                                                            )}
+                                                        </Text>
+                                                        <ButtonGroup
+                                                            onPress={
+                                                                setRouteHintMode
+                                                            }
+                                                            selectedIndex={
+                                                                routeHintMode
+                                                            }
+                                                            buttons={
+                                                                routeHintModeButtons
+                                                            }
+                                                            selectedButtonStyle={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'highlight'
+                                                                    ),
+                                                                borderRadius: 12
+                                                            }}
+                                                            containerStyle={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'secondary'
+                                                                    ),
+                                                                borderRadius: 12,
+                                                                borderWidth: 0,
+                                                                height: 30,
+                                                                flex: 1
+                                                            }}
+                                                            innerBorderStyle={{
+                                                                color: themeColor(
+                                                                    'secondary'
+                                                                )
+                                                            }}
+                                                        />
+                                                    </Row>
+                                                )}
+
+                                            {BackendUtils.isLNDBased() &&
+                                                routeHints && (
+                                                    <HopPicker
+                                                        ref={(ref) =>
+                                                            (this.hopPickerRef =
+                                                                ref)
                                                         }
-                                                    }}
-                                                    title={localeString(
-                                                        'views.Receive.customRouteHints'
-                                                    )}
-                                                    ChannelsStore={
-                                                        this.props.ChannelsStore
-                                                    }
-                                                    UnitsStore={UnitsStore}
-                                                    containerStyle={{
-                                                        display:
-                                                            routeHintMode ===
-                                                            RouteHintMode.Automatic
-                                                                ? 'none'
-                                                                : 'flex'
-                                                    }}
-                                                    clearOnTap={false}
-                                                    selectionMode={'multiple'}
-                                                    selectedChannels={
-                                                        selectedRouteHintChannels
-                                                    }
-                                                />
-                                            )}
+                                                        onValueChange={(
+                                                            channels
+                                                        ) => {
+                                                            this.setState({
+                                                                selectedRouteHintChannels:
+                                                                    channels
+                                                            });
+                                                        }}
+                                                        onCancel={() => {
+                                                            if (
+                                                                !selectedRouteHintChannels?.length
+                                                            ) {
+                                                                setRouteHintMode(
+                                                                    RouteHintMode.Automatic
+                                                                );
+                                                            }
+                                                        }}
+                                                        title={localeString(
+                                                            'views.Receive.customRouteHints'
+                                                        )}
+                                                        ChannelsStore={
+                                                            this.props
+                                                                .ChannelsStore
+                                                        }
+                                                        UnitsStore={UnitsStore}
+                                                        containerStyle={{
+                                                            display:
+                                                                routeHintMode ===
+                                                                RouteHintMode.Automatic
+                                                                    ? 'none'
+                                                                    : 'flex'
+                                                        }}
+                                                        clearOnTap={false}
+                                                        selectionMode={
+                                                            'multiple'
+                                                        }
+                                                        selectedChannels={
+                                                            selectedRouteHintChannels
+                                                        }
+                                                    />
+                                                )}
 
-                                        {BackendUtils.supportsAMP() &&
-                                            !lspIsActive && (
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        marginTop: 20
-                                                    }}
-                                                >
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text
-                                                            style={{
-                                                                ...styles.secondaryText,
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                            infoModalText={[
-                                                                localeString(
-                                                                    'views.Receive.ampSwitchExplainer1'
-                                                                ),
-                                                                localeString(
-                                                                    'views.Receive.ampSwitchExplainer2'
-                                                                )
-                                                            ]}
-                                                            infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
-                                                        >
-                                                            {localeString(
-                                                                'views.Receive.ampInvoice'
-                                                            )}
-                                                        </Text>
-                                                    </View>
+                                            {BackendUtils.supportsAMP() &&
+                                                !lspIsActive && (
                                                     <View
                                                         style={{
-                                                            alignSelf: 'center',
-                                                            marginLeft: 5
+                                                            flexDirection:
+                                                                'row',
+                                                            marginTop: 20
                                                         }}
                                                     >
-                                                        <Switch
-                                                            value={ampInvoice}
-                                                            onValueChange={() =>
-                                                                this.setState({
-                                                                    ampInvoice:
-                                                                        !ampInvoice
-                                                                })
-                                                            }
-                                                            disabled={
-                                                                blindedPaths
-                                                            }
-                                                        />
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                        {BackendUtils.supportsBolt11BlindedRoutes() &&
-                                            !lspIsActive && (
-                                                <View
-                                                    style={{
-                                                        flexDirection: 'row',
-                                                        marginTop: 20
-                                                    }}
-                                                >
-                                                    <View style={{ flex: 1 }}>
-                                                        <Text
-                                                            style={{
-                                                                ...styles.secondaryText,
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                            infoModalText={[
-                                                                localeString(
-                                                                    'views.Receive.blindedPathsExplainer1'
-                                                                ),
-                                                                localeString(
-                                                                    'views.Receive.blindedPathsExplainer2'
-                                                                )
-                                                            ]}
-                                                            infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                        <View
+                                                            style={{ flex: 1 }}
                                                         >
-                                                            {localeString(
-                                                                'views.Receive.blindedPaths'
-                                                            )}
-                                                        </Text>
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.secondaryText,
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    )
+                                                                }}
+                                                                infoModalText={[
+                                                                    localeString(
+                                                                        'views.Receive.ampSwitchExplainer1'
+                                                                    ),
+                                                                    localeString(
+                                                                        'views.Receive.ampSwitchExplainer2'
+                                                                    )
+                                                                ]}
+                                                                infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                            >
+                                                                {localeString(
+                                                                    'views.Receive.ampInvoice'
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                        <View
+                                                            style={{
+                                                                alignSelf:
+                                                                    'center',
+                                                                marginLeft: 5
+                                                            }}
+                                                        >
+                                                            <Switch
+                                                                value={
+                                                                    ampInvoice
+                                                                }
+                                                                onValueChange={() =>
+                                                                    this.setState(
+                                                                        {
+                                                                            ampInvoice:
+                                                                                !ampInvoice
+                                                                        }
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    blindedPaths
+                                                                }
+                                                            />
+                                                        </View>
                                                     </View>
+                                                )}
+
+                                            {BackendUtils.supportsBolt11BlindedRoutes() &&
+                                                !lspIsActive && (
                                                     <View
                                                         style={{
-                                                            alignSelf: 'center',
-                                                            marginLeft: 5
+                                                            flexDirection:
+                                                                'row',
+                                                            marginTop: 20
                                                         }}
                                                     >
-                                                        <Switch
-                                                            value={blindedPaths}
-                                                            onValueChange={() =>
-                                                                this.setState({
-                                                                    blindedPaths:
-                                                                        !blindedPaths,
-                                                                    ampInvoice:
-                                                                        false,
-                                                                    routeHints:
-                                                                        false
-                                                                })
-                                                            }
-                                                        />
+                                                        <View
+                                                            style={{ flex: 1 }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    ...styles.secondaryText,
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    )
+                                                                }}
+                                                                infoModalText={[
+                                                                    localeString(
+                                                                        'views.Receive.blindedPathsExplainer1'
+                                                                    ),
+                                                                    localeString(
+                                                                        'views.Receive.blindedPathsExplainer2'
+                                                                    )
+                                                                ]}
+                                                                infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                            >
+                                                                {localeString(
+                                                                    'views.Receive.blindedPaths'
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                        <View
+                                                            style={{
+                                                                alignSelf:
+                                                                    'center',
+                                                                marginLeft: 5
+                                                            }}
+                                                        >
+                                                            <Switch
+                                                                value={
+                                                                    blindedPaths
+                                                                }
+                                                                onValueChange={() =>
+                                                                    this.setState(
+                                                                        {
+                                                                            blindedPaths:
+                                                                                !blindedPaths,
+                                                                            ampInvoice:
+                                                                                false,
+                                                                            routeHints:
+                                                                                false
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        </View>
                                                     </View>
-                                                </View>
-                                            )}
+                                                )}
 
-                                        <View style={styles.button}>
-                                            <Button
-                                                title={
-                                                    localeString(
-                                                        'views.Receive.createInvoice'
-                                                    ) +
-                                                    (lnurl
-                                                        ? ` ${localeString(
-                                                              'views.Receive.andSubmitTo'
-                                                          )} ${lnurl.domain}`
-                                                        : '')
-                                                }
-                                                onPress={() => {
-                                                    createUnifiedInvoice({
-                                                        memo: lspIsActive
-                                                            ? ''
-                                                            : memo,
-                                                        value:
-                                                            satAmount.toString() ||
-                                                            '0',
-                                                        expiry: expirySeconds,
-                                                        lnurl,
-                                                        ampInvoice: lspIsActive
-                                                            ? false
-                                                            : ampInvoice ||
-                                                              false,
-                                                        blindedPaths:
-                                                            lspIsActive
-                                                                ? false
-                                                                : blindedPaths ||
-                                                                  false,
-                                                        routeHints,
-                                                        routeHintChannels:
-                                                            routeHintMode ===
-                                                            RouteHintMode.Custom
-                                                                ? selectedRouteHintChannels
-                                                                : undefined,
-                                                        addressType:
-                                                            BackendUtils.supportsAddressTypeSelection()
-                                                                ? addressType
-                                                                : undefined,
-                                                        customPreimage:
-                                                            BackendUtils.supportsCustomPreimages() &&
-                                                            showCustomPreimageField
-                                                                ? customPreimage
-                                                                : undefined,
-                                                        noLsp: !lspIsActive
-                                                    }).then(
-                                                        ({
-                                                            rHash,
-                                                            onChainAddress
-                                                        }: {
-                                                            rHash: string;
-                                                            onChainAddress?: string;
-                                                        }) => {
-                                                            this.subscribeInvoice(
+                                            <View style={styles.button}>
+                                                <Button
+                                                    title={
+                                                        localeString(
+                                                            'views.Receive.createInvoice'
+                                                        ) +
+                                                        (lnurl
+                                                            ? ` ${localeString(
+                                                                  'views.Receive.andSubmitTo'
+                                                              )} ${
+                                                                  lnurl.domain
+                                                              }`
+                                                            : '')
+                                                    }
+                                                    onPress={() => {
+                                                        // If clearButton was used in on-chain tab
+                                                        // and a new invoice below dust limit is created
+                                                        // reset selectedIndex to 1 (lightning)
+                                                        if (
+                                                            selectedIndex ===
+                                                                2 &&
+                                                            belowDustLimit
+                                                        ) {
+                                                            this.setState({
+                                                                selectedIndex: 1
+                                                            });
+                                                        }
+                                                        createUnifiedInvoice({
+                                                            memo: lspIsActive
+                                                                ? ''
+                                                                : memo,
+                                                            value:
+                                                                satAmount.toString() ||
+                                                                '0',
+                                                            expiry: expirySeconds,
+                                                            lnurl,
+                                                            ampInvoice:
+                                                                lspIsActive
+                                                                    ? false
+                                                                    : ampInvoice ||
+                                                                      false,
+                                                            blindedPaths:
+                                                                lspIsActive
+                                                                    ? false
+                                                                    : blindedPaths ||
+                                                                      false,
+                                                            routeHints,
+                                                            routeHintChannels:
+                                                                routeHintMode ===
+                                                                RouteHintMode.Custom
+                                                                    ? selectedRouteHintChannels
+                                                                    : undefined,
+                                                            addressType:
+                                                                BackendUtils.supportsAddressTypeSelection()
+                                                                    ? addressType
+                                                                    : undefined,
+                                                            customPreimage:
+                                                                BackendUtils.supportsCustomPreimages() &&
+                                                                showCustomPreimageField
+                                                                    ? customPreimage
+                                                                    : undefined,
+                                                            noLsp: !lspIsActive
+                                                        }).then(
+                                                            ({
                                                                 rHash,
                                                                 onChainAddress
-                                                            );
-                                                        }
-                                                    );
-                                                }}
-                                            />
-                                        </View>
-                                    </>
-                                )}
+                                                            }: {
+                                                                rHash: string;
+                                                                onChainAddress?: string;
+                                                            }) => {
+                                                                this.subscribeInvoice(
+                                                                    rHash,
+                                                                    onChainAddress
+                                                                );
+                                                            }
+                                                        );
+                                                    }}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
                             </View>
                         </ScrollView>
                     )}
@@ -2944,58 +3043,74 @@ export default class Receive extends React.Component<
                     position="bottom"
                     ref={this.modalBoxRef}
                 >
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 24,
-                            fontWeight: 'bold',
-                            paddingTop: 24,
-                            paddingBottom: 24
-                        }}
-                    >
-                        {localeString('views.Receive.addressType')}
-                    </Text>
-                    {_map(ADDRESS_TYPES, (d, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            onPress={() => {
-                                InvoicesStore.clearAddress();
-                                this.setState({ addressType: d.value });
-                                this.modalBoxRef.current?.close();
-                            }}
+                    <ScrollView>
+                        <Text
                             style={{
-                                backgroundColor: themeColor('secondary'),
-                                borderColor:
-                                    d.value === addressType
-                                        ? themeColor('highlight')
-                                        : themeColor('secondaryText'),
-                                borderRadius: 4,
-                                borderWidth: d.value === addressType ? 2 : 1,
-                                padding: 16,
-                                marginBottom: 24
+                                color: themeColor('text'),
+                                fontSize: 24,
+                                fontWeight: 'bold',
+                                paddingTop: 24,
+                                paddingBottom: 24
                             }}
                         >
-                            <Text
+                            {localeString('views.Receive.addressType')}
+                        </Text>
+                        {_map(ADDRESS_TYPES, (d, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                onPress={() => {
+                                    // If same address type is selected, close modal
+                                    if (d.value === addressType) {
+                                        this.modalBoxRef.current?.close();
+                                        return;
+                                    }
+                                    InvoicesStore.clearAddress();
+                                    this.setState({ addressType: d.value });
+
+                                    // Only auto-generate if we're in on-chain mode
+                                    if (selectedIndex === 2) {
+                                        this.autoGenerateOnChainAddress(
+                                            account,
+                                            d.value
+                                        );
+                                    }
+                                    this.modalBoxRef.current?.close();
+                                }}
                                 style={{
-                                    color: themeColor('text'),
-                                    fontSize: 16,
-                                    fontWeight: 'bold',
-                                    marginBottom: 4
+                                    backgroundColor: themeColor('secondary'),
+                                    borderColor:
+                                        d.value === addressType
+                                            ? themeColor('highlight')
+                                            : themeColor('secondaryText'),
+                                    borderRadius: 4,
+                                    borderWidth:
+                                        d.value === addressType ? 2 : 1,
+                                    padding: 16,
+                                    marginBottom: 24
                                 }}
                             >
-                                {d.key}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontSize: 16,
-                                    fontWeight: 'normal'
-                                }}
-                            >
-                                {d.description}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 16,
+                                        fontWeight: 'bold',
+                                        marginBottom: 4
+                                    }}
+                                >
+                                    {d.key}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 16,
+                                        fontWeight: 'normal'
+                                    }}
+                                >
+                                    {d.description}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </ModalBox>
             </Screen>
         );
