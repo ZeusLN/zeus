@@ -18,7 +18,7 @@ interface SetPassphraseProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
-    route: any;
+    route: { params?: { forBiometrics?: boolean } };
 }
 
 interface SetPassphraseState {

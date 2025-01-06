@@ -16,7 +16,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface SetPinProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    route: any;
+    route: { params?: { forBiometrics?: boolean } };
 }
 
 interface SetPinState {
