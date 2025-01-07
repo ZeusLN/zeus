@@ -57,10 +57,33 @@ export default class SwapsPane extends React.Component<
     fetchSwaps = async () => {
         this.setState({ loading: true });
         try {
-            const storedSwaps = await EncryptedStorage.getItem('swaps');
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-            this.setState({ swaps, loading: false });
-            console.log('All Swaps:', swaps);
+            // Fetch submarine swaps
+            const storedSubmarineSwaps = await EncryptedStorage.getItem(
+                'swaps'
+            );
+            const submarineSwaps = storedSubmarineSwaps
+                ? JSON.parse(storedSubmarineSwaps)
+                : [];
+
+            // Fetch reverse swaps
+            const storedReverseSwaps = await EncryptedStorage.getItem(
+                'reverse-swaps'
+            );
+            const reverseSwaps = storedReverseSwaps
+                ? JSON.parse(storedReverseSwaps)
+                : [];
+
+            // Combine both types of swaps
+            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+
+            // Sort by creation date (most recent first)
+            const sortedSwaps = allSwaps.sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+            );
+
+            this.setState({ swaps: sortedSwaps, loading: false });
         } catch (error) {
             this.setState({ error: 'Failed to load swaps' });
             console.error('Error retrieving swaps:', error);
@@ -96,6 +119,26 @@ export default class SwapsPane extends React.Component<
                 style={{ padding: 16 }}
                 onPress={() => this.handleSwapPress(item)}
             >
+                <View
+                    style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5
+                    }}
+                >
+                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                        Type:
+                    </Text>
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontSize: 16
+                        }}
+                    >
+                        {item?.type}
+                    </Text>
+                </View>
+
                 <View
                     style={{
                         flexDirection: 'row',
@@ -143,9 +186,21 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('views.SwapDetails.expectedAmount')}:`}
+                        {item?.type === 'Submarine'
+                            ? `${localeString(
+                                  'views.SwapDetails.expectedAmount'
+                              )}:`
+                            : `Onchain amount:`}
                     </Text>
-                    <Amount sats={item.expectedAmount} sensitive toggleable />
+                    <Amount
+                        sats={
+                            item?.type === 'Submarine'
+                                ? item.expectedAmount
+                                : item.onchainAmount
+                        }
+                        sensitive
+                        toggleable
+                    />
                 </View>
                 {item?.createdAt && (
                     <View
