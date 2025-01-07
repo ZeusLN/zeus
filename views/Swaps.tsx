@@ -6,6 +6,10 @@ import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
+import { crypto } from 'bitcoinjs-lib';
+
+import { randomBytes } from 'crypto';
+
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import Amount from '../components/Amount';
@@ -35,6 +39,7 @@ import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OrderList from '../assets/images/SVG/order-list.svg';
+import { initEccLib } from 'bitcoinjs-lib';
 
 interface SwapPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -157,12 +162,15 @@ export default class SwapPane extends React.PureComponent<
                     SwapStore.loading = false;
                     this.setState({ apiError: responseData.error });
                     console.error('Error in API response:', responseData.error);
-                    return; // Stop further execution
+                    return;
                 }
 
                 // Add the creation date to the response
                 const createdAt = new Date().toISOString();
                 responseData.createdAt = createdAt;
+
+                // Add the swap type
+                responseData.type = 'Submarine';
 
                 await saveSwapToStorage(responseData, keys, invoice);
 
@@ -183,6 +191,114 @@ export default class SwapPane extends React.PureComponent<
                     apiError: error.message || 'An unknown error occurred'
                 });
                 console.error('Error creating Submarine Swap:', error);
+            }
+        };
+
+        const createReverseSwap = async (destinationAddress: string) => {
+            const { SwapStore } = this.props;
+
+            try {
+                initEccLib(ecc);
+
+                console.log('Creating reverse swap...');
+
+                const preimage = randomBytes(32);
+                const keys: any = ECPairFactory(ecc).makeRandom();
+
+                // Creating a reverse swap
+                const data = JSON.stringify({
+                    invoiceAmount: 1500000,
+                    to: 'BTC',
+                    from: 'BTC',
+                    claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
+                    preimageHash: crypto.sha256(preimage).toString('hex')
+                });
+
+                console.log('Data before sending to API:', data);
+
+                const response = await ReactNativeBlobUtil.fetch(
+                    'POST',
+                    `${HOST}/swap/reverse`,
+                    {
+                        'Content-Type': 'application/json'
+                    },
+                    data
+                );
+
+                const responseData = JSON.parse(response.data); // Parse the response
+                console.log('Created reverse swap:', responseData);
+
+                // Handle API errors
+                if (responseData?.error) {
+                    SwapStore.loading = false;
+                    this.setState({ apiError: responseData.error });
+                    console.error('Error in API response:', responseData.error);
+                    return;
+                }
+
+                // Add the creation date
+                const createdAt = new Date().toISOString();
+                responseData.createdAt = createdAt;
+
+                // Add the swap type
+                responseData.type = 'Reverse';
+
+                // Step 3: Save to storage
+                await saveReverseSwaps(responseData, keys, destinationAddress);
+
+                // Step 4: Navigate to SwapDetails view
+                this.setState({ response: responseData }, () => {
+                    SwapStore.loading = false;
+                    console.log('Navigating to SwapDetails...');
+                    navigation.navigate('SwapDetails', {
+                        swapData: responseData,
+                        keys,
+                        endpoint: HOST,
+                        invoice: destinationAddress
+                    });
+                });
+            } catch (error: any) {
+                console.error('Error creating reverse swap:', error);
+                this.setState({
+                    apiError: error.message || 'An unknown error occurred'
+                });
+            }
+        };
+
+        const saveReverseSwaps = async (
+            newSwap: any,
+            keys: any,
+            invoice: string
+        ) => {
+            try {
+                // Retrieve existing swaps
+                const storedSwaps = await EncryptedStorage.getItem(
+                    'reverse-swaps'
+                );
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+                // Add new properties to the swap
+                const enrichedSwap = {
+                    ...newSwap,
+                    keys,
+                    invoice
+                };
+
+                // Add the new swap to the beginning of the array
+                swaps.unshift(enrichedSwap);
+
+                // Save the updated swaps array back to encrypted storage
+                await EncryptedStorage.setItem(
+                    'reverse-swaps',
+                    JSON.stringify(swaps)
+                );
+
+                console.log(
+                    'Reverse swap saved successfully to Encrypted Storage.'
+                );
+            } catch (error: any) {
+                console.error('Error saving reverse swap to storage:', error);
+                throw error;
             }
         };
 
@@ -764,12 +880,14 @@ export default class SwapPane extends React.PureComponent<
                                     title={localeString('views.Swaps.initiate')}
                                     onPress={() => {
                                         SwapStore.loading = true;
-                                        createSubmarineSwap(invoice);
+                                        reverse
+                                            ? createReverseSwap(invoice)
+                                            : createSubmarineSwap(invoice);
                                     }}
                                     containerStyle={{
                                         marginTop: 10
                                     }}
-                                    disabled={!isValid}
+                                    // disabled={!isValid}
                                 />
                             </View>
                         </>
