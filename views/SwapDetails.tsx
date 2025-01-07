@@ -55,13 +55,14 @@ export default class SwapDetails extends React.Component<
         this.state = {
             updates: null,
             error: null,
-            loading: true
+            loading: false
         };
     }
 
     componentDidMount() {
         const { swapData } = this.props.route.params;
-        this.subscribeToUpdatesWithPolling(swapData);
+        const isSubmarineSwap = !!swapData.bip21;
+        if (isSubmarineSwap) this.subscribeToUpdatesWithPolling(swapData);
     }
 
     renderSwapTree = (swapTree: any) => {
@@ -344,8 +345,11 @@ export default class SwapDetails extends React.Component<
         const { updates, error } = this.state;
         const swapData = this.props.route.params?.swapData ?? '';
 
+        const isSubmarineSwap = !!swapData.bip21;
+        const isReverseSwap = !!swapData.lockupAddress;
+
         const QRButton = () => {
-            if (!swapData?.bip21) {
+            if (!swapData?.bip21 && !swapData.invoice) {
                 return null;
             }
 
@@ -353,7 +357,9 @@ export default class SwapDetails extends React.Component<
                 <TouchableOpacity
                     onPress={() =>
                         navigation.navigate('QR', {
-                            value: swapData?.bip21
+                            value: isSubmarineSwap
+                                ? swapData?.bip21
+                                : swapData?.invoice
                         })
                     }
                 >
@@ -377,7 +383,11 @@ export default class SwapDetails extends React.Component<
                         }
                     }}
                     rightComponent={
-                        updates === 'invoice.set' ? <QRButton /> : <></>
+                        updates === 'invoice.set' || isReverseSwap ? (
+                            <QRButton />
+                        ) : (
+                            <></>
+                        )
                     }
                     navigation={navigation}
                 />
@@ -395,41 +405,75 @@ export default class SwapDetails extends React.Component<
                             color={SwapStore?.statusColor(updates)}
                         />
                     )}
-                    <KeyValue
-                        keyValue={localeString('views.SwapDetails.bip21')}
-                        value={swapData.bip21}
-                    />
-                    <KeyValue
-                        keyValue={localeString(
-                            'views.SwapDetails.acceptZerpConf'
-                        )}
-                        value={
-                            swapData.acceptZeroConf
-                                ? localeString('general.true')
-                                : localeString('general.false')
-                        }
-                        color={swapData.acceptZeroConf ? 'green' : '#808000'}
-                    />
-                    <KeyValue
-                        keyValue={localeString(
-                            'views.SwapDetails.expectedAmount'
-                        )}
-                        value={
-                            <Amount
-                                sats={swapData?.expectedAmount}
-                                sensitive
-                                toggleable
+                    {isSubmarineSwap && (
+                        <>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.SwapDetails.bip21'
+                                )}
+                                value={swapData.bip21}
                             />
-                        }
-                    />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.SwapDetails.acceptZerpConf'
+                                )}
+                                value={
+                                    swapData.acceptZeroConf
+                                        ? localeString('general.true')
+                                        : localeString('general.false')
+                                }
+                                color={
+                                    swapData.acceptZeroConf
+                                        ? 'green'
+                                        : '#808000'
+                                }
+                            />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.SwapDetails.expectedAmount'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={swapData?.expectedAmount}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                        </>
+                    )}
+                    {isReverseSwap && (
+                        <>
+                            <KeyValue
+                                keyValue="Invoice"
+                                value={swapData.invoice}
+                            />
+                            <KeyValue
+                                keyValue="Lockup address"
+                                value={swapData.lockupAddress}
+                            />
+                            <KeyValue
+                                keyValue="Onchain amount"
+                                value={
+                                    <Amount
+                                        sats={swapData?.onchainAmount}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                        </>
+                    )}
                     <KeyValue
                         keyValue={localeString('views.SwapDetails.swapId')}
                         value={swapData.id}
                     />
-                    <KeyValue
-                        keyValue={localeString('general.address')}
-                        value={swapData.address}
-                    />
+                    {isSubmarineSwap && (
+                        <KeyValue
+                            keyValue={localeString('general.address')}
+                            value={swapData.address}
+                        />
+                    )}
 
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData.swapTree)}
@@ -439,28 +483,42 @@ export default class SwapDetails extends React.Component<
                         )}
                         value={swapData.timeoutBlockHeight}
                     />
-                    <KeyValue
-                        keyValue={localeString(
-                            'views.SwapDetails.claimPublicKey'
-                        )}
-                        value={swapData.claimPublicKey}
-                    />
+                    {isSubmarineSwap && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.SwapDetails.claimPublicKey'
+                            )}
+                            value={swapData.claimPublicKey}
+                        />
+                    )}
+                    {isReverseSwap && (
+                        <KeyValue
+                            keyValue="Refund public key"
+                            value={swapData.refundPublicKey}
+                        />
+                    )}
                 </ScrollView>
-                {updates === 'invoice.set' && (
-                    <Button
-                        title={localeString('views.PaymentRequest.payInvoice')}
-                        containerStyle={{
-                            paddingVertical: 10
-                        }}
-                        onPress={() => {
-                            navigation.navigate('Send', {
-                                destination: swapData?.bip21,
-                                transactionType: 'On-chain'
-                            });
-                        }}
-                        secondary
-                    />
-                )}
+                {updates === 'invoice.set' ||
+                    (isReverseSwap && (
+                        <Button
+                            title={localeString(
+                                'views.PaymentRequest.payInvoice'
+                            )}
+                            containerStyle={{
+                                paddingVertical: 10
+                            }}
+                            onPress={() => {
+                                navigation.navigate('Send', {
+                                    destination: isSubmarineSwap
+                                        ? swapData?.bip21
+                                        : swapData?.invoice,
+                                    transactionType:
+                                        isSubmarineSwap && 'On-chain'
+                                });
+                            }}
+                            secondary
+                        />
+                    ))}
             </Screen>
         );
     }
