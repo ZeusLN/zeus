@@ -6,7 +6,7 @@ import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
-import { crypto } from 'bitcoinjs-lib';
+import { crypto, initEccLib } from 'bitcoinjs-lib';
 
 import { randomBytes } from 'crypto';
 
@@ -39,7 +39,6 @@ import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OrderList from '../assets/images/SVG/order-list.svg';
-import { initEccLib } from 'bitcoinjs-lib';
 
 interface SwapPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -118,7 +117,10 @@ export default class SwapPane extends React.PureComponent<
                 style={{ marginTop: -10 }}
                 onPress={() => {
                     navigation.navigate('SwapsPane');
-                    // EncryptedStorage.setItem('swaps', JSON.stringify([]));
+                    // EncryptedStorage.setItem(
+                    //     'reverse-swaps',
+                    //     JSON.stringify([])
+                    // );
                 }}
                 accessibilityLabel={localeString('general.add')}
             >
@@ -268,7 +270,7 @@ export default class SwapPane extends React.PureComponent<
         const saveReverseSwaps = async (
             newSwap: any,
             keys: any,
-            invoice: string
+            destinationAddress: string
         ) => {
             try {
                 // Retrieve existing swaps
@@ -281,7 +283,7 @@ export default class SwapPane extends React.PureComponent<
                 const enrichedSwap = {
                     ...newSwap,
                     keys,
-                    invoice
+                    destinationAddress
                 };
 
                 // Add the new swap to the beginning of the array
@@ -887,7 +889,7 @@ export default class SwapPane extends React.PureComponent<
                                     containerStyle={{
                                         marginTop: 10
                                     }}
-                                    // disabled={!isValid}
+                                    disabled={!isValid}
                                 />
                             </View>
                         </>
