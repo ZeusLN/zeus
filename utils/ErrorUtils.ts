@@ -47,7 +47,7 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     }
 
     const matchingPattern = Object.keys(userFriendlyErrors).find((pattern) =>
-        errorMsg.includes(pattern)
+        pattern === 'Error' ? errorMsg === pattern : errorMsg.includes(pattern)
     );
 
     let localeKey = matchingPattern
