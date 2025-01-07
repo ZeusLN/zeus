@@ -498,27 +498,23 @@ export default class SwapDetails extends React.Component<
                         />
                     )}
                 </ScrollView>
-                {updates === 'invoice.set' ||
-                    (isReverseSwap && (
-                        <Button
-                            title={localeString(
-                                'views.PaymentRequest.payInvoice'
-                            )}
-                            containerStyle={{
-                                paddingVertical: 10
-                            }}
-                            onPress={() => {
-                                navigation.navigate('Send', {
-                                    destination: isSubmarineSwap
-                                        ? swapData?.bip21
-                                        : swapData?.invoice,
-                                    transactionType:
-                                        isSubmarineSwap && 'On-chain'
-                                });
-                            }}
-                            secondary
-                        />
-                    ))}
+                {(updates === 'invoice.set' || isReverseSwap) && (
+                    <Button
+                        title={localeString('views.PaymentRequest.payInvoice')}
+                        containerStyle={{
+                            paddingVertical: 10
+                        }}
+                        onPress={() => {
+                            navigation.navigate('Send', {
+                                destination: isSubmarineSwap
+                                    ? swapData?.bip21
+                                    : swapData?.invoice,
+                                transactionType: isSubmarineSwap && 'On-chain'
+                            });
+                        }}
+                        secondary
+                    />
+                )}
             </Screen>
         );
     }
