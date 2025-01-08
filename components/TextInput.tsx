@@ -36,6 +36,7 @@ interface TextInputProps {
     ref?: React.Ref<TextInputRN>;
     error?: boolean;
     onFocus?: any;
+    onSubmitEditing?: () => void;
 }
 
 const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
@@ -167,6 +168,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     autoFocus={autoFocus}
                     secureTextEntry={secureTextEntry}
                     onPressIn={onPressIn}
+                    onSubmitEditing={props.onSubmitEditing}
                     ref={ref}
                 />
                 {suffix ? (
