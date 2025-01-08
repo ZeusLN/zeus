@@ -32,6 +32,9 @@ import UnitsStore from '../stores/UnitsStore';
 import RNPrint from 'react-native-print';
 import PosStore from '../stores/PosStore';
 
+const DEFAULT_CUSTOM_TIP_PERCENTAGE = '21';
+const DEFAULT_CUSTOM_TIP_SATS = '2100';
+
 interface OrderProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
@@ -281,59 +284,52 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     break;
                 default:
                     if (customType === 'percentage') {
+                        const effectivePercentage =
+                            customPercentage === ''
+                                ? DEFAULT_CUSTOM_TIP_PERCENTAGE
+                                : customPercentage;
                         totalSats = new BigNumber(subTotalSats)
-                            .multipliedBy(`1.${customPercentage || 0}`)
+                            .multipliedBy(`1.${effectivePercentage}`)
                             .plus(taxSats)
                             .toFixed(0);
                         tipSats = new BigNumber(subTotalSats)
                             .multipliedBy(
-                                new BigNumber(customPercentage || 0).dividedBy(
+                                new BigNumber(effectivePercentage).dividedBy(
                                     100
                                 )
                             )
                             .toFixed(0);
                     } else if (customType === 'amount') {
+                        const effectiveAmount =
+                            customAmount === ''
+                                ? DEFAULT_CUSTOM_TIP_SATS
+                                : customAmount;
                         if (units === 'fiat') {
-                            const customSats = new BigNumber(customAmount)
+                            const customSats = new BigNumber(effectiveAmount)
                                 .div(rate)
                                 .multipliedBy(SATS_PER_BTC)
                                 .toFixed(0);
 
-                            totalSats =
-                                !!customAmount && !isNaN(Number(customAmount))
-                                    ? `${new BigNumber(subTotalSats)
-                                          .plus(customSats)
-                                          .plus(taxSats)
-                                          .toFixed(0)}`
-                                    : new BigNumber(subTotalSats)
-                                          .plus(taxSats)
-                                          .toFixed(0);
-                            tipSats =
-                                !!customAmount && !isNaN(Number(customAmount))
-                                    ? new BigNumber(customSats).toFixed(0)
-                                    : '0';
+                            totalSats = new BigNumber(subTotalSats)
+                                .plus(customSats)
+                                .plus(taxSats)
+                                .toFixed(0);
+
+                            tipSats = new BigNumber(customSats).toFixed(0);
                         } else {
                             const customSats =
                                 units === 'sats'
-                                    ? new BigNumber(customAmount)
-                                    : new BigNumber(customAmount).multipliedBy(
-                                          SATS_PER_BTC
-                                      );
+                                    ? new BigNumber(effectiveAmount)
+                                    : new BigNumber(
+                                          effectiveAmount
+                                      ).multipliedBy(SATS_PER_BTC);
 
-                            totalSats =
-                                !!customAmount && !isNaN(Number(customAmount))
-                                    ? new BigNumber(subTotalSats)
-                                          .plus(customSats)
-                                          .plus(taxSats)
-                                          .toFixed(0)
-                                    : new BigNumber(subTotalSats)
-                                          .plus(taxSats)
-                                          .toFixed(0);
+                            totalSats = new BigNumber(subTotalSats)
+                                .plus(customSats)
+                                .plus(taxSats)
+                                .toFixed(0);
 
-                            tipSats =
-                                !!customAmount && !isNaN(Number(customAmount))
-                                    ? Number(customSats).toFixed(0)
-                                    : '0';
+                            tipSats = Number(customSats).toFixed(0);
                         }
                     }
             }
@@ -654,6 +650,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                         suffix="%"
                                         keyboardType="numeric"
                                         right={25}
+                                        placeholder={
+                                            DEFAULT_CUSTOM_TIP_PERCENTAGE
+                                        }
                                         value={customPercentage}
                                         onChangeText={(text: string) => {
                                             if (
@@ -684,6 +683,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     />
                                     <TextInput
                                         keyboardType="numeric"
+                                        placeholder={DEFAULT_CUSTOM_TIP_SATS}
                                         value={customAmount}
                                         onChangeText={(text: string) => {
                                             if (text.includes('-')) return;
