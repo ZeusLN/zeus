@@ -97,6 +97,7 @@ export default class ChannelsStore {
     @observable public pending_chan_ids: Array<string>;
     // pending HTLCs
     @observable public pendingHTLCs: Array<PendingHTLC>;
+    @observable public haveAnnouncedChannels = false;
 
     settingsStore: SettingsStore;
 
@@ -180,6 +181,7 @@ export default class ChannelsStore {
     @action
     reset = () => {
         this.resetOpenChannel();
+        this.haveAnnouncedChannels = false;
         this.nodes = {};
         this.channels = [];
         this.pendingChannels = [];
@@ -353,7 +355,15 @@ export default class ChannelsStore {
 
         if (setPendingHtlcs) this.pendingHTLCs = [];
 
+        let haveAnnouncedChannels = false;
         for (const channel of channels) {
+            if (
+                !haveAnnouncedChannels &&
+                !channel.private &&
+                channel.isActive
+            ) {
+                haveAnnouncedChannels = true;
+            }
             if (channel.alias == null) {
                 channel.alias =
                     this.nodes[channel.remotePubkey]?.alias ||
@@ -373,6 +383,7 @@ export default class ChannelsStore {
                 this.pendingHTLCs.push(...channel.pending_htlcs);
             }
         }
+        this.haveAnnouncedChannels = haveAnnouncedChannels;
 
         if (this.pendingHTLCs.length > 0) {
             console.log('Pending HTLCs', this.pendingHTLCs);
