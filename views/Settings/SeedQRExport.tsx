@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Tab } from 'react-native-elements';
@@ -19,7 +19,10 @@ import CollapsedQR from '../../components/CollapsedQR';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 
 import stores from '../../stores/Stores';
 import SettingsStore from '../../stores/SettingsStore';
@@ -282,8 +285,14 @@ export default class SeedQRExport extends React.PureComponent<
                     navigation={navigation}
                 />
                 {error && <ErrorMessage message={error} />}
-                <View style={{ margin: 25 }}>
-                    {nodeBase58Segwit && (
+                {nodeBase58Segwit && (
+                    <ScrollView style={{ margin: 25 }}>
+                        <WarningMessage
+                            message={localeString(
+                                'views.Settings.SeedQRExport.warning'
+                            )}
+                            fontSize={14}
+                        />
                         <Tab
                             value={tab}
                             onChange={(e) =>
@@ -318,19 +327,22 @@ export default class SeedQRExport extends React.PureComponent<
                                 }}
                             />
                         </Tab>
-                    )}
-                    <View style={{ marginTop: 25, width: '100%' }}>
-                        {tab === 0 && nodeBase58Segwit && (
-                            <CollapsedQR value={nodeBase58Segwit} expanded />
-                        )}
-                        {tab === 1 && nodeBase58NativeSegwit && (
-                            <CollapsedQR
-                                value={nodeBase58NativeSegwit}
-                                expanded
-                            />
-                        )}
-                    </View>
-                </View>
+                        <View style={{ marginTop: 25, width: '100%' }}>
+                            {tab === 0 && nodeBase58Segwit && (
+                                <CollapsedQR
+                                    value={nodeBase58Segwit}
+                                    expanded
+                                />
+                            )}
+                            {tab === 1 && nodeBase58NativeSegwit && (
+                                <CollapsedQR
+                                    value={nodeBase58NativeSegwit}
+                                    expanded
+                                />
+                            )}
+                        </View>
+                    </ScrollView>
+                )}
                 {loading && (
                     <View
                         style={{
