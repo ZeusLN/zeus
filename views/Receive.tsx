@@ -258,7 +258,11 @@ export default class Receive extends React.Component<
             expiry: settings?.invoices?.expiry || '3600',
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: newExpirySeconds,
-            routeHints: settings?.invoices?.routeHints || false,
+            routeHints:
+                settings?.invoices?.routeHints ||
+                !this.props.ChannelsStore.haveAnnouncedChannels
+                    ? true
+                    : false,
             ampInvoice:
                 (settings?.invoices?.ampInvoice &&
                     BackendUtils.supportsAMP()) ||
@@ -2697,6 +2701,7 @@ export default class Receive extends React.Component<
                                                 )}
 
                                             {BackendUtils.isLNDBased() &&
+                                                !lspIsActive &&
                                                 routeHints && (
                                                     <Row>
                                                         <Text
