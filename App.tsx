@@ -58,7 +58,6 @@ import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
-import SignVerifyMessage from './views/Settings/SignVerifyMessage';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
 import SocialMedia from './views/Settings/SocialMedia';
@@ -115,21 +114,26 @@ import Routing from './views/Routing/Routing';
 import RoutingEvent from './views/Routing/RoutingEvent';
 import SetFees from './views/Routing/SetFees';
 
+// Tools
+import Accounts from './views/Accounts/Accounts';
+import BumpFee from './views/BumpFee';
+import SignVerifyMessage from './views/Settings/SignVerifyMessage';
+import CurrencyConverter from './views/Settings/CurrencyConverter';
+import DeveloperTools from './views/Tools/DeveloperTools';
+
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
-import Accounts from './views/Accounts/Accounts';
 import ImportAccount from './views/Accounts/ImportAccount';
 import ImportingAccount from './views/Accounts/ImportingAccount';
-import BumpFee from './views/BumpFee';
 import QR from './views/QR';
 import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
-import CurrencyConverter from './views/Settings/CurrencyConverter';
+
 import PendingHTLCs from './views/PendingHTLCs';
 
 // POS
@@ -912,6 +916,12 @@ export default class App extends React.PureComponent {
                                                         name="OnChainAddresses" // @ts-ignore:next-line
                                                         component={
                                                             OnChainAddresses
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="DeveloperTools" // @ts-ignore:next-line
+                                                        component={
+                                                            DeveloperTools
                                                         }
                                                     />
                                                 </Stack.Navigator>
