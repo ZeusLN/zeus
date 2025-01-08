@@ -61,8 +61,19 @@ export default class SwapDetails extends React.Component<
 
     componentDidMount() {
         const { swapData } = this.props.route.params;
-        const isSubmarineSwap = !!swapData.bip21;
-        if (isSubmarineSwap) this.subscribeToUpdatesWithPolling(swapData);
+
+        if (!swapData) {
+            console.error('No swap data provided.');
+            return;
+        }
+
+        const isSubmarineSwap = Boolean(swapData.bip21);
+
+        if (isSubmarineSwap) {
+            this.subscribeSwapsUpdates(swapData, 2000, isSubmarineSwap);
+        } else {
+            this.subscribeReverseSwapsUpdates(swapData, 2000, isSubmarineSwap);
+        }
     }
 
     renderSwapTree = (swapTree: any) => {
@@ -93,9 +104,10 @@ export default class SwapDetails extends React.Component<
         );
     };
 
-    subscribeToUpdatesWithPolling = async (
+    subscribeSwapsUpdates = async (
         createdResponse: any,
-        pollingInterval: number = 2000
+        pollingInterval: number,
+        isSubmarineSwap: boolean
     ) => {
         const { keys, endpoint, invoice } = this.props.route.params;
 
@@ -145,7 +157,8 @@ export default class SwapDetails extends React.Component<
                 // Update the status in Encrypted Storage
                 await this.updateSwapStatusInStorage(
                     createdResponse.id,
-                    data.status
+                    data.status,
+                    isSubmarineSwap
                 );
 
                 console.log('Update:', data);
@@ -208,6 +221,99 @@ export default class SwapDetails extends React.Component<
         };
     };
 
+    subscribeReverseSwapsUpdates = async (
+        createdResponse: any,
+        pollingInterval: number,
+        isSubmarineSwap: boolean
+    ) => {
+        const { endpoint } = this.props.route.params;
+
+        if (!createdResponse || !createdResponse.id) {
+            console.error('Invalid response:', createdResponse);
+            this.setState({ error: 'Invalid response received.' });
+            return;
+        }
+
+        console.log('Starting polling for reverse swap updates...');
+        this.setState({ loading: true });
+
+        const pollForUpdates = async () => {
+            try {
+                const response = await fetch(
+                    `${endpoint}/swap/${createdResponse.id}`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+                const data = await response.json();
+
+                // Check for API errors
+                if (data?.error) {
+                    if (data.error === 'Operation timeout') {
+                        this.setState({
+                            error: 'The operation timed out.',
+                            loading: false
+                        });
+                        this.stopPolling(); // Stop polling
+                        return;
+                    }
+
+                    this.setState({
+                        error: data.error
+                    });
+                    this.stopPolling(); // Stop polling
+                    return;
+                }
+
+                // Update the status in the component state
+                this.setState({ updates: data.status, loading: false });
+
+                // Update the status in Encrypted Storage
+                await this.updateSwapStatusInStorage(
+                    createdResponse.id,
+                    data.status,
+                    isSubmarineSwap
+                );
+
+                console.log('Update:', data);
+
+                if (data.status === 'swap.created') {
+                    console.log('Waiting invoice to be paid');
+                } else if (data.status === 'transaction.mempool') {
+                    console.log('Creating claim transaction');
+                } else if (
+                    data.status === 'invoice.expired' ||
+                    data.status === 'transaction.failed' ||
+                    data.status === 'swap.expired'
+                ) {
+                    this.stopPolling();
+
+                    data?.failureReason &&
+                        this.setState({ error: data?.failureReason });
+                } else if (data.status === 'invoice.settled') {
+                    console.log('Swap successful');
+                    this.stopPolling();
+                } else {
+                    console.log('Unhandled status:', data.status);
+                }
+            } catch (error: any) {
+                this.setState({
+                    error: error.message || error || 'An unknown error occurred'
+                });
+                console.error('Error while polling for updates:', error);
+            }
+        };
+
+        this.pollingTimer = setInterval(pollForUpdates, pollingInterval);
+
+        this.componentWillUnmount = () => {
+            this.stopPolling();
+        };
+    };
+
     stopPolling = () => {
         if (this.pollingTimer) {
             clearInterval(this.pollingTimer);
@@ -220,9 +326,18 @@ export default class SwapDetails extends React.Component<
         this.stopPolling();
     }
 
-    updateSwapStatusInStorage = async (swapId: string, status: string) => {
+    updateSwapStatusInStorage = async (
+        swapId: string,
+        status: string,
+        isSubmarineSwap: boolean
+    ) => {
         try {
-            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            let storedSwaps: any;
+            if (isSubmarineSwap) {
+                storedSwaps = await EncryptedStorage.getItem('swaps');
+            } else {
+                storedSwaps = await EncryptedStorage.getItem('reverse-swaps');
+            }
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             const updatedSwaps = swaps.map((swap: any) =>
@@ -230,10 +345,14 @@ export default class SwapDetails extends React.Component<
             );
 
             await EncryptedStorage.setItem(
-                'swaps',
+                isSubmarineSwap ? 'swaps' : 'reverse-swaps',
                 JSON.stringify(updatedSwaps)
             );
-            console.log(`Updated status for swap ID ${swapId} to "${status}"`);
+            console.log(
+                `Updated ${
+                    isSubmarineSwap ? `swap ` : `reverse swap `
+                }status for swap ID ${swapId} to "${status}"`
+            );
         } catch (error) {
             console.error('Error updating swap status in storage:', error);
         }
@@ -498,7 +617,7 @@ export default class SwapDetails extends React.Component<
                         />
                     )}
                 </ScrollView>
-                {(updates === 'invoice.set' || isReverseSwap) && (
+                {(updates === 'invoice.set' || updates === 'swap.created') && (
                     <Button
                         title={localeString('views.PaymentRequest.payInvoice')}
                         containerStyle={{
