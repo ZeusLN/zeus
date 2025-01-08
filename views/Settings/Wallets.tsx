@@ -236,7 +236,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         style={{
                                             borderBottomWidth: 0,
                                             backgroundColor: nodeActive
-                                                ? themeColor('highlight')
+                                                ? // match the LayerBalance sliders
+                                                  themeColor(
+                                                      'buttonBackground'
+                                                  ) || themeColor('secondary')
                                                 : 'transparent'
                                         }}
                                         onPress={async () => {
