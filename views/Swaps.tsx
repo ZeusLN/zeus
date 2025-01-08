@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BigNumber from 'bignumber.js';
@@ -57,6 +57,7 @@ interface SwapPaneState {
     apiError: any;
     apiUpdates: any;
     response: any;
+    fetchingInvoice: boolean;
 }
 
 @inject('SwapStore', 'UnitsStore', 'InvoicesStore')
@@ -74,7 +75,8 @@ export default class SwapPane extends React.PureComponent<
         isValid: false,
         apiUpdates: '',
         apiError: null,
-        response: null
+        response: null,
+        fetchingInvoice: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -91,7 +93,8 @@ export default class SwapPane extends React.PureComponent<
             apiError,
             apiUpdates,
             invoice,
-            isValid
+            isValid,
+            fetchingInvoice
         } = this.state;
         const { subInfo, reverseInfo, loading } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
@@ -190,7 +193,8 @@ export default class SwapPane extends React.PureComponent<
             } catch (error: any) {
                 // Handle errors during API call
                 this.setState({
-                    apiError: error.message || 'An unknown error occurred'
+                    apiError: error.message || 'An unknown error occurred',
+                    invoice: ''
                 });
                 console.error('Error creating Submarine Swap:', error);
             }
@@ -209,7 +213,7 @@ export default class SwapPane extends React.PureComponent<
 
                 // Creating a reverse swap
                 const data = JSON.stringify({
-                    invoiceAmount: 1500000,
+                    invoiceAmount: Number(this.state.outputSats),
                     to: 'BTC',
                     from: 'BTC',
                     claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
@@ -556,7 +560,8 @@ export default class SwapPane extends React.PureComponent<
                                             reverse: !reverse,
                                             inputSats: 0,
                                             outputSats: 0,
-                                            serviceFeeSats: 0
+                                            serviceFeeSats: 0,
+                                            invoice: ''
                                         });
                                     }}
                                 >
@@ -734,49 +739,57 @@ export default class SwapPane extends React.PureComponent<
                                     </View>
                                 </Row>
                             </View>
-                            <TextInput
-                                onChangeText={(text: string) => {
-                                    let isValid;
-                                    if (reverse) {
-                                        isValid = text
-                                            ? AddressUtils.isValidBitcoinAddress(
-                                                  text,
-                                                  true
-                                              )
-                                            : false;
-                                    } else {
-                                        isValid = text
-                                            ? AddressUtils.isValidLightningPaymentRequest(
-                                                  text
-                                              )
-                                            : false;
+                            <View>
+                                <TextInput
+                                    onChangeText={(text: string) => {
+                                        let isValid;
+                                        if (reverse) {
+                                            isValid = text
+                                                ? AddressUtils.isValidBitcoinAddress(
+                                                      text,
+                                                      true
+                                                  )
+                                                : false;
+                                        } else {
+                                            isValid = text
+                                                ? AddressUtils.isValidLightningPaymentRequest(
+                                                      text
+                                                  )
+                                                : false;
+                                        }
+                                        this.setState({
+                                            invoice: text,
+                                            apiError: '',
+                                            apiUpdates: '',
+                                            isValid
+                                        });
+                                    }}
+                                    placeholder={
+                                        fetchingInvoice
+                                            ? ''
+                                            : reverse
+                                            ? `${localeString(
+                                                  'general.enter'
+                                              )} ${localeString(
+                                                  'views.Settings.AddContact.onchainAddress'
+                                              )}`
+                                            : `${localeString(
+                                                  'general.enter'
+                                              )} ${localeString(
+                                                  'views.PaymentRequest.title'
+                                              )}`
                                     }
-
-                                    this.setState({
-                                        invoice: text,
-                                        apiError: '',
-                                        apiUpdates: '',
-                                        isValid
-                                    });
-                                }}
-                                placeholder={
-                                    reverse
-                                        ? `${localeString(
-                                              'general.enter'
-                                          )} ${localeString(
-                                              'views.Settings.AddContact.onchainAddress'
-                                          )}`
-                                        : `${localeString(
-                                              'general.enter'
-                                          )} ${localeString(
-                                              'views.PaymentRequest.title'
-                                          )}`
-                                }
-                                style={{
-                                    marginHorizontal: 20
-                                }}
-                                value={invoice}
-                            />
+                                    style={{
+                                        marginHorizontal: 20
+                                    }}
+                                    value={invoice}
+                                />
+                                {fetchingInvoice && (
+                                    <View style={styles.loadingOverlay}>
+                                        <LoadingIndicator />
+                                    </View>
+                                )}
+                            </View>
 
                             <View
                                 style={{
@@ -785,7 +798,10 @@ export default class SwapPane extends React.PureComponent<
                             >
                                 <Button
                                     onPress={async () => {
-                                        SwapStore.loading = true;
+                                        this.setState({
+                                            invoice: '',
+                                            fetchingInvoice: true
+                                        });
                                         try {
                                             const amount =
                                                 units === 'sats'
@@ -799,9 +815,9 @@ export default class SwapPane extends React.PureComponent<
                                             if (!amount) {
                                                 this.setState({
                                                     apiError:
-                                                        'Please enter a amount!'
+                                                        'Please enter a amount!',
+                                                    fetchingInvoice: false
                                                 });
-                                                SwapStore.loading = false;
                                                 return;
                                             }
 
@@ -828,7 +844,8 @@ export default class SwapPane extends React.PureComponent<
                                                 } else {
                                                     this.setState({
                                                         apiError:
-                                                            'Failed to retrieve on-chain address'
+                                                            'Failed to retrieve on-chain address',
+                                                        fetchingInvoice: false
                                                     });
                                                 }
                                             } else {
@@ -844,11 +861,14 @@ export default class SwapPane extends React.PureComponent<
                                                 } else {
                                                     this.setState({
                                                         apiError:
-                                                            'Failed to retrieve Lightning payment request'
+                                                            'Failed to retrieve Lightning payment request',
+                                                        fetchingInvoice: false
                                                     });
                                                 }
                                             }
-                                            SwapStore.loading = false;
+                                            this.setState({
+                                                fetchingInvoice: false
+                                            });
                                         } catch (error: any) {
                                             console.error(
                                                 'Error generating invoice:',
@@ -856,9 +876,9 @@ export default class SwapPane extends React.PureComponent<
                                             );
                                             this.setState({
                                                 apiError:
-                                                    'Failed to generate invoice'
+                                                    'Failed to generate invoice',
+                                                fetchingInvoice: false
                                             });
-                                            SwapStore.loading = false;
                                         }
                                     }}
                                     title={
@@ -899,3 +919,15 @@ export default class SwapPane extends React.PureComponent<
         );
     }
 }
+
+const styles = StyleSheet.create({
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center'
+    }
+});
