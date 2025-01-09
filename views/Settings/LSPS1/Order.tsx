@@ -72,11 +72,11 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         console.log('Order found in storage->', temporaryOrder);
 
                         BackendUtils.supportsLSPS1rest()
-                            ? LSPStore.getOrderREST(
+                            ? LSPStore.lsps1GetOrderREST(
                                   id,
                                   temporaryOrder?.endpoint
                               )
-                            : LSPStore.getOrderCustomMessage(
+                            : LSPStore.lsps1GetOrderCustomMessage(
                                   id,
                                   temporaryOrder?.peer
                               );
