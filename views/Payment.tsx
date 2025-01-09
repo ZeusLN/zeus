@@ -97,7 +97,8 @@ export default class PaymentView extends React.Component<
             getPreimage,
             getDestination,
             enhancedPath,
-            getKeysendMessageOrMemo,
+            getKeysendMessage,
+            getMemo,
             isIncomplete,
             isInTransit,
             isFailed,
@@ -207,10 +208,20 @@ export default class PaymentView extends React.Component<
                             />
                         )}
 
-                        {getKeysendMessageOrMemo && (
+                        {getKeysendMessage && (
                             <KeyValue
-                                keyValue={localeString('views.Receive.memo')}
-                                value={getKeysendMessageOrMemo}
+                                keyValue={localeString(
+                                    'views.Invoices.keysendMessage'
+                                )}
+                                value={getKeysendMessage}
+                                sensitive
+                            />
+                        )}
+
+                        {getMemo && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.memo')}
+                                value={getMemo}
                                 sensitive
                             />
                         )}
