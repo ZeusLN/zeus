@@ -130,11 +130,17 @@ export default class Invoice extends BaseModel {
         );
     }
 
-    @computed public get getMemo(): string {
+    @computed public get getMemo(): string | undefined {
+        if (this.htlcs?.[0]?.custom_records?.[keySendMessageType]) {
+            return Base64Utils.base64ToUtf8(
+                this.htlcs[0].custom_records[keySendMessageType]
+            );
+        }
+
         const memo = this.memo || this.description;
         if (typeof memo === 'string') return memo;
         if (Array.isArray(memo)) return memo[0];
-        return '';
+        return undefined;
     }
 
     @computed public get isPaid(): boolean {
@@ -260,24 +266,6 @@ export default class Invoice extends BaseModel {
         }
 
         return getExpiryTimestamp * 1000 <= Date.now();
-    }
-
-    @computed public get getKeysendMessage(): string {
-        if (
-            this.htlcs?.length > 0 &&
-            this.htlcs[0].custom_records &&
-            this.htlcs[0].custom_records[keySendMessageType]
-        ) {
-            const encodedMessage =
-                this.htlcs[0].custom_records[keySendMessageType];
-            try {
-                return Base64Utils.base64ToUtf8(encodedMessage);
-            } catch (e) {
-                return '';
-            }
-        }
-
-        return '';
     }
 
     @computed public get isZeusPay(): boolean {

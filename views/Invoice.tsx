@@ -71,7 +71,6 @@ export default class InvoiceView extends React.Component<
             formattedOriginalTimeUntilExpiry,
             formattedTimeUntilExpiry,
             getPaymentRequest,
-            getKeysendMessage,
             is_amp,
             value,
             getNoteKey,
@@ -151,16 +150,6 @@ export default class InvoiceView extends React.Component<
                     </View>
 
                     <View style={styles.content}>
-                        {getKeysendMessage && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Invoices.keysendMessage'
-                                )}
-                                value={getKeysendMessage}
-                                sensitive
-                            />
-                        )}
-
                         {is_amp && isPaid && (
                             <KeyValue
                                 keyValue={localeString(
@@ -173,13 +162,13 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        <KeyValue
-                            keyValue={localeString('views.Invoice.memo')}
-                            value={
-                                getMemo || localeString('models.Invoice.noMemo')
-                            }
-                            sensitive
-                        />
+                        {getMemo && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.memo')}
+                                value={getMemo}
+                                sensitive
+                            />
+                        )}
 
                         {!!receipt && (
                             <KeyValue

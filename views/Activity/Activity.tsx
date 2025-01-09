@@ -346,12 +346,12 @@ export default class Activity extends React.PureComponent<
                                             : localeString(
                                                   'views.PaymentRequest.title'
                                               )}
-                                        {item.memo ? ': ' : ''}
-                                        {item.memo ? (
+                                        {item.getMemo ? ': ' : ''}
+                                        {item.getMemo ? (
                                             <Text
                                                 style={{ fontStyle: 'italic' }}
                                             >
-                                                {item.memo}
+                                                {item.getMemo}
                                             </Text>
                                         ) : (
                                             ''
