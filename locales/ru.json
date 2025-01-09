@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP также обернет ваши инвойсы, что повысит вашу приватность при получении платежей.",
     "views.Receive.routeHintSwitchExplainer1": "Подсказки маршрутизации предоставляют информацию для поиска неразрекламированных или необъявленных каналов. Это позволяет направлять платежи через узлы, которые не являются общедоступными в сети.",
     "views.Receive.routeHintSwitchExplainer2": "Подсказки маршрутизации полезны, если вы используете только необъявленные каналы, или если отправитель не может найти путь к вашему узлу через объявленные каналы.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Atomic Multi-Path Payments (AMP) - это новый тип лайтнинг-платежей, которые могут быть проведены несколько раз.",
     "views.Receive.ampSwitchExplainer2": "Обратите внимание, что AMP-инвойсы в настоящее время совместимы только с LND-узлами.",
     "views.Receive.lspZeroAmt": "LSP не поддерживают нулевые суммы. Был сформирован незавернутый инвойс. Открытый ключ вашего узла будет виден отправителю.",
