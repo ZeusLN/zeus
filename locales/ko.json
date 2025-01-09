@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "또한, LSP는 당신의 인보이스를 랩핑하여, 프라이버시를 강화하고 결제 받는 것을 더 쉽게 해 줄 것입니다.",
     "views.Receive.routeHintSwitchExplainer1": "경로 힌트에는 비공개 채널들을 찾을 수 있는 정보가 포함되어 있습니다. 이를 이용하여 네트워크 상에서는 보이지 않는 노드들에게 결제를 보낼 수 있게 합니다.",
     "views.Receive.routeHintSwitchExplainer2": "비공개 채널들만을 사용하고 있거나, 누군가 당신에게 공개 채널을 통해 지불이 불가능할 경우, 경로 힌트 옵션을 켜는 것이 도움이 될 수 있습니다.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "아토믹 다중 경로 결제 (AMP) 인보이스는 여러 번 재사용이 가능한 새로운 결제 방식입니다.",
     "views.Receive.ampSwitchExplainer2": "AMP 인보이스 기능은 오직 LND node들 간에만 호환이 가능하다는 점을 유의하세요.",
     "views.Receive.lspZeroAmt": "LSP는 금액 미표기 인보이스를 지원하지 않습니다.  래핑되지 않은 인보이스가 생성되었습니다. 당신의 노드 공개키가 노출됩니다.",
