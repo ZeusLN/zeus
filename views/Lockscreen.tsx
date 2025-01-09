@@ -463,6 +463,7 @@ export default class Lockscreen extends React.Component<
                                     ...styles.textInput,
                                     paddingTop: passphraseAttempt === '' ? 6 : 2
                                 }}
+                                onSubmitEditing={() => this.onAttemptLogIn()}
                             />
                             <View style={styles.showHideToggle}>
                                 <ShowHideToggle
