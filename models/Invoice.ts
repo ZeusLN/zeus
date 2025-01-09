@@ -130,17 +130,24 @@ export default class Invoice extends BaseModel {
         );
     }
 
-    @computed public get getMemo(): string | undefined {
+    @computed public get getKeysendMessage(): string | undefined {
         if (this.htlcs?.[0]?.custom_records?.[keySendMessageType]) {
             return Base64Utils.base64ToUtf8(
                 this.htlcs[0].custom_records[keySendMessageType]
             );
         }
+        return undefined;
+    }
 
+    @computed public get getMemo(): string | undefined {
         const memo = this.memo || this.description;
         if (typeof memo === 'string') return memo;
         if (Array.isArray(memo)) return memo[0];
         return undefined;
+    }
+
+    @computed public get getKeysendMessageOrMemo(): string | undefined {
+        return this.getKeysendMessage || this.getMemo;
     }
 
     @computed public get isPaid(): boolean {
