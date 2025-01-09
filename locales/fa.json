@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP همچنین رسیدهایتان را نیز می‌پیچد که با حفظ حریم خصوصی، دریافت پرداخت را آسان‌تر می‌کند.",
     "views.Receive.routeHintSwitchExplainer1": "راهنمایی مسیر اطلاعاتی ارائه می دهد تا کانال های اعلام نشده و تبلیغ نشده را بیابید. این  مسیریابی پرداخت به گره هایی که برای عموم قابل دیدن نیستند را ممکن می کند.",
     "views.Receive.routeHintSwitchExplainer2": "اگر فقط از کانال های اعلام نشده استفاده می کنید یا اگر کسی که قصد پرداخت به شما دارد نمی تواند از راه کانالهای اعلام شده به شما دسترسی داشته باشد، روشن کردن راهنمای مسیر مفید است.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "پرداخت اتمی چندمسیره (AMP) نوع جدیدی از پرداخت های لایتنینگ است که پرداخت می تواند چندین بار انجام شود.",
     "views.Receive.ampSwitchExplainer2": "خواهشمند است توجه کنید که اکنون رسیدهای AMP تنها با گره‌های LND سازگارند.",
     "views.Receive.lspZeroAmt": "LSP  با مبلغ صفر سازگار نیست. یک رسید نپیچیده ساخته شده است. کلید همه‌بین گره شما نمایان خواهد شد.",
