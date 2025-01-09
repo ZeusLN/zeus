@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP pia itafunika ankara zako, hivyo kufanya iwe rahisi kupokea malipo wakati huo huo kuhifadhi faragha yako.",
     "views.Receive.routeHintSwitchExplainer1": "Vidokezo vya njia hutoa habari za kutambua vituo visivyotangazwa, au visivyojulikana. Hii inaruhusu upelekaji wa malipo kwa nodi ambazo hazionekani hadharani kwenye mtandao.",
     "views.Receive.routeHintSwitchExplainer2": "Ni muhimu kubadilisha vidokezo vya njia kama unaotumia vituo visivyotangazwa tu, au kama mtu anayejaribu kukulipa hawezi kukufikia kupitia vituo vyako vilivyotangazwa.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Malipo ya Atomic Multi-path (AMP) ni aina mpya ya malipo ya Lightning ambayo yanaweza kulipwa mara kadhaa.",
     "views.Receive.ampSwitchExplainer2": "Tafadhali kumbuka kuwa ankara za AMP kwa sasa zinafaa kwa nodi za LND pekee.",
     "views.Receive.lspZeroAmt": "LSP haiwezi kutumiwa na kiasi cha sifuri. Ankara isiyo fungwa imeundwa. Ufunguo wako wa umma wa nodi utafichuliwa.",
