@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP také zabaluje vaše faktury, což zjednodušuje přijímání plateb a chrání vaše soukromí.",
     "views.Receive.routeHintSwitchExplainer1": "Směrovací nápovědy poskytují informace k nalezení neinzerovaných nebo neohlášených kanálů. Toto umožní směrování plateb přes uzly, které nejsou veřejně viditelné v síti.",
     "views.Receive.routeHintSwitchExplainer2": "Pokud používáte pouze neohlášené kanály, nebo pokud vás odesílatel nemůže zastihnout prostřednictvím ohlášených kanálů, je užitečné zapnout směrovací nápovědy.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Atomic Multi-path Payments (AMP) jsou nový typ Lightningové platby, která může být zaplacena vícekrát.",
     "views.Receive.ampSwitchExplainer2": "Mějte prosím na paměti, že AMP faktury jsou právě teď kompatibilní pouze s LND uzly.",
     "views.Receive.lspZeroAmt": "LSP je nekompatibilní s nulovými částkami. Byla vygenerována nezabalená faktura. Veřejný klíč vašeho uzlu bude odhalen.",
