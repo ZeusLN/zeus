@@ -61,7 +61,7 @@ export default class InvoiceView extends React.Component<
             fallback_addr,
             getRHash,
             isPaid,
-            getMemo,
+            getKeysendMessageOrMemo,
             receipt,
             creation_date,
             getDescriptionHash,
@@ -162,10 +162,10 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        {getMemo && (
+                        {getKeysendMessageOrMemo && (
                             <KeyValue
                                 keyValue={localeString('views.Invoice.memo')}
-                                value={getMemo}
+                                value={getKeysendMessageOrMemo}
                                 sensitive
                             />
                         )}

@@ -346,12 +346,14 @@ export default class Activity extends React.PureComponent<
                                             : localeString(
                                                   'views.PaymentRequest.title'
                                               )}
-                                        {item.getMemo ? ': ' : ''}
-                                        {item.getMemo ? (
+                                        {item.getKeysendMessageOrMemo
+                                            ? ': '
+                                            : ''}
+                                        {item.getKeysendMessageOrMemo ? (
                                             <Text
                                                 style={{ fontStyle: 'italic' }}
                                             >
-                                                {item.getMemo}
+                                                {item.getKeysendMessageOrMemo}
                                             </Text>
                                         ) : (
                                             ''
@@ -374,12 +376,14 @@ export default class Activity extends React.PureComponent<
                                 subTitle = (
                                     <Text>
                                         {localeString('general.lightning')}
-                                        {item.getMemo ? ': ' : ''}
-                                        {item.getMemo ? (
+                                        {item.getKeysendMessageOrMemo
+                                            ? ': '
+                                            : ''}
+                                        {item.getKeysendMessageOrMemo ? (
                                             <Text
                                                 style={{ fontStyle: 'italic' }}
                                             >
-                                                {item.getMemo}
+                                                {item.getKeysendMessageOrMemo}
                                             </Text>
                                         ) : (
                                             ''
