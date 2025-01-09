@@ -79,7 +79,8 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                         color: themeColor('text'),
                                         fontSize:
                                             infoModalText.length > 3 ? 18 : 20,
-                                        marginBottom: 40
+                                        marginBottom:
+                                            infoModalText.length > 3 ? 18 : 20
                                     }}
                                 >
                                     {text}
