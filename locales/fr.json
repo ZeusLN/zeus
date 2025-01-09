@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "Le LSP enveloppera également vos factures, ce qui facilite la réception des paiements tout en protégeant votre vie privée.",
     "views.Receive.routeHintSwitchExplainer1": "Les conseils d'itinéraire fournissent des informations pour trouver des canaux non adversés. Cela permet le routage des paiements aux nœuds qui ne sont pas visibles publiquement sur le réseau.",
     "views.Receive.routeHintSwitchExplainer2": "Il est utile de basculer les conseils de route si vous n'utilisez que des canaux non adversés, ou si quelqu'un qui essaie de payer, vous ne pouvez pas vous joindre via vos canaux annoncés.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Les paiements multi-chemins atomiques (AMP) sont un nouveau type de paiements de foudre qui peuvent être payés plusieurs fois.",
     "views.Receive.ampSwitchExplainer2": "Veuillez noter que les factures AMP ne sont actuellement compatibles qu'avec les nœuds LND.",
     "views.Receive.lspZeroAmt": "Le LSP est incompatible avec zéro montants. Une facture non emballée a été générée. La clé publique de votre nœud sera exposée.",
