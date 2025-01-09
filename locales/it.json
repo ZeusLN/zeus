@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP avvolgerà anche le fatture, rendendo più facile ricevere pagamenti proteggendo la tua privacy.",
     "views.Receive.routeHintSwitchExplainer1": "I suggerimenti per il percorso forniscono informazioni per trovare canali non pubblicitari o senza preavviso. Ciò consente il routing dei pagamenti a nodi che non sono pubblicamente visibili sulla rete.",
     "views.Receive.routeHintSwitchExplainer2": "È utile attivare i suggerimenti per il percorso se stai utilizzando solo canali senza preavviso o se qualcuno che cerca di pagare non puoi raggiungerti tramite i tuoi canali annunciati.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "I pagamenti multi-percorso atomici (AMP) sono un nuovo tipo di pagamenti Lightning che possono essere pagati più volte.",
     "views.Receive.ampSwitchExplainer2": "Si prega di notare che le fatture AMP sono attualmente compatibili solo con i nodi LND.",
     "views.Receive.lspZeroAmt": "LSP è incompatibile con quantità zero. È stata generata una fattura scartata. La chiave pubblica del tuo nodo sarà esposta.",
