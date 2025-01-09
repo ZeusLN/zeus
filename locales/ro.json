@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP vă va înfășura facturile, ceea ce face mai ușor să primiți plăți în timp ce vă protejați confidențialitatea",
     "views.Receive.routeHintSwitchExplainer1": "Sugestii de rută oferă informații pentru a găsi canale neanunțate. Aceasta permite rutarea plăților către noduri care nu sunt vizibile public în rețea.",
     "views.Receive.routeHintSwitchExplainer2": "Este util să comutați sugestii de traseu dacă utilizați doar canale neanunțate sau dacă cineva care încearcă să vă plătească, nu vă puteți ajunge prin canalele anunțate.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Atomic Multi-path Payments (AMP) sunt un nou tip de plăți Lightning care pot fi plătite de mai multe ori.",
     "views.Receive.ampSwitchExplainer2": "Vă rugăm să rețineți că facturile AMP sunt în prezent compatibile doar cu nodurile LND.",
     "views.Receive.lspZeroAmt": "LSP este incompatibil cu sume in zero. A fost generată o factură dezvăluită. Cheia publică a nodului dvs. va fi expusă.",
