@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "และสามารถครอบใบแจ้งหนี้ เพื่อให้รับเงินได้โดยที่ไม่เปิดเผยโหนดของโทรศัพท์",
     "views.Receive.routeHintSwitchExplainer1": "คำใบ้ Route ให้ข้อมูลในการหาแชนแนลเพื่อเชื่อมต่อที่ไม่ได้ประกาศสู่สาธารณะ",
     "views.Receive.routeHintSwitchExplainer2": "คำใบ้ Route จะช่วยให้ผู้คนสามารถส่งเงินหาคุณได้แม้คุณไม่ได้ประกาศแชนแนลสู่สาธารณะ หรือหากว่าเกิดปัญหากับแชลแนลสาธารณะของคุณ เราสามารถใช้คำใบ้ Route ในการส่งเงินเข้าแชลแนลลับของคุณแทนได้",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Atomic Multi-path Payments (AMP) เป็นรูปแบบการจ่ายเงินต่อเนื่องได้หลายครั้ง ตามความต้องการ.",
     "views.Receive.ampSwitchExplainer2": "โปรดจำไว้ว่าใบแจ้งหนี้แบบ AMP นั้นรองรับเพียงแค่ LND โหนด",
     "views.Receive.lspZeroAmt": "LSP ไม่รองรับธุรกรรมที่จำนวนเป็นศูนย์. ใบแจ้งหนี้นี้จะไม่ถูกครอบไว้โดยผู้บริการ Lightning. คีย์สาธารณะของโหนดคุณจะถูกเปิดเผย.",
