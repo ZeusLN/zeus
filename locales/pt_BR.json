@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "O LSP também encerrará suas faturas, facilitando o recebimento de pagamentos enquanto protege sua privacidade.",
     "views.Receive.routeHintSwitchExplainer1": "Dicas de rota fornecem informações para encontrar canais não anunciados ou sem aviso prévio. Isso permite o roteamento de pagamentos para nós que não são visíveis publicamente na rede.",
     "views.Receive.routeHintSwitchExplainer2": "É útil alternar dicas de rota se você estiver usando apenas canais sem aviso prévio ou se alguém que tenta pagar, você não poderá alcançá -lo através dos canais anunciados.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Os pagamentos atômicos de vários caminhos (AMP) são um novo tipo de pagamento de raios que pode ser pago várias vezes.",
     "views.Receive.ampSwitchExplainer2": "Observe que as faturas do AMP são atualmente compatíveis apenas com os nós do LND.",
     "views.Receive.lspZeroAmt": "O LSP é incompatível com zero quantidades. Uma fatura desembrulhada foi gerada. A chave pública do seu nó será exposta.",
