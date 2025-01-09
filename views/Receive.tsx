@@ -2665,6 +2665,9 @@ export default class Receive extends React.Component<
                                                                     ),
                                                                     localeString(
                                                                         'views.Receive.routeHintSwitchExplainer2'
+                                                                    ),
+                                                                    localeString(
+                                                                        'views.Receive.routeHintSwitchExplainer3'
                                                                     )
                                                                 ]}
                                                             >
