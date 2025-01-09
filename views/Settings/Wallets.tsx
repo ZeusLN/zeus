@@ -206,15 +206,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 item,
                                 index,
                                 onDragStart,
-                                onDragEnd,
-                                isActive
+                                onDragEnd
                             }: DragListRenderItemInfo<any>) => {
                                 let nodeSubtitle = '';
-                                if (
+                                const nodeActive =
                                     selectedNode === index ||
-                                    (!selectedNode && index === 0)
-                                ) {
-                                    nodeSubtitle = 'Active | ';
+                                    (!selectedNode && index === 0);
+                                if (nodeActive) {
+                                    nodeSubtitle = `${localeString(
+                                        'general.active'
+                                    )} | `;
                                 }
 
                                 nodeSubtitle +=
@@ -234,8 +235,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         key={index}
                                         style={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: isActive
-                                                ? themeColor('highlight')
+                                            backgroundColor: nodeActive
+                                                ? // match the LayerBalance sliders
+                                                  themeColor(
+                                                      'buttonBackground'
+                                                  ) || themeColor('secondary')
                                                 : 'transparent'
                                         }}
                                         onPress={async () => {
@@ -285,9 +289,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             <ListItem.Content>
                                                 <ListItem.Title
                                                     style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
+                                                        color: nodeActive
+                                                            ? themeColor(
+                                                                  'buttonText'
+                                                              )
+                                                            : themeColor(
+                                                                  'text'
+                                                              ),
                                                         fontFamily:
                                                             'PPNeueMontreal-Book'
                                                     }}
@@ -296,9 +304,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 </ListItem.Title>
                                                 <ListItem.Subtitle
                                                     style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
+                                                        color: nodeActive
+                                                            ? themeColor(
+                                                                  'buttonText'
+                                                              )
+                                                            : themeColor(
+                                                                  'secondaryText'
+                                                              ),
                                                         fontFamily:
                                                             'PPNeueMontreal-Book'
                                                     }}
@@ -315,9 +327,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     icon={{
                                                         name: 'settings',
                                                         size: 35,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
+                                                        color: nodeActive
+                                                            ? themeColor(
+                                                                  'buttonText'
+                                                              )
+                                                            : themeColor('text')
                                                     }}
                                                     onPress={() =>
                                                         navigation.navigate(
@@ -327,9 +341,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                                     item
                                                                 ),
                                                                 index,
-                                                                active:
-                                                                    selectedNode ===
-                                                                    index,
+                                                                active: nodeActive,
                                                                 saved: true
                                                             }
                                                         )
@@ -346,9 +358,15 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         )}
                                                     >
                                                         <DragDots
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
+                                                            fill={
+                                                                nodeActive
+                                                                    ? themeColor(
+                                                                          'buttonText'
+                                                                      )
+                                                                    : themeColor(
+                                                                          'text'
+                                                                      )
+                                                            }
                                                             width="30"
                                                             height="30"
                                                             style={{

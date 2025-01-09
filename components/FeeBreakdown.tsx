@@ -346,7 +346,7 @@ export default class FeeBreakdown extends React.Component<
                             keyValue={localeString('views.Channel.peerStatus')}
                             value={
                                 isActive
-                                    ? localeString('views.Channel.active')
+                                    ? localeString('general.active')
                                     : localeString('views.Channel.inactive')
                             }
                         />

@@ -390,7 +390,7 @@ export default class ChannelView extends React.Component<
                             : closeHeight
                             ? localeString('views.Channel.closed')
                             : isActive
-                            ? localeString('views.Channel.active')
+                            ? localeString('general.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
                     {channelId && (
