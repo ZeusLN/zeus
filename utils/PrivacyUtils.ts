@@ -7,6 +7,8 @@ const numbers = numbersLibrary.split('');
 const alphabet = alphabetLibrary.split('');
 
 class PrivacyUtils {
+    private memoizedValues: Map<string, string> = new Map();
+
     sensitiveValue = (
         input: string | number | Date | undefined,
         fixedLength?: number | null,
@@ -17,16 +19,22 @@ class PrivacyUtils {
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
         if (!lurkerMode) return input;
 
-        let output = '';
         const length = fixedLength || (input && input.toString().length) || 1;
-        const wordlist = numberSet ? numbers : alphabet;
+        const key = `${input}-${length}-${numberSet}`;
 
-        for (let i = 0; i <= length - 1; i++) {
-            const newLetter =
-                wordlist[Math.floor(Math.random() * wordlist.length)];
-            output = output.concat(newLetter);
+        if (!this.memoizedValues.has(key)) {
+            let output = '';
+            const wordlist = numberSet ? numbers : alphabet;
+
+            for (let i = 0; i <= length - 1; i++) {
+                const newLetter =
+                    wordlist[Math.floor(Math.random() * wordlist.length)];
+                output = output.concat(newLetter);
+            }
+            this.memoizedValues.set(key, output);
         }
-        return output;
+
+        return this.memoizedValues.get(key);
     };
 }
 

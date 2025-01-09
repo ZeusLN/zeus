@@ -1227,6 +1227,7 @@ export default class SettingsStore {
     @observable public loggedIn = false;
     @observable public connecting = true;
     @observable public lurkerExposed = false;
+    private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -1869,12 +1870,17 @@ export default class SettingsStore {
 
     @action
     public toggleLurker = () => {
+        if (this.lurkerTimeout) {
+            clearTimeout(this.lurkerTimeout);
+        }
+
         this.lurkerExposed = true;
         this.settings.privacy.lurkerMode = false;
 
-        setTimeout(() => {
+        this.lurkerTimeout = setTimeout(() => {
             this.lurkerExposed = false;
             this.settings.privacy.lurkerMode = true;
+            this.lurkerTimeout = null;
         }, 3000);
     };
 
