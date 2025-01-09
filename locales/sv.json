@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP kommer också att paketerade dina fakturor, vilket gör det lättare att ta emot betalningar samtidigt som du skyddar din integritet.",
     "views.Receive.routeHintSwitchExplainer1": "Rutt tips ger information för att hitta icke-annonserade eller oanmälda kanaler. Detta möjliggör dirigering av betalningar till noder som inte är offentligt synliga på nätverket.",
     "views.Receive.routeHintSwitchExplainer2": "Det är bra att starta rutt tips om du bara använder oanmälda kanaler, eller om någon som försöker betala dig inte kan nå dig via dina annonserade kanaler.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Atomic Multi-path Payments (AMP) är en ny typ av Lightning-betalningar som kan betalas flera gånger.",
     "views.Receive.ampSwitchExplainer2": "Observera att AMP-fakturor för närvarande endast är kompatibla med LND-noder.",
     "views.Receive.lspZeroAmt": "LSP:n är inkompatibel med nollbelopp. En oinpackad faktura har genererats. Din nods publika nyckel kommer att exponeras.",
