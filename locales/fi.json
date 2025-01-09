@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "LSP käärii myös laskusi, mikä helpottaa maksujen vastaanottamista samalla suojaten yksityisyyttäsi.",
     "views.Receive.routeHintSwitchExplainer1": "Reittivihjeet tarjoavat tietoa ei-mainostetuista tai ilmoittamattomista kanavista. Tämä mahdollistaa maksujen reitittämisen solmuihin, jotka eivät ole julkisesti näkyvissä verkossa.",
     "views.Receive.routeHintSwitchExplainer2": "On hyödyllistä ottaa reititysvihjeet käyttöön, jos käytät vain ilmoittamattomia kanavia tai jos joku yrittää maksaa sinulle ei tavoita sinua ilmoitettujen kanavien kautta.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Atomiset monipolkuiset maksut (AMP) ovat uuden tyyppisiä salamamaksuja, jotka voidaan maksaa useita kertoja.",
     "views.Receive.ampSwitchExplainer2": "Huomaa, että AMP-laskut ovat tällä hetkellä yhteensopivia vain LND-solmujen kanssa.",
     "views.Receive.lspZeroAmt": "LSP on yhteensopimaton nollasummien kanssa. Luomme purkamattoman laskun. Solmusi julkinen avain paljastuu.",
