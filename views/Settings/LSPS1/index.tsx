@@ -11,7 +11,6 @@ import {
 import { ButtonGroup, Icon } from 'react-native-elements';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { v4 as uuidv4 } from 'uuid';
 
 import CaretDown from '../../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../../assets/images/SVG/Caret Right.svg';
@@ -102,13 +101,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
-            LSPStore.getInfoREST();
+            LSPStore.lsps1GetInfoREST();
         } else {
             console.log('connecting');
             await this.connectPeer();
             console.log('connected');
             await this.subscribeToCustomMessages();
-            this.sendCustomMessage_lsps1();
+            LSPStore.lsps1GetInfoCustomMessage();
         }
 
         navigation.addListener('focus', () => {
@@ -228,84 +227,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
     }
 
-    sendCustomMessage_lsps1() {
-        const { LSPStore } = this.props;
-        LSPStore.loading = true;
-        LSPStore.error = false;
-        LSPStore.error_msg = '';
-        const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
-        const type = 37913;
-        const id = uuidv4();
-        LSPStore.getInfoId = id;
-        const data = this.encodeMesage({
-            jsonrpc: '2.0',
-            method: 'lsps1.get_info',
-            params: {},
-            id: LSPStore.getInfoId
-        });
-
-        LSPStore.sendCustomMessage({
-            peer: node_pubkey_string,
-            type,
-            data
-        })
-            .then((response) => {
-                console.log('Custom message sent:', response);
-            })
-            .catch((error) => {
-                console.error(
-                    'Error sending (get_info) custom message:',
-                    error
-                );
-            });
-    }
-
-    lsps1_createorder = () => {
-        const { LSPStore } = this.props;
-        const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
-        const type = 37913;
-        const id = uuidv4();
-        LSPStore.createOrderId = id;
-        LSPStore.loading = true;
-        LSPStore.error = false;
-        LSPStore.error_msg = '';
-        const data = this.encodeMesage({
-            jsonrpc: '2.0',
-            method: 'lsps1.create_order',
-            params: {
-                lsp_balance_sat: this.state.lspBalanceSat.toString(),
-                client_balance_sat: this.state.clientBalanceSat.toString(),
-                required_channel_confirmations: parseInt(
-                    this.state.requiredChannelConfirmations
-                ),
-                funding_confirms_within_blocks: parseInt(
-                    this.state.confirmsWithinBlocks
-                ),
-                channel_expiry_blocks: this.state.channelExpiryBlocks,
-                token: this.state.token,
-                refund_onchain_address: this.state.refundOnchainAddress,
-                announce_channel: this.state.announceChannel
-            },
-            id: LSPStore.createOrderId
-        });
-
-        LSPStore.sendCustomMessage({
-            peer: node_pubkey_string,
-            type,
-            data
-        })
-            .then(() => {})
-            .catch((error) => {
-                console.error(
-                    'Error sending (create_order) custom message:',
-                    error
-                );
-            });
-    };
-
     connectPeer = async () => {
         const { ChannelsStore, LSPStore } = this.props;
-        const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
+        const node_pubkey_string: string = LSPStore.getLSPSPubkey();
         const host: string = LSPStore.getLSPS1Host();
         try {
             return await ChannelsStore.connectPeer(
@@ -474,7 +398,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'
             : BackendUtils.supportsLSPS1customMessage()
-            ? LSPStore.getLSPS1Pubkey()
+            ? LSPStore.getLSPSPubkey()
             : LSPStore.getLSPS1Rest();
 
         return (
@@ -494,7 +418,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                 />
                 <View style={{ paddingHorizontal: 18 }}>
                     {BackendUtils.supportsLSPS1customMessage() &&
-                        !LSPStore.getLSPS1Pubkey() &&
+                        !LSPStore.getLSPSPubkey() &&
                         !LSPStore.getLSPS1Host() && (
                             <ErrorMessage
                                 message={localeString(
@@ -1293,11 +1217,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             .length === 0
                                     ) {
                                         if (BackendUtils.supportsLSPS1rest()) {
-                                            LSPStore.createOrderREST(
+                                            LSPStore.lsps1CreateOrderREST(
                                                 this.state
                                             );
                                         } else {
-                                            this.lsps1_createorder();
+                                            LSPStore.lsps1CreateOrderCustomMessage(
+                                                this.state
+                                            );
                                         }
                                     } else {
                                         const orderId = result.order_id;
@@ -1349,8 +1275,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         BackendUtils.supportsLSPS1customMessage()
                                                     ) {
                                                         orderData.peer =
-                                                            LSPStore.getLSPS1Pubkey();
-                                                        orderData.uri = `${LSPStore.getLSPS1Pubkey()}@${LSPStore.getLSPS1Host()}`;
+                                                            LSPStore.getLSPSPubkey();
+                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPS1Host()}`;
                                                     }
                                                     if (
                                                         BackendUtils.supportsLSPS1rest()
@@ -1440,14 +1366,14 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                             }}
                         >
                             <Button
-                                title="Retry"
+                                title={localeString('general.retry')}
                                 onPress={async () => {
                                     if (BackendUtils.supportsLSPS1rest()) {
-                                        LSPStore.getInfoREST();
+                                        LSPStore.lsps1GetInfoREST();
                                     } else {
                                         await this.connectPeer();
                                         await this.subscribeToCustomMessages();
-                                        this.sendCustomMessage_lsps1();
+                                        LSPStore.lsps1GetInfoCustomMessage();
                                     }
                                 }}
                             />

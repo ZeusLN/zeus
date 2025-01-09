@@ -66,7 +66,7 @@ export default class LSPS1Settings extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            pubkey: LSPStore.getLSPS1Pubkey(),
+            pubkey: LSPStore.getLSPSPubkey(),
             host: LSPStore.getLSPS1Host(),
             restHost: LSPStore.getLSPS1Rest(),
             lsps1ShowPurchaseButton:
