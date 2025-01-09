@@ -628,6 +628,7 @@
     "views.Receive.lspSwitchExplainer2": "El LSP también envolverá sus facturas, lo que facilitará recibir pagos mientras protege su privacidad.",
     "views.Receive.routeHintSwitchExplainer1": "Las sugerencias de ruta proporcionan información para encontrar canales no anunciados. Esto permite el enrutamiento de pagos a nodos que no son visibles públicamente en la red.",
     "views.Receive.routeHintSwitchExplainer2": "Es útil alternar las sugerencias de ruta si está utilizando solo canales no anunciados, o si alguien que intenta pagar no puede comunicarse con usted a través de sus canales anunciados.",
+    "views.Receive.routeHintSwitchExplainer3": "Route hints are automatically enabled when you only have unannounced channels",
     "views.Receive.ampSwitchExplainer1": "Los pagos atómicos múltiples (AMP) son un nuevo tipo de pagos Lightning que se pueden pagar varias veces.",
     "views.Receive.ampSwitchExplainer2": "Tenga en cuenta que las facturas de AMP actualmente solo son compatibles con los nodos LND.",
     "views.Receive.lspZeroAmt": "El LSP es incompatible con cantidades cero. Se ha generado una factura sin envolver. La clave pública de su nodo estará expuesta.",
