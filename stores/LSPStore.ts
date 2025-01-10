@@ -47,7 +47,7 @@ export default class LSPStore {
     @observable public getOrderResponse: any = {};
     // LSPS7
     @observable public getExtendableOrdersId: string;
-    @observable public getExtendableOrdersData: any = {};
+    @observable public getExtendableOrdersData: any = [];
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -65,7 +65,9 @@ export default class LSPStore {
         reaction(
             () => this.channelsStore.channels,
             () => {
-                this.getExtendableChannels();
+                if (this.channelsStore.channels.length !== 0) {
+                    this.getExtendableChannels();
+                }
             }
         );
     }
@@ -425,7 +427,7 @@ export default class LSPStore {
                     ? errorToUserFriendly(data?.error?.message)
                     : '';
             } else {
-                this.getExtendableOrdersData = data;
+                this.getExtendableOrdersData = data?.result?.extendable_orders;
             }
         }
     };
