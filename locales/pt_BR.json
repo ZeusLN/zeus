@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Modo Espreitador",
     "views.Settings.Privacy.lurkerMode.explainer1": "O modo Lurker esconde todos os valores sensíveis, alterando -os para caracteres gregos antigos.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Esta é uma ótima maneira de demonstrar o aplicativo para alguém sem revelar suas informações confidenciais.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Ler área de transferência",
     "views.Settings.Privacy.clipboard.explainer": "Se ativado, o Zeus lerá os valores copiados para a sua área de transferência e solicitará se eles podem ser usados no aplicativo.",
     "views.Settings.Privacy.enableMempoolRates": "Habilitar sugestões de taxa da Mempool.space",
