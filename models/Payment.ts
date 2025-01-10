@@ -80,15 +80,21 @@ export default class Payment extends BaseModel {
         }
     }
 
-    @computed public get getMemo(): string | undefined {
+    @computed public get getKeysendMessage(): string | undefined {
         if (
             this.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
                 keySendMessageType
             ]
         ) {
-            const customRecords = this.htlcs[0].route.hops[0].custom_records;
-            return Base64Utils.base64ToUtf8(customRecords[keySendMessageType]);
-        } else if (this.getPaymentRequest) {
+            return Base64Utils.base64ToUtf8(
+                this.htlcs[0].route.hops[0].custom_records[keySendMessageType]
+            );
+        }
+        return undefined;
+    }
+
+    @computed public get getMemo(): string | undefined {
+        if (this.getPaymentRequest) {
             try {
                 const decoded: any = bolt11.decode(this.getPaymentRequest);
                 for (let i = 0; i < decoded.tags.length; i++) {
@@ -100,6 +106,10 @@ export default class Payment extends BaseModel {
             }
         }
         return undefined;
+    }
+
+    @computed public get getKeysendMessageOrMemo(): string | undefined {
+        return this.getKeysendMessage || this.getMemo;
     }
 
     @computed public get model(): string {
