@@ -219,6 +219,9 @@ export default class Privacy extends React.Component<
                                         'views.Settings.Privacy.lurkerMode.explainer1'
                                     ),
                                     localeString(
+                                        'views.Settings.Privacy.lurkerMode.explainer3'
+                                    ),
+                                    localeString(
                                         'views.Settings.Privacy.lurkerMode.explainer2'
                                     )
                                 ]}
