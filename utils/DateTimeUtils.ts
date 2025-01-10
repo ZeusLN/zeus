@@ -38,6 +38,13 @@ class DateTimeUtils {
 
         return `${time} | ${monthAndDay}${year}`;
     };
+
+    blocksToDaysRounded = (blocks: number) => {
+        // 1440 minutes in a day
+        // 144 blocks in a day w/ 10 min blocks
+        const blocksPerDay = 144;
+        return Math.round(blocks / blocksPerDay);
+    };
 }
 
 const dateTimeUtils = new DateTimeUtils();
