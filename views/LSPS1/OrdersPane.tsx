@@ -4,21 +4,21 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { View, FlatList, TouchableOpacity, Text } from 'react-native';
 
-import Header from '../../../components/Header';
-import Screen from '../../../components/Screen';
-import Amount from '../../../components/Amount';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Amount from '../../components/Amount';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { themeColor } from '../../../utils/ThemeUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import BackendUtils from '../../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
-import Storage from '../../../storage';
+import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../stores/LSPStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import { WarningMessage } from '../../../components/SuccessErrorMessage';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
 
 interface OrdersPaneProps {
     navigation: StackNavigationProp<any, any>;

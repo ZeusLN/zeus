@@ -12,36 +12,36 @@ import { ButtonGroup, Icon } from 'react-native-elements';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import CaretDown from '../../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../../assets/images/SVG/Caret Right.svg';
-import OrderList from '../../../assets/images/SVG/order-list.svg';
-import OlympusSVG from '../../../assets/images/SVG/Olympus.svg';
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
+import OrderList from '../../assets/images/SVG/order-list.svg';
+import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
-import Button from '../../../components/Button';
-import Header from '../../../components/Header';
-import KeyValue from '../../../components/KeyValue';
-import LoadingIndicator from '../../../components/LoadingIndicator';
-import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
-import Screen from '../../../components/Screen';
-import Switch from '../../../components/Switch';
-import Text from '../../../components/Text';
-import TextInput from '../../../components/TextInput';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import LSPS1OrderResponse from '../../components/LSPS1OrderResponse';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import { Row } from '../../../components/layout/Row';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
 
-import BackendUtils from '../../../utils/BackendUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import { numberWithCommas } from '../../../utils/UnitsUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
-import Storage from '../../../storage';
+import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import InvoicesStore from '../../../stores/InvoicesStore';
-import ChannelsStore from '../../../stores/ChannelsStore';
-import SettingsStore from '../../../stores/SettingsStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../stores/LSPStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { LSPS1OrderResponse as Order } from './OrdersPane';
 

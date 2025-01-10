@@ -4,22 +4,22 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Screen from '../../../components/Screen';
-import Header from '../../../components/Header';
-import { WarningMessage } from '../../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { themeColor } from '../../../utils/ThemeUtils';
-import BackendUtils from '../../../utils/BackendUtils';
-import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import Storage from '../../../storage';
+import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import SettingsStore from '../../../stores/SettingsStore';
-import InvoicesStore from '../../../stores/InvoicesStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
-import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../stores/LSPStore';
+import SettingsStore from '../../stores/SettingsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import LSPS1OrderResponse from '../../components/LSPS1OrderResponse';
 
 import { Order } from './OrdersPane';
 

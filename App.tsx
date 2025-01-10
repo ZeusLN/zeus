@@ -156,10 +156,10 @@ import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelB
 import LSPServicesList from './views/Settings/LSPServicesList';
 
 // LSPS1
-import LSPS1 from './views/Settings/LSPS1/index';
-import LSPS1Settings from './views/Settings/LSPS1/Settings';
-import OrdersPane from './views/Settings/LSPS1/OrdersPane';
-import Orders from './views/Settings/LSPS1/Order';
+import LSPS1 from './views/LSPS1/index';
+import LSPS1Settings from './views/LSPS1/Settings';
+import OrdersPane from './views/LSPS1/OrdersPane';
+import Orders from './views/LSPS1/Order';
 
 import RawTxHex from './views/RawTxHex';
 
