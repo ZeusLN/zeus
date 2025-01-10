@@ -280,24 +280,16 @@ export default class CLNRest {
         const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
             .times(1000)
             .toString()}perkb`;
-        if (data.utxos && data.utxos.length > 0) {
-            request = {
-                id: data.id,
-                amount: data.satoshis,
-                feerate: feeRate,
-                announce: !data.privateChannel ? true : false,
-                minconf: data.min_confs,
-                utxos: data.utxos
-            };
-        } else {
-            request = {
-                id: data.id,
-                amount: data.satoshis,
-                feerate: feeRate,
-                announce: !data.privateChannel ? true : false,
-                minconf: data.min_confs
-            };
-        }
+
+        request = {
+            id: data.id,
+            amount: data.fundMax ? 'all' : data.satoshis,
+            feerate: feeRate,
+            announce: !data.privateChannel ? true : false,
+            minconf: data.min_confs
+        };
+
+        if (data.utxos && data.utxos.length > 0) request.utxos = data.utxos;
 
         return this.postRequest('/v1/fundchannel', request);
     };
