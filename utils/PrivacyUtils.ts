@@ -7,6 +7,7 @@ const numbers = numbersLibrary.split('');
 const alphabet = alphabetLibrary.split('');
 
 class PrivacyUtils {
+    // Stores generated masked values to prevent regeneration on each render
     private memoizedValues: Map<string, string> = new Map();
 
     sensitiveValue = (
@@ -19,9 +20,11 @@ class PrivacyUtils {
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
         if (!lurkerMode) return input;
 
+        // Create unique key for memoization based on input parameters
         const length = fixedLength || (input && input.toString().length) || 1;
         const key = `${input}-${length}-${numberSet}`;
 
+        // Generate and store new masked value only if not already memoized
         if (!this.memoizedValues.has(key)) {
             let output = '';
             const wordlist = numberSet ? numbers : alphabet;
