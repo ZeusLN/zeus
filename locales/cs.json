@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Režim Lurker",
     "views.Settings.Privacy.lurkerMode.explainer1": "Režim Lurker skryje všechny citlivé částky tak, že je změní na starořecké znaky.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Toto je skvělý způsob, jak aplikaci někomu předvést, aniž byste odhalili své citlivé údaje.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Načíst schránku",
     "views.Settings.Privacy.clipboard.explainer": "Pokud je toto povoleno, Zeus přečte hodnoty zkopírované do schránky a zeptá se vás, zda je použít v aplikaci.",
     "views.Settings.Privacy.enableMempoolRates": "Povolit návrhy poplatků Mempool.space",
