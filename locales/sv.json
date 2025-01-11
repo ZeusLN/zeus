@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Lurkerläge",
     "views.Settings.Privacy.lurkerMode.explainer1": "Lurker-läget döljer alla känsliga värden genom att ändra dem till antika grekiska tecken.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Det här är ett bra sätt att demonstrera appen för någon utan att avslöja din känsliga information.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Läs urklipp",
     "views.Settings.Privacy.clipboard.explainer": "Om aktiverat kommer Zeus att läsa värden som kopierats till ditt urklipp och fråga dig om de kan användas i appen.",
     "views.Settings.Privacy.enableMempoolRates": "Aktivera Mempool.space för avgiftestimering",

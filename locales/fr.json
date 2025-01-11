@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Mode discret",
     "views.Settings.Privacy.lurkerMode.explainer1": "Le mode Lurker masque toutes les valeurs sensibles en les modifiant en caractères grecs anciens.",
     "views.Settings.Privacy.lurkerMode.explainer2": "C'est un excellent moyen de démontrer l'application à quelqu'un sans révéler vos informations sensibles.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Lire le presse-papiers",
     "views.Settings.Privacy.clipboard.explainer": "S'il est activé, Zeus lira des valeurs copiées dans votre presse-papiers et vous invitera si elles peuvent être utilisées dans l'application.",
     "views.Settings.Privacy.enableMempoolRates": "Activer les suggestions de frais Mempool.space",

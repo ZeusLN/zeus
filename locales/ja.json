@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Lurker mode",
     "views.Settings.Privacy.lurkerMode.explainer1": "Lurker mode hides all sensitive values by changing them to ancient Greek characters.",
     "views.Settings.Privacy.lurkerMode.explainer2": "This is a great way to demo the app to someone without revealing your sensitive information.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "クリップボードから読み込む",
     "views.Settings.Privacy.clipboard.explainer": "If enabled, Zeus will read values copied to your clipboard and prompt you if they can be used in the app.",
     "views.Settings.Privacy.enableMempoolRates": "Mempool.spaceの手数料提案を有効",

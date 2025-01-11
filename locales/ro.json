@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Mod pândă",
     "views.Settings.Privacy.lurkerMode.explainer1": "Modul Lurker ascunde toate valorile sensibile schimbându -le în personaje grecești antice.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Aceasta este o modalitate excelentă de a demonstra aplicația cuiva fără a vă dezvălui informațiile sensibile.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Citește memoria",
     "views.Settings.Privacy.clipboard.explainer": "Dacă este activat, Zeus va citi valori copiate în clipboard și vă va solicita dacă pot fi utilizate în aplicație.",
     "views.Settings.Privacy.enableMempoolRates": "Activează sugestii de la Mempool.space pentru valoarea comisionului.",

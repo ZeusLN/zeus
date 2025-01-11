@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "잠복 모드",
     "views.Settings.Privacy.lurkerMode.explainer1": "잠복 모드는 모든 민감한 값들을 고대 그리스 문자로 변경하여 해당 값들을 숨겨줍니다.",
     "views.Settings.Privacy.lurkerMode.explainer2": "이를 활용하여, 누군가에게 당신의 민감 정보를 밝히지 않으면서도 데모를 보여줄 수 있는 좋은 방법입니다.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "클립보드 읽기",
     "views.Settings.Privacy.clipboard.explainer": "허용 시, Zeus는 클립보드에 복사된 값들을 읽고 앱 내에서 활용할 것인지 재확인합니다.",
     "views.Settings.Privacy.enableMempoolRates": "Mempool.space 수수료 제안 사용",

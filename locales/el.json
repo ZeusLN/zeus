@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Λειτουργία Lurker",
     "views.Settings.Privacy.lurkerMode.explainer1": "Η λειτουργία Lurker κρύβει όλες τις ευαίσθητες τιμές αλλάζοντάς τες σε αρχαίους Ελληνικούς χαρακτήρες.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Αυτός είναι ένας πολύ καλός τρόπος για να κάνετε επίδειξη της εφαρμογής σε κάποιον χωρίς να αποκαλύψετε τις ευαίσθητες πληροφορίες σας.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Ανάγνωση προχείρου",
     "views.Settings.Privacy.clipboard.explainer": "Αν είναι ενεργοποιημένο, το Zeus θα διαβάζει τις τιμές που αντιγράφονται στο πρόχειρο και θα σας ρωτάει αν μπορούν να χρησιμοποιηθούν στην εφαρμογή.",
     "views.Settings.Privacy.enableMempoolRates": "Ενεργοποίηση προτάσεων τελών Mempool.space",

@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Beobachtungsschutz-Modus",
     "views.Settings.Privacy.lurkerMode.explainer1": "Im Beobachtungsschutz-Modus werden sensible Daten versteckt, indem sie mit zufälligen altgriechischen Schriftzeichen ersetzt werden.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Dies ist sehr hilfreich, wenn die App jemandem gezeigt werden soll, ohne sensible Informationen preiszugeben.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Halte ein verdecktes Feld länger gedrückt, um die tatsächlichen Daten für einige Sekunden anzuzeigen.",
     "views.Settings.Privacy.clipboard": "Zwischenablage überwachen",
     "views.Settings.Privacy.clipboard.explainer": "Wenn dies aktiviert ist, analysiert Zeus deine Zwischenablage und informiert dich, wenn Daten gefunden werden, die in der App genutzt werden können.",
     "views.Settings.Privacy.enableMempoolRates": "Aktiviere Gebührenvorschläge von mempool.space",

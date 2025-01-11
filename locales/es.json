@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Modo Lurker",
     "views.Settings.Privacy.lurkerMode.explainer1": "El modo Lurker oculta todos los valores sensibles cambiándolos a personajes griegos antiguos.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Esta es una excelente manera de demostrar la aplicación a alguien sin revelar su información confidencial.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Leer portapapeles",
     "views.Settings.Privacy.clipboard.explainer": "Si está habilitado, ZEUS leerá valores copiados en su portapapeles y le solicitará si se pueden usar en la aplicación.",
     "views.Settings.Privacy.enableMempoolRates": "Activar las sugerencias de tarifas de Mempool.space",
