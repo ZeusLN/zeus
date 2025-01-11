@@ -160,6 +160,8 @@ import LSPS1 from './views/LSPS1/index';
 import LSPS1Settings from './views/LSPS1/Settings';
 import OrdersPane from './views/LSPS1/OrdersPane';
 import Orders from './views/LSPS1/Order';
+// LSPS7
+import LSPS7 from './views/LSPS7/index';
 
 import RawTxHex from './views/RawTxHex';
 
@@ -892,6 +894,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="LSPS1Order" // @ts-ignore:next-line
                                                         component={Orders}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LSPS7" // @ts-ignore:next-line
+                                                        component={LSPS7}
                                                     />
                                                     <Stack.Screen
                                                         name="PendingHTLCs" // @ts-ignore:next-line
