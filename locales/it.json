@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Modalità Lurker",
     "views.Settings.Privacy.lurkerMode.explainer1": "La modalità Lurker nasconde tutti i valori sensibili cambiandoli in antichi caratteri greci.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Questo è un ottimo modo per dimostrare l'app a qualcuno senza rivelare le tue informazioni sensibili.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Leggi gli appunti",
     "views.Settings.Privacy.clipboard.explainer": "Se abilitato, Zeus leggerà i valori copiati negli appunti e ti chiederà se possono essere utilizzati nell'app.",
     "views.Settings.Privacy.enableMempoolRates": "Abilita i suggerimenti per le commissioni di memppool.space",

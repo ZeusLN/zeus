@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Lurkkaus-tila",
     "views.Settings.Privacy.lurkerMode.explainer1": "Lurker-tila piilottaa kaikki herkät arvot muuttamalla ne antiikin kreikkalaisiksi merkeiksi.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Tämä on loistava tapa esitellä sovellusta jollekin paljastamatta arkaluontoisia tietoja.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Lue leikepöytä",
     "views.Settings.Privacy.clipboard.explainer": "Jos se on käytössä, Zeus lukee leikepöydälle kopioituja arvoja ja kysyy sinulta, voiko niitä käyttää sovelluksessa.",
     "views.Settings.Privacy.enableMempoolRates": "Ota käyttöön Mempool.space-siirtomaksu ehdotukset",

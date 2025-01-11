@@ -776,6 +776,7 @@
     "views.Settings.Privacy.lurkerMode": "Hali ya Lurker",
     "views.Settings.Privacy.lurkerMode.explainer1": "Hali ya Lurker inaficha thamani zote nyeti kwa kuzibadilisha kuwa herufi za Kigiriki za kale.",
     "views.Settings.Privacy.lurkerMode.explainer2": "Hii ni njia nzuri ya kuonyesha programu kwa mtu bila kufunua habari yako nyeti.",
+    "views.Settings.Privacy.lurkerMode.explainer3": "Long press any hidden value to temporarily reveal the actual data for a few seconds.",
     "views.Settings.Privacy.clipboard": "Soma ubao wa kunakili",
     "views.Settings.Privacy.clipboard.explainer": "Ukiwezesha, Zeus itasoma thamani zilizonakiliwa kwenye ubao wako wa kunakili na kukuarifu ikiwa zinaweza kutumika kwenye programu.",
     "views.Settings.Privacy.enableMempoolRates": "Wezesha mapendekezo ya ada ya Mempool.space",
