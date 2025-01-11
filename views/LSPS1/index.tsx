@@ -97,7 +97,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
     encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
-    async componentDidMount() {
+    async componentWillUnmount() {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
@@ -790,33 +790,37 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             )}
                                         </Text>
                                     </Row>
-                                    <Slider
-                                        style={{
-                                            width: '100%',
-                                            height: 40,
-                                            marginBottom: 10
-                                        }}
-                                        minimumValue={parseInt(
-                                            info?.min_initial_lsp_balance_sat
-                                        )}
-                                        maximumValue={parseInt(
-                                            info?.max_initial_lsp_balance_sat
-                                        )}
-                                        minimumTrackTintColor={themeColor(
-                                            'highlight'
-                                        )}
-                                        maximumTrackTintColor="black"
-                                        thumbTintColor={themeColor('highlight')}
-                                        value={parseInt(
-                                            lspBalanceSat.toString()
-                                        )}
-                                        onValueChange={(value: number) =>
-                                            this.setState({
-                                                lspBalanceSat: value
-                                            })
-                                        }
-                                        step={10000}
-                                    />
+                                    {info.min_initial_lsp_balance_sat && (
+                                        <Slider
+                                            style={{
+                                                width: '100%',
+                                                height: 40,
+                                                marginBottom: 10
+                                            }}
+                                            minimumValue={parseInt(
+                                                info?.min_initial_lsp_balance_sat
+                                            )}
+                                            maximumValue={parseInt(
+                                                info?.max_initial_lsp_balance_sat
+                                            )}
+                                            minimumTrackTintColor={themeColor(
+                                                'highlight'
+                                            )}
+                                            maximumTrackTintColor="black"
+                                            thumbTintColor={themeColor(
+                                                'highlight'
+                                            )}
+                                            value={parseInt(
+                                                lspBalanceSat.toString()
+                                            )}
+                                            onValueChange={(value: number) =>
+                                                this.setState({
+                                                    lspBalanceSat: value
+                                                })
+                                            }
+                                            step={10000}
+                                        />
+                                    )}
 
                                     <>
                                         <Text
