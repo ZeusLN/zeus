@@ -412,6 +412,7 @@ export default class CLNRest {
     supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
+    supportsChannelFundMax = () => true;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;

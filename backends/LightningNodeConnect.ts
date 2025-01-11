@@ -543,6 +543,7 @@ export default class LightningNodeConnect {
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
+    supportsChannelFundMax = () => true;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsOffers = () => false;

@@ -175,6 +175,7 @@ class BackendUtils {
     supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
+    supportsChannelFundMax = () => this.call('supportsChannelFundMax');
     supportsOffers = () => this.call('supportsOffers');
     supportsBolt11BlindedRoutes = () =>
         this.call('supportsBolt11BlindedRoutes');

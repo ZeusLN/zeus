@@ -604,8 +604,7 @@ export default class OpenChannel extends React.Component<
                                     </View>
                                 )}
 
-                                {(BackendUtils.isLNDBased() ||
-                                    implementation === 'cln-rest') &&
+                                {BackendUtils.supportsChannelFundMax() &&
                                     additionalChannels.length === 0 && (
                                         <>
                                             <Text
