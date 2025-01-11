@@ -555,13 +555,13 @@ export default class ChannelView extends React.Component<
                                                   'views.Channel.lease.purchaseLease'
                                               )
                                     }
-                                    // onPress={() => {
-                                    //     navigation.navigate('LSPS7Order', {
-                                    //         chanId: shortChannelId,
-                                    //         maxExtensionInBlocks:
-                                    //             renewalInfo.maxExtensionInBlocks
-                                    //     });
-                                    // }}
+                                    onPress={() => {
+                                        navigation.navigate('LSPS7', {
+                                            chanId: shortChannelId,
+                                            maxExtensionInBlocks:
+                                                renewalInfo.maxExtensionInBlocks
+                                        });
+                                    }}
                                     ViewComponent={LinearGradient}
                                     linearGradientProps={{
                                         colors: [

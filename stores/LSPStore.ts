@@ -48,6 +48,10 @@ export default class LSPStore {
     // LSPS7
     @observable public getExtendableOrdersId: string;
     @observable public getExtendableOrdersData: any = [];
+    @observable public createExtensionOrderId: string;
+    @observable public createExtensionOrderResponse: any = {};
+    @observable public getExtensionOrderId: string;
+    @observable public getExtensionOrderResponse: any = {};
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -401,34 +405,43 @@ export default class LSPStore {
         } else if (data.id === this.createOrderId) {
             if (data.error) {
                 this.error = true;
-                this.loading = false;
                 this.error_msg = data?.error?.data?.message
                     ? errorToUserFriendly(data?.error?.data?.message)
                     : '';
             } else {
                 this.createOrderResponse = data;
-                this.loading = false;
             }
+            this.loading = false;
         } else if (data.id === this.getOrderId) {
             if (data.error) {
                 this.error = true;
-                this.loading = false;
                 this.error_msg = data?.error?.message
                     ? errorToUserFriendly(data?.error?.message)
                     : '';
             } else {
                 this.getOrderResponse = data;
             }
+            this.loading = false;
         } else if (data.id === this.getExtendableOrdersId) {
             if (data.error) {
                 this.error = true;
-                this.loading = false;
                 this.error_msg = data?.error?.message
                     ? errorToUserFriendly(data?.error?.message)
                     : '';
             } else {
                 this.getExtendableOrdersData = data?.result?.extendable_orders;
             }
+            this.loading = false;
+        } else if (data.id === this.createExtensionOrderId) {
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : '';
+            } else {
+                this.createExtensionOrderResponse = data;
+            }
+            this.loading = false;
         }
     };
 
@@ -664,6 +677,7 @@ export default class LSPStore {
                 } else {
                     this.getOrderResponse = responseData;
                 }
+                this.loading = false;
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
@@ -710,7 +724,6 @@ export default class LSPStore {
 
     @action
     public getExtendableChannels = () => {
-        this.loading = true;
         this.error = false;
         this.error_msg = '';
 
@@ -737,4 +750,75 @@ export default class LSPStore {
                 );
             });
     };
+
+    @action
+    public lsps7CreateOrderCustomMessage = (state: any) => {
+        this.loading = true;
+        this.error = false;
+        this.error_msg = '';
+
+        this.createExtensionOrderId = uuidv4();
+        const method = 'lsps7.create_order';
+
+        this.sendCustomMessage({
+            peer: this.getLSPSPubkey(),
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {
+                    short_channel_id: state.chanId,
+                    channel_extension_expiry_blocks: state.channelExpiryBlocks,
+                    token: state.token,
+                    refund_onchain_address: state.refundOnchainAddress
+                },
+                id: this.createExtensionOrderId
+            })
+        })
+            .then((response) => {
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    };
+
+    @action
+    public lsps7GetOrderCustomMessage(orderId: string, peer: string) {
+        this.loading = true;
+
+        this.getExtensionOrderId = uuidv4();
+        const method = 'lsps7.get_order';
+
+        this.sendCustomMessage({
+            peer,
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {
+                    order_id: orderId
+                },
+                id: this.getExtensionOrderId
+            })
+        })
+            .then((response) => {
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    }
 }
