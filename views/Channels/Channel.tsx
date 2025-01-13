@@ -80,7 +80,8 @@ interface ChannelState {
     channel: Channel;
     renewalInfo: {
         expiresInBlocks?: number;
-        expiresInDays?: number;
+        expiresMonths?: number;
+        expiresDays?: number;
         maxExtensionInBlocks?: number;
     };
 }
@@ -122,9 +123,12 @@ export default class ChannelView extends React.Component<
                 .toNumber();
         }
 
-        let expiresInDays;
+        let expiresMonths, expiresDays;
         if (expiresInBlocks) {
-            expiresInDays = DateTimeUtils.blocksToDaysRounded(expiresInBlocks);
+            const { months, days } =
+                DateTimeUtils.blocksToMonthsAndDays(expiresInBlocks);
+            expiresMonths = months;
+            expiresDays = days;
         }
 
         let maxExtensionInBlocks;
@@ -142,7 +146,8 @@ export default class ChannelView extends React.Component<
             channel,
             renewalInfo: {
                 expiresInBlocks,
-                expiresInDays,
+                expiresDays,
+                expiresMonths,
                 maxExtensionInBlocks
             }
         };
@@ -499,13 +504,44 @@ export default class ChannelView extends React.Component<
                                             }}
                                         >{`${numberWithCommas(
                                             renewalInfo.expiresInBlocks
-                                        )} ${localeString('general.blocks')} ${
-                                            renewalInfo.expiresInDays
-                                                ? `(${numberWithCommas(
-                                                      renewalInfo.expiresInDays
+                                        )} ${localeString(
+                                            'general.blocks'
+                                        )}\n ~${
+                                            renewalInfo.expiresMonths
+                                                ? `${numberWithCommas(
+                                                      Math.abs(
+                                                          renewalInfo.expiresMonths
+                                                      )
                                                   )} ${localeString(
-                                                      'time.days'
-                                                  ).toLowerCase()})`
+                                                      new BigNumber(
+                                                          Math.abs(
+                                                              renewalInfo.expiresMonths
+                                                          )
+                                                      ).gt(1)
+                                                          ? 'time.months'
+                                                          : 'time.month'
+                                                  ).toLowerCase()}`
+                                                : ''
+                                        }${
+                                            renewalInfo.expiresMonths &&
+                                            renewalInfo.expiresDays
+                                                ? ', '
+                                                : ''
+                                        }${
+                                            renewalInfo.expiresDays
+                                                ? `${numberWithCommas(
+                                                      Math.abs(
+                                                          renewalInfo.expiresDays
+                                                      )
+                                                  )} ${localeString(
+                                                      new BigNumber(
+                                                          Math.abs(
+                                                              renewalInfo.expiresDays
+                                                          )
+                                                      ).gt(1)
+                                                          ? 'time.days'
+                                                          : 'time.day'
+                                                  ).toLowerCase()}`
                                                 : ''
                                         }`}</Text>
                                     </View>
