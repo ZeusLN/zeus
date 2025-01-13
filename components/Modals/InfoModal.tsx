@@ -13,6 +13,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 interface InfoModalProps {
     ModalStore: ModalStore;
+    onDismiss?: () => void;
 }
 
 @inject('ModalStore')
@@ -130,7 +131,14 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.close')}
-                                    onPress={() => toggleInfoModal()}
+                                    onPress={() => {
+                                        toggleInfoModal(
+                                            undefined,
+                                            undefined,
+                                            undefined,
+                                            ModalStore.onDismiss
+                                        );
+                                    }}
                                     secondary
                                 />
                             </View>

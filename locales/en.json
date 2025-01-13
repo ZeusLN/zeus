@@ -1311,5 +1311,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Balance (ascending)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Balance (descending)",
     "views.OnChainAddresses.createAddress": "Create address",
-    "views.OnChainAddresses.changeAddresses": "Change addresses"
+    "views.OnChainAddresses.changeAddresses": "Change addresses",
+    "notifications.permissionNeeded": "Without notifications some ZEUS features will not work as intended.",
+    "notifications.permissionBlocked": "Please enable notifications in your device settings to continue."
 }

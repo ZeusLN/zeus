@@ -23,6 +23,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { sleep } from '../utils/SleepUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { checkAndRequestNotificationPermissions } from '../utils/NotificationUtils';
 
 import Storage from '../storage';
 
@@ -340,6 +341,37 @@ export default class LightningAddressStore {
                                                         domain
                                                     );
                                                 }
+
+                                                // If it is not the first LN address we should
+                                                // not overwrite users notifications settings
+                                                const hasExistingLightningAddress =
+                                                    Object.values(
+                                                        this.settingsStore
+                                                            .settings
+                                                            .lightningAddressByPubkey ||
+                                                            {}
+                                                    ).some(
+                                                        (addr) => addr.enabled
+                                                    );
+
+                                                let notificationsSetting =
+                                                    hasExistingLightningAddress
+                                                        ? this.settingsStore
+                                                              .settings
+                                                              .lightningAddressGlobal
+                                                              ?.notifications
+                                                        : 1;
+
+                                                if (
+                                                    notificationsSetting === 1
+                                                ) {
+                                                    const permissionGranted =
+                                                        await checkAndRequestNotificationPermissions();
+                                                    if (!permissionGranted) {
+                                                        notificationsSetting = 0;
+                                                    }
+                                                }
+
                                                 await this.settingsStore.updateSettings(
                                                     {
                                                         lightningAddressGlobal:
@@ -350,7 +382,8 @@ export default class LightningAddressStore {
                                                                     true,
                                                                 nostrRelays:
                                                                     relays,
-                                                                notifications: 1
+                                                                notifications:
+                                                                    notificationsSetting
                                                             },
                                                         lightningAddressByPubkey:
                                                             {

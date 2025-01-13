@@ -41,6 +41,7 @@ import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import UrlUtils from '../../../utils/UrlUtils';
+import { checkAndRequestNotificationPermissions } from '../../../utils/NotificationUtils';
 
 import QR from '../../../assets/images/SVG/QR.svg';
 import Gear from '../../../assets/images/SVG/Gear.svg';
@@ -564,14 +565,40 @@ export default class LightningAddress extends React.Component<
                                             title={localeString(
                                                 'views.Settings.LightningAddress.create'
                                             )}
-                                            onPress={() =>
+                                            onPress={async () => {
+                                                const {
+                                                    updateSettings,
+                                                    settings
+                                                } = SettingsStore;
+                                                const pushNotificationsEnabled =
+                                                    settings
+                                                        .lightningAddressGlobal
+                                                        ?.notifications === 1;
+                                                if (pushNotificationsEnabled) {
+                                                    const permissionGranted =
+                                                        await checkAndRequestNotificationPermissions();
+                                                    if (!permissionGranted) {
+                                                        await updateSettings({
+                                                            lightningAddressGlobal:
+                                                                {
+                                                                    ...settings.lightningAddressGlobal,
+                                                                    notifications: 0
+                                                                }
+                                                        });
+                                                    }
+                                                }
                                                 create(
                                                     newLightningAddress,
                                                     nostrPublicKey,
                                                     nostrPrivateKey,
                                                     nostrRelays
-                                                ).then(() => status())
-                                            }
+                                                )
+                                                    .then(() => status())
+                                                    .catch(() => {
+                                                        // Empty catch to prevent unhandled rejection warning
+                                                        // Error state is handled by MobX store
+                                                    });
+                                            }}
                                             disabled={
                                                 !nostrPublicKey ||
                                                 !nostrNpub ||

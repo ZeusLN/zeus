@@ -55,6 +55,14 @@ jest.mock('../storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()
 }));
+jest.mock('react-native-permissions', () => ({
+    checkNotifications: jest.fn(),
+    requestNotifications: jest.fn()
+}));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn()
+}));
 
 jest.mock('../stores/storeInstances', () => ({
     settingsStore: {

@@ -17,6 +17,7 @@ export default class ModalStore {
     @observable public alertModalLink: string | undefined;
     @observable public alertModalNav: string | undefined;
     @observable public onPress: () => void;
+    @observable public onDismiss: (() => void) | undefined;
 
     /* External Link Modal */
     @action
@@ -28,12 +29,15 @@ export default class ModalStore {
     public toggleInfoModal = (
         text?: string | Array<string>,
         link?: string,
-        buttons?: Array<{ title: string; callback?: () => void }>
+        buttons?: Array<{ title: string; callback?: () => void }>,
+        onDismiss?: () => void
     ) => {
         this.showInfoModal = text ? true : false;
         this.infoModalText = text;
         this.infoModalLink = link;
         this.infoModalAdditionalButtons = buttons;
+        this.onDismiss = onDismiss;
+        if (!text && onDismiss) onDismiss();
     };
 
     @action
@@ -73,9 +77,11 @@ export default class ModalStore {
             return true;
         }
         if (this.showInfoModal) {
+            if (this.onDismiss) this.onDismiss();
             this.showInfoModal = false;
             this.infoModalText = '';
             this.infoModalLink = '';
+            this.onDismiss = undefined;
             this.infoModalAdditionalButtons = undefined;
             return true;
         }

@@ -21,6 +21,7 @@ import NodeInfoStore from '../../../stores/NodeInfoStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+import { checkAndRequestNotificationPermissions } from '../../../utils/NotificationUtils';
 
 interface LightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -279,6 +280,12 @@ export default class LightningAddressSettings extends React.Component<
                                 )}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
+                                    if (value === 1) {
+                                        const permissionGranted =
+                                            await checkAndRequestNotificationPermissions();
+                                        if (!permissionGranted) return;
+                                    }
+
                                     try {
                                         await update({
                                             notifications: value
