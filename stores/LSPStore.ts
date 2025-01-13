@@ -768,7 +768,8 @@ export default class LSPStore {
                 method,
                 params: {
                     short_channel_id: state.chanId,
-                    channel_extension_expiry_blocks: state.channelExpiryBlocks,
+                    channel_extension_expiry_blocks:
+                        state.channelExtensionBlocks,
                     token: state.token,
                     refund_onchain_address: state.refundOnchainAddress
                 },
