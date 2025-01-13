@@ -317,6 +317,7 @@ export default class EmbeddedLND extends LND {
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
+    supportsChannelFundMax = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;
