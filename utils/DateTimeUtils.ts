@@ -39,11 +39,18 @@ class DateTimeUtils {
         return `${time} | ${monthAndDay}${year}`;
     };
 
-    blocksToDaysRounded = (blocks: number) => {
-        // 1440 minutes in a day
-        // 144 blocks in a day w/ 10 min blocks
+    blocksToMonthsAndDays = (blocks: number) => {
         const blocksPerDay = 144;
-        return Math.round(blocks / blocksPerDay);
+        const daysPerMonth = 30;
+
+        // Calculate total days
+        const totalDays = Math.round(blocks / blocksPerDay);
+
+        // Calculate months and remaining days
+        const months = Math.floor(totalDays / daysPerMonth);
+        const days = totalDays % daysPerMonth;
+
+        return { months, days };
     };
 }
 
