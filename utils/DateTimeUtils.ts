@@ -47,8 +47,11 @@ class DateTimeUtils {
         const totalDays = Math.round(blocks / blocksPerDay);
 
         // Calculate months and remaining days
-        const months = Math.floor(totalDays / daysPerMonth);
-        const days = totalDays % daysPerMonth;
+        const months =
+            Math.floor(Math.abs(totalDays) / daysPerMonth) *
+            Math.sign(totalDays);
+        const days =
+            (Math.abs(totalDays) % daysPerMonth) * Math.sign(totalDays);
 
         return { months, days };
     };
