@@ -31,7 +31,8 @@ export default class LSPStore {
     @observable public zeroConfFee: number | undefined;
     @observable public feeId: string | undefined;
     @observable public pubkey: string;
-    @observable public loading: boolean = true;
+    @observable public loadingLSPS1: boolean = true;
+    @observable public loadingLSPS7: boolean = true;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public showLspSettings: boolean = false;
@@ -96,7 +97,15 @@ export default class LSPStore {
     public resetLSPS1Data = () => {
         this.createOrderResponse = {};
         this.getInfoData = {};
-        this.loading = true;
+        this.loadingLSPS1 = false;
+        this.error = false;
+        this.error_msg = '';
+    };
+
+    @action
+    public resetLSPS7Data = () => {
+        this.createExtensionOrderResponse = {};
+        this.loadingLSPS7 = false;
         this.error = false;
         this.error_msg = '';
     };
@@ -401,7 +410,7 @@ export default class LSPStore {
 
         if (data.id === this.getInfoId) {
             this.getInfoData = data;
-            this.loading = false;
+            this.loadingLSPS1 = false;
         } else if (data.id === this.createOrderId) {
             if (data.error) {
                 this.error = true;
@@ -411,7 +420,7 @@ export default class LSPStore {
             } else {
                 this.createOrderResponse = data;
             }
-            this.loading = false;
+            this.loadingLSPS1 = false;
         } else if (data.id === this.getOrderId) {
             if (data.error) {
                 this.error = true;
@@ -421,7 +430,7 @@ export default class LSPStore {
             } else {
                 this.getOrderResponse = data;
             }
-            this.loading = false;
+            this.loadingLSPS1 = false;
         } else if (data.id === this.getExtendableOrdersId) {
             if (data.error) {
                 this.error = true;
@@ -431,7 +440,7 @@ export default class LSPStore {
             } else {
                 this.getExtendableOrdersData = data?.result?.extendable_orders;
             }
-            this.loading = false;
+            this.loadingLSPS7 = false;
         } else if (data.id === this.createExtensionOrderId) {
             if (data.error) {
                 this.error = true;
@@ -441,7 +450,7 @@ export default class LSPStore {
             } else {
                 this.createExtensionOrderResponse = data;
             }
-            this.loading = false;
+            this.loadingLSPS7 = false;
         } else if (data.id === this.getExtensionOrderId) {
             if (data.error) {
                 this.error = true;
@@ -451,7 +460,7 @@ export default class LSPStore {
             } else {
                 this.getExtensionOrderResponse = data;
             }
-            this.loading = false;
+            this.loadingLSPS7 = false;
         }
     };
 
@@ -464,7 +473,8 @@ export default class LSPStore {
             if (!this.resolvedCustomMessage) {
                 this.error = true;
                 this.error_msg = localeString('views.LSPS1.timeoutError');
-                this.loading = false;
+                this.loadingLSPS1 = false;
+                this.loadingLSPS7 = false;
             }
         }, timer);
 
@@ -521,23 +531,23 @@ export default class LSPStore {
                         const pubkey = uri.split('@')[0];
                         this.pubkey = pubkey;
                     } catch (e) {}
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                 } else {
                     this.error = true;
                     this.error_msg = 'Error fetching get_info data';
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                 }
             })
             .catch(() => {
                 this.error = true;
                 this.error_msg = 'Error fetching get_info data';
-                this.loading = false;
+                this.loadingLSPS1 = false;
             });
     };
 
     @action
     public lsps1GetInfoCustomMessage = () => {
-        this.loading = true;
+        this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
 
@@ -585,7 +595,7 @@ export default class LSPStore {
             announce_channel: state.announceChannel,
             public_key: this.nodeInfoStore.nodeInfo.nodeId
         });
-        this.loading = true;
+        this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
         const endpoint = `${this.getLSPS1Rest()}/api/v1/create_order`;
@@ -604,10 +614,10 @@ export default class LSPStore {
                 if (responseData.error) {
                     this.error = true;
                     this.error_msg = errorToUserFriendly(responseData.message);
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                 } else {
                     this.createOrderResponse = responseData;
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                     console.log('Response received:', responseData);
                 }
             })
@@ -618,13 +628,13 @@ export default class LSPStore {
                 );
                 this.error = true;
                 this.error_msg = errorToUserFriendly(error);
-                this.loading = false;
+                this.loadingLSPS1 = false;
             });
     };
 
     @action
     public lsps1CreateOrderCustomMessage = (state: any) => {
-        this.loading = true;
+        this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
 
@@ -670,7 +680,7 @@ export default class LSPStore {
 
     @action
     public lsps1GetOrderREST(id: string, RESTHost: string) {
-        this.loading = true;
+        this.loadingLSPS1 = true;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
         console.log('Sending data to:', endpoint);
@@ -687,19 +697,19 @@ export default class LSPStore {
                 } else {
                     this.getOrderResponse = responseData;
                 }
-                this.loading = false;
+                this.loadingLSPS1 = false;
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
                 this.error = true;
                 this.error_msg = errorToUserFriendly(error);
-                this.loading = false;
+                this.loadingLSPS1 = false;
             });
     }
 
     @action
     public lsps1GetOrderCustomMessage(orderId: string, peer: string) {
-        this.loading = true;
+        this.loadingLSPS1 = true;
 
         this.getOrderId = uuidv4();
         const method = 'lsps1.get_order';
@@ -763,7 +773,7 @@ export default class LSPStore {
 
     @action
     public lsps7CreateOrderCustomMessage = (state: any) => {
-        this.loading = true;
+        this.loadingLSPS7 = true;
         this.error = false;
         this.error_msg = '';
 
@@ -802,7 +812,7 @@ export default class LSPStore {
 
     @action
     public lsps7GetOrderCustomMessage(orderId: string, peer: string) {
-        this.loading = true;
+        this.loadingLSPS7 = true;
 
         this.getExtensionOrderId = uuidv4();
         const method = 'lsps7.get_order';

@@ -278,12 +278,12 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                     rightComponent={
                         <Row>
                             <SettingsBtn />
-                            {!LSPStore.loading && !LSPStore.error && (
+                            {!LSPStore.loadingLSPS7 && !LSPStore.error && (
                                 <OrderlistBtn />
                             )}
                         </Row>
                     }
-                    onBack={() => LSPStore.resetLSPS1Data()}
+                    onBack={() => LSPStore.resetLSPS7Data()}
                 />
                 <View style={{ paddingHorizontal: 18 }}>
                     {BackendUtils.supportsLSPS1customMessage() &&
@@ -303,7 +303,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                             <ErrorMessage message={LSPStore.error_msg} />
                         )}
                 </View>
-                {LSPStore.loading ? (
+                {LSPStore.loadingLSPS7 ? (
                     <LoadingIndicator />
                 ) : (LSPStore?.error && LSPStore?.error_msg) ===
                   localeString('views.LSPS1.timeoutError') ? (
