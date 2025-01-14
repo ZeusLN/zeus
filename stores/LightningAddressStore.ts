@@ -605,6 +605,26 @@ export default class LightningAddressStore {
                                                 domain;
                                             if (handle && domain) {
                                                 this.lightningAddress = `${handle}@${domain}`;
+
+                                                // If we have a Lightning Address but 'enabled' flag is false,
+                                                // we fix this state mismatch now (issue #2730)
+                                                if (
+                                                    !this.settingsStore.settings
+                                                        .lightningAddress
+                                                        ?.enabled
+                                                ) {
+                                                    await this.settingsStore.updateSettings(
+                                                        {
+                                                            lightningAddress: {
+                                                                ...this
+                                                                    .settingsStore
+                                                                    .settings
+                                                                    .lightningAddress,
+                                                                enabled: true
+                                                            }
+                                                        }
+                                                    );
+                                                }
                                             }
 
                                             if (
