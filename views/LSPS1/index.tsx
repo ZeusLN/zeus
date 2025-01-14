@@ -21,7 +21,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import LSPS1OrderResponse from '../../components/LSPS1OrderResponse';
+import LSPS1OrderResponse from './OrderResponse';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
@@ -43,7 +43,7 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import { LSPS1OrderResponse as Order } from './OrdersPane';
+import { LSPOrderResponse as Order } from './OrdersPane';
 
 interface LSPS1Props {
     LSPStore: LSPStore;
@@ -1288,6 +1288,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         orderData.endpoint =
                                                             LSPStore.getLSPS1Rest();
                                                     }
+
+                                                    orderData.service = 'LSPS1';
 
                                                     console.log(orderData);
 
