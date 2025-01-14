@@ -16,7 +16,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import LSPS1OrderResponse from '../../components/LSPS1OrderResponse';
+import LSPS7OrderResponse from './OrderResponse';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
@@ -35,7 +35,7 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import { LSPS1OrderResponse as Order } from '../LSPS1/OrdersPane';
+import { LSPOrderResponse as Order } from '../LSPS1/OrdersPane';
 
 interface LSPS7Props {
     LSPStore: LSPStore;
@@ -316,7 +316,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                     .length > 0 &&
                                 result &&
                                 payment && (
-                                    <LSPS1OrderResponse
+                                    <LSPS7OrderResponse
                                         orderResponse={result}
                                         orderView={false}
                                         navigation={navigation}
@@ -704,14 +704,10 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
 
                                                     orderData.clientPubkey =
                                                         this.props.NodeInfoStore.nodeInfo.nodeId;
-
-                                                    if (
-                                                        BackendUtils.supportsLSPS1customMessage()
-                                                    ) {
-                                                        orderData.peer =
-                                                            LSPStore.getLSPSPubkey();
-                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPS1Host()}`;
-                                                    }
+                                                    orderData.peer =
+                                                        LSPStore.getLSPSPubkey();
+                                                    orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPS1Host()}`;
+                                                    orderData.service = 'LSPS7';
 
                                                     console.log(orderData);
 
