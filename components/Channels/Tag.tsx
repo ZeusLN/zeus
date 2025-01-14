@@ -3,9 +3,10 @@ import { View } from 'react-native';
 import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
-import { Status } from '../../views/Channels/ChannelsPane';
+import { ExpirationStatus, Status } from '../../views/Channels/ChannelsPane';
+import { themeColor } from '../../utils/ThemeUtils';
 
-export function Tag({ status }: { status: Status }) {
+export function Tag({ status }: { status: Status | ExpirationStatus }) {
     // Garish colors to let you know you fucked up
     const colors = { background: 'pink', dot: 'blue' };
 
@@ -30,6 +31,14 @@ export function Tag({ status }: { status: Status }) {
             colors.background = '#A7A9AC';
             colors.dot = '#E5E5E5';
             break;
+        case ExpirationStatus.Expiring:
+            colors.background = themeColor('warning');
+            colors.dot = '#E5E5E5';
+            break;
+        case ExpirationStatus.Expired:
+            colors.background = themeColor('error');
+            colors.dot = '#E5E5E5';
+            break;
     }
 
     return (
@@ -40,7 +49,8 @@ export function Tag({ status }: { status: Status }) {
                 paddingTop: 3,
                 paddingBottom: 3,
                 backgroundColor: colors.background,
-                borderRadius: 4
+                borderRadius: 4,
+                marginLeft: 8
             }}
         >
             <Row>
