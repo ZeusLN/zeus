@@ -4,19 +4,19 @@ import { ScrollView, View } from 'react-native';
 import moment from 'moment';
 import BigNumber from 'bignumber.js';
 
-import Screen from './Screen';
-import KeyValue from './KeyValue';
-import Amount from './Amount';
-import Button from './Button';
+import Screen from '../../components/Screen';
+import KeyValue from '../../components/KeyValue';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
-import { numberWithCommas } from '../utils/UnitsUtils';
-import UrlUtils from '../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import InvoicesStore from '../stores/InvoicesStore';
-import NodeInfoStore from '../stores/NodeInfoStore';
-import { ChannelItem } from './Channels/ChannelItem';
+import InvoicesStore from '../../stores/InvoicesStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import { ChannelItem } from '../../components/Channels/ChannelItem';
 
 interface LSPS1OrderResponseProps {
     navigation: any;

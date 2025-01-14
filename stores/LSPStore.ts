@@ -442,6 +442,16 @@ export default class LSPStore {
                 this.createExtensionOrderResponse = data;
             }
             this.loading = false;
+        } else if (data.id === this.getExtensionOrderId) {
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : '';
+            } else {
+                this.getExtensionOrderResponse = data;
+            }
+            this.loading = false;
         }
     };
 
