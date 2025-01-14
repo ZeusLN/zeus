@@ -409,7 +409,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     rightComponent={
                         <Row>
                             <SettingsBtn />
-                            {!LSPStore.loading && !LSPStore.error && (
+                            {!LSPStore.loadingLSPS1 && !LSPStore.error && (
                                 <OrderlistBtn />
                             )}
                         </Row>
@@ -434,7 +434,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                             <ErrorMessage message={LSPStore.error_msg} />
                         )}
                 </View>
-                {LSPStore.loading ? (
+                {LSPStore.loadingLSPS1 ? (
                     <LoadingIndicator />
                 ) : (LSPStore?.error && LSPStore?.error_msg) ===
                   localeString('views.LSPS1.timeoutError') ? (
@@ -1360,7 +1360,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     </>
                 )}
 
-                {!LSPStore.loading &&
+                {!LSPStore.loadingLSPS1 &&
                     LSPStore.error &&
                     LSPStore.error_msg ===
                         localeString('views.LSPS1.timeoutError') && (

@@ -90,7 +90,7 @@ export default class LSPS1Order extends React.Component<
                                     order: temporaryOrder?.order,
                                     fetchOldOrder: true
                                 });
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS1 = false;
                                 console.log('Old Order state fetched!');
                             } else if (
                                 Object.keys(LSPStore.getOrderResponse)
@@ -105,7 +105,7 @@ export default class LSPS1Order extends React.Component<
                                     'Latest Order state fetched!',
                                     this.state.order
                                 );
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS1 = false;
                                 const result =
                                     getOrderData?.result || getOrderData;
                                 if (
@@ -208,7 +208,7 @@ export default class LSPS1Order extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                {LSPStore.loading ? (
+                {LSPStore.loadingLSPS1 ? (
                     <LoadingIndicator />
                 ) : (
                     <ScrollView>

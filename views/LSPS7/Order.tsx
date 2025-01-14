@@ -99,7 +99,7 @@ export default class LSPS7Order extends React.Component<
                                     order: temporaryOrder?.order,
                                     fetchOldOrder: true
                                 });
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS7 = false;
                                 console.log('Old Order state fetched!');
                             } else if (
                                 Object.keys(LSPStore.getExtensionOrderResponse)
@@ -115,7 +115,7 @@ export default class LSPS7Order extends React.Component<
                                     'Latest Order state fetched!',
                                     this.state.order
                                 );
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS7 = false;
                                 const result =
                                     getExtensionOrderData?.result ||
                                     getExtensionOrderData;
@@ -220,7 +220,7 @@ export default class LSPS7Order extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                {LSPStore.loading ? (
+                {LSPStore.loadingLSPS7 ? (
                     <LoadingIndicator />
                 ) : (
                     <ScrollView>
