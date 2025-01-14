@@ -162,16 +162,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
     }
 
-    async UNSAFE_componentWillMount(): Promise<void> {
-        const {
-            SettingsStore: { updateSettings }
-        } = this.props;
-
-        const supportedBiometryType = await getSupportedBiometryType();
-
-        await updateSettings({ supportedBiometryType });
-    }
-
     private handleBackButton() {
         const tabNavigator = this.tabNavigationRef.current;
         if (!tabNavigator) {
@@ -215,6 +205,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'change',
             this.handleAppStateChange
         );
+
+        const {
+            SettingsStore: { updateSettings }
+        } = this.props;
+
+        const supportedBiometryType = await getSupportedBiometryType();
+
+        await updateSettings({ supportedBiometryType });
     }
 
     componentWillUnmount() {
