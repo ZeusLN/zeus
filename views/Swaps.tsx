@@ -249,8 +249,15 @@ export default class SwapPane extends React.PureComponent<
                 // Add the swap type
                 responseData.type = 'Reverse';
 
+                responseData.preimage = preimage;
+
                 // Step 3: Save to storage
-                await saveReverseSwaps(responseData, keys, destinationAddress);
+                await saveReverseSwaps(
+                    responseData,
+                    keys,
+                    destinationAddress,
+                    preimage
+                );
 
                 // Step 4: Navigate to SwapDetails view
                 this.setState({ response: responseData }, () => {
@@ -274,7 +281,8 @@ export default class SwapPane extends React.PureComponent<
         const saveReverseSwaps = async (
             newSwap: any,
             keys: any,
-            destinationAddress: string
+            destinationAddress: string,
+            preimage: any
         ) => {
             try {
                 // Retrieve existing swaps
@@ -287,7 +295,8 @@ export default class SwapPane extends React.PureComponent<
                 const enrichedSwap = {
                     ...newSwap,
                     keys,
-                    destinationAddress
+                    destinationAddress,
+                    preimage
                 };
 
                 // Add the new swap to the beginning of the array
