@@ -100,7 +100,7 @@ const getAmount = (sats: string | number) => {
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
-    let amount: string;
+    let amount: string = '';
     switch (units) {
         case 'sats':
             amount = value;
