@@ -33,7 +33,13 @@ interface SwapDetailsProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<
         'SwapDetails',
-        { swapData: any; keys: any; endpoint: any; invoice: any }
+        {
+            swapData: any;
+            keys: any;
+            endpoint: any;
+            invoice: any;
+            feeRate: any;
+        }
     >;
     NodeInfoStore?: NodeInfoStore;
     SwapStore?: SwapStore;
@@ -229,7 +235,7 @@ export default class SwapDetails extends React.Component<
         pollingInterval: number,
         isSubmarineSwap: boolean
     ) => {
-        const { keys, endpoint, swapData } = this.props.route.params;
+        const { keys, endpoint, swapData, feeRate } = this.props.route.params;
 
         if (!createdResponse || !createdResponse.id) {
             console.error('Invalid response:', createdResponse);
@@ -295,7 +301,8 @@ export default class SwapDetails extends React.Component<
                         swapData.lockupAddress,
                         swapData.destinationAddress,
                         swapData.preimage,
-                        data.transaction.hex
+                        data.transaction.hex,
+                        feeRate
                     );
                 } else if (
                     data.status === 'invoice.expired' ||
@@ -481,7 +488,8 @@ export default class SwapDetails extends React.Component<
         lockupAddress: string,
         destinationAddress: string,
         preimage: any,
-        transactionHex: string
+        transactionHex: string,
+        feeRate: any
     ) => {
         try {
             const dObject = keys.__D;
@@ -508,7 +516,7 @@ export default class SwapDetails extends React.Component<
                     transactionHex,
                     lockupAddress,
                     destinationAddress,
-                    feeRate: 2, // TODO
+                    feeRate,
                     isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
                 });
 
