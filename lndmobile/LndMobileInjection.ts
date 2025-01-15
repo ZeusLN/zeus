@@ -97,7 +97,8 @@ import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
 import {
     // swaps
-    createClaimTransaction
+    createClaimTransaction,
+    createReverseClaimTransaction
 } from './swaps';
 
 import {
@@ -484,6 +485,33 @@ export interface ILndMobileInjections {
             transactionHash: string;
             pubNonce: string;
         }) => Promise<string>;
+        createReverseClaimTransaction: ({
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            privateKey,
+            servicePubKey,
+            preimageHex,
+            transactionHex,
+            lockupAddress,
+            destinationAddress,
+            feeRate,
+            isTestnet
+        }: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            privateKey: string;
+            servicePubKey: string;
+            preimageHex: string;
+            transactionHex: string;
+            lockupAddress: string;
+            destinationAddress: string;
+            feeRate: number;
+            isTestnet?: boolean;
+        }) => Promise<string>;
     };
 }
 
@@ -592,6 +620,7 @@ export default {
         checkScheduledSyncWorkStatus
     },
     swaps: {
-        createClaimTransaction
+        createClaimTransaction,
+        createReverseClaimTransaction
     }
 } as ILndMobileInjections;

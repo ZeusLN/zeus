@@ -61,3 +61,54 @@ export const createClaimTransaction = async ({
         throw e;
     }
 };
+
+/**
+ * @throws
+ */
+export const createReverseClaimTransaction = async ({
+    endpoint,
+    swapId,
+    claimLeaf,
+    refundLeaf,
+    privateKey,
+    servicePubKey,
+    preimageHex,
+    transactionHex,
+    lockupAddress,
+    destinationAddress,
+    feeRate,
+    isTestnet
+}: {
+    endpoint: string;
+    swapId: string;
+    claimLeaf: string;
+    refundLeaf: string;
+    privateKey: string;
+    servicePubKey: string;
+    preimageHex: string;
+    transactionHex: string;
+    lockupAddress: string;
+    destinationAddress: string;
+    feeRate: number;
+    isTestnet?: boolean;
+}): Promise<string> => {
+    try {
+        const error: string = await LncModule.createReverseClaimTransaction(
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            privateKey,
+            servicePubKey,
+            preimageHex,
+            transactionHex,
+            lockupAddress,
+            destinationAddress,
+            feeRate,
+            isTestnet
+        );
+        return error;
+    } catch (e) {
+        throw e;
+    }
+};
