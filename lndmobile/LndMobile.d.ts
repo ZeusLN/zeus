@@ -64,6 +64,21 @@ export interface ILndMobile {
         transactionHash: string,
         pubNonce: string
     ): Promise<string>;
+
+    createReverseClaimTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        privateKey: string,
+        servicePubKey: string,
+        preimageHex: string,
+        transactionHex: string,
+        lockupAddress: string,
+        destinationAddress: string,
+        feeRate: number,
+        isTestnet?: boolean
+    ): Promise<string>;
 }
 
 export interface ILndMobileTools {
