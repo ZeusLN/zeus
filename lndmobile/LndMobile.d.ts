@@ -40,10 +40,7 @@ export interface ILndMobile {
     writeToStream(method: string, payload: string): Promise<boolean>;
 
     // Express Graph Sync / Speedloader
-    gossipSync(
-        serviceUrl: string,
-        networkType: string
-    ): Promise<{ data: string }>;
+    gossipSync(serviceUrl: string): Promise<{ data: string }>;
     cancelGossipSync(): void;
 
     // Android-specific

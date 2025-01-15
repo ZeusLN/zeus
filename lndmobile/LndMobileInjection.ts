@@ -121,10 +121,7 @@ export interface ILndMobileInjections {
             isTestnet?: boolean
         ) => Promise<string>;
         stopLnd: () => Promise<string>;
-        gossipSync: (
-            serviceUrl: string,
-            networkType: string
-        ) => Promise<{ data: string }>;
+        gossipSync: (serviceUrl: string) => Promise<{ data: string }>;
         cancelGossipSync: () => void;
         checkICloudEnabled: () => Promise<boolean>;
         checkApplicationSupportExists: () => Promise<boolean>;

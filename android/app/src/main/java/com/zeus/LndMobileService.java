@@ -239,8 +239,7 @@ public class LndMobileService extends Service {
 
           case MSG_GOSSIP_SYNC:
             final String serviceUrl = bundle.getString("serviceUrl", "");
-            final String networkType = bundle.getString("networkType", "");
-            gossipSync(msg.replyTo, serviceUrl, networkType, request);
+            gossipSync(msg.replyTo, serviceUrl, request);
             break;
 
           case MSG_CANCEL_GOSSIP_SYNC:
@@ -374,14 +373,14 @@ public class LndMobileService extends Service {
     }
   }
 
-  void gossipSync(Messenger recipient, String serviceUrl, String networkType, int request) {
+  void gossipSync(Messenger recipient, String serviceUrl, int request) {
     Runnable gossipSync = new Runnable() {
       public void run() {
         Lndmobile.gossipSync(
           serviceUrl,
           getApplicationContext().getCacheDir().getAbsolutePath(),
           getApplicationContext().getFilesDir().getAbsolutePath(),
-          networkType,
+          "",
           new lndmobile.Callback() {
 
           @Override
