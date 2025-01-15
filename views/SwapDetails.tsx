@@ -10,7 +10,8 @@ import { Route } from '@react-navigation/native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-const { createClaimTransaction } = lndMobile.swaps;
+const { createClaimTransaction, createReverseClaimTransaction } =
+    lndMobile.swaps;
 
 import Screen from '../components/Screen';
 import Header from '../components/Header';
@@ -23,6 +24,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import NodeInfoStore from '../stores/NodeInfoStore';
 import SwapStore from '../stores/SwapStore';
 
 import QR from '../assets/images/SVG/QR.svg';
@@ -33,6 +35,7 @@ interface SwapDetailsProps {
         'SwapDetails',
         { swapData: any; keys: any; endpoint: any; invoice: any }
     >;
+    NodeInfoStore?: NodeInfoStore;
     SwapStore?: SwapStore;
 }
 
@@ -42,7 +45,7 @@ interface SwapDetailsState {
     loading: boolean;
 }
 
-@inject('SwapStore')
+@inject('NodeInfoStore', 'SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
@@ -226,7 +229,7 @@ export default class SwapDetails extends React.Component<
         pollingInterval: number,
         isSubmarineSwap: boolean
     ) => {
-        const { endpoint } = this.props.route.params;
+        const { keys, endpoint, swapData } = this.props.route.params;
 
         if (!createdResponse || !createdResponse.id) {
             console.error('Invalid response:', createdResponse);
@@ -284,6 +287,16 @@ export default class SwapDetails extends React.Component<
                     console.log('Waiting invoice to be paid');
                 } else if (data.status === 'transaction.mempool') {
                     console.log('Creating claim transaction');
+
+                    await this.createReverseClaimTransaction(
+                        createdResponse,
+                        keys,
+                        endpoint,
+                        swapData.lockupAddress,
+                        swapData.destinationAddress,
+                        swapData.preimage,
+                        data.transaction.hex
+                    );
                 } else if (
                     data.status === 'invoice.expired' ||
                     data.status === 'transaction.failed' ||
@@ -455,6 +468,60 @@ export default class SwapDetails extends React.Component<
             return;
         } catch (e) {
             console.log('Error creating claim tx ', e);
+        }
+    };
+
+    /**
+     * Create and send a claim transaction for a reverse swap
+     */
+    createReverseClaimTransaction = async (
+        createdResponse: any,
+        keys: any,
+        endpoint: string,
+        lockupAddress: string,
+        destinationAddress: string,
+        preimage: any,
+        transactionHex: string
+    ) => {
+        try {
+            const dObject = keys.__D;
+
+            // Extract keys, sort them numerically, and map to byte values
+            const dBytes = Object.keys(dObject)
+                .map((key) => parseInt(key, 10))
+                .sort((a, b) => a - b)
+                .map((key) => dObject[key]);
+
+            const privateKeyHex = dBytes
+                .map((byte) => byte.toString(16).padStart(2, '0'))
+                .join('');
+
+            const error = await createReverseClaimTransaction({
+                endpoint,
+                swapId: createdResponse.id,
+                claimLeaf: createdResponse.swapTree.claimLeaf.output,
+                refundLeaf: createdResponse.swapTree.refundLeaf.output,
+                privateKey: privateKeyHex,
+                servicePubKey: createdResponse.claimPublicKey,
+                preimageHex: preimage.toString('hex'),
+                transactionHex,
+                lockupAddress,
+                destinationAddress,
+                feeRate: 2, // TODO
+                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            });
+
+            if (!error) {
+                console.log(
+                    'Reverse claim transaction submitted successfully.'
+                );
+            } else {
+                console.log('Error submitting reverse claim tx', error);
+            }
+
+            return;
+        } catch (e) {
+            console.log('Error creating reverse claim tx ', e);
         }
     };
 
