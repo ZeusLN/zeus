@@ -460,7 +460,7 @@ export default class SwapPane extends React.PureComponent<
                             {apiError && (
                                 <ErrorMessage
                                     message={
-                                        apiError?.message || String(apiError)
+                                        apiError['message'] || String(apiError)
                                     }
                                 />
                             )}
@@ -697,7 +697,7 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                Network fee:{' '}
+                                                {'Network fee: '}
                                             </Text>
                                             <Amount sats={networkFee} />
                                         </Row>
@@ -708,7 +708,7 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                Service fee:{' '}
+                                                {'Service fee: '}
                                             </Text>
                                             <Amount sats={serviceFeeSats} />
                                             <Text
@@ -717,8 +717,7 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                {' '}
-                                                ({serviceFeePct}%)
+                                                {` (${serviceFeePct}%)`}
                                             </Text>
                                         </Row>
                                     </View>
@@ -730,7 +729,7 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                Min:{' '}
+                                                {'Min: '}
                                             </Text>
                                             <Amount sats={min} />
                                         </Row>
@@ -741,7 +740,7 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                Max:{' '}
+                                                {'Max: '}
                                             </Text>
                                             <Amount sats={max} />
                                         </Row>
