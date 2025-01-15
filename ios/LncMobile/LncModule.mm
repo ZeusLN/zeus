@@ -225,12 +225,17 @@ RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
                  privateKey:(NSString *)privateKey
                  servicePubKey:(NSString *)servicePubKey
                  transactionHash:(NSString *)transactionHash
-                 pubNonce:(NSString *)pubNonce)
+                 pubNonce:(NSString *)pubNonce
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
     LndmobileCreateClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce, &error);
     if (error) {
         NSLog(@"createClaimTransaction error   %@",   error);
+        reject(@"createClaimTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(@"Success");
     }
 }
 
@@ -245,12 +250,17 @@ RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
                  lockupAddress:(NSString *)lockupAddress
                  destinationAddress:(NSString *)destinationAddress
                  feeRate:(NSInteger)feeRate
-                 isTestnet:(BOOL)isTestnet)
+                 isTestnet:(BOOL)isTestnet
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
     LndmobileCreateReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet, &error);
     if (error) {
         NSLog(@"createReverseClaimTransaction error   %@",   error);
+        reject(@"createReverseClaimTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(@"Success");
     }
 }
 
