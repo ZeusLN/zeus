@@ -448,20 +448,20 @@ export default class SwapDetails extends React.Component<
                 .map((byte) => byte.toString(16).padStart(2, '0'))
                 .join('');
 
-            const error = await createClaimTransaction({
-                endpoint,
-                swapId: createdResponse.id,
-                claimLeaf: createdResponse.swapTree.claimLeaf.output,
-                refundLeaf: createdResponse.swapTree.refundLeaf.output,
-                privateKey: privateKeyHex,
-                servicePubKey: createdResponse.claimPublicKey,
-                transactionHash: claimTxDetails.transactionHash,
-                pubNonce: claimTxDetails.pubNonce
-            });
+            try {
+                await createClaimTransaction({
+                    endpoint,
+                    swapId: createdResponse.id,
+                    claimLeaf: createdResponse.swapTree.claimLeaf.output,
+                    refundLeaf: createdResponse.swapTree.refundLeaf.output,
+                    privateKey: privateKeyHex,
+                    servicePubKey: createdResponse.claimPublicKey,
+                    transactionHash: claimTxDetails.transactionHash,
+                    pubNonce: claimTxDetails.pubNonce
+                });
 
-            if (!error) {
                 console.log('Claim transaction submitted successfully.');
-            } else {
+            } catch (error) {
                 console.log('Error submitting claim tx', error);
             }
 
@@ -496,26 +496,26 @@ export default class SwapDetails extends React.Component<
                 .map((byte) => byte.toString(16).padStart(2, '0'))
                 .join('');
 
-            const error = await createReverseClaimTransaction({
-                endpoint,
-                swapId: createdResponse.id,
-                claimLeaf: createdResponse.swapTree.claimLeaf.output,
-                refundLeaf: createdResponse.swapTree.refundLeaf.output,
-                privateKey: privateKeyHex,
-                servicePubKey: createdResponse.claimPublicKey,
-                preimageHex: preimage.toString('hex'),
-                transactionHex,
-                lockupAddress,
-                destinationAddress,
-                feeRate: 2, // TODO
-                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
-            });
+            try {
+                await createReverseClaimTransaction({
+                    endpoint,
+                    swapId: createdResponse.id,
+                    claimLeaf: createdResponse.swapTree.claimLeaf.output,
+                    refundLeaf: createdResponse.swapTree.refundLeaf.output,
+                    privateKey: privateKeyHex,
+                    servicePubKey: createdResponse.claimPublicKey,
+                    preimageHex: preimage.toString('hex'),
+                    transactionHex,
+                    lockupAddress,
+                    destinationAddress,
+                    feeRate: 2, // TODO
+                    isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+                });
 
-            if (!error) {
                 console.log(
                     'Reverse claim transaction submitted successfully.'
                 );
-            } else {
+            } catch (error) {
                 console.log('Error submitting reverse claim tx', error);
             }
 
