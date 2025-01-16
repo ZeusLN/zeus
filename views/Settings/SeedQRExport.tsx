@@ -85,9 +85,13 @@ export default class SeedQRExport extends React.PureComponent<
         return ad;
     }
 
-    UNSAFE_componentWillMount() {
-        // make sure we have latest settings and the seed phrase is accessible
-        this.props.SettingsStore.getSettings().then(() => {
+    componentDidMount() {
+        this.initializeSeed();
+    }
+
+    async initializeSeed() {
+        try {
+            await this.props.SettingsStore.getSettings();
             const { SettingsStore } = this.props;
             const { seedPhrase }: any = SettingsStore;
 
@@ -102,6 +106,7 @@ export default class SeedQRExport extends React.PureComponent<
                 .match(/(.{1,8})/g)
                 .map((bin: string) => parseInt(bin, 2));
             const seed = Buffer.from(seedBytes);
+
             if (!seed || seed.length === 0 || seed[0] !== AEZEED_VERSION) {
                 this.setState({
                     loading: false,
@@ -111,11 +116,8 @@ export default class SeedQRExport extends React.PureComponent<
             }
 
             const salt = seed.slice(SALT_OFFSET, SALT_OFFSET + SALT_LENGTH);
-
             const password = Buffer.from(AEZEED_DEFAULT_PASSPHRASE, 'utf8');
-
             const cipherSeed = seed.slice(1, SALT_OFFSET);
-
             const checksum = seed.slice(CHECKSUM_OFFSET);
 
             const newChecksum = crc32.calculate(seed.slice(0, CHECKSUM_OFFSET));
@@ -127,138 +129,127 @@ export default class SeedQRExport extends React.PureComponent<
                 return;
             }
 
-            try {
-                scrypt(
-                    password,
-                    salt,
-                    SCRYPT_N,
-                    SCRYPT_R,
-                    SCRYPT_P,
-                    SCRYPT_KEY_LENGTH
-                ).then((key: string) => {
-                    if (key) {
-                        const plainSeedBytes = aez.decrypt(
-                            key,
-                            null,
-                            [this.getAD(salt)],
-                            AEZ_TAU,
-                            cipherSeed
-                        );
-                        if (plainSeedBytes == null) {
-                            this.setState({
-                                loading: false,
-                                error: 'Decryption failed. Invalid passphrase?'
-                            });
-                            return;
-                        } else {
-                            // const version = plainSeedBytes.readUInt8(0);
-                            // const birthday = plainSeedBytes.readUInt16BE(1);
-                            const entropy = plainSeedBytes
-                                .slice(3)
-                                .toString('hex');
+            const key = await scrypt(
+                password,
+                salt,
+                SCRYPT_N,
+                SCRYPT_R,
+                SCRYPT_P,
+                SCRYPT_KEY_LENGTH
+            );
 
-                            const SEGWIT_MAINNET = {
-                                label: 'BTC (Bitcoin, SegWit, BIP49)',
-                                config: {
-                                    messagePrefix:
-                                        '\u0018Bitcoin Signed Message:\n',
-                                    bech32: 'bc',
-                                    bip32: {
-                                        public: 0x049d7cb2,
-                                        private: 0x049d7878
-                                    },
-                                    pubKeyHash: 0,
-                                    scriptHash: 5,
-                                    wif: 128,
-                                    bip44: 0x00
-                                }
-                            };
+            const plainSeedBytes = aez.decrypt(
+                key,
+                null,
+                [this.getAD(salt)],
+                AEZ_TAU,
+                cipherSeed
+            );
 
-                            const SEGWIT_TESTNET = {
-                                label: 'BTC (Bitcoin Testnet, SegWit, BIP49)',
-                                config: {
-                                    messagePrefix:
-                                        '\u0018Bitcoin Signed Message:\n',
-                                    bech32: 'tb',
-                                    bip32: {
-                                        public: 0x044a5262,
-                                        private: 0x044a4e28
-                                    },
-                                    pubKeyHash: 111,
-                                    scriptHash: 196,
-                                    wif: 239,
-                                    bip44: 0x01
-                                }
-                            };
-
-                            const NATIVE_SEGWIT_MAINNET = {
-                                label: 'BTC (Bitcoin, Native SegWit, BIP84)',
-                                config: {
-                                    messagePrefix:
-                                        '\u0018Bitcoin Signed Message:\n',
-                                    bech32: 'bc',
-                                    bip32: {
-                                        public: 0x04b24746,
-                                        private: 0x04b2430c
-                                    },
-                                    pubKeyHash: 0,
-                                    scriptHash: 5,
-                                    wif: 128,
-                                    bip44: 0x00
-                                }
-                            };
-
-                            const NATIVE_SEGWIT_TESTNET = {
-                                label: 'BTC (Bitcoin Testnet, Native SegWit, BIP84)',
-                                config: {
-                                    messagePrefix:
-                                        '\u0018Bitcoin Signed Message:\n',
-                                    bech32: 'tb',
-                                    bip32: {
-                                        public: 0x045f1cf6,
-                                        private: 0x045f18bc
-                                    },
-                                    pubKeyHash: 111,
-                                    scriptHash: 196,
-                                    wif: 239,
-                                    bip44: 0x01
-                                }
-                            };
-
-                            const nodeBase58Segwit = bip32
-                                .fromSeed(
-                                    Buffer.from(entropy, 'hex'),
-                                    stores.nodeInfoStore.nodeInfo.isTestNet
-                                        ? SEGWIT_TESTNET.config
-                                        : SEGWIT_MAINNET.config
-                                )
-                                .toBase58();
-
-                            const nodeBase58NativeSegwit = bip32
-                                .fromSeed(
-                                    Buffer.from(entropy, 'hex'),
-                                    stores.nodeInfoStore.nodeInfo.isTestNet
-                                        ? NATIVE_SEGWIT_TESTNET.config
-                                        : NATIVE_SEGWIT_MAINNET.config
-                                )
-                                .toBase58();
-
-                            this.setState({
-                                loading: false,
-                                nodeBase58Segwit,
-                                nodeBase58NativeSegwit
-                            });
-                        }
-                    }
-                });
-            } catch (e) {
-                console.log('Scrypt err', e);
+            if (plainSeedBytes == null) {
                 this.setState({
                     loading: false,
-                    error: 'Error execution scrypt'
+                    error: 'Decryption failed. Invalid passphrase?'
                 });
+                return;
             }
-        });
+
+            const entropy = plainSeedBytes.slice(3).toString('hex');
+
+            const SEGWIT_MAINNET = {
+                label: 'BTC (Bitcoin, SegWit, BIP49)',
+                config: {
+                    messagePrefix: '\u0018Bitcoin Signed Message:\n',
+                    bech32: 'bc',
+                    bip32: {
+                        public: 0x049d7cb2,
+                        private: 0x049d7878
+                    },
+                    pubKeyHash: 0,
+                    scriptHash: 5,
+                    wif: 128,
+                    bip44: 0x00
+                }
+            };
+
+            const SEGWIT_TESTNET = {
+                label: 'BTC (Bitcoin Testnet, SegWit, BIP49)',
+                config: {
+                    messagePrefix: '\u0018Bitcoin Signed Message:\n',
+                    bech32: 'tb',
+                    bip32: {
+                        public: 0x044a5262,
+                        private: 0x044a4e28
+                    },
+                    pubKeyHash: 111,
+                    scriptHash: 196,
+                    wif: 239,
+                    bip44: 0x01
+                }
+            };
+
+            const NATIVE_SEGWIT_MAINNET = {
+                label: 'BTC (Bitcoin, Native SegWit, BIP84)',
+                config: {
+                    messagePrefix: '\u0018Bitcoin Signed Message:\n',
+                    bech32: 'bc',
+                    bip32: {
+                        public: 0x04b24746,
+                        private: 0x04b2430c
+                    },
+                    pubKeyHash: 0,
+                    scriptHash: 5,
+                    wif: 128,
+                    bip44: 0x00
+                }
+            };
+
+            const NATIVE_SEGWIT_TESTNET = {
+                label: 'BTC (Bitcoin Testnet, Native SegWit, BIP84)',
+                config: {
+                    messagePrefix: '\u0018Bitcoin Signed Message:\n',
+                    bech32: 'tb',
+                    bip32: {
+                        public: 0x045f1cf6,
+                        private: 0x045f18bc
+                    },
+                    pubKeyHash: 111,
+                    scriptHash: 196,
+                    wif: 239,
+                    bip44: 0x01
+                }
+            };
+
+            const nodeBase58Segwit = bip32
+                .fromSeed(
+                    Buffer.from(entropy, 'hex'),
+                    stores.nodeInfoStore.nodeInfo.isTestNet
+                        ? SEGWIT_TESTNET.config
+                        : SEGWIT_MAINNET.config
+                )
+                .toBase58();
+
+            const nodeBase58NativeSegwit = bip32
+                .fromSeed(
+                    Buffer.from(entropy, 'hex'),
+                    stores.nodeInfoStore.nodeInfo.isTestNet
+                        ? NATIVE_SEGWIT_TESTNET.config
+                        : NATIVE_SEGWIT_MAINNET.config
+                )
+                .toBase58();
+
+            this.setState({
+                loading: false,
+                nodeBase58Segwit,
+                nodeBase58NativeSegwit
+            });
+        } catch (e) {
+            console.log('Error initializing seed', e);
+            this.setState({
+                loading: false,
+                error: 'Error initializing seed'
+            });
+        }
     }
 
     render() {
@@ -343,7 +334,7 @@ export default class SeedQRExport extends React.PureComponent<
                         </View>
                     </ScrollView>
                 )}
-                {loading && (
+                {loading ? (
                     <View
                         style={{
                             flex: 1,
@@ -367,25 +358,26 @@ export default class SeedQRExport extends React.PureComponent<
                             )}
                         </Text>
                     </View>
-                )}
-                <View
-                    style={{
-                        alignSelf: 'center',
-                        marginTop: 45,
-                        bottom: 35,
-                        backgroundColor: themeColor('background'),
-                        width: '100%'
-                    }}
-                >
-                    <Button
-                        onPress={() => {
-                            navigation.popTo('Wallet');
+                ) : (
+                    <View
+                        style={{
+                            alignSelf: 'center',
+                            marginTop: 45,
+                            bottom: 35,
+                            backgroundColor: themeColor('background'),
+                            width: '100%'
                         }}
-                        title={localeString(
-                            'views.SendingLightning.goToWallet'
-                        )}
-                    />
-                </View>
+                    >
+                        <Button
+                            onPress={() => {
+                                navigation.popTo('Wallet');
+                            }}
+                            title={localeString(
+                                'views.SendingLightning.goToWallet'
+                            )}
+                        />
+                    </View>
+                )}
             </Screen>
         );
     }
