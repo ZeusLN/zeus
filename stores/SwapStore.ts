@@ -19,10 +19,12 @@ export default class SwapStore {
         let stateColor;
         switch (status) {
             case 'transaction.claimed':
+            case 'invoice.settled':
                 stateColor = 'green';
                 break;
             case 'invoice.failedToPay':
             case 'swap.expired':
+            case 'invoice.expired':
             case 'transaction.lockupFailed':
                 stateColor = themeColor('error');
                 break;
