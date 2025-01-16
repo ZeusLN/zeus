@@ -36,9 +36,9 @@ interface SwapDetailsProps {
         {
             swapData: any;
             keys: any;
-            endpoint: any;
-            invoice: any;
-            feeRate: any;
+            endpoint: string;
+            invoice: string;
+            fee: string;
         }
     >;
     NodeInfoStore?: NodeInfoStore;
@@ -46,8 +46,8 @@ interface SwapDetailsProps {
 }
 
 interface SwapDetailsState {
-    updates: any;
-    error: any;
+    updates: string | null;
+    error: string | { message?: string } | null;
     loading: boolean;
 }
 
@@ -235,7 +235,7 @@ export default class SwapDetails extends React.Component<
         pollingInterval: number,
         isSubmarineSwap: boolean
     ) => {
-        const { keys, endpoint, swapData, feeRate } = this.props.route.params;
+        const { keys, endpoint, swapData, fee } = this.props.route.params;
 
         if (!createdResponse || !createdResponse.id) {
             console.error('Invalid response:', createdResponse);
@@ -302,7 +302,7 @@ export default class SwapDetails extends React.Component<
                         swapData.destinationAddress,
                         swapData.preimage,
                         data.transaction.hex,
-                        feeRate
+                        fee
                     );
                 } else if (
                     data.status === 'invoice.expired' ||
@@ -489,7 +489,7 @@ export default class SwapDetails extends React.Component<
         destinationAddress: string,
         preimage: any,
         transactionHex: string,
-        feeRate: any
+        fee: string
     ) => {
         try {
             const dObject = keys.__D;
@@ -516,7 +516,7 @@ export default class SwapDetails extends React.Component<
                     transactionHex,
                     lockupAddress,
                     destinationAddress,
-                    feeRate,
+                    feeRate: Number(fee),
                     isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
                 });
 
@@ -589,7 +589,11 @@ export default class SwapDetails extends React.Component<
                     {this.state.loading && <LoadingIndicator />}
                     {error && (
                         <ErrorMessage
-                            message={error?.message || String(error)}
+                            message={
+                                typeof error === 'object' && 'message' in error
+                                    ? error?.message
+                                    : String(error)
+                            }
                         />
                     )}
                     {updates && (
