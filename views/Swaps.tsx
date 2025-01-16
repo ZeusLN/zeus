@@ -272,7 +272,7 @@ export default class SwapPane extends React.PureComponent<
                         keys,
                         endpoint: HOST,
                         invoice: destinationAddress,
-                        feeRate: fee
+                        fee
                     });
                 });
             } catch (error: any) {
