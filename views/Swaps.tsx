@@ -25,6 +25,7 @@ import {
     ErrorMessage,
     SuccessMessage
 } from '../components/SuccessErrorMessage';
+import OnchainFeeInput from '../components/OnchainFeeInput';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -58,6 +59,7 @@ interface SwapPaneState {
     apiUpdates: any;
     response: any;
     fetchingInvoice: boolean;
+    fee: string;
 }
 
 @inject('SwapStore', 'UnitsStore', 'InvoicesStore')
@@ -76,7 +78,8 @@ export default class SwapPane extends React.PureComponent<
         apiUpdates: '',
         apiError: null,
         response: null,
-        fetchingInvoice: false
+        fetchingInvoice: false,
+        fee: ''
     };
 
     async UNSAFE_componentWillMount() {
@@ -94,7 +97,8 @@ export default class SwapPane extends React.PureComponent<
             apiUpdates,
             invoice,
             isValid,
-            fetchingInvoice
+            fetchingInvoice,
+            fee
         } = this.state;
         const { subInfo, reverseInfo, loading } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
@@ -267,7 +271,8 @@ export default class SwapPane extends React.PureComponent<
                         swapData: responseData,
                         keys,
                         endpoint: HOST,
-                        invoice: destinationAddress
+                        invoice: destinationAddress,
+                        fee
                     });
                 });
             } catch (error: any) {
@@ -904,6 +909,23 @@ export default class SwapPane extends React.PureComponent<
                                     disabled={errorMsg}
                                 />
                             </View>
+                            <View style={{ paddingHorizontal: 20 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        marginTop: 10
+                                    }}
+                                >
+                                    {localeString('views.Send.feeSatsVbyte')}
+                                </Text>
+                                <OnchainFeeInput
+                                    fee={fee}
+                                    onChangeFee={(text: string) =>
+                                        this.setState({ fee: text })
+                                    }
+                                    navigation={navigation}
+                                />
+                            </View>
 
                             <View>
                                 <Button
@@ -913,9 +935,6 @@ export default class SwapPane extends React.PureComponent<
                                         reverse
                                             ? createReverseSwap(invoice)
                                             : createSubmarineSwap(invoice);
-                                    }}
-                                    containerStyle={{
-                                        marginTop: 10
                                     }}
                                     disabled={!isValid}
                                 />
