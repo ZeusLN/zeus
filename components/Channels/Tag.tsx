@@ -7,8 +7,7 @@ import { ExpirationStatus, Status } from '../../views/Channels/ChannelsPane';
 import { themeColor } from '../../utils/ThemeUtils';
 
 export function Tag({ status }: { status: Status | ExpirationStatus }) {
-    // Garish colors to let you know you fucked up
-    const colors = { background: 'pink', dot: 'blue' };
+    const colors = { background: '', dot: '' };
 
     // TODO: should all these colors be in the theme?
     switch (status) {
@@ -33,11 +32,9 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
             break;
         case ExpirationStatus.Expiring:
             colors.background = themeColor('warning');
-            colors.dot = '#E5E5E5';
             break;
         case ExpirationStatus.Expired:
             colors.background = themeColor('error');
-            colors.dot = '#E5E5E5';
             break;
     }
 
@@ -54,16 +51,17 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
             }}
         >
             <Row>
-                <View
-                    style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 6,
-                        backgroundColor: colors.dot
-                    }}
-                />
-                <Spacer width={6} />
-                {/* TODO: localize */}
+                {colors.dot && (
+                    <View
+                        style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 6,
+                            backgroundColor: colors.dot
+                        }}
+                    />
+                )}
+                {colors.dot && <Spacer width={6} />}
                 <Body colorOverride="white" small>
                     {status}
                 </Body>
