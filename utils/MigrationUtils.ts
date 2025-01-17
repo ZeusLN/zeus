@@ -273,46 +273,60 @@ class MigrationsUtils {
     }
 
     public async storageMigrationV2(settings: any) {
+        const migrationTasks = [];
+
         // Settings migration
         console.log('Attemping settings migration');
-        const writeSuccess = await Storage.setItem(STORAGE_KEY, settings);
-        console.log('Settings migration status', writeSuccess);
+        const settingsMigration = Storage.setItem(STORAGE_KEY, settings).then(
+            (writeSuccess) => {
+                console.log('Settings migration status', writeSuccess);
+                return writeSuccess;
+            }
+        );
+        migrationTasks.push(settingsMigration);
 
         // Contacts migration
-        try {
-            const contacts = await EncryptedStorage.getItem(
-                LEGACY_CONTACTS_KEY
-            );
-            if (contacts) {
-                console.log('Attemping contacts migration');
-                const writeSuccess = await Storage.setItem(
-                    MODERN_CONTACTS_KEY,
-                    contacts
+        const contactsMigration = (async () => {
+            try {
+                const contacts = await EncryptedStorage.getItem(
+                    LEGACY_CONTACTS_KEY
                 );
-                console.log('Contacts migration status', writeSuccess);
+                if (contacts) {
+                    console.log('Attemping contacts migration');
+                    const writeSuccess = await Storage.setItem(
+                        MODERN_CONTACTS_KEY,
+                        contacts
+                    );
+                    console.log('Contacts migration status', writeSuccess);
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading contacts from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading contacts from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(contactsMigration);
 
         // Notes migration
-        try {
-            const storedKeys = await EncryptedStorage.getItem(LEGACY_NOTES_KEY);
-            if (storedKeys) {
-                const noteKeys = JSON.parse(storedKeys);
-                console.log('Attemping notes migration');
-                const writeSuccess = await Storage.setItem(
-                    MODERN_NOTES_KEY,
-                    noteKeys
+        const notesMigration = (async () => {
+            try {
+                const storedKeys = await EncryptedStorage.getItem(
+                    LEGACY_NOTES_KEY
                 );
-                console.log('Notes keys migration status', writeSuccess);
+                if (storedKeys) {
+                    const noteKeys = JSON.parse(storedKeys);
+                    console.log('Attemping notes migration');
+                    const writeSuccess = await Storage.setItem(
+                        MODERN_NOTES_KEY,
+                        noteKeys
+                    );
+                    console.log('Notes keys migration status', writeSuccess);
 
-                // Load all legacy notes
-                await Promise.all(
-                    noteKeys.map(async (key: string) => {
+                    // Load all legacy notes
+                    const notesPromises = noteKeys.map(async (key: string) => {
                         const note = await EncryptedStorage.getItem(key);
                         if (note) {
                             const writeSuccess = await Storage.setItem(
@@ -323,254 +337,367 @@ class MigrationsUtils {
                                 `Notes keys migration status: ${key}`,
                                 writeSuccess
                             );
+                            return writeSuccess;
                         }
-                    })
+                    });
+
+                    const noteResults = await Promise.all(notesPromises);
+                    return (
+                        writeSuccess &&
+                        noteResults.every((result) => result !== false)
+                    );
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading note keys from encrypted storage',
+                    error
                 );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading note keys from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(notesMigration);
 
         // Lightning address migration
-        try {
-            const activated = await EncryptedStorage.getItem(
-                LEGACY_ADDRESS_ACTIVATED_STRING
-            );
-            if (activated) {
-                console.log('Attemping lightning address activated migration');
-                const writeSuccess = await Storage.setItem(
-                    ADDRESS_ACTIVATED_STRING,
-                    activated
-                );
-                console.log(
-                    'Lightning address activated migration status',
-                    writeSuccess
-                );
-            }
+        const lightningAddressMigration = (async () => {
+            try {
+                let activatedSuccess: any = true;
+                let hashesSuccess: any = true;
 
-            const hashes = await EncryptedStorage.getItem(
-                LEGACY_HASHES_STORAGE_STRING
-            );
-            if (hashes) {
-                console.log('Attemping lightning address hashes migration');
-                const writeSuccess = await Storage.setItem(
-                    HASHES_STORAGE_STRING,
-                    hashes
+                const activated = await EncryptedStorage.getItem(
+                    LEGACY_ADDRESS_ACTIVATED_STRING
                 );
-                console.log(
-                    'Lightning address hashes migration status',
-                    writeSuccess
+                if (activated) {
+                    console.log(
+                        'Attemping lightning address activated migration'
+                    );
+                    activatedSuccess = await Storage.setItem(
+                        ADDRESS_ACTIVATED_STRING,
+                        activated
+                    );
+                    console.log(
+                        'Lightning address activated migration status',
+                        activatedSuccess
+                    );
+                }
+
+                const hashes = await EncryptedStorage.getItem(
+                    LEGACY_HASHES_STORAGE_STRING
                 );
+                if (hashes) {
+                    console.log('Attemping lightning address hashes migration');
+                    hashesSuccess = await Storage.setItem(
+                        HASHES_STORAGE_STRING,
+                        hashes
+                    );
+                    console.log(
+                        'Lightning address hashes migration status',
+                        hashesSuccess
+                    );
+                }
+
+                return activatedSuccess && hashesSuccess;
+            } catch (error) {
+                console.error(
+                    'Error loading lightning address data from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading lightning address data from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(lightningAddressMigration);
 
         // Backup status migration
-        try {
-            const status = await EncryptedStorage.getItem(
-                LEGACY_LAST_CHANNEL_BACKUP_STATUS
-            );
-            if (status) {
-                console.log('Attemping backup status migration');
-                const writeSuccess = await Storage.setItem(
-                    LAST_CHANNEL_BACKUP_STATUS,
-                    status
-                );
-                console.log('Backup status migration status', writeSuccess);
-            }
+        const backupStatusMigration = (async () => {
+            try {
+                let statusSuccess: any = true;
+                let timeSuccess: any = true;
 
-            const time = await EncryptedStorage.getItem(
-                LEGACY_LAST_CHANNEL_BACKUP_TIME
-            );
-            if (time) {
-                console.log('Attemping backup time migration');
-                const writeSuccess = await Storage.setItem(
-                    LAST_CHANNEL_BACKUP_TIME,
-                    time
+                const status = await EncryptedStorage.getItem(
+                    LEGACY_LAST_CHANNEL_BACKUP_STATUS
                 );
-                console.log('Backup time migration status', writeSuccess);
+                if (status) {
+                    console.log('Attemping backup status migration');
+                    statusSuccess = await Storage.setItem(
+                        LAST_CHANNEL_BACKUP_STATUS,
+                        status
+                    );
+                    console.log(
+                        'Backup status migration status',
+                        statusSuccess
+                    );
+                }
+
+                const time = await EncryptedStorage.getItem(
+                    LEGACY_LAST_CHANNEL_BACKUP_TIME
+                );
+                if (time) {
+                    console.log('Attemping backup time migration');
+                    timeSuccess = await Storage.setItem(
+                        LAST_CHANNEL_BACKUP_TIME,
+                        time
+                    );
+                    console.log('Backup time migration status', timeSuccess);
+                }
+
+                return statusSuccess && timeSuccess;
+            } catch (error) {
+                console.error(
+                    'Error loading backup status from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading backup status from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(backupStatusMigration);
 
         // POS migration
-        try {
-            const posHiddenKey = await EncryptedStorage.getItem(
-                LEGACY_POS_HIDDEN_KEY
-            );
-            if (posHiddenKey) {
-                console.log('Attemping POS hidden key migration');
-                const writeSuccess = await Storage.setItem(
-                    POS_HIDDEN_KEY,
-                    posHiddenKey
-                );
-                console.log('POS hidden key migration status', writeSuccess);
-            }
+        const posMigration = (async () => {
+            try {
+                let hiddenKeySuccess: any = true;
+                let standaloneKeySuccess: any = true;
+                let categoriesSuccess: any = true;
+                let productsSuccess: any = true;
 
-            const posStandaloneKey = await EncryptedStorage.getItem(
-                LEGACY_POS_STANDALONE_KEY
-            );
-            if (posStandaloneKey) {
-                console.log('Attemping POS standalone key migration');
-                const writeSuccess = await Storage.setItem(
-                    POS_STANDALONE_KEY,
-                    posStandaloneKey
+                const posHiddenKey = await EncryptedStorage.getItem(
+                    LEGACY_POS_HIDDEN_KEY
                 );
-                console.log(
-                    'POS standalone key migration status',
-                    writeSuccess
-                );
-            }
+                if (posHiddenKey) {
+                    console.log('Attemping POS hidden key migration');
+                    hiddenKeySuccess = await Storage.setItem(
+                        POS_HIDDEN_KEY,
+                        posHiddenKey
+                    );
+                    console.log(
+                        'POS hidden key migration status',
+                        hiddenKeySuccess
+                    );
+                }
 
-            const categories = await EncryptedStorage.getItem(
-                LEGACY_CATEGORY_KEY
-            );
-            if (categories) {
-                console.log('Attemping POS categories migration');
-                const writeSuccess = await Storage.setItem(
-                    CATEGORY_KEY,
-                    categories
+                const posStandaloneKey = await EncryptedStorage.getItem(
+                    LEGACY_POS_STANDALONE_KEY
                 );
-                console.log('POS categories migration status', writeSuccess);
-            }
+                if (posStandaloneKey) {
+                    console.log('Attemping POS standalone key migration');
+                    standaloneKeySuccess = await Storage.setItem(
+                        POS_STANDALONE_KEY,
+                        posStandaloneKey
+                    );
+                    console.log(
+                        'POS standalone key migration status',
+                        standaloneKeySuccess
+                    );
+                }
 
-            const products = await EncryptedStorage.getItem(LEGACY_PRODUCT_KEY);
-            if (products) {
-                console.log('Attemping POS products migration');
-                const writeSuccess = await Storage.setItem(
-                    PRODUCT_KEY,
-                    products
+                const categories = await EncryptedStorage.getItem(
+                    LEGACY_CATEGORY_KEY
                 );
-                console.log('POS products migration status', writeSuccess);
+                if (categories) {
+                    console.log('Attemping POS categories migration');
+                    categoriesSuccess = await Storage.setItem(
+                        CATEGORY_KEY,
+                        categories
+                    );
+                    console.log(
+                        'POS categories migration status',
+                        categoriesSuccess
+                    );
+                }
+
+                const products = await EncryptedStorage.getItem(
+                    LEGACY_PRODUCT_KEY
+                );
+                if (products) {
+                    console.log('Attemping POS products migration');
+                    productsSuccess = await Storage.setItem(
+                        PRODUCT_KEY,
+                        products
+                    );
+                    console.log(
+                        'POS products migration status',
+                        productsSuccess
+                    );
+                }
+
+                return (
+                    hiddenKeySuccess &&
+                    standaloneKeySuccess &&
+                    categoriesSuccess &&
+                    productsSuccess
+                );
+            } catch (error) {
+                console.error(
+                    'Error loading POS data from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading POS data from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(posMigration);
 
         // Units migration
-        try {
-            const units = await EncryptedStorage.getItem(LEGACY_UNIT_KEY);
-            if (units) {
-                console.log('Attemping units migration');
-                const writeSuccess = await Storage.setItem(UNIT_KEY, units);
-                console.log('Units migration status', writeSuccess);
+        const unitsMigration = (async () => {
+            try {
+                const units = await EncryptedStorage.getItem(LEGACY_UNIT_KEY);
+                if (units) {
+                    console.log('Attemping units migration');
+                    const writeSuccess = await Storage.setItem(UNIT_KEY, units);
+                    console.log('Units migration status', writeSuccess);
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading units data from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading units data from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(unitsMigration);
 
         // Hidden accounts migration
-        try {
-            const accounts = await EncryptedStorage.getItem(
-                LEGACY_HIDDEN_ACCOUNTS_KEY
-            );
-            if (accounts) {
-                console.log('Attemping hidden accounts migration');
-                const writeSuccess = await Storage.setItem(
-                    HIDDEN_ACCOUNTS_KEY,
-                    accounts
+        const hiddenAccountsMigration = (async () => {
+            try {
+                const accounts = await EncryptedStorage.getItem(
+                    LEGACY_HIDDEN_ACCOUNTS_KEY
                 );
-                console.log('Hidden accounts migration status', writeSuccess);
+                if (accounts) {
+                    console.log('Attemping hidden accounts migration');
+                    const writeSuccess = await Storage.setItem(
+                        HIDDEN_ACCOUNTS_KEY,
+                        accounts
+                    );
+                    console.log(
+                        'Hidden accounts migration status',
+                        writeSuccess
+                    );
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading hidden accounts from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading hidden accounts from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(hiddenAccountsMigration);
 
         // Currency codes migration
-        try {
-            const currencyCodes = await EncryptedStorage.getItem(
-                LEGACY_CURRENCY_CODES_KEY
-            );
-            if (currencyCodes) {
-                console.log('Attemping currency codes migration');
-                const writeSuccess = await Storage.setItem(
-                    CURRENCY_CODES_KEY,
-                    currencyCodes
+        const currencyCodesMigration = (async () => {
+            try {
+                const currencyCodes = await EncryptedStorage.getItem(
+                    LEGACY_CURRENCY_CODES_KEY
                 );
-                console.log('Currency codes migration status', writeSuccess);
+                if (currencyCodes) {
+                    console.log('Attemping currency codes migration');
+                    const writeSuccess = await Storage.setItem(
+                        CURRENCY_CODES_KEY,
+                        currencyCodes
+                    );
+                    console.log(
+                        'Currency codes migration status',
+                        writeSuccess
+                    );
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading currency codes from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading currency codes from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(currencyCodesMigration);
 
         // LSPS1 orders migration
-        try {
-            const lsps1orders = await EncryptedStorage.getItem(
-                LEGACY_LSPS1_ORDERS_KEY
-            );
-            if (lsps1orders) {
-                console.log('Attemping LSPS1 orders migration');
-                const writeSuccess = await Storage.setItem(
-                    LSPS1_ORDERS_KEY,
-                    lsps1orders
+        const lsps1OrdersMigration = (async () => {
+            try {
+                const lsps1orders = await EncryptedStorage.getItem(
+                    LEGACY_LSPS1_ORDERS_KEY
                 );
-                console.log('LSPS1 orders migration status', writeSuccess);
+                if (lsps1orders) {
+                    console.log('Attemping LSPS1 orders migration');
+                    const writeSuccess = await Storage.setItem(
+                        LSPS1_ORDERS_KEY,
+                        lsps1orders
+                    );
+                    console.log('LSPS1 orders migration status', writeSuccess);
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading LSPS1 orders from encrypted storage',
+                    error
+                );
+                return false;
             }
-        } catch (error) {
-            console.error(
-                'Error loading LSPS1 orders from encrypted storage',
-                error
-            );
-        }
+        })();
+        migrationTasks.push(lsps1OrdersMigration);
 
         // LNC migrations
-        try {
-            settings?.nodes.forEach(async (node: any) => {
-                if (node.implementation === 'lightning-node-connect') {
-                    const baseKey = `${LNC_STORAGE_KEY}:${hash(
-                        node.pairingPhrase
-                    )}`;
-                    const hostKey = `${baseKey}:host`;
+        const lncMigration = (async () => {
+            try {
+                const migrationPromises =
+                    settings?.nodes.map(async (node: any) => {
+                        if (node.implementation === 'lightning-node-connect') {
+                            const baseKey = `${LNC_STORAGE_KEY}:${hash(
+                                node.pairingPhrase
+                            )}`;
+                            const hostKey = `${baseKey}:host`;
 
-                    const baseKeyData: string =
-                        (await EncryptedStorage.getItem(baseKey)) || '{}';
+                            const baseKeyData: string =
+                                (await EncryptedStorage.getItem(baseKey)) ||
+                                '{}';
 
-                    console.log('Attemping LNC base key migration', baseKey);
-                    const writeSuccess1 = await Storage.setItem(
-                        baseKey,
-                        JSON.parse(baseKeyData)
-                    );
-                    console.log('LNC base key migration status', writeSuccess1);
+                            console.log(
+                                'Attemping LNC base key migration',
+                                baseKey
+                            );
+                            const writeSuccess1 = await Storage.setItem(
+                                baseKey,
+                                JSON.parse(baseKeyData)
+                            );
+                            console.log(
+                                'LNC base key migration status',
+                                writeSuccess1
+                            );
 
-                    const hostKeyData = await EncryptedStorage.getItem(hostKey);
+                            const hostKeyData = await EncryptedStorage.getItem(
+                                hostKey
+                            );
 
-                    console.log('Attemping LNC host key migration', baseKey);
-                    const writeSuccess2 = await Storage.setItem(
-                        hostKey,
-                        hostKeyData
-                    );
-                    console.log('LNC host key migration status', writeSuccess2);
-                }
-            });
-        } catch (error) {
-            console.error(
-                'Error loading LNC data from encrypted storage',
-                error
-            );
-        }
+                            console.log(
+                                'Attemping LNC host key migration',
+                                baseKey
+                            );
+                            const writeSuccess2 = await Storage.setItem(
+                                hostKey,
+                                hostKeyData
+                            );
+                            console.log(
+                                'LNC host key migration status',
+                                writeSuccess2
+                            );
+
+                            return writeSuccess1 && writeSuccess2;
+                        }
+                    }) || [];
+
+                const results = await Promise.all(migrationPromises);
+                return results.every((result) => result !== false);
+            } catch (error) {
+                console.error(
+                    'Error loading LNC data from encrypted storage',
+                    error
+                );
+                return false;
+            }
+        })();
+        migrationTasks.push(lncMigration);
+
+        const results = await Promise.all(migrationTasks);
+        return results.every((result) => result === true);
     }
 }
 
