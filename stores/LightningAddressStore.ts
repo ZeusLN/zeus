@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { action, observable } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import ReactNativeBlobUtil, { FetchBlobResponse } from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
 import BigNumber from 'bignumber.js';
@@ -30,11 +30,11 @@ const LNURL_HOST = 'https://zeuspay.com/api';
 const LNURL_SOCKET_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
-export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
-export const ADDRESS_ACTIVATED_STRING = 'zeuspay-lightning-address';
 export const HASHES_STORAGE_STRING = 'zeuspay-lightning-address-hashes';
+
+export type LightningAddressServiceStatus = true | false | 'unknown';
 
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
@@ -95,24 +95,7 @@ export default class LightningAddressStore {
         return this.preimageMap;
     };
 
-    @action
-    public getLightningAddressActivated = async () => {
-        this.loading = true;
-        const lightningAddressActivated = await Storage.getItem(
-            ADDRESS_ACTIVATED_STRING
-        );
-
-        if (lightningAddressActivated) {
-            this.lightningAddressActivated = Boolean(lightningAddressActivated);
-            this.loading = false;
-            return this.lightningAddressActivated;
-        } else {
-            this.loading = false;
-        }
-    };
-
     setLightningAddress = async (handle: string, domain: string) => {
-        await Storage.setItem(ADDRESS_ACTIVATED_STRING, true);
         this.lightningAddressActivated = true;
         this.lightningAddressHandle = handle;
         this.lightningAddressDomain = domain;
@@ -149,7 +132,9 @@ export default class LightningAddressStore {
         const nostrSignatures: any = [];
         if (preimages) {
             const nostrPrivateKey =
-                this.settingsStore?.settings?.lightningAddress?.nostrPrivateKey;
+                this.settingsStore.settings.lightningAddressByPubkey?.[
+                    this.nodeInfoStore.nodeInfo.identity_pubkey
+                ]?.nostrPrivateKey;
             for (let i = 0; i < preimages.length; i++) {
                 const preimage = preimages[i];
                 const hash = sha256
@@ -340,36 +325,38 @@ export default class LightningAddressStore {
                                     .then(async (response: any) => {
                                         const data = response.json();
                                         const status = response.info().status;
-                                        const {
-                                            handle,
-                                            domain,
-                                            created_at,
-                                            success
-                                        } = data;
+                                        const { handle, created_at, success } =
+                                            data;
 
                                         if (status === 200 && success) {
                                             if (handle) {
-                                                this.setLightningAddress(
-                                                    handle,
-                                                    domain
+                                                await this.settingsStore.updateSettings(
+                                                    {
+                                                        lightningAddressGlobal:
+                                                            {
+                                                                automaticallyAccept:
+                                                                    true,
+                                                                allowComments:
+                                                                    true,
+                                                                nostrRelays:
+                                                                    relays,
+                                                                notifications: 1
+                                                            },
+                                                        lightningAddressByPubkey:
+                                                            {
+                                                                [this
+                                                                    .nodeInfoStore
+                                                                    .nodeInfo
+                                                                    .identity_pubkey]:
+                                                                    {
+                                                                        enabled:
+                                                                            true,
+                                                                        nostrPrivateKey
+                                                                    }
+                                                            }
+                                                    }
                                                 );
                                             }
-
-                                            await this.settingsStore.updateSettings(
-                                                {
-                                                    lightningAddress: {
-                                                        enabled: true,
-                                                        automaticallyAccept:
-                                                            true,
-                                                        automaticallyRequestOlympusChannels:
-                                                            false, // deprecated
-                                                        allowComments: true,
-                                                        nostrPrivateKey,
-                                                        nostrRelays: relays,
-                                                        notifications: 1
-                                                    }
-                                                }
-                                            );
 
                                             // ensure push credentials are in place
                                             // right after creation
@@ -595,6 +582,38 @@ export default class LightningAddressStore {
                                                 domain;
                                             if (handle && domain) {
                                                 this.lightningAddress = `${handle}@${domain}`;
+
+                                                // If backend could not be reached earlier, we set "enabled: true" now
+                                                if (
+                                                    this.settingsStore.settings
+                                                        .lightningAddressByPubkey?.[
+                                                        this.nodeInfoStore
+                                                            .nodeInfo
+                                                            .identity_pubkey
+                                                    ].enabled === false
+                                                ) {
+                                                    await this.settingsStore.updateSettings(
+                                                        {
+                                                            lightningAddressByPubkey:
+                                                                {
+                                                                    ...this
+                                                                        .settingsStore
+                                                                        .settings
+                                                                        .lightningAddressByPubkey,
+                                                                    [this
+                                                                        .nodeInfoStore
+                                                                        .nodeInfo
+                                                                        .identity_pubkey]:
+                                                                        {
+                                                                            enabled:
+                                                                                true,
+                                                                            nostrPrivateKey:
+                                                                                ''
+                                                                        }
+                                                                }
+                                                        }
+                                                    );
+                                                }
                                             }
 
                                             if (
@@ -761,7 +780,7 @@ export default class LightningAddressStore {
             const hashpk = getPublicKey(hash);
 
             await Promise.all(
-                this.settingsStore.settings.lightningAddress.nostrRelays.map(
+                this.settingsStore.settings.lightningAddressGlobal.nostrRelays.map(
                     async (relayItem) => {
                         const relay = relayInit(relayItem);
                         relay.on('connect', () => {
@@ -978,7 +997,7 @@ export default class LightningAddressStore {
                 memo: comment ? `ZEUS Pay: ${comment}` : 'ZEUS Pay',
                 preimage,
                 private:
-                    this.settingsStore?.settings?.lightningAddress
+                    this.settingsStore?.settings?.lightningAddressGlobal
                         ?.routeHints || false
             })
                 .then((result: any) => {
@@ -1032,9 +1051,9 @@ export default class LightningAddressStore {
     @action
     public redeemAllOpenPayments = async () => {
         this.redeemingAll = true;
-        const attestationLevel = this.settingsStore?.settings?.lightningAddress
-            ?.automaticallyAcceptAttestationLevel
-            ? this.settingsStore.settings.lightningAddress
+        const attestationLevel = this.settingsStore?.settings
+            ?.lightningAddressGlobal?.automaticallyAcceptAttestationLevel
+            ? this.settingsStore.settings.lightningAddressGlobal
                   .automaticallyAcceptAttestationLevel
             : 2;
 
@@ -1107,9 +1126,9 @@ export default class LightningAddressStore {
                         const { hash, amount_msat, comment } = data;
 
                         const attestationLevel = this.settingsStore?.settings
-                            ?.lightningAddress
+                            ?.lightningAddressGlobal
                             ?.automaticallyAcceptAttestationLevel
-                            ? this.settingsStore.settings.lightningAddress
+                            ? this.settingsStore.settings.lightningAddressGlobal
                                   .automaticallyAcceptAttestationLevel
                             : 2;
 
@@ -1163,6 +1182,58 @@ export default class LightningAddressStore {
             await sleep(3000);
         }
     };
+
+    public checkLightningAddressExists =
+        async (): Promise<LightningAddressServiceStatus> => {
+            const timeout = (ms: number) =>
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Request timed out')), ms)
+                );
+
+            try {
+                const authResponse = (await Promise.race([
+                    ReactNativeBlobUtil.fetch(
+                        'POST',
+                        `${LNURL_HOST}/lnurl/auth`,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({
+                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                        })
+                    ),
+                    timeout(10000) // 10 seconds should be enough
+                ])) as FetchBlobResponse;
+
+                const authData = authResponse.json();
+                if (authResponse.info().status !== 200) return 'unknown';
+
+                const { verification } = authData;
+                const data = await BackendUtils.signMessage(verification);
+                const signature = data.zbase || data.signature;
+
+                const statusResponse = (await Promise.race([
+                    ReactNativeBlobUtil.fetch(
+                        'POST',
+                        `${LNURL_HOST}/lnurl/status`,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({
+                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                            message: verification,
+                            signature
+                        })
+                    ),
+                    timeout(10000) // 10 seconds should be enough
+                ])) as FetchBlobResponse;
+
+                const statusData = statusResponse.json();
+                if (statusResponse.info().status !== 200) return 'unknown';
+
+                const { handle, domain } = statusData;
+                return Boolean(handle && domain);
+            } catch (error) {
+                console.error('Lightning Address check failed:', error);
+                return 'unknown';
+            }
+        };
 
     @action
     public reset = () => {

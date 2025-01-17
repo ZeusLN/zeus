@@ -17,6 +17,7 @@ import SettingsStore, {
     AUTOMATIC_ATTESTATION_KEYS
 } from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -25,6 +26,7 @@ interface LightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface LightningAddressSettingsState {
@@ -37,7 +39,7 @@ interface LightningAddressSettingsState {
     notifications: number;
 }
 
-@inject('SettingsStore', 'LightningAddressStore')
+@inject('SettingsStore', 'LightningAddressStore', 'NodeInfoStore')
 @observer
 export default class LightningAddressSettings extends React.Component<
     LightningAddressSettingsProps,
@@ -54,27 +56,24 @@ export default class LightningAddressSettings extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const lightningAddressGlobal =
+            SettingsStore.settings.lightningAddressGlobal;
 
         this.setState({
-            automaticallyAccept: settings.lightningAddress?.automaticallyAccept
-                ? true
-                : false,
-            automaticallyAcceptAttestationLevel: settings.lightningAddress
-                ?.automaticallyAcceptAttestationLevel
-                ? settings.lightningAddress.automaticallyAcceptAttestationLevel
-                : 2,
-            routeHints: settings.lightningAddress?.routeHints ? true : false,
-            allowComments: settings.lightningAddress?.allowComments
-                ? true
-                : false,
-            nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
-            nostrRelays: settings.lightningAddress?.nostrRelays || [],
-            notifications:
-                settings.lightningAddress?.notifications !== undefined
-                    ? settings.lightningAddress.notifications
-                    : 1
+            // Global settings
+            automaticallyAccept: lightningAddressGlobal.automaticallyAccept,
+            automaticallyAcceptAttestationLevel:
+                lightningAddressGlobal.automaticallyAcceptAttestationLevel,
+            routeHints: lightningAddressGlobal.routeHints,
+            allowComments: lightningAddressGlobal.allowComments,
+            nostrRelays: lightningAddressGlobal.nostrRelays,
+            notifications: lightningAddressGlobal.notifications,
+            // Node-specific settings
+            nostrPrivateKey:
+                SettingsStore.settings.lightningAddressByPubkey?.[
+                    NodeInfoStore.nodeInfo.identity_pubkey
+                ].nostrPrivateKey ?? ''
         });
     }
 
@@ -85,12 +84,10 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAcceptAttestationLevel,
             routeHints,
             allowComments,
-            nostrPrivateKey,
             nostrRelays,
             notifications
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
-        const enabled = settings?.lightningAddress?.enabled;
         const { loading, update, error_msg } = LightningAddressStore;
 
         return (
@@ -150,18 +147,10 @@ export default class LightningAddressSettings extends React.Component<
                                                 !automaticallyAccept
                                         });
                                         await updateSettings({
-                                            lightningAddress: {
-                                                enabled,
+                                            lightningAddressGlobal: {
+                                                ...settings.lightningAddressGlobal,
                                                 automaticallyAccept:
-                                                    !automaticallyAccept,
-                                                automaticallyAcceptAttestationLevel,
-                                                automaticallyRequestOlympusChannels:
-                                                    false, // deprecated
-                                                routeHints,
-                                                allowComments,
-                                                nostrPrivateKey,
-                                                nostrRelays,
-                                                notifications
+                                                    !automaticallyAccept
                                             }
                                         });
                                     }}
@@ -182,18 +171,10 @@ export default class LightningAddressSettings extends React.Component<
                                             value
                                     });
                                     await updateSettings({
-                                        lightningAddress: {
-                                            enabled,
-                                            automaticallyAccept,
+                                        lightningAddressGlobal: {
+                                            ...settings.lightningAddressGlobal,
                                             automaticallyAcceptAttestationLevel:
-                                                value,
-                                            automaticallyRequestOlympusChannels:
-                                                false, // deprecated
-                                            routeHints,
-                                            allowComments,
-                                            nostrPrivateKey,
-                                            nostrRelays,
-                                            notifications
+                                                value
                                         }
                                     });
                                 }}
@@ -236,17 +217,9 @@ export default class LightningAddressSettings extends React.Component<
                                             routeHints: !routeHints
                                         });
                                         await updateSettings({
-                                            lightningAddress: {
-                                                enabled,
-                                                automaticallyAccept,
-                                                automaticallyAcceptAttestationLevel,
-                                                automaticallyRequestOlympusChannels:
-                                                    false, // deprecated
-                                                routeHints: !routeHints,
-                                                allowComments,
-                                                nostrPrivateKey,
-                                                nostrRelays,
-                                                notifications
+                                            lightningAddressGlobal: {
+                                                ...settings.lightningAddressGlobal,
+                                                routeHints: !routeHints
                                             }
                                         });
                                     }}
@@ -287,18 +260,10 @@ export default class LightningAddressSettings extends React.Component<
                                                         !allowComments
                                                 });
                                                 await updateSettings({
-                                                    lightningAddress: {
-                                                        enabled,
-                                                        automaticallyAccept,
-                                                        automaticallyAcceptAttestationLevel,
-                                                        automaticallyRequestOlympusChannels:
-                                                            false, // deprecated
-                                                        routeHints,
+                                                    lightningAddressGlobal: {
+                                                        ...settings.lightningAddressGlobal,
                                                         allowComments:
-                                                            !allowComments,
-                                                        nostrPrivateKey,
-                                                        nostrRelays,
-                                                        notifications
+                                                            !allowComments
                                                     }
                                                 });
                                             });
@@ -322,16 +287,8 @@ export default class LightningAddressSettings extends React.Component<
                                                 notifications: value
                                             });
                                             await updateSettings({
-                                                lightningAddress: {
-                                                    enabled,
-                                                    automaticallyAccept,
-                                                    automaticallyAcceptAttestationLevel,
-                                                    automaticallyRequestOlympusChannels:
-                                                        false, // deprecated
-                                                    routeHints,
-                                                    allowComments,
-                                                    nostrPrivateKey,
-                                                    nostrRelays,
+                                                lightningAddressGlobal: {
+                                                    ...settings.lightningAddressGlobal,
                                                     notifications: value
                                                 }
                                             });
