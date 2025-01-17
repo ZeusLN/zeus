@@ -12,6 +12,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -22,6 +23,7 @@ interface ActivityFilterProps {
     navigation: StackNavigationProp<any, any>;
     ActivityStore: ActivityStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface ActivityFilterState {
@@ -31,7 +33,7 @@ interface ActivityFilterState {
     workingEndDate: any;
 }
 
-@inject('ActivityStore', 'SettingsStore')
+@inject('ActivityStore', 'SettingsStore', 'NodeInfoStore')
 @observer
 export default class ActivityFilter extends React.Component<
     ActivityFilterProps,
@@ -229,7 +231,10 @@ export default class ActivityFilter extends React.Component<
                 value: zeusPay,
                 var: 'zeusPay',
                 type: 'Toggle',
-                condition: SettingsStore.settings.lightningAddress.enabled
+                condition:
+                    SettingsStore.settings.lightningAddressByPubkey[
+                        this.props.NodeInfoStore.nodeInfo.identity_pubkey
+                    ]?.enabled
             },
             {
                 label: localeString('general.unconfirmed'),

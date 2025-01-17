@@ -50,6 +50,7 @@ import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import MigrationUtils from '../../utils/MigrationUtils';
 
 import Storage from '../../storage';
 
@@ -341,7 +342,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             rescan,
             compactDb,
             recovery,
-            lightningAddress,
             embeddedTor,
             initialLoad
         } = settings;
@@ -413,6 +413,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
             await NodeInfoStore.getNodeInfo();
+
+            const didMigrate =
+                await MigrationUtils.migrateLightningAddressSettings();
+            if (didMigrate) {
+                await SettingsStore.getSettings();
+            }
+
             NodeInfoStore.getNetworkInfo();
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
@@ -466,6 +473,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 try {
                     await BackendUtils.checkPerms();
                     await NodeInfoStore.getNodeInfo();
+
+                    const didMigrate =
+                        await MigrationUtils.migrateLightningAddressSettings();
+                    if (didMigrate) {
+                        await SettingsStore.getSettings();
+                    }
+
                     if (BackendUtils.supportsAccounts())
                         await UTXOsStore.listAccounts();
                     await BalanceStore.getCombinedBalance();
@@ -492,6 +506,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
+
+                const didMigrate =
+                    await MigrationUtils.migrateLightningAddressSettings();
+                if (didMigrate) {
+                    await SettingsStore.getSettings();
+                }
+
                 if (BackendUtils.supportsAccounts()) {
                     UTXOsStore.listAccounts();
                 }
@@ -505,23 +526,30 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
+        if (BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet) {
+            this.handlePubkeySpecificLightningAddressSettings();
+        }
+
         if (
-            lightningAddress.enabled &&
+            SettingsStore.settings.lightningAddressByPubkey?.[
+                NodeInfoStore.nodeInfo.identity_pubkey
+            ]?.enabled &&
             BackendUtils.supportsCustomPreimages() &&
             !NodeInfoStore.testnet
         ) {
             if (connecting) {
                 try {
                     await LightningAddressStore.status();
-
-                    if (lightningAddress.automaticallyAccept) {
+                    if (
+                        SettingsStore.settings.lightningAddressGlobal
+                            .automaticallyAccept
+                    ) {
                         LightningAddressStore.prepareToAutomaticallyAccept();
                     }
-
                     if (
                         // TODO add enum
-                        SettingsStore.settings.lightningAddress
-                            ?.notifications === 1
+                        SettingsStore.settings.lightningAddressGlobal
+                            .notifications === 1
                     ) {
                         LightningAddressStore.updatePushCredentials();
                     }
@@ -572,6 +600,27 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const { navigation } = this.props;
         if (event.url) {
             LinkingUtils.handleDeepLink(event.url, navigation);
+        }
+    };
+
+    private handlePubkeySpecificLightningAddressSettings = async () => {
+        const { LightningAddressStore, NodeInfoStore, SettingsStore } =
+            this.props;
+        const currentPubkey = NodeInfoStore.nodeInfo.identity_pubkey;
+
+        if (!SettingsStore.settings.lightningAddressByPubkey?.[currentPubkey]) {
+            const hasLightningAddress =
+                await LightningAddressStore.checkLightningAddressExists();
+            await SettingsStore.updateSettings({
+                lightningAddressByPubkey: {
+                    ...SettingsStore.settings.lightningAddressByPubkey,
+                    [currentPubkey]: {
+                        enabled: hasLightningAddress === true,
+                        nostrPrivateKey: ''
+                    }
+                }
+            });
+            SettingsStore.getSettings();
         }
     };
 

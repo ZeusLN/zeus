@@ -23,6 +23,7 @@ import {
 import { Row } from '../../../components/layout/Row';
 
 import SettingsStore from '../../../stores/SettingsStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
@@ -36,6 +37,7 @@ import Edit from '../../../assets/images/SVG/Pen.svg';
 interface NostrKeyProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     LightningAddressStore: LightningAddressStore;
     route: Route<'NostrKey', { setup: boolean; nostrPrivateKey: string }>;
 }
@@ -51,7 +53,7 @@ interface NostrKeyState {
     revealSensitive: boolean;
 }
 
-@inject('SettingsStore', 'LightningAddressStore')
+@inject('SettingsStore', 'NodeInfoStore', 'LightningAddressStore')
 @observer
 export default class NostrKey extends React.Component<
     NostrKeyProps,
@@ -89,7 +91,10 @@ export default class NostrKey extends React.Component<
         const setup = route.params?.setup;
         const nostrPrivateKey =
             route.params?.nostrPrivateKey ??
-            (settings?.lightningAddress?.nostrPrivateKey || '');
+            (settings?.lightningAddressByPubkey[
+                this.props.NodeInfoStore.nodeInfo.identity_pubkey
+            ]?.nostrPrivateKey ||
+                '');
 
         let nostrPublicKey, nostrNsec, nostrNpub;
         if (nostrPrivateKey) {
@@ -111,7 +116,12 @@ export default class NostrKey extends React.Component<
     }
 
     render() {
-        const { navigation, LightningAddressStore, SettingsStore } = this.props;
+        const {
+            navigation,
+            LightningAddressStore,
+            SettingsStore,
+            NodeInfoStore
+        } = this.props;
         const {
             existingNostrPrivateKey,
             nostrPrivateKey,
@@ -348,7 +358,8 @@ export default class NostrKey extends React.Component<
                                                 );
                                             } else {
                                                 const relays =
-                                                    settings.lightningAddress
+                                                    settings
+                                                        .lightningAddressGlobal
                                                         .nostrRelays;
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
@@ -376,10 +387,15 @@ export default class NostrKey extends React.Component<
                                                             editMode: false
                                                         });
                                                         await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
-                                                                nostrPrivateKey
-                                                            }
+                                                            lightningAddressByPubkey:
+                                                                {
+                                                                    [NodeInfoStore
+                                                                        .nodeInfo
+                                                                        .identity_pubkey]:
+                                                                        {
+                                                                            nostrPrivateKey
+                                                                        }
+                                                                }
                                                         });
                                                     });
                                                 } catch (e) {}

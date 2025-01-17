@@ -14,6 +14,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -506,7 +507,8 @@ export default class WalletConfiguration extends React.Component<
             adminMacaroon,
             embeddedLndNetwork,
             photo,
-            nostrWalletConnectUrl
+            nostrWalletConnectUrl,
+            uuid: uuidv4()
         };
 
         let nodes: Node[];
@@ -626,6 +628,7 @@ export default class WalletConfiguration extends React.Component<
         const { index } = this.state;
         const { nodes } = settings;
 
+        const deletedNode = nodes![index!];
         const newNodes: any = [];
         for (let i = 0; nodes && i < nodes.length; i++) {
             if (index !== i) {
@@ -636,7 +639,17 @@ export default class WalletConfiguration extends React.Component<
         updateSettings({
             nodes: newNodes,
             selectedNode: this.getNewSelectedNodeIndex(index, settings)
-        }).then(() => {
+        }).then(async () => {
+            // Remove UUID from migration todo list if it's on there
+            const MOD_KEY9 = 'lightning-address-pubkey-2025';
+            const uuidArray = (await Storage.getItem(MOD_KEY9)) || [];
+            if (uuidArray.includes(deletedNode.uuid)) {
+                const remainingUuids = uuidArray.filter(
+                    (uuid: string) => uuid !== deletedNode.uuid
+                );
+                await Storage.setItem(MOD_KEY9, remainingUuids);
+            }
+
             if (newNodes.length === 0) {
                 navigation.navigate('IntroSplash');
             } else {

@@ -68,7 +68,7 @@ export default class NostrRelays extends React.Component<
             setup,
             relays: relays
                 ? relays
-                : settings.lightningAddress.nostrRelays || []
+                : settings.lightningAddressGlobal.nostrRelays || []
         });
     }
 
@@ -201,11 +201,11 @@ export default class NostrRelays extends React.Component<
                                                             addRelay: ''
                                                         });
                                                         await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
-                                                                nostrRelays:
-                                                                    newNostrRelays
-                                                            }
+                                                            lightningAddressGlobal:
+                                                                {
+                                                                    nostrRelays:
+                                                                        newNostrRelays
+                                                                }
                                                         });
                                                     });
                                                 } catch (e) {}
@@ -286,10 +286,10 @@ export default class NostrRelays extends React.Component<
                                                                         );
                                                                         await updateSettings(
                                                                             {
-                                                                                lightningAddress:
+                                                                                lightningAddressGlobal:
                                                                                     {
-                                                                                        ...settings.lightningAddress,
-                                                                                        relays: newNostrRelays
+                                                                                        nostrRelays:
+                                                                                            newNostrRelays
                                                                                     }
                                                                             }
                                                                         );

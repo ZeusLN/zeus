@@ -34,6 +34,7 @@ export interface Node {
     nickname?: string;
     dismissCustodialWarning: boolean;
     photo?: string;
+    uuid?: string;
     // LNC
     pairingPhrase?: string;
     mailboxServer?: string;
@@ -110,7 +111,7 @@ interface ChannelsSettings {
     simpleTaprootChannel: boolean;
 }
 
-interface LightningAddressSettings {
+interface LegacyLightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
     automaticallyAcceptAttestationLevel: number;
@@ -120,6 +121,24 @@ interface LightningAddressSettings {
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
     notifications: number;
+}
+
+interface GlobalLightningAddressSettings {
+    automaticallyAccept: boolean;
+    automaticallyAcceptAttestationLevel: number;
+    routeHints: boolean;
+    allowComments: boolean;
+    nostrRelays: Array<string>;
+    notifications: number;
+}
+
+interface NodeSpecificLightningAddressSettings {
+    enabled: boolean;
+    nostrPrivateKey: string;
+}
+
+interface PubkeyLightningAddressMap {
+    [pubkey: string]: NodeSpecificLightningAddressSettings;
 }
 
 interface Bolt12AddressSettings {
@@ -183,7 +202,9 @@ export interface Settings {
     lsps1Token: string;
     lsps1ShowPurchaseButton: boolean;
     // Lightning Address
-    lightningAddress: LightningAddressSettings;
+    lightningAddress?: LegacyLightningAddressSettings;
+    lightningAddressGlobal: GlobalLightningAddressSettings;
+    lightningAddressByPubkey: PubkeyLightningAddressMap;
     bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
 }
@@ -1204,17 +1225,17 @@ export default class SettingsStore {
         lsps1Token: '',
         lsps1ShowPurchaseButton: true,
         // Lightning Address
-        lightningAddress: {
-            enabled: false,
+        lightningAddressGlobal: {
             automaticallyAccept: true,
             automaticallyAcceptAttestationLevel: 2,
-            automaticallyRequestOlympusChannels: false, // deprecated
             routeHints: false,
             allowComments: true,
-            nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0
         },
+        // lightningAddressByPubkey settings will be added
+        // for each node's pubkey when connecting to that node.
+        lightningAddressByPubkey: {},
         bolt12Address: {
             localPart: ''
         },
@@ -1227,6 +1248,7 @@ export default class SettingsStore {
     @observable olympians: Array<any>;
     @observable gods: Array<any>;
     @observable mortals: Array<any>;
+    @observable public currentNodeUuid: string | undefined;
     @observable host: string;
     @observable port: string;
     @observable url: string;
@@ -1239,6 +1261,9 @@ export default class SettingsStore {
     @observable public connecting = true;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
+    @observable private isMigrating = false;
+    @observable public migrationPromise: Promise<void> | null = null;
+    private migrationResolve: (() => void) | null = null;
     // LNDHub
     @observable username: string;
     @observable password: string;
@@ -1392,6 +1417,14 @@ export default class SettingsStore {
         return this.macaroonHex || this.accessKey ? true : false;
     }
 
+    private initMigrationPromise() {
+        if (!this.migrationPromise) {
+            this.migrationPromise = new Promise((resolve) => {
+                this.migrationResolve = resolve;
+            });
+        }
+    }
+
     public async getSettings(silentUpdate: boolean = false) {
         if (!silentUpdate) this.loading = true;
         try {
@@ -1400,7 +1433,10 @@ export default class SettingsStore {
             if (modernSettings) {
                 console.log('attempting to load modern settings');
                 this.settings = JSON.parse(modernSettings);
-            } else {
+            } else if (!this.isMigrating) {
+                this.isMigrating = true;
+                this.initMigrationPromise();
+
                 console.log('attempting to load legacy settings');
 
                 // Retrieve the settings
@@ -1421,6 +1457,9 @@ export default class SettingsStore {
                 } else {
                     console.log('No legacy settings stored');
                 }
+
+                if (this.migrationResolve) this.migrationResolve();
+                this.isMigrating = false;
             }
 
             runInAction(() => {
@@ -1428,6 +1467,7 @@ export default class SettingsStore {
                     this.settings?.nodes?.length &&
                     this.settings?.nodes[this.settings.selectedNode || 0];
                 if (node) {
+                    this.currentNodeUuid = node.uuid;
                     this.host = node.host;
                     this.port = node.port;
                     this.url = node.url;
