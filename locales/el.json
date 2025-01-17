@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "Εάν καθοριστεί, τα κεφάλαια του καναλιού σας θα αποστέλλονται σε αυτή την εξωτερική διεύθυνση, αντί για μια διεύθυνση στο εσωτερικό πορτοφόλι.",
     "views.Channel.forceClose": "Αναγκαστικό κλείσιμο",
     "views.Channel.confirmClose": "Επιβεβαίωση κλεισίματος καναλιού",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCIDs",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
