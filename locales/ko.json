@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "강제 폐쇄",
     "views.Channel.confirmClose": "채널 닫기 확인",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "별칭 SCID",
     "views.Channel.aliasScids": "별칭 SCID",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
