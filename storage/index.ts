@@ -17,6 +17,11 @@ class Storage {
         );
         return response;
     };
+
+    removeItem = async (key: string) => {
+        const response = await Keychain.resetInternetCredentials(key);
+        return response;
+    };
 }
 
 const storage = new Storage();

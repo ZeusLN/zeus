@@ -19,7 +19,7 @@ import {
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
     DEFAULT_SLIDE_TO_PAY_THRESHOLD,
-    MODERN_STORAGE_KEY,
+    STORAGE_KEY,
     LEGACY_CURRENCY_CODES_KEY,
     CURRENCY_CODES_KEY
 } from '../stores/SettingsStore';
@@ -60,6 +60,8 @@ import {
 } from '../stores/UTXOsStore';
 
 import { LEGACY_LSPS1_ORDERS_KEY, LSPS1_ORDERS_KEY } from '../stores/LSPStore';
+
+import { LNC_STORAGE_KEY, hash } from '../backends/LNC/credentialStore';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
@@ -273,10 +275,7 @@ class MigrationsUtils {
     public async storageMigrationV2(settings: any) {
         // Settings migration
         console.log('Attemping settings migration');
-        const writeSuccess = await Storage.setItem(
-            MODERN_STORAGE_KEY,
-            settings
-        );
+        const writeSuccess = await Storage.setItem(STORAGE_KEY, settings);
         console.log('Settings migration status', writeSuccess);
 
         // Contacts migration
@@ -533,6 +532,42 @@ class MigrationsUtils {
         } catch (error) {
             console.error(
                 'Error loading LSPS1 orders from encrypted storage',
+                error
+            );
+        }
+
+        // LNC migrations
+        try {
+            settings?.nodes.forEach(async (node: any) => {
+                if (node.implementation === 'lightning-node-connect') {
+                    const baseKey = `${LNC_STORAGE_KEY}:${hash(
+                        node.pairingPhrase
+                    )}`;
+                    const hostKey = `${baseKey}:host`;
+
+                    const baseKeyData: string =
+                        (await EncryptedStorage.getItem(baseKey)) || '{}';
+
+                    console.log('Attemping LNC base key migration', baseKey);
+                    const writeSuccess1 = await Storage.setItem(
+                        baseKey,
+                        JSON.parse(baseKeyData)
+                    );
+                    console.log('LNC base key migration status', writeSuccess1);
+
+                    const hostKeyData = await EncryptedStorage.getItem(hostKey);
+
+                    console.log('Attemping LNC host key migration', baseKey);
+                    const writeSuccess2 = await Storage.setItem(
+                        hostKey,
+                        hostKeyData
+                    );
+                    console.log('LNC host key migration status', writeSuccess2);
+                }
+            });
+        } catch (error) {
+            console.error(
+                'Error loading LNC data from encrypted storage',
                 error
             );
         }

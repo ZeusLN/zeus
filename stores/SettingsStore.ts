@@ -16,7 +16,7 @@ import Storage from '../storage';
 import LoginRequest from '../models/LoginRequest';
 
 const LEGACY_STORAGE_KEY = 'zeus-settings';
-export const MODERN_STORAGE_KEY = 'zeus-settings-v2';
+export const STORAGE_KEY = 'zeus-settings-v2';
 
 export const LEGACY_CURRENCY_CODES_KEY = 'currency-codes';
 export const CURRENCY_CODES_KEY = 'zeus-currency-codes';
@@ -1395,9 +1395,7 @@ export default class SettingsStore {
     public async getSettings(silentUpdate: boolean = false) {
         if (!silentUpdate) this.loading = true;
         try {
-            const modernSettings: any = await Storage.getItem(
-                MODERN_STORAGE_KEY
-            );
+            const modernSettings: any = await Storage.getItem(STORAGE_KEY);
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
@@ -1421,13 +1419,13 @@ export default class SettingsStore {
 
                     await MigrationsUtils.storageMigrationV2(newSettings);
                 } else {
-                    console.log('No settings stored');
+                    console.log('No legacy settings stored');
                 }
             }
 
             const node: any =
-                this.settings.nodes?.length &&
-                this.settings.nodes[this.settings.selectedNode || 0];
+                this.settings?.nodes?.length &&
+                this.settings?.nodes[this.settings.selectedNode || 0];
             if (node) {
                 this.host = node.host;
                 this.port = node.port;
@@ -1462,9 +1460,9 @@ export default class SettingsStore {
     }
 
     @action
-    public async setSettings(settings: string) {
+    public async setSettings(settings: any) {
         this.loading = true;
-        await EncryptedStorage.setItem(LEGACY_STORAGE_KEY, settings);
+        await Storage.setItem(STORAGE_KEY, settings);
         this.loading = false;
         return settings;
     }
@@ -1477,7 +1475,7 @@ export default class SettingsStore {
             ...newSetting
         };
 
-        await this.setSettings(JSON.stringify(newSettings));
+        await this.setSettings(newSettings);
         // ensure we get the enhanced settings set
         const settings = await this.getSettings(true);
         return settings;
@@ -1651,7 +1649,7 @@ export default class SettingsStore {
     public checkBiometricsStatus = async () => {
         const biometryType = await getSupportedBiometryType();
         if (this.settings.supportedBiometryType !== biometryType) {
-            this.updateSettings({
+            await this.updateSettings({
                 supportedBiometryType: biometryType
             });
         }
