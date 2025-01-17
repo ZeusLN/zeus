@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "Dacă este specificat, fondurile canalului dvs. vor fi trimise la această adresă externă, în loc de o adresă din portofelul intern.",
     "views.Channel.forceClose": "Forțare Închidere",
     "views.Channel.confirmClose": "Confirmă Închidere Canal",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias-uri SCID",
     "views.Channel.peerAliasScid": "Peer Alias ​​SCID",
