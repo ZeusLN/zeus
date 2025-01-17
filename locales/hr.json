@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "Prisilno zatvori",
     "views.Channel.confirmClose": "Potvrdi zatvaranje kanala",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCID-ovi",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
