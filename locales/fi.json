@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "Jos tämä on määritetty, kanavasi varat lähetetään tähän ulkoiseen osoitteeseen sisäisen lompakon osoitteen sijasta.",
     "views.Channel.forceClose": "Sulje väkisin",
     "views.Channel.confirmClose": "Vahvista kanavan sulkeminen",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCID:t",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
