@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "סגירה כפויה",
     "views.Channel.confirmClose": "אישור סגירת ערוץ",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "כינוי SCID",
     "views.Channel.aliasScids": "כינויי SCID",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
