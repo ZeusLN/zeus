@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "Falls angegeben, wird dein Kanal-Guthaben an diese externe Adresse gesendet, anstatt an eine Adresse der internen Wallet.",
     "views.Channel.forceClose": "Force-Close",
     "views.Channel.confirmClose": "Kanalschließung bestätigen",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCIDs",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
