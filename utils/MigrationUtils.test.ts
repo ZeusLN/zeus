@@ -52,7 +52,7 @@ jest.mock('../stores/SettingsStore', () => ({
         'wss://nostr.lnproxy.org'
     ],
     DEFAULT_SLIDE_TO_PAY_THRESHOLD: 10000,
-    MODERN_STORAGE_KEY: 'zeus-settings-v2',
+    STORAGE_KEY: 'zeus-settings-v2',
     LEGACY_CURRENCY_CODES_KEY: 'currency-codes',
     CURRENCY_CODES_KEY: 'zeus-currency-codes',
     PosEnabled: {

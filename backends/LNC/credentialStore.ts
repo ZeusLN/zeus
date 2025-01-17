@@ -1,18 +1,18 @@
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Storage from '../../storage';
 import { CredentialStore } from '../../zeus_modules/@lightninglabs/lnc-rn';
 import hashjs from 'hash.js';
 
-const STORAGE_KEY = 'lnc-rn';
+const LNC_STORAGE_KEY = 'lnc-rn';
 
 const hash = (stringToHash: string) =>
     hashjs.sha256().update(stringToHash).digest('hex');
 
 /**
- * A wrapper around `EncryptedStorage` used to store sensitive data required
+ * A wrapper around `Storage` used to store sensitive data required
  * by LNC to reconnect after the initial pairing process has been completed.
  */
 export default class LncCredentialStore implements CredentialStore {
-    // the data to store in EncryptedStorage
+    // the data to store in Storage
     private persisted = {
         serverHost: '',
         localKey: '',
@@ -44,28 +44,22 @@ export default class LncCredentialStore implements CredentialStore {
 
     private async _migrateServerHost() {
         try {
-            const baseKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
+            const baseKey = `${LNC_STORAGE_KEY}:${hash(this._pairingPhrase)}`;
             const hostKey = `${baseKey}:host`;
-            const hasNewFormat = await EncryptedStorage.getItem(hostKey);
+            const hasNewFormat = await Storage.getItem(hostKey);
 
             // Only migrate if new format doesn't exist yet
             if (!hasNewFormat) {
-                const oldData = await EncryptedStorage.getItem(baseKey);
+                const oldData = await Storage.getItem(baseKey);
 
                 if (oldData) {
                     const parsed = JSON.parse(oldData);
                     if (parsed.serverHost) {
-                        await EncryptedStorage.setItem(
-                            hostKey,
-                            parsed.serverHost
-                        );
+                        await Storage.setItem(hostKey, parsed.serverHost);
 
                         // Remove serverHost from old format
                         delete parsed.serverHost;
-                        await EncryptedStorage.setItem(
-                            baseKey,
-                            JSON.stringify(parsed)
-                        );
+                        await Storage.setItem(baseKey, parsed);
                     }
                 }
             }
@@ -81,7 +75,8 @@ export default class LncCredentialStore implements CredentialStore {
 
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */
     get serverHost() {
-        return this.persisted.serverHost;
+        // strip string of quotation marks thay may have been added during migrations
+        return this.persisted.serverHost.replace(/['"]+/g, '');
     }
 
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */
@@ -136,9 +131,9 @@ export default class LncCredentialStore implements CredentialStore {
 
     /** Clears any persisted data in the store */
     clear() {
-        const baseKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
-        EncryptedStorage.removeItem(baseKey);
-        EncryptedStorage.removeItem(`${baseKey}:host`);
+        const baseKey = `${LNC_STORAGE_KEY}:${hash(this._pairingPhrase)}`;
+        Storage.removeItem(baseKey);
+        Storage.removeItem(`${baseKey}:host`);
         this.persisted = {
             serverHost: this.persisted.serverHost,
             localKey: '',
@@ -150,15 +145,15 @@ export default class LncCredentialStore implements CredentialStore {
         this._pairingPhrase = '';
     }
 
-    /** Loads persisted data from EncryptedStorage */
+    /** Loads persisted data from Storage */
     async load(pairingPhrase?: string) {
         // only load if pairingPhrase is set
         if (!pairingPhrase) return;
         try {
-            const baseKey = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
+            const baseKey = `${LNC_STORAGE_KEY}:${hash(pairingPhrase)}`;
             const hostKey = `${baseKey}:host`;
-            const json = await EncryptedStorage.getItem(baseKey);
-            const serverHost = await EncryptedStorage.getItem(hostKey);
+            const json = await Storage.getItem(baseKey);
+            const serverHost = await Storage.getItem(hostKey);
             if (json) {
                 this.persisted = JSON.parse(json);
                 if (serverHost) {
@@ -179,18 +174,18 @@ export default class LncCredentialStore implements CredentialStore {
     //
 
     private _saveServerHost() {
-        const hostKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}:host`;
-        EncryptedStorage.setItem(hostKey, this.persisted.serverHost);
+        const hostKey = `${LNC_STORAGE_KEY}:${hash(this._pairingPhrase)}:host`;
+        Storage.setItem(hostKey, this.persisted.serverHost);
     }
 
-    /** Saves persisted data to EncryptedStorage */
+    /** Saves persisted data to Storage */
     private _save() {
         // only save if localKey and remoteKey is set
         if (!this._localKey) return;
         if (!this._remoteKey) return;
-        const baseKey = `${STORAGE_KEY}:${hash(this._pairingPhrase)}`;
-        EncryptedStorage.setItem(baseKey, JSON.stringify(this.persisted));
+        const baseKey = `${LNC_STORAGE_KEY}:${hash(this._pairingPhrase)}`;
+        Storage.setItem(baseKey, this.persisted);
     }
 }
 
-export { STORAGE_KEY, hash };
+export { LNC_STORAGE_KEY, hash };
