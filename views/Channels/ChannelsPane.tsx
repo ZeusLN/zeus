@@ -43,17 +43,17 @@ import Channel from '../../models/Channel';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
-    Good = 'Good',
-    Stable = 'Stable',
-    Unstable = 'Unstable',
-    Offline = 'Offline',
-    Opening = 'Opening',
-    Closing = 'Closing'
+    Good = localeString('channel.status.good'),
+    Stable = localeString('channel.status.stable'),
+    Unstable = localeString('channel.status.unstable'),
+    Offline = localeString('channel.status.offline'),
+    Opening = localeString('channel.status.opening'),
+    Closing = localeString('channel.status.closing')
 }
 
 export enum ExpirationStatus {
-    Expiring = 'Expiring soon',
-    Expired = 'Expired'
+    Expiring = localeString('channel.expirationStatus.expiring'),
+    Expired = localeString('channel.expirationStatus.expired')
 }
 
 interface ChannelsProps {
