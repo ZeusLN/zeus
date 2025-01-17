@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "Принудительное закрытие",
     "views.Channel.confirmClose": "Подтвердить Закрытие Канала",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Псевдоним SCID",
     "views.Channel.aliasScids": "Псевдонимы SCID",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
