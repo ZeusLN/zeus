@@ -25,6 +25,7 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
+import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
@@ -43,9 +44,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import ContactStore from '../../stores/ContactStore';
 
-// @ts-ignore:next-line
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import Edit from '../../assets/images/SVG/Edit.svg';
-// @ts-ignore:next-line
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 
 interface ChannelProps {
@@ -62,6 +63,7 @@ interface ChannelState {
     satPerByte: string;
     forceCloseChannel: boolean;
     deliveryAddress: string;
+    aliasToggle: boolean;
     channel: Channel;
 }
 
@@ -82,6 +84,7 @@ export default class ChannelView extends React.Component<
             satPerByte: '',
             forceCloseChannel: false,
             deliveryAddress: '',
+            aliasToggle: false,
             channel
         };
 
@@ -218,7 +221,8 @@ export default class ChannelView extends React.Component<
             confirmCloseChannel,
             satPerByte,
             forceCloseChannel,
-            deliveryAddress
+            deliveryAddress,
+            aliasToggle
         } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
@@ -283,6 +287,14 @@ export default class ChannelView extends React.Component<
         );
 
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
+
+        const showAliasScids =
+            !!alias_scids &&
+            alias_scids.length > 0 &&
+            !(
+                alias_scids.length === 1 &&
+                alias_scids[0].toString() === channelId
+            );
 
         const EditFees = () => (
             <TouchableOpacity
@@ -405,35 +417,71 @@ export default class ChannelView extends React.Component<
                             value={shortChannelId}
                         />
                     )}
-                    {!!alias_scids &&
-                        alias_scids.length > 0 &&
-                        // hide if single SCID that matches channel ID
-                        !(
-                            alias_scids.length === 1 &&
-                            alias_scids[0].toString() === channelId
-                        ) && (
-                            <KeyValue
-                                keyValue={
-                                    alias_scids.length > 1
-                                        ? localeString(
-                                              'views.Channel.aliasScids'
-                                          )
-                                        : localeString(
-                                              'views.Channel.aliasScid'
-                                          )
-                                }
-                                value={PrivacyUtils.sensitiveValue(
-                                    alias_scids.join(', ')
-                                )}
-                            />
-                        )}
-                    {!!peer_scid_alias && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Channel.peerAliasScid'
+
+                    {(!!peer_scid_alias || showAliasScids) && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                this.setState({
+                                    aliasToggle: !aliasToggle
+                                });
+                            }}
+                        >
+                            <View>
+                                <Row justify="space-between">
+                                    <View style={{ width: '95%' }}>
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Channel.aliases'
+                                            )}
+                                        />
+                                    </View>
+                                    {aliasToggle ? (
+                                        <CaretDown
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    ) : (
+                                        <CaretRight
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    )}
+                                </Row>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+
+                    {aliasToggle && (
+                        <>
+                            {showAliasScids && (
+                                <KeyValue
+                                    keyValue={
+                                        alias_scids.length > 1
+                                            ? localeString(
+                                                  'views.Channel.aliasScids'
+                                              )
+                                            : localeString(
+                                                  'views.Channel.aliasScid'
+                                              )
+                                    }
+                                    value={PrivacyUtils.sensitiveValue(
+                                        alias_scids.join(', ')
+                                    )}
+                                />
                             )}
-                            value={PrivacyUtils.sensitiveValue(peer_scid_alias)}
-                        />
+                            {!!peer_scid_alias && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.peerAliasScid'
+                                    )}
+                                    value={PrivacyUtils.sensitiveValue(
+                                        peer_scid_alias
+                                    )}
+                                />
+                            )}
+                        </>
                     )}
                     {zero_conf && (
                         <KeyValue
