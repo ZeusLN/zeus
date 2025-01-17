@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "Kapamaya zorla",
     "views.Channel.confirmClose": "Kanalı kapatmayı onayla",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "SCID Takma adı",
     "views.Channel.aliasScids": "SCID Takma adları",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
