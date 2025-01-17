@@ -83,6 +83,7 @@ interface ChannelState {
         expiresMonths?: number;
         expiresDays?: number;
         maxExtensionInBlocks?: number;
+        expirationBlock?: number;
     };
 }
 
@@ -137,6 +138,8 @@ export default class ChannelView extends React.Component<
                 renewalInfo.max_channel_extension_expiry_blocks;
         }
 
+        const expirationBlock = renewalInfo?.expiration_block;
+
         this.state = {
             confirmCloseChannel: false,
             satPerByte: '',
@@ -148,7 +151,8 @@ export default class ChannelView extends React.Component<
                 expiresInBlocks,
                 expiresDays,
                 expiresMonths,
-                maxExtensionInBlocks
+                maxExtensionInBlocks,
+                expirationBlock
             }
         };
 
@@ -595,7 +599,9 @@ export default class ChannelView extends React.Component<
                                         navigation.navigate('LSPS7', {
                                             chanId: shortChannelId,
                                             maxExtensionInBlocks:
-                                                renewalInfo.maxExtensionInBlocks
+                                                renewalInfo.maxExtensionInBlocks,
+                                            expirationBlock:
+                                                renewalInfo.expirationBlock
                                         });
                                     }}
                                     ViewComponent={LinearGradient}
