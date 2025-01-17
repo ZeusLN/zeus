@@ -59,7 +59,7 @@ export default class LSPS7OrderResponse extends React.Component<
                         {orderResponse?.new_channel_expiry_block && (
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.LSPS7.newChannelExpiryBlock'
+                                    'views.LSPS7.proposedExpirationBlock'
                                 )}
                                 value={numberWithCommas(
                                     orderResponse.new_channel_expiry_block

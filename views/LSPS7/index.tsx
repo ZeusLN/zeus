@@ -49,6 +49,7 @@ interface LSPS7Props {
         {
             chanId: string;
             maxExtensionInBlocks: number;
+            expirationBlock: number;
         }
     >;
 }
@@ -62,6 +63,7 @@ interface LSPS7State {
     advancedSettings: boolean;
     chanId: string;
     maxExtensionInBlocks: number;
+    expirationBlock: number;
 }
 
 @inject(
@@ -79,6 +81,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
 
         const chanId = props?.route.params?.chanId;
         const maxExtensionInBlocks = props?.route.params?.maxExtensionInBlocks;
+        const expirationBlock = props?.route.params?.expirationBlock;
 
         let expirationIndex = 4;
         if (maxExtensionInBlocks === 4380) {
@@ -99,7 +102,8 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
             showInfo: false,
             advancedSettings: false,
             chanId,
-            maxExtensionInBlocks
+            maxExtensionInBlocks,
+            expirationBlock
         };
     }
 
@@ -144,16 +148,19 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     };
 
     render() {
-        const { navigation, LSPStore, InvoicesStore } = this.props;
+        const { navigation, LSPStore, NodeInfoStore, InvoicesStore } =
+            this.props;
         const {
             showInfo,
             advancedSettings,
             channelExtensionBlocks,
             expirationIndex,
             chanId,
-            maxExtensionInBlocks
+            maxExtensionInBlocks,
+            expirationBlock
         } = this.state;
         const { createExtensionOrderResponse } = LSPStore;
+        const { nodeInfo } = NodeInfoStore;
         const result =
             createExtensionOrderResponse?.result ||
             createExtensionOrderResponse;
@@ -269,6 +276,16 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'
             : LSPStore.getLSPSPubkey();
+
+        const proposedNewExpirationBlock = numberWithCommas(
+            new BigNumber(
+                new BigNumber(nodeInfo.currentBlockHeight).gt(expirationBlock)
+                    ? nodeInfo.currentBlockHeight
+                    : expirationBlock
+            )
+                .plus(channelExtensionBlocks)
+                .toNumber()
+        );
 
         return (
             <Screen>
@@ -442,6 +459,38 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                 'views.Channel.scid'
                                             )}
                                             value={chanId}
+                                        />
+
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Sync.currentBlockHeight'
+                                            )}
+                                            value={numberWithCommas(
+                                                nodeInfo.currentBlockHeight
+                                            )}
+                                        />
+
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.LSPS7.expirationBlock'
+                                            )}
+                                            value={numberWithCommas(
+                                                expirationBlock
+                                            )}
+                                        />
+
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.LSPS7.proposedExpirationBlock'
+                                            )}
+                                            value={
+                                                proposedNewExpirationBlock ===
+                                                'NaN'
+                                                    ? localeString(
+                                                          'general.invalid'
+                                                      )
+                                                    : proposedNewExpirationBlock
+                                            }
                                         />
                                     </View>
 
@@ -703,7 +752,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                     };
 
                                                     orderData.clientPubkey =
-                                                        this.props.NodeInfoStore.nodeInfo.nodeId;
+                                                        nodeInfo?.nodeId;
                                                     orderData.peer =
                                                         LSPStore.getLSPSPubkey();
                                                     orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPS1Host()}`;
