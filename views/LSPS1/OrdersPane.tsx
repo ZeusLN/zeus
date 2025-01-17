@@ -108,17 +108,17 @@ export default class OrdersPane extends React.Component<
                     );
 
                     let selectedOrders;
-                    if (BackendUtils.supportsLSPS1customMessage()) {
-                        selectedOrders = decodedResponses.filter(
-                            (response: LSPOrderResponse) =>
-                                response?.uri &&
-                                response.clientPubkey ===
-                                    this.props.NodeInfoStore.nodeInfo.nodeId
-                        );
-                    } else if (BackendUtils.supportsLSPS1rest()) {
+                    if (BackendUtils.supportsLSPS1rest()) {
                         selectedOrders = decodedResponses.filter(
                             (response: LSPOrderResponse) =>
                                 response?.endpoint &&
+                                response.clientPubkey ===
+                                    this.props.NodeInfoStore.nodeInfo.nodeId
+                        );
+                    } else if (BackendUtils.supportsLSPS1customMessage()) {
+                        selectedOrders = decodedResponses.filter(
+                            (response: LSPOrderResponse) =>
+                                response?.uri &&
                                 response.clientPubkey ===
                                     this.props.NodeInfoStore.nodeInfo.nodeId
                         );

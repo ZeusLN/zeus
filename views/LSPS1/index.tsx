@@ -97,12 +97,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
     encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
-    async componentWillUnmount() {
+    async componentDidMount() {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.lsps1GetInfoREST();
-        } else {
+        } else if (BackendUtils.supportsLSPS1customMessage()) {
             console.log('connecting');
             await this.connectPeer();
             console.log('connected');
@@ -1224,7 +1224,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             LSPStore.lsps1CreateOrderREST(
                                                 this.state
                                             );
-                                        } else {
+                                        } else if (
+                                            BackendUtils.supportsLSPS1customMessage()
+                                        ) {
                                             LSPStore.lsps1CreateOrderCustomMessage(
                                                 this.state
                                             );
@@ -1376,7 +1378,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                 onPress={async () => {
                                     if (BackendUtils.supportsLSPS1rest()) {
                                         LSPStore.lsps1GetInfoREST();
-                                    } else {
+                                    } else if (
+                                        BackendUtils.supportsLSPS1customMessage()
+                                    ) {
                                         await this.connectPeer();
                                         await this.subscribeToCustomMessages();
                                         LSPStore.lsps1GetInfoCustomMessage();
