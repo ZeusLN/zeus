@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "Se especificado, os fundos do seu canal serão enviados para este endereço externo, em vez de para um endereço na carteira interna.",
     "views.Channel.forceClose": "Forçar fechamento",
     "views.Channel.confirmClose": "Confirmar Fechamento do Canal",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Pseudônimo SCID",
     "views.Channel.aliasScids": "Pseudônimos SCID",
     "views.Channel.peerAliasScid": "Alias ​​de par SCID",
