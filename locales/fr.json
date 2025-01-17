@@ -422,6 +422,7 @@
     "views.Channel.externalAddress.info": "Si cela est spécifié, les fonds de votre chaîne seront envoyés à cette adresse externe, au lieu d'une adresse dans le portefeuille interne.",
     "views.Channel.forceClose": "Forcer fermeture",
     "views.Channel.confirmClose": "Confirmer fermeture forcée",
+    "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCIDs",
     "views.Channel.peerAliasScid": "Alias ​​de pair SCID",
