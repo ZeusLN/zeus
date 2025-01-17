@@ -716,7 +716,7 @@ export default class LND {
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;
-    supportsLSPS1customMessage = () => false;
+    supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => true;
     supportsOffers = (): Promise<boolean> | boolean => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');

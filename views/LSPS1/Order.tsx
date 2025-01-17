@@ -74,15 +74,17 @@ export default class LSPS1Order extends React.Component<
                         temporaryOrder = parsedOrder;
                         console.log('Order found in storage->', temporaryOrder);
 
-                        BackendUtils.supportsLSPS1rest()
-                            ? LSPStore.lsps1GetOrderREST(
-                                  id,
-                                  temporaryOrder?.endpoint
-                              )
-                            : LSPStore.lsps1GetOrderCustomMessage(
-                                  id,
-                                  temporaryOrder?.peer
-                              );
+                        if (BackendUtils.supportsLSPS1rest()) {
+                            LSPStore.lsps1GetOrderREST(
+                                id,
+                                temporaryOrder?.endpoint
+                            );
+                        } else if (BackendUtils.supportsLSPS1customMessage()) {
+                            LSPStore.lsps1GetOrderCustomMessage(
+                                id,
+                                temporaryOrder?.peer
+                            );
+                        }
 
                         setTimeout(() => {
                             if (LSPStore.error && LSPStore.error_msg !== '') {
