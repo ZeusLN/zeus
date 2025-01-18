@@ -526,7 +526,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (BackendUtils.supportsCustomPreimages() && !NodeInfoStore.testnet) {
+        if (
+            connecting &&
+            BackendUtils.supportsCustomPreimages() &&
+            !NodeInfoStore.testnet
+        ) {
             this.handlePubkeySpecificLightningAddressSettings();
         }
 
