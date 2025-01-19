@@ -325,11 +325,21 @@ export default class LightningAddressStore {
                                     .then(async (response: any) => {
                                         const data = response.json();
                                         const status = response.info().status;
-                                        const { handle, created_at, success } =
-                                            data;
+                                        const {
+                                            handle,
+                                            domain,
+                                            created_at,
+                                            success
+                                        } = data;
 
                                         if (status === 200 && success) {
                                             if (handle) {
+                                                {
+                                                    this.setLightningAddress(
+                                                        handle,
+                                                        domain
+                                                    );
+                                                }
                                                 await this.settingsStore.updateSettings(
                                                     {
                                                         lightningAddressGlobal:
