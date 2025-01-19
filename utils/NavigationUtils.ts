@@ -14,7 +14,7 @@ const protectedNavigation = async (
 
     if (posEnabled && loginRequired) {
         navigation.navigate('Lockscreen', {
-            attemptAdminLogin: true
+            pendingNavigation: { screen: route, params: routeParams }
         });
     } else {
         if (disactivatePOS) setPosStatus('inactive');
