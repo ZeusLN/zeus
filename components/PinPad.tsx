@@ -15,6 +15,8 @@ import Touchable from './Touchable';
 import Stores from '../stores/Stores';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
+import DeleteKey from '../assets/images/SVG/DeleteKey.svg';
+
 interface PinPadProps {
     appendValue: (newValue: string) => void;
     clearValue: () => void;
@@ -357,17 +359,11 @@ export default function PinPad({
                             highlight={numberHighlight}
                             style={styles.key}
                         >
-                            <Text
-                                style={{
-                                    ...styles.pinPadNumber,
-                                    color: themeColor('text'),
-                                    fontSize: bigKeypadButtons
-                                        ? BIG_SIZE
-                                        : DEFAULT_SIZE
-                                }}
-                            >
-                                {'<'}
-                            </Text>
+                            <DeleteKey
+                                fill={themeColor('text')}
+                                width={bigKeypadButtons ? '50' : '35'}
+                                height={bigKeypadButtons ? '50' : '35'}
+                            />
                         </Touchable>
                     ) : (
                         <Touchable
