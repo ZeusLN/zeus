@@ -12,6 +12,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -52,6 +53,7 @@ interface SeedRecoveryState {
     walletPassword: string;
     adminMacaroon: string;
     embeddedLndNetwork: string;
+    lndDir: string;
     recoveryCipherSeed: string;
     channelBackupsBase64: string;
     errorCreatingWallet: boolean;
@@ -82,6 +84,7 @@ export default class SeedRecovery extends React.PureComponent<
             walletPassword: '',
             adminMacaroon: '',
             embeddedLndNetwork: 'mainnet',
+            lndDir: '',
             recoveryCipherSeed: '',
             channelBackupsBase64: '',
             errorCreatingWallet: false,
@@ -122,7 +125,8 @@ export default class SeedRecovery extends React.PureComponent<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            seedPhrase
+            seedPhrase,
+            lndDir
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -131,7 +135,8 @@ export default class SeedRecovery extends React.PureComponent<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            implementation: 'embedded-lnd'
+            implementation: 'embedded-lnd',
+            lndDir
         };
 
         let nodes: any;
@@ -312,14 +317,15 @@ export default class SeedRecovery extends React.PureComponent<
 
             const recoveryCipherSeed = seedArray.join(' ');
 
+            const lndDir = uuidv4();
+
             try {
-                const response = await createLndWallet(
-                    recoveryCipherSeed,
-                    undefined,
-                    false,
-                    network === 'testnet',
+                const response = await createLndWallet({
+                    lndDir,
+                    seedMnemonic: recoveryCipherSeed,
+                    isTestnet: network === 'testnet',
                     channelBackupsBase64
-                );
+                });
 
                 const { wallet, seed, randomBase64 }: any = response;
 
@@ -329,7 +335,8 @@ export default class SeedRecovery extends React.PureComponent<
                         seedPhrase: seed.cipher_seed_mnemonic,
                         walletPassword: randomBase64,
                         embeddedLndNetwork:
-                            network.charAt(0).toUpperCase() + network.slice(1)
+                            network.charAt(0).toUpperCase() + network.slice(1),
+                        lndDir
                     });
 
                     this.saveWalletConfiguration(recoveryCipherSeed);

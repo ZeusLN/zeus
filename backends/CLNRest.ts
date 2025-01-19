@@ -141,10 +141,10 @@ export default class CLNRest {
                 .join('&')}`;
         }
 
-        const headers: any = this.getHeaders(rune);
+        const headers: any = this.getHeaders(rune || '');
         headers['Content-Type'] = 'application/json';
 
-        const url = this.getURL(host, port, route);
+        const url = this.getURL(host || '', port || '', route);
 
         return this.restReq(
             headers,
