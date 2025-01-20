@@ -16,7 +16,7 @@ import CopyButton from '../../components/CopyButton';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import backendUtils from '../../utils/BackendUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 import SettingsStore, { Implementations } from '../../stores/SettingsStore';
 
@@ -277,7 +277,7 @@ class Command extends React.Component<CommandProps, CommandState> {
         if (this.commandsWithSubItems.includes(this.props.command)) {
             this.setState({ loading: true });
             try {
-                const response = await backendUtils.call('getChannels');
+                const response = await BackendUtils.call('getChannels');
                 const channels = response.channels || [];
                 const subItems = channels.map((channel: any) => ({
                     label: `Channel ${channel.chan_id} (${channel.remote_pubkey})`,
@@ -463,7 +463,7 @@ export default class DeveloperTools extends React.Component<
             error: null
         });
         try {
-            const response = await backendUtils.call(command, param);
+            const response = await BackendUtils.call(command, param);
             this.setState({
                 loading: false,
                 response: JSON.stringify(response, null, 2)
