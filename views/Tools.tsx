@@ -241,9 +241,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </TouchableOpacity>
                     </View>
 
-                    {(BackendUtils.isLNDBased() ||
-                        SettingsStore.implementation === 'cln-rest' ||
-                        SettingsStore.implementation === 'lndhub') && (
+                    {BackendUtils.supportsDevTools() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
