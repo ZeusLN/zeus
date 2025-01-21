@@ -9,7 +9,7 @@ import {
     Text,
     View
 } from 'react-native';
-import { Route, CommonActions } from '@react-navigation/native';
+import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../components/Button';
@@ -84,29 +84,21 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    proceed = (targetScreen?: string, triggerSettingsRefresh: boolean = false) => {
+    proceed = (targetScreen?: string, navigationParams?: any) => {
         const { SettingsStore, navigation } = this.props;
         if (targetScreen) {
-            navigation.popTo(targetScreen, { triggerSettingsRefresh });
+            navigation.popTo(targetScreen, { ...navigationParams });
         } else if (
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
-            navigation.popTo('Wallets', { triggerSettingsRefresh: true });
+            navigation.popTo('Wallets');
         } else {
-            const navigationState = navigation.getState();
-            navigation.dispatch(
-                CommonActions.reset({
-                    ...navigationState,
-                    index: 0,
-                    routes: [
-                        {
-                            ...navigationState.routes[0],
-                            params: { triggerSettingsRefresh }
-                        }
-                    ]
-                })
-            );
+            // Default login flow
+            // Resets navigation stack to previous screen
+            // to prevent back navigation to Lockscreen
+            SettingsStore.triggerSettingsRefresh = true;
+            navigation.pop();
         }
     };
 
@@ -131,8 +123,9 @@ export default class Lockscreen extends React.Component<
             !deletePin &&
             !deleteDuressPin
         ) {
+            // If POS is enabled and active, proceed without authentication
             SettingsStore.setLoginStatus(true);
-            this.proceed('Wallet');
+            this.proceed('Wallet', undefined);
             return;
         }
 
@@ -161,17 +154,6 @@ export default class Lockscreen extends React.Component<
                 );
                 return;
             }
-        }
-
-        if (
-            posEnabled !== PosEnabled.Disabled &&
-            SettingsStore.posStatus === 'active' &&
-            !attemptAdminLogin &&
-            !deletePin &&
-            !deleteDuressPin
-        ) {
-            SettingsStore.setLoginStatus(true);
-            this.proceed('Wallet', true);
         }
 
         if (settings.authenticationAttempts) {
