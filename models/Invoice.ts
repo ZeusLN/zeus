@@ -131,11 +131,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getKeysendMessage(): string | undefined {
-        if (this.htlcs?.[0]?.custom_records?.[keySendMessageType]) {
+        if (
+            this.htlcs?.length > 0 &&
+            this.htlcs?.[0]?.custom_records?.[keySendMessageType]
+        )
             return Base64Utils.base64ToUtf8(
                 this.htlcs[0].custom_records[keySendMessageType]
             );
-        }
         return undefined;
     }
 
@@ -384,7 +386,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getNoteKey(): string {
-        return `note-${this.payment_hash || this.getRPreimage}`;
+        return `note-${this.payment_hash || this.getRPreimage || ''}`;
     }
 
     @computed public get getNote(): string {
