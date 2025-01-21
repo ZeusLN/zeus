@@ -461,12 +461,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             { element: twelveMoButton }
         ];
 
-        const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
+        const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
 
         const flowServiceAvailable =
             SettingsStore.settings?.enableLSP &&
-            BackendUtils.supportsLSPs() &&
-            !lspNotConfigured;
+            BackendUtils.supportsFlowLSP() &&
+            !flowLspNotConfigured;
 
         const isOlympus = LSPStore.isOlympus();
 
