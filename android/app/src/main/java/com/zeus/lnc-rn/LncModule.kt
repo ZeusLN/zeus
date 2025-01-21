@@ -145,4 +145,30 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      gocb.setCallback(::sendEvent)
      Lndmobile.invokeRPC(namespace, eventName, request, gocb)
   }
+
+  @ReactMethod
+  fun createClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, transactionHash: String, pubNonce: String, promise: Promise) {
+     Log.d("createClaimTransaction called", "");
+
+     try {
+         Lndmobile.createClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce)
+         promise.resolve(null)
+     } catch (e: Exception) {
+         val exceptionAsString = e.toString()
+         promise.reject(exceptionAsString)
+     }
+  }
+
+  @ReactMethod
+  fun createReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, isTestnet: Boolean = false, promise: Promise) {
+     Log.d("createReverseClaimTransaction called", "");
+
+     try {
+         Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet)
+         promise.resolve(null)
+     } catch (e: Exception) {
+         val exceptionAsString = e.toString()
+         promise.reject(exceptionAsString)
+     }
+  }
 }
