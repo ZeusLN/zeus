@@ -37,12 +37,11 @@ const handleNotificationPermissionBlocked = (
     callback?: (hasPermission: boolean) => void
 ) => {
     return new Promise<boolean>((resolve) => {
-        stores.modalStore.toggleInfoModal(
-            `${localeString('notifications.permissionNeeded')} ${localeString(
-                'notifications.permissionBlocked'
-            )}`,
-            undefined,
-            [
+        stores.modalStore.toggleInfoModal({
+            text: `${localeString(
+                'notifications.permissionNeeded'
+            )} ${localeString('notifications.permissionBlocked')}`,
+            buttons: [
                 {
                     title: localeString('views.Wallet.MainPane.goToSettings'),
                     callback: async () => {
@@ -66,10 +65,10 @@ const handleNotificationPermissionBlocked = (
                     }
                 }
             ],
-            () => {
+            onDismiss: () => {
                 resolve(false);
             }
-        );
+        });
     });
 };
 

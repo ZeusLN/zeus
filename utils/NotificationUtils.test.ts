@@ -114,7 +114,8 @@ describe('NotificationUtils', () => {
 
             await Promise.resolve();
             expect(toggleInfoModal).toHaveBeenCalled();
-            const modalCallback = toggleInfoModal.mock.calls[0][2][0].callback;
+            const modalCallback =
+                toggleInfoModal.mock.calls[0][0].buttons[0].callback;
             await modalCallback();
 
             const appStateCallback = addEventListener.mock.calls[0][1];
@@ -134,7 +135,7 @@ describe('NotificationUtils', () => {
 
             await Promise.resolve();
             expect(toggleInfoModal).toHaveBeenCalled();
-            const onCloseCallback = toggleInfoModal.mock.calls[0][3];
+            const onCloseCallback = toggleInfoModal.mock.calls[0][0].onDismiss;
             onCloseCallback();
 
             const result = await promise;

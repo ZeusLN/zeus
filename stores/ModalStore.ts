@@ -1,5 +1,12 @@
 import { action, observable } from 'mobx';
 
+interface InfoModalParams {
+    text?: string | Array<string>;
+    link?: string;
+    buttons?: Array<{ title: string; callback?: () => void }>;
+    onDismiss?: () => void;
+}
+
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
@@ -26,18 +33,13 @@ export default class ModalStore {
     };
 
     @action
-    public toggleInfoModal = (
-        text?: string | Array<string>,
-        link?: string,
-        buttons?: Array<{ title: string; callback?: () => void }>,
-        onDismiss?: () => void
-    ) => {
-        this.showInfoModal = text ? true : false;
-        this.infoModalText = text;
-        this.infoModalLink = link;
-        this.infoModalAdditionalButtons = buttons;
-        this.onDismiss = onDismiss;
-        if (!text && onDismiss) onDismiss();
+    public toggleInfoModal = (params?: InfoModalParams) => {
+        this.showInfoModal = !!params?.text;
+        this.infoModalText = params?.text;
+        this.infoModalLink = params?.link;
+        this.infoModalAdditionalButtons = params?.buttons;
+        this.onDismiss = params?.onDismiss;
+        if (!params?.text && params?.onDismiss) params.onDismiss();
     };
 
     @action

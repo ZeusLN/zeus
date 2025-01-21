@@ -132,12 +132,9 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                 <Button
                                     title={localeString('general.close')}
                                     onPress={() => {
-                                        toggleInfoModal(
-                                            undefined,
-                                            undefined,
-                                            undefined,
-                                            ModalStore.onDismiss
-                                        );
+                                        toggleInfoModal({
+                                            onDismiss: ModalStore.onDismiss
+                                        });
                                     }}
                                     secondary
                                 />
