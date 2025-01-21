@@ -422,7 +422,7 @@
     "views.Channel.externalAddress.info": "Bude-li uvedena, prostředky vašeho kanálu budou odeslány na tuto externí adresu namísto adresy v interní peněžence.",
     "views.Channel.forceClose": "Vynutit uzavření",
     "views.Channel.confirmClose": "Potvrdit zavření kanálu",
-    "views.Channel.aliases": "Aliases",
+    "views.Channel.aliases": "Aliasy",
     "views.Channel.aliasScid": "SCID Alias",
     "views.Channel.aliasScids": "Aliasy SCID",
     "views.Channel.peerAliasScid": "SCID Alias peeru",
