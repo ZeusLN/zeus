@@ -22,6 +22,7 @@ import { Row } from '../components/layout/Row';
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -38,6 +39,7 @@ interface SendingLightningProps {
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
+    SettingsStore: SettingsStore;
 }
 
 interface SendingLightningState {
@@ -503,11 +505,11 @@ export default class SendingLightning extends React.Component<
                                         size: 25,
                                         color: themeColor('background')
                                     }}
-                                    onPress={() =>
-                                        navigation.popTo('Wallet', {
-                                            refresh: true
-                                        })
-                                    }
+                                    onPress={() => {
+                                        this.props.SettingsStore.triggerSettingsRefresh =
+                                            true;
+                                        navigation.popTo('Wallet');
+                                    }}
                                     buttonStyle={{ height: 40 }}
                                     titleStyle={{
                                         color: themeColor('background')

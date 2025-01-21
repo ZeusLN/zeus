@@ -96,9 +96,7 @@ export default class SetDuressPin extends React.Component<
 
         await updateSettings({ duressPin }).then(() => {
             getSettings();
-            navigation.popTo('Settings', {
-                refresh: true
-            });
+            navigation.popTo('Settings');
         });
     };
 
