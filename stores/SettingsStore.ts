@@ -1237,6 +1237,7 @@ export default class SettingsStore {
     @observable implementation: Implementations;
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
+    @observable public triggerSettingsRefresh: boolean = false;
     @observable public connecting = true;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
