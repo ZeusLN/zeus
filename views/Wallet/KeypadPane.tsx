@@ -38,7 +38,7 @@ interface KeypadPaneState {
     needInbound: boolean;
     belowMinAmount: boolean;
     overrideBelowMinAmount: boolean;
-    lspNotConfigured: boolean;
+    flowLspNotConfigured: boolean;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'UnitsStore')
@@ -54,7 +54,7 @@ export default class KeypadPane extends React.PureComponent<
         needInbound: false,
         belowMinAmount: false,
         overrideBelowMinAmount: false,
-        lspNotConfigured: true
+        flowLspNotConfigured: true
     };
 
     async UNSAFE_componentWillMount() {
@@ -66,11 +66,11 @@ export default class KeypadPane extends React.PureComponent<
     }
 
     async handleLsp() {
-        const { lspNotConfigured } =
-            this.props.NodeInfoStore!.lspNotConfigured();
+        const { flowLspNotConfigured } =
+            this.props.NodeInfoStore!.flowLspNotConfigured();
 
         this.setState({
-            lspNotConfigured
+            flowLspNotConfigured
         });
     }
 
@@ -126,9 +126,9 @@ export default class KeypadPane extends React.PureComponent<
         let needInbound = false;
         let belowMinAmount = false;
         if (
-            BackendUtils.supportsLSPs() &&
+            BackendUtils.supportsFlowLSP() &&
             this.props.SettingsStore!.settings?.enableLSP &&
-            !this.state.lspNotConfigured &&
+            !this.state.flowLspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore!.totalInbound
@@ -170,9 +170,9 @@ export default class KeypadPane extends React.PureComponent<
         let needInbound = false;
         let belowMinAmount = false;
         if (
-            BackendUtils.supportsLSPs() &&
+            BackendUtils.supportsFlowLSP() &&
             this.props.SettingsStore!.settings?.enableLSP &&
-            !this.state.lspNotConfigured &&
+            !this.state.flowLspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
                 this.props.ChannelsStore!.totalInbound

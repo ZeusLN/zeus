@@ -70,8 +70,8 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
 
         const isTestNet = nodeInfo?.isTestNet;
 
-        const { lspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
-            NodeInfoStore.lspNotConfigured();
+        const { flowLspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
+            NodeInfoStore.flowLspNotConfigured();
 
         const showReset: boolean =
             !enableLSP ||
@@ -96,7 +96,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                     navigation={navigation}
                 />
                 <View style={{ flex: 1 }}>
-                    {lspNotConfigured ? (
+                    {flowLspNotConfigured ? (
                         <>
                             <ListItem containerStyle={styles.listItem}>
                                 <Text style={{ color: themeColor('text') }}>
@@ -348,7 +348,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                         </>
                     )}
                 </View>
-                {!lspNotConfigured && (
+                {!flowLspNotConfigured && (
                     <View style={{ marginBottom: 15 }}>
                         <FlatList
                             data={[
