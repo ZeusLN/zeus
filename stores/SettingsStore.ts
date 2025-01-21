@@ -19,16 +19,27 @@ export interface Node {
     macaroonHex?: string;
     rune?: string;
     accessKey?: string;
-    implementation?: string;
+    implementation?: Implementations;
     certVerification?: boolean;
     enableTor?: boolean;
     nickname?: string;
     dismissCustodialWarning: boolean;
     photo?: string;
+    // LNDHub
+    lndhubUrl?: string;
+    existingAccount?: boolean;
+    username?: string;
+    password?: string;
     // LNC
     pairingPhrase?: string;
     mailboxServer?: string;
     customMailboxServer?: string;
+    // Embedded LND
+    seedPhrase?: string[] | string;
+    walletPassword?: string;
+    adminMacaroon?: string;
+    embeddedLndNetwork?: string;
+    lndDir?: string;
 }
 
 interface PrivacySettings {
@@ -116,7 +127,7 @@ interface Bolt12AddressSettings {
 }
 
 export interface Settings {
-    nodes?: Array<Node>;
+    nodes: Array<Node>;
     selectedNode?: number;
     passphrase?: string;
     duressPassphrase?: string;
@@ -1096,6 +1107,7 @@ const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 export default class SettingsStore {
     @observable settings: Settings = {
+        nodes: [],
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
@@ -1216,22 +1228,22 @@ export default class SettingsStore {
     @observable olympians: Array<any>;
     @observable gods: Array<any>;
     @observable mortals: Array<any>;
-    @observable host: string;
-    @observable port: string;
-    @observable url: string;
-    @observable macaroonHex: string;
-    @observable rune: string;
-    @observable accessKey: string;
+    @observable host?: string;
+    @observable port?: string;
+    @observable url?: string;
+    @observable macaroonHex?: string;
+    @observable rune?: string;
+    @observable accessKey?: string;
     @observable implementation: Implementations;
-    @observable certVerification: boolean | undefined;
+    @observable certVerification?: boolean | undefined;
     @observable public loggedIn = false;
     @observable public connecting = true;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
-    @observable username: string;
-    @observable password: string;
-    @observable lndhubUrl: string;
+    @observable username?: string;
+    @observable password?: string;
+    @observable lndhubUrl?: string;
     @observable dismissCustodialWarning: boolean = false;
     @observable public createAccountError: string;
     @observable public createAccountSuccess: string;
@@ -1240,16 +1252,17 @@ export default class SettingsStore {
     // Tor
     @observable public enableTor: boolean;
     // LNC
-    @observable public pairingPhrase: string;
-    @observable public mailboxServer: string;
-    @observable public customMailboxServer: string;
+    @observable public pairingPhrase?: string;
+    @observable public mailboxServer?: string;
+    @observable public customMailboxServer?: string;
     @observable public error = false;
     @observable public errorMsg: string;
     // Embedded lnd
-    @observable public seedPhrase: Array<string>;
-    @observable public walletPassword: string;
-    @observable public adminMacaroon: string;
-    @observable public embeddedLndNetwork: string;
+    @observable public seedPhrase?: string[] | string;
+    @observable public walletPassword?: string;
+    @observable public adminMacaroon?: string;
+    @observable public embeddedLndNetwork?: string;
+    @observable public lndDir?: string;
     @observable public initialStart: boolean = true;
 
     @action
@@ -1607,9 +1620,8 @@ export default class SettingsStore {
                     this.settings = newSettings;
                 }
 
-                const node: any =
-                    newSettings.nodes?.length &&
-                    newSettings.nodes[newSettings.selectedNode || 0];
+                const node: Node =
+                    newSettings?.nodes[newSettings.selectedNode || 0];
                 if (node) {
                     this.host = node.host;
                     this.port = node.port;
@@ -1623,16 +1635,17 @@ export default class SettingsStore {
                     this.dismissCustodialWarning = node.dismissCustodialWarning;
                     this.implementation = node.implementation || 'lnd';
                     this.certVerification = node.certVerification || false;
-                    this.enableTor = node.enableTor;
+                    this.enableTor = node.enableTor || false;
                     // LNC
                     this.pairingPhrase = node.pairingPhrase;
                     this.mailboxServer = node.mailboxServer;
                     this.customMailboxServer = node.customMailboxServer;
-                    // Embeded lnd
+                    // Embedded lnd
                     this.seedPhrase = node.seedPhrase;
                     this.walletPassword = node.walletPassword;
                     this.adminMacaroon = node.adminMacaroon;
                     this.embeddedLndNetwork = node.embeddedLndNetwork;
+                    this.lndDir = node.lndDir || 'lnd';
                 }
             } else {
                 console.log('No settings stored');

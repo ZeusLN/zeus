@@ -40,8 +40,14 @@ export const checkStatus = async (): Promise<ELndMobileStatusCodes> => {
  * @throws
  * @return string
  */
-export const writeConfig = async (data: string) => {
-    return await LndMobileTools.writeConfig(data);
+export const writeConfig = async ({
+    config,
+    lndDir
+}: {
+    config: string;
+    lndDir: string;
+}) => {
+    return await LndMobileTools.writeConfig(config, lndDir);
 };
 
 export const subscribeState = async () => {
@@ -75,12 +81,23 @@ export const stopLnd = async (): Promise<{ data: string }> => {
 /**
  * @throws
  */
-export const startLnd = async (
-    args?: string,
-    isTorEnabled: boolean = false,
-    isTestnet: boolean = false
-): Promise<{ data: string }> => {
-    return await LndMobile.startLnd(args || '', isTorEnabled, isTestnet);
+export const startLnd = async ({
+    args,
+    lndDir,
+    isTorEnabled = false,
+    isTestnet = false
+}: {
+    args?: string;
+    lndDir: string;
+    isTorEnabled: boolean;
+    isTestnet: boolean;
+}): Promise<{ data: string }> => {
+    return await LndMobile.startLnd(
+        args || '',
+        lndDir,
+        isTorEnabled,
+        isTestnet
+    );
 };
 
 /**
@@ -120,8 +137,12 @@ export const checkLndFolderExists = async () => {
 /**
  * @throws
  */
-export const createIOSApplicationSupportAndLndDirectories = async () => {
-    return await LndMobileTools.createIOSApplicationSupportAndLndDirectories();
+export const createIOSApplicationSupportAndLndDirectories = async (
+    lndDir: string
+) => {
+    return await LndMobileTools.createIOSApplicationSupportAndLndDirectories(
+        lndDir
+    );
 };
 
 /**
@@ -134,8 +155,8 @@ export const TEMP_moveLndToApplicationSupport = async () => {
 /**
  * @throws
  */
-export const excludeLndICloudBackup = async () => {
-    return await LndMobileTools.excludeLndICloudBackup();
+export const excludeLndICloudBackup = async (lndDir: string) => {
+    return await LndMobileTools.excludeLndICloudBackup(lndDir);
 };
 
 /**
