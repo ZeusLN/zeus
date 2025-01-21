@@ -86,6 +86,7 @@ export const listPeers = async (data: any) => {
                 remote_pubkey: peer.peer_id,
                 channel_point: peer.funding_txid,
                 chan_id: peer.channel_id,
+                short_channel_id: peer.short_channel_id,
                 capacity: Number(peer.total_msat / 1000).toString(),
                 local_balance: Number(peer.to_us_msat / 1000).toString(),
                 remote_balance: Number(

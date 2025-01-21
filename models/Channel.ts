@@ -61,6 +61,7 @@ export default class Channel extends BaseModel {
     // CLN v23.05 msat new
     total: string;
     to_us: string;
+    short_channel_id: string; // CLN
 
     channel_id?: string;
     alias?: string;
@@ -187,7 +188,9 @@ export default class Channel extends BaseModel {
 
     @computed
     public get shortChannelId(): string | undefined {
-        return this.channelId
+        return this.short_channel_id
+            ? this.short_channel_id
+            : this.channelId
             ? chanFormat({ number: this.channelId }).channel
             : undefined;
     }
