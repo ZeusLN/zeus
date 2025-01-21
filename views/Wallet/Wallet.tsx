@@ -520,11 +520,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.setInitialStart(false);
         }
 
-        if (BackendUtils.supportsLSPs()) {
+        if (BackendUtils.supportsFlowLSP()) {
             if (
                 SettingsStore.settings.enableLSP &&
                 (implementation !== 'lnd' ||
-                    !this.props.NodeInfoStore.lspNotConfigured)
+                    !this.props.NodeInfoStore.flowLspNotConfigured)
             ) {
                 await LSPStore.getLSPInfo();
             }
