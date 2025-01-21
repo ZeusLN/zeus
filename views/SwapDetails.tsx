@@ -126,6 +126,8 @@ export default class SwapDetails extends React.Component<
             return;
         }
 
+        let submitted = false;
+
         console.log('Starting polling for updates...');
         this.setState({ loading: true });
 
@@ -175,34 +177,42 @@ export default class SwapDetails extends React.Component<
                 if (data.status === 'invoice.set') {
                     console.log('Waiting for onchain transaction...');
                 } else if (data.status === 'transaction.claim.pending') {
-                    console.log('Creating cooperative claim transaction...');
+                    if (submitted) {
+                        console.log(
+                            'Cooperative claim transaction already created and submitted successfully. Skipping.'
+                        );
+                    } else {
+                        console.log(
+                            'Creating cooperative claim transaction...'
+                        );
 
-                    const claimTxDetails = await this.fetchClaimDetails(
-                        createdResponse.id,
-                        endpoint
-                    );
-                    console.log('Fetched claim details:', claimTxDetails);
+                        const claimTxDetails = await this.fetchClaimDetails(
+                            createdResponse.id,
+                            endpoint
+                        );
+                        console.log('Fetched claim details:', claimTxDetails);
 
-                    const isValid = this.validatePreimage(
-                        claimTxDetails?.preimage,
-                        invoice
-                    );
-                    console.log('Is valid?', isValid);
+                        const isValid = this.validatePreimage(
+                            claimTxDetails?.preimage,
+                            invoice
+                        );
+                        console.log('Is valid?', isValid);
 
-                    if (!isValid) {
-                        console.error('Invalid preimage received');
-                        return;
+                        if (!isValid) {
+                            console.error('Invalid preimage received');
+                            return;
+                        }
+
+                        console.log(
+                            'Preimage validated. Proceeding with claim transaction...'
+                        );
+                        submitted = await this.createClaimTransaction(
+                            claimTxDetails,
+                            createdResponse,
+                            keys,
+                            endpoint
+                        );
                     }
-
-                    console.log(
-                        'Preimage validated. Proceeding with claim transaction...'
-                    );
-                    await this.createClaimTransaction(
-                        claimTxDetails,
-                        createdResponse,
-                        keys,
-                        endpoint
-                    );
                 } else if (
                     data.status === 'transaction.claimed' ||
                     data.status === 'invoice.failedToPay' ||
@@ -242,6 +252,8 @@ export default class SwapDetails extends React.Component<
             this.setState({ error: 'Invalid response received.' });
             return;
         }
+
+        let submitted = false;
 
         console.log('Starting polling for reverse swap updates...');
         this.setState({ loading: true });
@@ -292,18 +304,24 @@ export default class SwapDetails extends React.Component<
                 if (data.status === 'swap.created') {
                     console.log('Waiting invoice to be paid');
                 } else if (data.status === 'transaction.mempool') {
-                    console.log('Creating claim transaction');
+                    if (submitted) {
+                        console.log(
+                            'Claim transaction already created and submitted successfully. Skipping.'
+                        );
+                    } else {
+                        console.log('Creating claim transaction');
 
-                    await this.createReverseClaimTransaction(
-                        createdResponse,
-                        keys,
-                        endpoint,
-                        swapData.lockupAddress,
-                        swapData.destinationAddress,
-                        swapData.preimage,
-                        data.transaction.hex,
-                        fee
-                    );
+                        submitted = await this.createReverseClaimTransaction(
+                            createdResponse,
+                            keys,
+                            endpoint,
+                            swapData.lockupAddress,
+                            swapData.destinationAddress,
+                            swapData.preimage,
+                            data.transaction.hex,
+                            fee
+                        );
+                    }
                 } else if (
                     data.status === 'invoice.expired' ||
                     data.status === 'transaction.failed' ||
@@ -441,7 +459,7 @@ export default class SwapDetails extends React.Component<
         createdResponse: any,
         keys: any,
         endpoint: string
-    ) => {
+    ): Promise<boolean> => {
         try {
             const dObject = keys.__D;
 
@@ -468,13 +486,14 @@ export default class SwapDetails extends React.Component<
                 });
 
                 console.log('Claim transaction submitted successfully.');
+                return true;
             } catch (error) {
                 console.log('Error submitting claim tx', error);
+                return false;
             }
-
-            return;
         } catch (e) {
             console.log('Error creating claim tx ', e);
+            return false;
         }
     };
 
@@ -490,7 +509,7 @@ export default class SwapDetails extends React.Component<
         preimage: any,
         transactionHex: string,
         fee: string
-    ) => {
+    ): Promise<boolean> => {
         try {
             const dObject = keys.__D;
 
@@ -523,13 +542,14 @@ export default class SwapDetails extends React.Component<
                 console.log(
                     'Reverse claim transaction submitted successfully.'
                 );
+                return true;
             } catch (error) {
                 console.log('Error submitting reverse claim tx', error);
+                return false;
             }
-
-            return;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
+            return false;
         }
     };
 
