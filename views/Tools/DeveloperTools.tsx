@@ -561,7 +561,8 @@ const styles = StyleSheet.create({
         gap: 10,
         marginTop: 15,
         width: '90%',
-        alignSelf: 'center'
+        alignSelf: 'center',
+        paddingBottom: 20
     },
     categoryContainer: {
         borderRadius: 10,
