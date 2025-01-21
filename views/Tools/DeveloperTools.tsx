@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -31,6 +32,7 @@ interface DeveloperToolsState {
     loading: boolean;
     response: string | null;
     error: string | null;
+    showScrollTop: boolean;
 }
 
 interface CategoryProps {
@@ -447,12 +449,24 @@ export default class DeveloperTools extends React.Component<
     DeveloperToolsProps,
     DeveloperToolsState
 > {
+    scrollViewRef = React.createRef<ScrollView>();
+
     state = {
         selectedCommand: null,
         expandedCategory: null,
         loading: false,
         response: null,
-        error: null
+        error: null,
+        showScrollTop: false
+    };
+
+    handleScroll = (event: any) => {
+        const currentScrollPosition = event.nativeEvent.contentOffset.y;
+        this.setState({ showScrollTop: currentScrollPosition > 100 });
+    };
+
+    scrollToTop = () => {
+        this.scrollViewRef.current?.scrollTo({ y: 0, animated: true });
     };
 
     handleCommand = async (command: string, param?: string) => {
@@ -485,7 +499,8 @@ export default class DeveloperTools extends React.Component<
 
     render() {
         const { navigation, SettingsStore } = this.props;
-        const { expandedCategory, loading, response, error } = this.state;
+        const { expandedCategory, loading, response, error, showScrollTop } =
+            this.state;
 
         return (
             <Screen>
@@ -500,7 +515,12 @@ export default class DeveloperTools extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <ScrollView contentContainerStyle={styles.container}>
+                <ScrollView
+                    ref={this.scrollViewRef}
+                    contentContainerStyle={styles.container}
+                    onScroll={this.handleScroll}
+                    scrollEventThrottle={16}
+                >
                     {categories
                         .filter((c) =>
                             c.commands.some((c) =>
@@ -551,12 +571,46 @@ export default class DeveloperTools extends React.Component<
                         />
                     )}
                 </ScrollView>
+                {showScrollTop && (
+                    <TouchableOpacity
+                        style={[
+                            styles.scrollTopButton,
+                            {
+                                backgroundColor: themeColor('secondary'),
+                                borderColor: themeColor('background')
+                            }
+                        ]}
+                        onPress={this.scrollToTop}
+                    >
+                        <MaterialIcons
+                            name="arrow-upward"
+                            size={24}
+                            color={themeColor('text')}
+                        />
+                    </TouchableOpacity>
+                )}
             </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    scrollTopButton: {
+        position: 'absolute',
+        bottom: 10,
+        right: 10,
+        width: 45,
+        height: 45,
+        borderRadius: 22.5,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3.84,
+        borderWidth: 1
+    },
     container: {
         gap: 10,
         marginTop: 15,
