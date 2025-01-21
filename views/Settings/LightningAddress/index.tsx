@@ -30,7 +30,9 @@ import { Spacer } from '../../../components/layout/Spacer';
 
 import ChannelsStore from '../../../stores/ChannelsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
 import SettingsStore, {
+    DEFAULT_LSPS1_PUBKEY_MAINNET,
     DEFAULT_NOSTR_RELAYS
 } from '../../../stores/SettingsStore';
 import UnitsStore from '../../../stores/UnitsStore';
@@ -47,6 +49,7 @@ interface LightningAddressProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
     LightningAddressStore: LightningAddressStore;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     route: Route<
@@ -63,7 +66,13 @@ interface LightningAddressState {
     nostrRelays: Array<string>;
 }
 
-@inject('LightningAddressStore', 'ChannelsStore', 'SettingsStore', 'UnitsStore')
+@inject(
+    'LightningAddressStore',
+    'NodeInfoStore',
+    'ChannelsStore',
+    'SettingsStore',
+    'UnitsStore'
+)
 @observer
 export default class LightningAddress extends React.Component<
     LightningAddressProps,
@@ -141,6 +150,7 @@ export default class LightningAddress extends React.Component<
         const {
             navigation,
             LightningAddressStore,
+            NodeInfoStore,
             ChannelsStore,
             SettingsStore,
             UnitsStore
@@ -182,8 +192,18 @@ export default class LightningAddress extends React.Component<
             !automaticallyAccept ||
             readyToAutomaticallyAccept;
 
-        const hasChannels =
-            ChannelsStore.channels && ChannelsStore.channels.length > 0;
+        let hasZeusLspChannel = false;
+        ChannelsStore.channels?.every((channel) => {
+            if (channel.remotePubkey === DEFAULT_LSPS1_PUBKEY_MAINNET) {
+                hasZeusLspChannel = true;
+                return;
+            }
+        });
+
+        const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
+        const supportsLSPS1 =
+            BackendUtils.supportsLSPS1customMessage() ||
+            BackendUtils.supportsLSPS1rest();
 
         const InfoButton = () => (
             <View style={{ right: 15 }}>
@@ -379,7 +399,7 @@ export default class LightningAddress extends React.Component<
                             !redeeming &&
                             !redeemingAll &&
                             !lightningAddressHandle &&
-                            hasChannels && (
+                            hasZeusLspChannel && (
                                 <>
                                     <View style={{ flex: 1 }}>
                                         <View style={styles.wrapper}>
@@ -566,149 +586,136 @@ export default class LightningAddress extends React.Component<
                             !redeeming &&
                             !redeemingAll &&
                             !lightningAddressHandle &&
-                            !hasChannels && (
+                            !hasZeusLspChannel && (
                                 <>
-                                    <ScrollView
+                                    <View
                                         style={{
+                                            flex: 1,
                                             marginLeft: 5,
                                             marginRight: 5
                                         }}
                                     >
-                                        <Text
-                                            style={{
-                                                ...styles.explainer,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.explainer1'
+                                        <ScrollView style={{ margin: 10 }}>
+                                            <Text
+                                                style={{
+                                                    ...styles.explainer,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.LightningAddress.explainer1'
+                                                )}
+                                            </Text>
+                                            {BackendUtils.supportsFlowLSP() &&
+                                                !flowLspNotConfigured && (
+                                                    <Text
+                                                        style={{
+                                                            ...styles.explainer,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.LightningAddress.explainer2'
+                                                        ).replace(
+                                                            'OLYMPUS by ZEUS',
+                                                            'Olympus by ZEUS'
+                                                        )}
+                                                    </Text>
+                                                )}
+                                            {BackendUtils.supportsFlowLSP() &&
+                                                !flowLspNotConfigured && (
+                                                    <Text
+                                                        style={{
+                                                            ...styles.explainer,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                                        )}
+                                                    </Text>
+                                                )}
+                                            {supportsLSPS1 && (
+                                                <Text
+                                                    style={{
+                                                        ...styles.explainer,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.LightningAddress.explainer3'
+                                                    ).replace(
+                                                        'OLYMPUS by ZEUS',
+                                                        'Olympus by ZEUS'
+                                                    )}
+                                                </Text>
                                             )}
-                                        </Text>
-                                        {BackendUtils.supportsLSPs() && (
-                                            <Text
-                                                style={{
-                                                    ...styles.explainer,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.explainer2'
-                                                ).replace(
-                                                    'OLYMPUS by ZEUS',
-                                                    'Olympus by ZEUS'
+                                        </ScrollView>
+                                        <View style={{ bottom: 10 }}>
+                                            {BackendUtils.supportsFlowLSP() &&
+                                                !flowLspNotConfigured && (
+                                                    <View
+                                                        style={{
+                                                            margin: 10
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            title={localeString(
+                                                                'views.Settings.LightningAddress.get0ConfChan'
+                                                            )}
+                                                            onPress={() => {
+                                                                UnitsStore.resetUnits();
+                                                                navigation.navigate(
+                                                                    'Receive',
+                                                                    {
+                                                                        amount: '100000'
+                                                                    }
+                                                                );
+                                                            }}
+                                                        />
+                                                    </View>
                                                 )}
-                                            </Text>
-                                        )}
-                                        {BackendUtils.supportsLSPs() && (
-                                            <Text
-                                                style={{
-                                                    ...styles.explainer,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+
+                                            {supportsLSPS1 &&
+                                                !flowLspNotConfigured && (
+                                                    <View
+                                                        style={{
+                                                            margin: 10
+                                                        }}
+                                                    >
+                                                        <Button
+                                                            title={localeString(
+                                                                'views.Settings.LightningAddress.getStandardChan'
+                                                            )}
+                                                            onPress={() => {
+                                                                navigation.navigate(
+                                                                    'LSPS1'
+                                                                );
+                                                            }}
+                                                        />
+                                                    </View>
                                                 )}
-                                            </Text>
-                                        )}
-                                        {!BackendUtils.supportsLSPs() && (
-                                            <Text
-                                                style={{
-                                                    ...styles.explainer,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.explainer3'
-                                                ).replace(
-                                                    'OLYMPUS by ZEUS',
-                                                    'Olympus by ZEUS'
-                                                )}
-                                            </Text>
-                                        )}
-                                        <View
-                                            style={{
-                                                margin: 10,
-                                                marginTop: 25,
-                                                bottom: 15
-                                            }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    BackendUtils.supportsLSPs()
-                                                        ? 'views.Settings.LightningAddress.get0ConfChan'
-                                                        : 'views.Wallet.Channels.open'
-                                                )}
-                                                onPress={() => {
-                                                    if (
-                                                        BackendUtils.supportsLSPs()
-                                                    ) {
-                                                        UnitsStore.resetUnits();
-                                                        navigation.navigate(
-                                                            'Receive',
-                                                            {
-                                                                amount: '100000'
-                                                            }
-                                                        );
-                                                    } else {
-                                                        navigation.navigate(
-                                                            'OpenChannel'
-                                                        );
-                                                    }
-                                                }}
-                                            />
-                                        </View>
-                                        {BackendUtils.supportsLSPs() && (
-                                            <View
-                                                style={{
-                                                    bottom: 15,
-                                                    margin: 10
-                                                }}
-                                            >
+                                            <View style={{ margin: 10 }}>
                                                 <Button
                                                     title={localeString(
-                                                        'views.LspExplanation.buttonText2'
+                                                        'views.Intro.lightningLiquidity'
                                                     )}
                                                     onPress={() =>
-                                                        navigation.navigate(
-                                                            'LspExplanationOverview'
+                                                        UrlUtils.goToUrl(
+                                                            'https://bitcoin.design/guide/how-it-works/liquidity/'
                                                         )
                                                     }
-                                                    tertiary
+                                                    secondary
                                                 />
                                             </View>
-                                        )}
-                                        <View
-                                            style={{ bottom: 15, margin: 10 }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    'views.Intro.lightningOnboarding'
-                                                )}
-                                                onPress={() =>
-                                                    UrlUtils.goToUrl(
-                                                        'https://docs.zeusln.app/for-users/embedded-node/lightning-onboarding/'
-                                                    )
-                                                }
-                                                secondary
-                                            />
                                         </View>
-                                        <View
-                                            style={{ bottom: 15, margin: 10 }}
-                                        >
-                                            <Button
-                                                title={localeString(
-                                                    'views.Intro.lightningLiquidity'
-                                                )}
-                                                onPress={() =>
-                                                    UrlUtils.goToUrl(
-                                                        'https://bitcoin.design/guide/how-it-works/liquidity/'
-                                                    )
-                                                }
-                                                secondary
-                                            />
-                                        </View>
-                                    </ScrollView>
+                                    </View>
                                 </>
                             )}
                         {lightningAddressHandle && (
@@ -838,7 +845,7 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     explainer: {
-        fontSize: 16.5,
+        fontSize: 20,
         marginBottom: 10
     },
     wrapper: {

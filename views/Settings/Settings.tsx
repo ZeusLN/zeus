@@ -87,7 +87,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                     }}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.supportsLSPs() && selectedNode && (
+                    {BackendUtils.supportsFlowLSP() && selectedNode && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -104,7 +104,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                         BackendUtils.supportsLSPS1customMessage() ||
                                         BackendUtils.supportsLSPS1rest();
                                     if (
-                                        BackendUtils.supportsLSPs() &&
+                                        BackendUtils.supportsFlowLSP() &&
                                         supportsLSPS1
                                     ) {
                                         navigation.navigate('LSPServicesList');

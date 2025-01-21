@@ -291,7 +291,7 @@ export default class InvoicesStore {
         if (customPreimage) req.preimage = customPreimage;
 
         if (
-            BackendUtils.supportsLSPs() &&
+            BackendUtils.supportsFlowLSP() &&
             this.settingsStore.settings?.enableLSP &&
             value &&
             value !== '0' &&
@@ -356,7 +356,7 @@ export default class InvoicesStore {
 
                 let jit_bolt11: string = '';
                 if (
-                    BackendUtils.supportsLSPs() &&
+                    BackendUtils.supportsFlowLSP() &&
                     this.settingsStore.settings?.enableLSP &&
                     value !== '0' &&
                     !noLsp

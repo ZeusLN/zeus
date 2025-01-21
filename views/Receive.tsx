@@ -150,7 +150,7 @@ interface ReceiveState {
     needInbound: boolean;
     enableLSP: boolean;
     lspIsActive: boolean;
-    lspNotConfigured: boolean;
+    flowLspNotConfigured: boolean;
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
     hideRightHeaderComponent?: boolean;
@@ -204,7 +204,7 @@ export default class Receive extends React.Component<
             needInbound: false,
             enableLSP: true,
             lspIsActive: false,
-            lspNotConfigured: true,
+            flowLspNotConfigured: true,
             routeHintMode: RouteHintMode.Automatic,
             selectedRouteHintChannels: undefined
         };
@@ -234,7 +234,7 @@ export default class Receive extends React.Component<
             status();
         }
 
-        const { lspNotConfigured } = NodeInfoStore.lspNotConfigured();
+        const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
 
         const newExpirySeconds = settings?.invoices?.expirySeconds || '3600';
 
@@ -274,9 +274,9 @@ export default class Receive extends React.Component<
             enableLSP: settings?.enableLSP,
             lspIsActive:
                 settings?.enableLSP &&
-                BackendUtils.supportsLSPs() &&
-                !lspNotConfigured,
-            lspNotConfigured
+                BackendUtils.supportsFlowLSP() &&
+                !flowLspNotConfigured,
+            flowLspNotConfigured
         });
 
         const lnOnly =
@@ -1121,7 +1121,7 @@ export default class Receive extends React.Component<
             needInbound,
             enableLSP,
             lspIsActive,
-            lspNotConfigured,
+            flowLspNotConfigured,
             routeHintMode,
             selectedRouteHintChannels,
             blindedPaths,
@@ -2079,8 +2079,8 @@ export default class Receive extends React.Component<
                                     !creatingInvoice &&
                                     route.params?.selectedIndex !== 2 && (
                                         <>
-                                            {BackendUtils.supportsLSPs() &&
-                                                !lspNotConfigured && (
+                                            {BackendUtils.supportsFlowLSP() &&
+                                                !flowLspNotConfigured && (
                                                     <View
                                                         style={{
                                                             flexDirection:
@@ -2142,8 +2142,8 @@ export default class Receive extends React.Component<
                                                                                 !enableLSP,
                                                                             lspIsActive:
                                                                                 !enableLSP &&
-                                                                                BackendUtils.supportsLSPs() &&
-                                                                                !lspNotConfigured
+                                                                                BackendUtils.supportsFlowLSP() &&
+                                                                                !flowLspNotConfigured
                                                                         }
                                                                     );
                                                                     await updateSettings(
@@ -2159,7 +2159,7 @@ export default class Receive extends React.Component<
                                                 )}
 
                                             {(!enableLSP ||
-                                                lspNotConfigured) && (
+                                                flowLspNotConfigured) && (
                                                 <>
                                                     <Text
                                                         style={{

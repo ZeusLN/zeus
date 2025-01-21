@@ -295,7 +295,7 @@ export default class CLightningREST extends LND {
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
-    supportsLSPs = () => false;
+    supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
