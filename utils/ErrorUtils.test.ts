@@ -107,8 +107,7 @@ describe('ErrorUtils', () => {
                         message:
                             'Error: {"code":2,"message":"verification failed: signature mismatch after caveat verification","details":[]}',
                         name: 'test'
-                    }),
-                    false
+                    })
                 )
             ).toEqual(
                 "Invalid macaroon. Please check that you've entered the correct macaroon for this node."
