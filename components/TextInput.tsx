@@ -19,6 +19,7 @@ interface TextInputProps {
     numberOfLines?: number;
     style?: ViewStyle;
     textInputStyle?: StyleProp<TextStyle>;
+    textColor?: string;
     placeholderTextColor?: string;
     locked?: boolean;
     keyboardType?: KeyboardTypeOptions;
@@ -49,6 +50,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             numberOfLines,
             style,
             textInputStyle,
+            textColor,
             placeholderTextColor,
             locked,
             keyboardType,
@@ -156,9 +158,11 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     style={{
                         ...StyleSheet.flatten(textInputStyle),
                         ...styles.input,
-                        color: locked
-                            ? themeColor('secondaryText')
-                            : themeColor('text')
+                        color:
+                            textColor ||
+                            (locked
+                                ? themeColor('secondaryText')
+                                : themeColor('text'))
                     }}
                     placeholderTextColor={
                         placeholderTextColor || themeColor('secondaryText')
