@@ -16,7 +16,6 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
-import ModalStore from '../../stores/ModalStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
@@ -66,7 +65,6 @@ import {
 interface WalletConfigurationProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    ModalStore: ModalStore;
     route: Route<
         'WalletConfiguration',
         {
@@ -140,7 +138,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('SettingsStore', 'ModalStore')
+@inject('SettingsStore')
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -2314,12 +2312,40 @@ export default class WalletConfiguration extends React.Component<
                                     disabled={
                                         loading ||
                                         hostError ||
+                                        (host &&
+                                            !ValidationUtils.isValidHostname(
+                                                host
+                                            )) ||
                                         portError ||
+                                        (port &&
+                                            !ValidationUtils.isValidPort(
+                                                port
+                                            )) ||
                                         macaroonHexError ||
+                                        (macaroonHex &&
+                                            !ValidationUtils.hasValidMacaroonChars(
+                                                macaroonHex
+                                            )) ||
                                         runeError ||
+                                        (rune &&
+                                            !ValidationUtils.hasValidRuneChars(
+                                                rune
+                                            )) ||
                                         lndhubUrlError ||
+                                        (lndhubUrl &&
+                                            !ValidationUtils.isValidHostAndPort(
+                                                lndhubUrl
+                                            )) ||
                                         customMailboxServerError ||
+                                        (customMailboxServer &&
+                                            !ValidationUtils.isValidHttpsHostAndPort(
+                                                customMailboxServer
+                                            )) ||
                                         pairingPhraseError ||
+                                        (pairingPhrase &&
+                                            !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                pairingPhrase
+                                            )) ||
                                         // Required input check
                                         // Port is optional, it will fallback to 80 or 443
                                         (implementation === 'lndhub' &&
