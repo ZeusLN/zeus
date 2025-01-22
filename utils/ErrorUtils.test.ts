@@ -135,11 +135,11 @@ describe('ErrorUtils', () => {
             expect(
                 errorToUserFriendly(
                     Object.assign(new Error(), {
-                        message: 'Random message',
+                        message: 'Random message that can even contain Error',
                         name: 'test'
                     })
                 )
-            ).toEqual('Random message');
+            ).toEqual('Random message that can even contain Error');
         });
 
         it('Return string if error is sent as a string', () => {
