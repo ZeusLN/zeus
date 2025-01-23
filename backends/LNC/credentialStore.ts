@@ -75,8 +75,7 @@ export default class LncCredentialStore implements CredentialStore {
 
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */
     get serverHost() {
-        // strip string of quotation marks thay may have been added during migrations
-        return this.persisted.serverHost.replace(/['"]+/g, '');
+        return this.persisted.serverHost;
     }
 
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */
