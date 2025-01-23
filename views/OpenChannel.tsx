@@ -14,7 +14,6 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Tab } from 'react-native-elements';
 
-import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import DropdownSetting from '../components/DropdownSetting';
@@ -569,40 +568,32 @@ export default class OpenChannel extends React.Component<
 
                         {!connectPeerOnly && (
                             <>
-                                {!fundMax && (
-                                    <AmountInput
-                                        amount={local_funding_amount}
-                                        title={localeString(
-                                            'views.OpenChannel.localAmt'
-                                        )}
-                                        onAmountChange={(
-                                            amount: string,
-                                            satAmount: string | number
-                                        ) => {
-                                            this.setState({
-                                                local_funding_amount: amount,
-                                                satAmount
-                                            });
-                                        }}
-                                        hideConversion={
-                                            local_funding_amount === 'all'
-                                        }
-                                    />
-                                )}
-
-                                {(local_funding_amount === 'all' ||
-                                    fundMax) && (
-                                    <View style={{ marginBottom: 20 }}>
-                                        <Amount
-                                            sats={
-                                                utxoBalance > 0
-                                                    ? utxoBalance
-                                                    : confirmedBlockchainBalance
-                                            }
-                                            toggleable
-                                        />
-                                    </View>
-                                )}
+                                <AmountInput
+                                    amount={
+                                        fundMax
+                                            ? utxoBalance > 0
+                                                ? utxoBalance.toString()
+                                                : confirmedBlockchainBalance.toString()
+                                            : local_funding_amount
+                                    }
+                                    title={localeString(
+                                        'views.OpenChannel.localAmt'
+                                    )}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            local_funding_amount: amount,
+                                            satAmount
+                                        });
+                                    }}
+                                    hideConversion={
+                                        local_funding_amount === 'all'
+                                    }
+                                    locked={fundMax}
+                                    forceUnit={fundMax ? 'sats' : undefined}
+                                />
 
                                 {BackendUtils.supportsChannelFundMax() &&
                                     additionalChannels.length === 0 && (
