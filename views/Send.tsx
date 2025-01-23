@@ -364,7 +364,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     payBolt12 = async () => {
-        const { amount, bolt12 } = this.state;
+        const { satAmount, bolt12 } = this.state;
         if (!bolt12) {
             this.setState({
                 loading: false,
@@ -374,7 +374,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             });
             return;
         }
-        if (!amount || amount === '0') {
+        if (!satAmount || satAmount === '0') {
             this.setState({
                 loading: false,
                 error_msg: localeString('views.Send.payBolt12.specifyAmount')
@@ -391,7 +391,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 // grok out overstring from Bitcoin URI
                 // eg. bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq2zapy7nz5yqcnygzsv9uk6etwwssyzerywfjhxuckyypvm779pgy7grg2m0j55f67e2du7359h4nad964309j93kqa0xshcs
                 split[1] || bolt12,
-                amount
+                satAmount
             );
             if (!res.invoice) {
                 this.setState({
