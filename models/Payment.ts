@@ -198,6 +198,7 @@ export default class Payment extends BaseModel {
             : this.value_sat ||
                   this.value ||
                   Number(this.msatoshi_sent) / 1000 ||
+                  Number(this.amount_sent_msat) / 1000 ||
                   0;
     }
 
