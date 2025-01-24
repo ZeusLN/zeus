@@ -24,11 +24,8 @@ import {
     CURRENCY_CODES_KEY
 } from '../stores/SettingsStore';
 
-import { LEGACY_NOTES_KEY, MODERN_NOTES_KEY } from '../stores/NotesStore';
-import {
-    LEGACY_CONTACTS_KEY,
-    MODERN_CONTACTS_KEY
-} from '../stores/ContactStore';
+import { LEGACY_NOTES_KEY, NOTES_KEY } from '../stores/NotesStore';
+import { LEGACY_CONTACTS_KEY, CONTACTS_KEY } from '../stores/ContactStore';
 import {
     LEGACY_LAST_CHANNEL_BACKUP_STATUS,
     LEGACY_LAST_CHANNEL_BACKUP_TIME,
@@ -302,7 +299,7 @@ class MigrationsUtils {
                 if (contacts) {
                     console.log('Attemping contacts migration');
                     const writeSuccess = await Storage.setItem(
-                        MODERN_CONTACTS_KEY,
+                        CONTACTS_KEY,
                         contacts
                     );
                     console.log('Contacts migration status', writeSuccess);
@@ -328,7 +325,7 @@ class MigrationsUtils {
                     const noteKeys = JSON.parse(storedKeys);
                     console.log('Attemping notes migration');
                     const writeSuccess = await Storage.setItem(
-                        MODERN_NOTES_KEY,
+                        NOTES_KEY,
                         noteKeys
                     );
                     console.log('Notes keys migration status', writeSuccess);

@@ -31,7 +31,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import Storage from '../storage';
 
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-import ContactStore, { MODERN_CONTACTS_KEY } from '../stores/ContactStore';
+import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
@@ -408,9 +408,7 @@ export default class NostrContacts extends React.Component<
             );
 
             // Retrieve existing contacts from Encrypted storage
-            const contactsString: any = await Storage.getItem(
-                MODERN_CONTACTS_KEY
-            );
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
             const existingContacts: any = contactsString
                 ? JSON.parse(contactsString)
                 : [];
@@ -422,7 +420,7 @@ export default class NostrContacts extends React.Component<
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             // Save the updated contacts to encrypted storage
-            await Storage.setItem(MODERN_CONTACTS_KEY, updatedContacts);
+            await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
             console.log('Contacts imported successfully!');
 

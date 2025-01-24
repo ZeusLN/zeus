@@ -17,7 +17,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 import { Row } from '../components/layout/Row';
 
-import ContactStore, { MODERN_CONTACTS_KEY } from '../stores/ContactStore';
+import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -102,9 +102,7 @@ export default class ContactDetails extends React.Component<
             try {
                 const { contactId, nostrContact, isNostrContact } =
                     this.props.route.params ?? {};
-                const contactsString: any = await Storage.getItem(
-                    MODERN_CONTACTS_KEY
-                );
+                const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
@@ -146,9 +144,7 @@ export default class ContactDetails extends React.Component<
     saveUpdatedContact = async (updatedContact: Contact) => {
         const { ContactStore } = this.props;
         try {
-            const contactsString: any = await Storage.getItem(
-                MODERN_CONTACTS_KEY
-            );
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
             if (contactsString) {
                 const existingContacts: Contact[] = JSON.parse(contactsString);
@@ -163,10 +159,7 @@ export default class ContactDetails extends React.Component<
                     existingContacts[contactIndex] = updatedContact;
 
                     // Save the updated contacts back to storage
-                    await Storage.setItem(
-                        MODERN_CONTACTS_KEY,
-                        existingContacts
-                    );
+                    await Storage.setItem(CONTACTS_KEY, existingContacts);
 
                     console.log('Contact updated successfully!');
                     ContactStore?.loadContacts();
@@ -180,7 +173,7 @@ export default class ContactDetails extends React.Component<
     importToContacts = async () => {
         const { contact } = this.state;
 
-        const contactsString: any = await Storage.getItem(MODERN_CONTACTS_KEY);
+        const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
         const existingContacts: Contact[] = contactsString
             ? JSON.parse(contactsString)
@@ -190,7 +183,7 @@ export default class ContactDetails extends React.Component<
             a.name.localeCompare(b.name)
         );
 
-        await Storage.setItem(MODERN_CONTACTS_KEY, updatedContacts);
+        await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
         console.log('Contact imported successfully!');
         this.props.navigation.popTo('Contacts');
