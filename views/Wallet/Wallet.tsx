@@ -47,6 +47,7 @@ import {
     expressGraphSync
 } from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
@@ -414,9 +415,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
             }
             if (recovery) {
-                const isBackedUp = await Storage.getItem('backup-complete');
+                const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
                 if (!isBackedUp) {
-                    await Storage.setItem('backup-complete', true);
+                    await Storage.setItem(IS_BACKED_UP_KEY, true);
                 }
                 if (isSyncing) return;
                 try {
