@@ -194,7 +194,7 @@ export default class LnurlPay extends React.Component<
 
     render() {
         const { navigation, route } = this.props;
-        const { amount, satAmount, domain, comment } = this.state;
+        const { amount, satAmount, domain, comment, loading } = this.state;
 
         const lnurl = route.params?.lnurlParams;
 
@@ -296,10 +296,11 @@ export default class LnurlPay extends React.Component<
                             <AmountInput
                                 amount={amount}
                                 locked={
-                                    lnurl &&
+                                    loading ||
+                                    (lnurl &&
                                     lnurl.minSendable === lnurl.maxSendable
                                         ? true
-                                        : false
+                                        : false)
                                 }
                                 onAmountChange={(
                                     amount: string,
@@ -331,6 +332,7 @@ export default class LnurlPay extends React.Component<
                                     onChangeText={(text: string) => {
                                         this.setState({ comment: text });
                                     }}
+                                    locked={loading}
                                 />
                             </>
                         ) : null}
@@ -353,9 +355,9 @@ export default class LnurlPay extends React.Component<
                                 buttonStyle={{
                                     backgroundColor: themeColor('secondary')
                                 }}
-                                disabled={this.state.loading}
+                                disabled={loading}
                             />
-                            {this.state.loading && (
+                            {loading && (
                                 <View style={{ marginTop: 20 }}>
                                     <LoadingIndicator size={30} />
                                 </View>
