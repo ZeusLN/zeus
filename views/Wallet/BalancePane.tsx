@@ -16,6 +16,7 @@ import Amount from '../../components/Amount';
 import Conversion from '../../components/Conversion';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
@@ -52,7 +53,7 @@ export default class BalancePane extends React.PureComponent<
     };
 
     async UNSAFE_componentWillMount() {
-        const isBackedUp = await Storage.getItem('backup-complete');
+        const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
         if (isBackedUp !== 'true') {
             this.setState({
                 showBackupPrompt: true

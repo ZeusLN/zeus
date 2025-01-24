@@ -68,6 +68,9 @@ import {
     ACTIVITY_FILTERS_KEY
 } from '../stores/ActivityStore';
 
+const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
+export const IS_BACKED_UP_KEY = 'backup-complete-v2';
+
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
@@ -642,6 +645,36 @@ class MigrationsUtils {
             }
         })();
         migrationTasks.push(activityFiltersMigration);
+
+        // Embedded LND is backed up migration
+        const embeddedLndIsBackedUpMigration = (async () => {
+            try {
+                const embeddedLndIsBackedUp = await EncryptedStorage.getItem(
+                    LEGACY_IS_BACKED_UP_KEY
+                );
+                if (embeddedLndIsBackedUp) {
+                    console.log(
+                        'Attemping Embedded LND is backed up migration'
+                    );
+                    const writeSuccess = await Storage.setItem(
+                        IS_BACKED_UP_KEY,
+                        embeddedLndIsBackedUp
+                    );
+                    console.log(
+                        'Embedded LND is backed up migration status',
+                        writeSuccess
+                    );
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading Embedded LND is backed up from encrypted storage',
+                    error
+                );
+                return false;
+            }
+        })();
+        migrationTasks.push(embeddedLndIsBackedUpMigration);
 
         // LSPS1 orders migration
         const lsps1OrdersMigration = (async () => {
