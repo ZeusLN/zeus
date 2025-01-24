@@ -63,6 +63,11 @@ import { LEGACY_LSPS1_ORDERS_KEY, LSPS1_ORDERS_KEY } from '../stores/LSPStore';
 
 import { LNC_STORAGE_KEY, hash } from '../backends/LNC/credentialStore';
 
+import {
+    LEGACY_ACTIVITY_FILTERS_KEY,
+    ACTIVITY_FILTERS_KEY
+} from '../stores/ActivityStore';
+
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 
@@ -609,6 +614,34 @@ class MigrationsUtils {
             }
         })();
         migrationTasks.push(currencyCodesMigration);
+
+        // Activity filters migration
+        const activityFiltersMigration = (async () => {
+            try {
+                const activityFilters = await EncryptedStorage.getItem(
+                    LEGACY_ACTIVITY_FILTERS_KEY
+                );
+                if (activityFilters) {
+                    console.log('Attemping activity filters migration');
+                    const writeSuccess = await Storage.setItem(
+                        ACTIVITY_FILTERS_KEY,
+                        activityFilters
+                    );
+                    console.log(
+                        'Activity filters migration status',
+                        writeSuccess
+                    );
+                    return writeSuccess;
+                }
+            } catch (error) {
+                console.error(
+                    'Error loading activity filters from encrypted storage',
+                    error
+                );
+                return false;
+            }
+        })();
+        migrationTasks.push(activityFiltersMigration);
 
         // LSPS1 orders migration
         const lsps1OrdersMigration = (async () => {
