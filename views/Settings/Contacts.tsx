@@ -24,7 +24,7 @@ import Storage from '../../storage';
 
 import Contact from '../../models/Contact';
 
-import ContactStore, { MODERN_CONTACTS_KEY } from '../../stores/ContactStore';
+import ContactStore, { CONTACTS_KEY } from '../../stores/ContactStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
@@ -430,10 +430,7 @@ export default class Contacts extends React.Component<
                                         deletionAwaitingConfirmation: true
                                     });
                                 } else {
-                                    await Storage.setItem(
-                                        MODERN_CONTACTS_KEY,
-                                        []
-                                    );
+                                    await Storage.setItem(CONTACTS_KEY, []);
                                     this.setState({
                                         deletionAwaitingConfirmation: false
                                     });
