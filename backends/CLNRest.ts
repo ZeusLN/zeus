@@ -215,9 +215,11 @@ export default class CLNRest {
         return this.postRequest('/v1/withdraw', request);
     };
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
-    getInvoices = () =>
+    getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
-            query: "SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT 150;"
+            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
+                data?.limit ? data.limit : 150
+            };`
         }).then((data: any) => {
             const invoiceList: any[] = [];
             data.rows.forEach((invoice: any) => {
