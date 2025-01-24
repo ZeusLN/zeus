@@ -216,11 +216,7 @@ export default class LnurlPay extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            {loading && (
-                                <View style={{ paddingRight: 15 }}>
-                                    <LoadingIndicator size={35} />
-                                </View>
-                            )}
+                            {loading && <LoadingIndicator size={35} />}
                         </View>
                     }
                     navigation={navigation}
