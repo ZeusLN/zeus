@@ -209,6 +209,20 @@ export default class LnurlPay extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            {loading && (
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={35} />
+                                </View>
+                            )}
+                        </View>
+                    }
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
@@ -357,11 +371,6 @@ export default class LnurlPay extends React.Component<
                                 }}
                                 disabled={loading}
                             />
-                            {loading && (
-                                <View style={{ marginTop: 20 }}>
-                                    <LoadingIndicator size={30} />
-                                </View>
-                            )}
                         </View>
                     </View>
                     <View style={styles.metadata}>
