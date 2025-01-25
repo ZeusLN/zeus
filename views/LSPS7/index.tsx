@@ -2,7 +2,6 @@ import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { ButtonGroup, Icon } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';
@@ -36,6 +35,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { LSPOrderResponse as Order } from '../LSPS1/OrdersPane';
+
+import Storage from '../../storage';
 
 interface LSPS7Props {
     LSPStore: LSPStore;
@@ -710,9 +711,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                         const orderId = result.order_id;
 
                                         // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        EncryptedStorage.getItem(
-                                            'orderResponses'
-                                        )
+                                        Storage.getItem('orderResponses')
                                             .then((responseArrayString) => {
                                                 let responseArray = [];
                                                 if (responseArrayString) {
@@ -772,7 +771,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                     );
 
                                                     // Save the updated array back to encrypted storage
-                                                    EncryptedStorage.setItem(
+                                                    Storage.setItem(
                                                         'orderResponses',
                                                         JSON.stringify(
                                                             responseArray
