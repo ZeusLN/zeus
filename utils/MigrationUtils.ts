@@ -760,6 +760,7 @@ class MigrationsUtils {
         migrationTasks.push(lncMigration);
 
         const results = await Promise.all(migrationTasks);
+        console.log('storageMigrationV2 completed!', results);
         return results.every((result) => result === true);
     }
 }
