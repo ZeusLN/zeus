@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,6 +19,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import LSPS1OrderResponse from './OrderResponse';
 
 import { Payment } from '../../views/LSPS1/OrdersPane';
+
+import Storage from '../../storage';
 
 interface Order {
     announce_channel: boolean;
@@ -72,7 +73,7 @@ export default class LSPS7Order extends React.Component<
         const orderShouldUpdate = route.params?.orderShouldUpdate;
 
         console.log('Looking for order in storage...');
-        EncryptedStorage.getItem('orderResponses')
+        Storage.getItem('orderResponses')
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
@@ -149,7 +150,7 @@ export default class LSPS7Order extends React.Component<
 
     updateOrderInStorage(order: Order) {
         console.log('Updating order in encrypted storage...');
-        EncryptedStorage.getItem('orderResponses')
+        Storage.getItem('orderResponses')
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     let responseArray = JSON.parse(responseArrayString);
@@ -173,7 +174,7 @@ export default class LSPS7Order extends React.Component<
                         responseArray[index] = JSON.stringify(oldOrder);
 
                         // Save the updated order array back to encrypted storage
-                        EncryptedStorage.setItem(
+                        Storage.setItem(
                             'orderResponses',
                             JSON.stringify(responseArray)
                         ).then(() => {
