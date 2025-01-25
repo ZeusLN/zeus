@@ -1,7 +1,10 @@
 import { action, observable } from 'mobx';
 import { v4 as uuidv4 } from 'uuid';
 import Contact from '../models/Contact';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Storage from '../storage';
+
+export const LEGACY_CONTACTS_KEY = 'zeus-contacts';
+export const CONTACTS_KEY = 'zeus-contacts-v2';
 
 export default class ContactStore {
     @observable public loading: boolean = true;
@@ -13,9 +16,7 @@ export default class ContactStore {
         try {
             this.loading = true;
             console.log('LOADING CONTACTS.....');
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
             if (contactsString) {
                 const allContacts: Contact[] = JSON.parse(contactsString);
                 this.contacts = allContacts;
@@ -39,9 +40,7 @@ export default class ContactStore {
         try {
             const compactedContactDetails =
                 this.compactContactArrays(contactDetails);
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
             const existingContacts: Contact[] = contactsString
                 ? JSON.parse(contactsString)
                 : [];
@@ -57,10 +56,7 @@ export default class ContactStore {
                 updatedContacts.sort((a, b) => a.name.localeCompare(b.name));
 
                 // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
+                await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
                 console.log('Contact updated successfully!', updatedContacts);
 
@@ -80,10 +76,7 @@ export default class ContactStore {
                 );
 
                 // Save the updated contacts to encrypted storage
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
+                await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
                 console.log('Contact saved successfully!');
 
@@ -111,9 +104,7 @@ export default class ContactStore {
     public deleteContact = async (navigation: any) => {
         if (this.prefillContact) {
             try {
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
+                const contactsString: any = await Storage.getItem(CONTACTS_KEY);
                 const existingContacts: Contact[] = contactsString
                     ? JSON.parse(contactsString)
                     : [];
@@ -123,10 +114,7 @@ export default class ContactStore {
                         contact.contactId !== this.prefillContact.contactId
                 );
 
-                await EncryptedStorage.setItem(
-                    'zeus-contacts',
-                    JSON.stringify(updatedContacts)
-                );
+                await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
                 console.log('Contact deleted successfully!');
 

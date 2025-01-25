@@ -1,3 +1,7 @@
+jest.mock('../stores/ChannelBackupStore', () => ({}));
+jest.mock('../stores/LSPStore', () => ({}));
+jest.mock('react-native-notifications', () => ({}));
+
 import stores from '../stores/Stores';
 import handleAnything from './handleAnything';
 

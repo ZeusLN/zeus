@@ -1,6 +1,5 @@
 import { action } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { schnorr } from '@noble/curves/secp256k1';
 import { hexToBytes } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
@@ -16,6 +15,8 @@ import {
     relayInit
 } from 'nostr-tools';
 
+import Storage from '../storage';
+
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
 
@@ -26,7 +27,7 @@ export interface LnurlPayTransaction {
     metadata_hash: string;
     successAction: LNURLPaySuccessAction;
     time: number;
-    metadata?: Metadata; // only after an independent load from EncryptedStorage.
+    metadata?: Metadata; // only after an independent load from Storage.
 }
 
 interface Metadata {
@@ -71,12 +72,10 @@ export default class LnurlPayStore {
 
     @action
     public load = async (paymentHash: string): Promise<LnurlPayTransaction> => {
-        let lnurlpaytx: any = await EncryptedStorage.getItem(
-            'lnurlpay:' + paymentHash
-        );
+        let lnurlpaytx: any = await Storage.getItem('lnurlpay:' + paymentHash);
         if (lnurlpaytx) {
             lnurlpaytx = JSON.parse(lnurlpaytx);
-            const metadata: any = await EncryptedStorage.getItem(
+            const metadata: any = await Storage.getItem(
                 'lnurlpay:' + lnurlpaytx.metadata_hash
             );
             if (metadata) {
@@ -118,14 +117,8 @@ export default class LnurlPayStore {
             last_stored: now
         };
 
-        await EncryptedStorage.setItem(
-            'lnurlpay:' + paymentHash,
-            JSON.stringify(transactionData)
-        );
-        await EncryptedStorage.setItem(
-            'lnurlpay:' + descriptionHash,
-            JSON.stringify(metadataEntry)
-        );
+        await Storage.setItem('lnurlpay:' + paymentHash, transactionData);
+        await Storage.setItem('lnurlpay:' + descriptionHash, metadataEntry);
 
         this.paymentHash = paymentHash;
         this.successAction = successAction;

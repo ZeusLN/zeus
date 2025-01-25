@@ -1,5 +1,5 @@
 import { action, observable } from 'mobx';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Storage from '../storage';
 
 import SettingsStore from './SettingsStore';
 import FiatStore from './FiatStore';
@@ -13,7 +13,8 @@ import FeeUtils from '../utils/FeeUtils';
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
-const UNIT_KEY = 'zeus-units';
+export const LEGACY_UNIT_KEY = 'zeus-units';
+export const UNIT_KEY = 'zeus-units-v2';
 
 interface ValueDisplayProps {
     amount: string;
@@ -38,14 +39,14 @@ export default class UnitsStore {
     }
 
     getUnits = async () => {
-        const units = await EncryptedStorage.getItem(UNIT_KEY);
+        const units = await Storage.getItem(UNIT_KEY);
         if (units) this.units = units;
     };
 
     @action
     public changeUnits = async () => {
         this.units = this.getNextUnit();
-        await EncryptedStorage.setItem(UNIT_KEY, this.units);
+        await Storage.setItem(UNIT_KEY, this.units);
     };
 
     public getNextUnit = () => {

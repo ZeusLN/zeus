@@ -1258,8 +1258,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
-  - RNKeychain (8.1.1):
+  - RNKeychain (9.2.2):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Codegen
     - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNReactNativeHapticFeedback (2.2.0):
     - React-Core
   - RNReanimated (3.12.0):
@@ -1312,7 +1331,7 @@ PODS:
   - RNVectorIcons (7.1.0):
     - React
   - SocketRocket (0.7.0)
-  - SwiftProtobuf (1.26.0)
+  - SwiftProtobuf (1.28.2)
   - TcpSockets (4.0.0):
     - React
   - VisionCamera (4.3.2):
@@ -1687,7 +1706,7 @@ SPEC CHECKSUMS:
   RNDeviceInfo: 900bd20e1fd3bfd894e7384cc4a83880c0341bd3
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
   RNGestureHandler: 326e35460fb6c8c64a435d5d739bea90d7ed4e49
-  RNKeychain: 3a8b12f0fdd0b967811a48d9e83d582fc2e483eb
+  RNKeychain: c339dd4a9f13baac6cf6b617bfad3a0eab5df8b1
   RNReactNativeHapticFeedback: a6fb5b7a981683bf58af43e3fb827d4b7ed87f83
   RNReanimated: f1a8e928e0a5e8698c354c226d8d5f80629f8658
   RNScreens: a2d8a2555b4653d7a19706eb172f855657ac30d7
@@ -1695,7 +1714,7 @@ SPEC CHECKSUMS:
   RNSVG: e77adf5edb2302f0f10dd03a09e92bb9420d914e
   RNVectorIcons: 7159ba77d44e14808dcc50fbc03eb5666b1034fc
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d
-  SwiftProtobuf: 5e8349171e7c2f88f5b9e683cb3cb79d1dc780b3
+  SwiftProtobuf: 4dbaffec76a39a8dc5da23b40af1a5dc01a4c02d
   TcpSockets: c5f030d4dbc758c4c7acb00496dc92c412b02cd2
   VisionCamera: 6ad4b86176f6fea45e90e380d3d530bc5e1abff9
   Yoga: ae3c32c514802d30f687a04a6a35b348506d411f

@@ -9,7 +9,6 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { ButtonGroup, Icon } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -37,7 +36,9 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { numberWithCommas } from '../../../utils/UnitsUtils';
 
-import LSPStore from '../../../stores/LSPStore';
+import Storage from '../../../storage';
+
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
 import InvoicesStore from '../../../stores/InvoicesStore';
 import ChannelsStore from '../../../stores/ChannelsStore';
 import SettingsStore from '../../../stores/SettingsStore';
@@ -1302,9 +1303,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         const orderId = result.order_id;
 
                                         // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        EncryptedStorage.getItem(
-                                            'orderResponses'
-                                        )
+                                        Storage.getItem(LSPS1_ORDERS_KEY)
                                             .then((responseArrayString) => {
                                                 let responseArray = [];
                                                 if (responseArrayString) {
@@ -1374,11 +1373,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     );
 
                                                     // Save the updated array back to encrypted storage
-                                                    EncryptedStorage.setItem(
-                                                        'orderResponses',
-                                                        JSON.stringify(
-                                                            responseArray
-                                                        )
+                                                    Storage.setItem(
+                                                        LSPS1_ORDERS_KEY,
+                                                        responseArray
                                                     )
                                                         .then(() => {
                                                             console.log(

@@ -8,7 +8,6 @@ import {
     ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -18,7 +17,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Header from '../components/Header';
 import { Row } from '../components/layout/Row';
 
-import ContactStore from '../stores/ContactStore';
+import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
@@ -31,6 +30,8 @@ import QR from '../assets/images/SVG/QR.svg';
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { localeString } from '../utils/LocaleUtils';
+
+import Storage from '../storage';
 
 import Contact from '../models/Contact';
 
@@ -101,9 +102,7 @@ export default class ContactDetails extends React.Component<
             try {
                 const { contactId, nostrContact, isNostrContact } =
                     this.props.route.params ?? {};
-                const contactsString = await EncryptedStorage.getItem(
-                    'zeus-contacts'
-                );
+                const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
                 if (contactsString && contactId) {
                     const existingContact = JSON.parse(contactsString);
@@ -145,9 +144,7 @@ export default class ContactDetails extends React.Component<
     saveUpdatedContact = async (updatedContact: Contact) => {
         const { ContactStore } = this.props;
         try {
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
             if (contactsString) {
                 const existingContacts: Contact[] = JSON.parse(contactsString);
@@ -162,10 +159,7 @@ export default class ContactDetails extends React.Component<
                     existingContacts[contactIndex] = updatedContact;
 
                     // Save the updated contacts back to storage
-                    await EncryptedStorage.setItem(
-                        'zeus-contacts',
-                        JSON.stringify(existingContacts)
-                    );
+                    await Storage.setItem(CONTACTS_KEY, existingContacts);
 
                     console.log('Contact updated successfully!');
                     ContactStore?.loadContacts();
@@ -179,7 +173,7 @@ export default class ContactDetails extends React.Component<
     importToContacts = async () => {
         const { contact } = this.state;
 
-        const contactsString = await EncryptedStorage.getItem('zeus-contacts');
+        const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
         const existingContacts: Contact[] = contactsString
             ? JSON.parse(contactsString)
@@ -189,10 +183,7 @@ export default class ContactDetails extends React.Component<
             a.name.localeCompare(b.name)
         );
 
-        await EncryptedStorage.setItem(
-            'zeus-contacts',
-            JSON.stringify(updatedContacts)
-        );
+        await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
         console.log('Contact imported successfully!');
         this.props.navigation.popTo('Contacts');

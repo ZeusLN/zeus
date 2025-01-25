@@ -20,6 +20,9 @@ import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
+export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
+export const LSPS1_ORDERS_KEY = 'zeus-lsps1-orders';
+
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;

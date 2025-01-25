@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import moment from 'moment';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -14,7 +13,9 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 
-import LSPStore from '../../../stores/LSPStore';
+import Storage from '../../../storage';
+
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
 
 import { WarningMessage } from '../../../components/SuccessErrorMessage';
@@ -85,8 +86,8 @@ export default class OrdersPane extends React.Component<
         navigation.addListener('focus', async () => {
             try {
                 // Retrieve saved responses from encrypted storage
-                const responseArrayString = await EncryptedStorage.getItem(
-                    'orderResponses'
+                const responseArrayString = await Storage.getItem(
+                    LSPS1_ORDERS_KEY
                 );
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
