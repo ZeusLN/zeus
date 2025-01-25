@@ -1,7 +1,8 @@
 import { action, observable } from 'mobx';
-import EncryptedStorage from 'react-native-encrypted-storage';
+import Storage from '../storage';
 
-const NOTES_KEY = 'note-Keys';
+export const LEGACY_NOTES_KEY = 'note-Keys';
+export const NOTES_KEY = 'zeus-notes-v2';
 
 export default class NotesStore {
     @observable public noteKeys: string[] = [];
@@ -37,13 +38,13 @@ export default class NotesStore {
     public async loadNoteKeys() {
         console.log('Loading notes...');
         try {
-            const storedKeys = await EncryptedStorage.getItem(NOTES_KEY);
+            const storedKeys: any = await Storage.getItem(NOTES_KEY);
             if (storedKeys) {
                 this.noteKeys = JSON.parse(storedKeys);
                 // Load all notes
                 await Promise.all(
                     this.noteKeys.map(async (key) => {
-                        const note = await EncryptedStorage.getItem(key);
+                        const note: any = await Storage.getItem(key);
                         if (note) {
                             this.notes[key] = note;
                         }
@@ -60,10 +61,7 @@ export default class NotesStore {
 
     writeNoteKeysToLocalStorage = async () => {
         try {
-            await EncryptedStorage.setItem(
-                NOTES_KEY,
-                JSON.stringify(this.noteKeys)
-            );
+            await Storage.setItem(NOTES_KEY, this.noteKeys);
         } catch (error) {
             console.error('Error saving to encrypted storage');
         }

@@ -8,7 +8,6 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import { Row } from '../../components/layout/Row';
@@ -23,6 +22,8 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+
+import Storage from '../../storage';
 
 import Skull from '../../assets/images/SVG/Skull.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -331,9 +332,9 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    await EncryptedStorage.setItem(
+                                    await Storage.setItem(
                                         'backup-complete',
-                                        JSON.stringify(true)
+                                        true
                                     );
                                     navigation.popTo('Wallet');
                                 }}

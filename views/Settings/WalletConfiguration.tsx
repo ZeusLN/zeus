@@ -10,19 +10,20 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
+import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
+import Storage from '../../storage';
 
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
@@ -282,8 +283,8 @@ export default class WalletConfiguration extends React.Component<
 
         const { implementation, pairingPhrase } = this.state;
         if (implementation === 'lightning-node-connect') {
-            const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
-            const json: any = await EncryptedStorage.getItem(key);
+            const key = `${LNC_STORAGE_KEY}:${hash(pairingPhrase)}`;
+            const json: any = await Storage.getItem(key);
             const parsed = JSON.parse(json);
             if (parsed) {
                 if (parsed.localKey && parsed.remoteKey) {

@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -14,7 +13,9 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 
-import LSPStore from '../../../stores/LSPStore';
+import Storage from '../../../storage';
+
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
 import SettingsStore from '../../../stores/SettingsStore';
 import InvoicesStore from '../../../stores/InvoicesStore';
 import NodeInfoStore from '../../../stores/NodeInfoStore';
@@ -54,7 +55,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
         const orderShouldUpdate = route.params?.orderShouldUpdate;
 
         console.log('Looking for order in storage...');
-        EncryptedStorage.getItem('orderResponses')
+        Storage.getItem(LSPS1_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
@@ -132,7 +133,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
 
     updateOrderInStorage(order: Order) {
         console.log('Updating order in encrypted storage...');
-        EncryptedStorage.getItem('orderResponses')
+        Storage.getItem(LSPS1_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     let responseArray = JSON.parse(responseArrayString);
@@ -156,12 +157,13 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         responseArray[index] = JSON.stringify(oldOrder);
 
                         // Save the updated order array back to encrypted storage
-                        EncryptedStorage.setItem(
-                            'orderResponses',
-                            JSON.stringify(responseArray)
-                        ).then(() => {
-                            console.log('Order updated in encrypted storage!');
-                        });
+                        Storage.setItem(LSPS1_ORDERS_KEY, responseArray).then(
+                            () => {
+                                console.log(
+                                    'Order updated in encrypted storage!'
+                                );
+                            }
+                        );
                     } else {
                         console.log('Order not found in encrypted storage.');
                     }

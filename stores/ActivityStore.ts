@@ -1,5 +1,4 @@
 import { action, observable } from 'mobx';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 // LN
 import Payment from './../models/Payment';
@@ -15,7 +14,10 @@ import TransactionsStore from './TransactionsStore';
 import BackendUtils from './../utils/BackendUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
 
-const STORAGE_KEY = 'zeus-activity-filters';
+import Storage from '../storage';
+
+export const LEGACY_ACTIVITY_FILTERS_KEY = 'zeus-activity-filters';
+export const ACTIVITY_FILTERS_KEY = 'zeus-activity-filters-v2';
 
 export interface Filter {
     [index: string]: any;
@@ -78,10 +80,7 @@ export default class ActivityStore {
     @action
     public resetFilters = async () => {
         this.filters = DEFAULT_FILTERS;
-        await EncryptedStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(this.filters)
-        );
+        await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
         this.setFilters(this.filters);
     };
 
@@ -101,10 +100,7 @@ export default class ActivityStore {
             startDate: undefined,
             endDate: undefined
         };
-        await EncryptedStorage.setItem(
-            STORAGE_KEY,
-            JSON.stringify(this.filters)
-        );
+        await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
 
     @action
@@ -192,7 +188,7 @@ export default class ActivityStore {
     public async getFilters() {
         this.loading = true;
         try {
-            const filters = await EncryptedStorage.getItem(STORAGE_KEY);
+            const filters = await Storage.getItem(ACTIVITY_FILTERS_KEY);
             if (filters) {
                 this.filters = JSON.parse(filters, (key, value) =>
                     (key === 'startDate' || key === 'endDate') && value
@@ -224,7 +220,7 @@ export default class ActivityStore {
                 activity.determineFormattedRemainingTimeUntilExpiry(locale);
             }
         });
-        await EncryptedStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
+        await Storage.setItem(ACTIVITY_FILTERS_KEY, filters);
         this.loading = false;
     };
 
