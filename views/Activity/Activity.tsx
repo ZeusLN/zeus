@@ -50,6 +50,7 @@ interface ActivityProps {
 }
 
 interface ActivityState {
+    loading: boolean;
     selectedPaymentForOrder: any;
     isCsvModalVisible: boolean;
 }
@@ -64,18 +65,23 @@ export default class Activity extends React.PureComponent<
     invoicesListener: any;
 
     state = {
+        loading: false,
         selectedPaymentForOrder: null,
         isCsvModalVisible: false
     };
 
     async UNSAFE_componentWillMount() {
-        const { ActivityStore, SettingsStore } = this.props;
-        const { getActivityAndFilter, getFilters } = ActivityStore;
+        const {
+            ActivityStore: { getActivityAndFilter, getFilters },
+            SettingsStore
+        } = this.props;
+        this.setState({ loading: true });
         const filters = await getFilters();
         await getActivityAndFilter(SettingsStore.settings.locale, filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
+        this.setState({ loading: false });
     }
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
@@ -151,10 +157,10 @@ export default class Activity extends React.PureComponent<
             SettingsStore,
             route
         } = this.props;
-        const { selectedPaymentForOrder, isCsvModalVisible } = this.state;
+        const { loading, selectedPaymentForOrder, isCsvModalVisible } =
+            this.state;
 
-        const { loading, filteredActivity, getActivityAndFilter } =
-            ActivityStore;
+        const { filteredActivity, getActivityAndFilter } = ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
