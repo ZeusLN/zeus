@@ -59,7 +59,6 @@ export default class ActivityFilter extends React.Component<
             this.state;
         const locale = SettingsStore.settings.locale;
         const {
-            loading,
             setFilters,
             filters,
             setAmountFilter,
@@ -380,7 +379,6 @@ export default class ActivityFilter extends React.Component<
                     }
                     ItemSeparatorComponent={this.renderSeparator}
                     onEndReachedThreshold={50}
-                    refreshing={loading}
                 />
                 <DatePicker
                     onConfirm={(date) => {
