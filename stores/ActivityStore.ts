@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 
 // LN
 import Payment from './../models/Payment';
@@ -77,14 +77,12 @@ export default class ActivityStore {
         this.invoicesStore = invoicesStore;
     }
 
-    @action
     public resetFilters = async () => {
         this.filters = DEFAULT_FILTERS;
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
         this.setFilters(this.filters);
     };
 
-    @action
     public setFiltersPos = async () => {
         this.filters = {
             lightning: true,
@@ -133,7 +131,7 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
-    getSortedActivity = () => {
+    private getSortedActivity = () => {
         const activity: any[] = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
@@ -154,47 +152,53 @@ export default class ActivityStore {
         return sortedActivity;
     };
 
-    @action
-    public getActivity = async () => {
-        this.loading = true;
-        this.activity = [];
+    private getActivity = async () => {
+        runInAction(() => {
+            this.loading = true;
+            this.activity = [];
+        });
+
         await this.paymentsStore.getPayments();
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
 
-        this.activity = this.getSortedActivity();
-        this.filteredActivity = this.activity;
-
-        this.loading = false;
+        runInAction(() => {
+            this.activity = this.getSortedActivity();
+            this.filteredActivity = this.activity;
+            this.loading = false;
+        });
     };
 
-    @action
     public updateInvoices = async (locale: string | undefined) => {
         await this.invoicesStore.getInvoices();
-        this.activity = this.getSortedActivity();
-        await this.setFilters(this.filters, locale);
+        await runInAction(async () => {
+            this.activity = this.getSortedActivity();
+            await this.setFilters(this.filters, locale);
+        });
     };
 
-    @action
     public updateTransactions = async (locale: string | undefined) => {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
-        this.activity = this.getSortedActivity();
-        await this.setFilters(this.filters, locale);
+        await runInAction(async () => {
+            this.activity = this.getSortedActivity();
+            await this.setFilters(this.filters, locale);
+        });
     };
 
-    @action
     public async getFilters() {
         this.loading = true;
         try {
             const filters = await Storage.getItem(ACTIVITY_FILTERS_KEY);
             if (filters) {
-                this.filters = JSON.parse(filters, (key, value) =>
-                    (key === 'startDate' || key === 'endDate') && value
-                        ? new Date(value)
-                        : value
-                );
+                runInAction(() => {
+                    this.filters = JSON.parse(filters, (key, value) =>
+                        (key === 'startDate' || key === 'endDate') && value
+                            ? new Date(value)
+                            : value
+                    );
+                });
             } else {
                 console.log('No activity filters stored');
             }
@@ -207,24 +211,26 @@ export default class ActivityStore {
         return this.filters;
     }
 
-    @action
     public setFilters = async (filters: Filter, locale?: string) => {
-        this.loading = true;
-        this.filters = filters;
-        this.filteredActivity = ActivityFilterUtils.filterActivities(
-            this.activity,
-            filters
-        );
-        this.filteredActivity.forEach((activity) => {
-            if (activity instanceof Invoice) {
-                activity.determineFormattedRemainingTimeUntilExpiry(locale);
-            }
+        runInAction(() => {
+            this.loading = true;
+            this.filters = filters;
+            this.filteredActivity = ActivityFilterUtils.filterActivities(
+                this.activity,
+                filters
+            );
+            this.filteredActivity.forEach((activity) => {
+                if (activity instanceof Invoice) {
+                    activity.determineFormattedRemainingTimeUntilExpiry(locale);
+                }
+            });
         });
+
         await Storage.setItem(ACTIVITY_FILTERS_KEY, filters);
+
         this.loading = false;
     };
 
-    @action
     public getActivityAndFilter = async (
         locale: string | undefined,
         filters: Filter = this.filters

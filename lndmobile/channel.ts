@@ -337,20 +337,17 @@ export const subscribeChannelEvents = async (): Promise<string> => {
 /**
  * @throws
  */
-export const exportAllChannelBackups =
-    async (): Promise<lnrpc.ChanBackupSnapshot> => {
-        const response = await sendCommand<
-            lnrpc.IChanBackupExportRequest,
-            lnrpc.ChanBackupExportRequest,
-            lnrpc.ChanBackupSnapshot
-        >({
-            request: lnrpc.ChanBackupExportRequest,
-            response: lnrpc.ChanBackupSnapshot,
-            method: 'ExportAllChannelBackups',
-            options: {}
-        });
-        return response;
-    };
+export const exportAllChannelBackups = (): Promise<lnrpc.ChanBackupSnapshot> =>
+    sendCommand<
+        lnrpc.IChanBackupExportRequest,
+        lnrpc.ChanBackupExportRequest,
+        lnrpc.ChanBackupSnapshot
+    >({
+        request: lnrpc.ChanBackupExportRequest,
+        response: lnrpc.ChanBackupSnapshot,
+        method: 'ExportAllChannelBackups',
+        options: {}
+    });
 
 /**
  * @throws

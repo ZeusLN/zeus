@@ -1,4 +1,4 @@
-import { action, reaction, observable } from 'mobx';
+import { action, reaction, observable, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
@@ -32,7 +32,8 @@ export default class BalanceStore {
         );
     }
 
-    reset = () => {
+    @action
+    public reset = () => {
         this.resetLightningBalance();
         this.resetBlockchainBalance();
         this.error = false;
@@ -47,49 +48,51 @@ export default class BalanceStore {
         this.loadingBlockchainBalance = false;
     };
 
-    resetLightningBalance = () => {
+    private resetLightningBalance = () => {
         this.pendingOpenBalance = 0;
         this.lightningBalance = 0;
         this.loadingLightningBalance = false;
     };
 
-    balanceError = () => {
+    @action
+    private balanceError = () => {
         this.error = true;
         this.loadingBlockchainBalance = false;
         this.loadingLightningBalance = false;
     };
 
     @action
-    public getBlockchainBalance = (set: boolean, reset: boolean) => {
-        this.loadingBlockchainBalance = true;
+    public getBlockchainBalance = async (set: boolean, reset: boolean) => {
         if (reset) this.resetBlockchainBalance();
-        return BackendUtils.getBlockchainBalance({})
-            .then((data: any) => {
-                // process external accounts
-                const accounts = data?.account_balance;
+        this.loadingBlockchainBalance = true;
+        try {
+            const data = await BackendUtils.getBlockchainBalance({});
+            // process external accounts
+            const accounts = data?.account_balance;
 
-                const unconfirmedBlockchainBalance = Number(
-                    accounts?.default
-                        ? accounts.default.unconfirmed_balance || 0
-                        : data.unconfirmed_balance || 0
-                );
+            const unconfirmedBlockchainBalance = Number(
+                accounts?.default
+                    ? accounts.default.unconfirmed_balance || 0
+                    : data.unconfirmed_balance || 0
+            );
 
-                const confirmedBlockchainBalance = Number(
-                    accounts?.default
-                        ? accounts?.default.confirmed_balance || 0
-                        : data.confirmed_balance || 0
-                );
+            const confirmedBlockchainBalance = Number(
+                accounts?.default
+                    ? accounts?.default.confirmed_balance || 0
+                    : data.confirmed_balance || 0
+            );
 
-                const totalBlockchainBalance = new BigNumber(
-                    unconfirmedBlockchainBalance
-                )
-                    .plus(confirmedBlockchainBalance)
-                    .toNumber();
+            const totalBlockchainBalance = new BigNumber(
+                unconfirmedBlockchainBalance
+            )
+                .plus(confirmedBlockchainBalance)
+                .toNumber();
 
-                const totalBlockchainBalanceAccounts = Number(
-                    data.total_balance || 0
-                );
+            const totalBlockchainBalanceAccounts = Number(
+                data.total_balance || 0
+            );
 
+            runInAction(() => {
                 if (set) {
                     if (accounts && accounts.default && data.confirmed_balance)
                         delete accounts.default;
@@ -104,44 +107,43 @@ export default class BalanceStore {
                         totalBlockchainBalanceAccounts;
                 }
                 this.loadingBlockchainBalance = false;
-                return {
-                    unconfirmedBlockchainBalance,
-                    confirmedBlockchainBalance,
-                    totalBlockchainBalance,
-                    accounts
-                };
-            })
-            .catch(() => {
-                this.balanceError();
             });
+            return {
+                unconfirmedBlockchainBalance,
+                confirmedBlockchainBalance,
+                totalBlockchainBalance,
+                accounts
+            };
+        } catch {
+            this.balanceError();
+        }
     };
 
     @action
-    public getLightningBalance = (set: boolean, reset?: boolean) => {
-        this.loadingLightningBalance = true;
+    public getLightningBalance = async (set: boolean, reset?: boolean) => {
         if (reset) this.resetLightningBalance();
-        return BackendUtils.getLightningBalance()
-            .then((data: any) => {
-                const pendingOpenBalance = Number(
-                    data.pending_open_balance || 0
-                );
-                const lightningBalance = Number(data.balance || 0);
+        this.loadingLightningBalance = true;
+        try {
+            const data = await BackendUtils.getLightningBalance();
+            const pendingOpenBalance = Number(data.pending_open_balance || 0);
+            const lightningBalance = Number(data.balance || 0);
 
+            runInAction(() => {
                 if (set) {
                     this.pendingOpenBalance = pendingOpenBalance;
                     this.lightningBalance = lightningBalance;
                 }
 
                 this.loadingLightningBalance = false;
-
-                return {
-                    pendingOpenBalance,
-                    lightningBalance
-                };
-            })
-            .catch(() => {
-                this.balanceError();
             });
+
+            return {
+                pendingOpenBalance,
+                lightningBalance
+            };
+        } catch {
+            this.balanceError();
+        }
     };
 
     @action
@@ -150,18 +152,18 @@ export default class BalanceStore {
         const lightning = await this.getLightningBalance(false);
         const onChain = await this.getBlockchainBalance(false, false);
 
-        // LN
-        this.pendingOpenBalance =
-            (lightning && lightning.pendingOpenBalance) || 0;
-        this.lightningBalance = (lightning && lightning.lightningBalance) || 0;
-        // on-chain
-        this.otherAccounts = (onChain && onChain.accounts) || [];
-        this.unconfirmedBlockchainBalance =
-            (onChain && onChain.unconfirmedBlockchainBalance) || 0;
-        this.confirmedBlockchainBalance =
-            (onChain && onChain.confirmedBlockchainBalance) || 0;
-        this.totalBlockchainBalance =
-            (onChain && onChain.totalBlockchainBalance) || 0;
+        runInAction(() => {
+            // LN
+            this.pendingOpenBalance = lightning?.pendingOpenBalance || 0;
+            this.lightningBalance = lightning?.lightningBalance || 0;
+            // on-chain
+            this.otherAccounts = onChain?.accounts || [];
+            this.unconfirmedBlockchainBalance =
+                onChain?.unconfirmedBlockchainBalance || 0;
+            this.confirmedBlockchainBalance =
+                onChain?.confirmedBlockchainBalance || 0;
+            this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
+        });
 
         return {
             onChain,

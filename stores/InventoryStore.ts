@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { observable, runInAction } from 'mobx';
 import Product from '../models/Product';
 import ProductCategory from '../models/ProductCategory';
 import Storage from '../storage';
@@ -14,20 +14,21 @@ export default class InventoryStore {
     @observable products: Array<Product> = [];
     @observable public loading = false;
 
-    @action
     public async getInventory() {
         this.loading = true;
         try {
-            // Retrieve the categories
+            // Retrieve categories and products
             const categories = await Storage.getItem(CATEGORY_KEY);
-            if (categories) {
-                this.categories = JSON.parse(categories) || [];
-            }
-            // Retrieve the products
             const products = await Storage.getItem(PRODUCT_KEY);
-            if (products) {
-                this.products = JSON.parse(products) || [];
-            }
+
+            runInAction(() => {
+                if (categories) {
+                    this.categories = JSON.parse(categories) || [];
+                }
+                if (products) {
+                    this.products = JSON.parse(products) || [];
+                }
+            });
         } catch (error) {
             console.error('Could not load inventory', error);
         } finally {
@@ -40,15 +41,13 @@ export default class InventoryStore {
         };
     }
 
-    @action
-    public async setCategories(categories: string) {
+    private async setCategories(categories: string) {
         this.loading = true;
         await Storage.setItem(CATEGORY_KEY, categories);
         this.loading = false;
         return categories;
     }
 
-    @action
     public updateCategories = async (newCategory: ProductCategory) => {
         const { categories: existingCategories } = await this.getInventory();
 
@@ -76,7 +75,6 @@ export default class InventoryStore {
         return categories;
     };
 
-    @action
     public deleteCategory = async (categoryId: string) => {
         const { categories: existingCategories } = await this.getInventory();
 
@@ -90,15 +88,13 @@ export default class InventoryStore {
         }
     };
 
-    @action
-    public async setProducts(products: string) {
+    private async setProducts(products: string) {
         this.loading = true;
         await Storage.setItem(PRODUCT_KEY, products);
         this.loading = false;
         return products;
     }
 
-    @action
     public updateProducts = async (newProducts: Product[]) => {
         const { products: existingProducts } = await this.getInventory();
 
@@ -122,7 +118,6 @@ export default class InventoryStore {
         return products;
     };
 
-    @action
     public deleteProduct = async (productIds: string[]) => {
         const { products: existingProducts } = await this.getInventory();
 
