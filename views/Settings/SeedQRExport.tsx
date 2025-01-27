@@ -25,14 +25,18 @@ import {
 } from '../../components/SuccessErrorMessage';
 
 import stores from '../../stores/Stores';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
+import Storage from '../../storage';
+
 interface SeedQRExportProps {
     navigation: StackNavigationProp<any, any>;
+    NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
 
@@ -58,7 +62,7 @@ const AEZEED_DEFAULT_PASSPHRASE = 'aezeed',
     CHECKSUM_OFFSET = ENCIPHERED_LENGTH - CHECKSUM_LENGTH,
     SALT_OFFSET = CHECKSUM_OFFSET - SALT_LENGTH;
 
-@inject('SettingsStore')
+@inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class SeedQRExport extends React.PureComponent<
     SeedQRExportProps,
@@ -92,8 +96,24 @@ export default class SeedQRExport extends React.PureComponent<
     async initializeSeed() {
         try {
             await this.props.SettingsStore.getSettings();
-            const { SettingsStore } = this.props;
+            const { NodeInfoStore, SettingsStore } = this.props;
             const { seedPhrase }: any = SettingsStore;
+
+            const pubkey = NodeInfoStore!.nodeInfo?.nodeId;
+            const storageKey = `${pubkey}-extended-private-keys`;
+            const extendedKeys = await Storage.getItem(storageKey);
+            if (extendedKeys) {
+                const extendedKeysJson = JSON.parse(extendedKeys);
+                const { nodeBase58Segwit, nodeBase58NativeSegwit } =
+                    extendedKeysJson;
+
+                this.setState({
+                    loading: false,
+                    nodeBase58Segwit,
+                    nodeBase58NativeSegwit
+                });
+                return;
+            }
 
             const bits = seedPhrase
                 .map((word: string) => {
@@ -237,6 +257,11 @@ export default class SeedQRExport extends React.PureComponent<
                         : NATIVE_SEGWIT_MAINNET.config
                 )
                 .toBase58();
+
+            await Storage.setItem(storageKey, {
+                nodeBase58Segwit,
+                nodeBase58NativeSegwit
+            });
 
             this.setState({
                 loading: false,
