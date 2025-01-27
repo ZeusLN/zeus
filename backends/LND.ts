@@ -330,7 +330,11 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = (params?: { maxPayments?: number; reversed?: boolean }) =>
+    getPayments = (
+        params: { maxPayments?: number; reversed?: boolean } = {
+            maxPayments: 500
+        }
+    ) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
