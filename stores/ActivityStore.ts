@@ -53,7 +53,6 @@ export const DEFAULT_FILTERS = {
 };
 
 export default class ActivityStore {
-    @observable public loading = false;
     @observable public error = false;
     @observable public activity: Array<Invoice | Payment | Transaction> = [];
     @observable public filteredActivity: Array<
@@ -156,7 +155,6 @@ export default class ActivityStore {
 
     @action
     public getActivity = async () => {
-        this.loading = true;
         this.activity = [];
         await this.paymentsStore.getPayments();
         if (BackendUtils.supportsOnchainSends())
@@ -165,8 +163,6 @@ export default class ActivityStore {
 
         this.activity = this.getSortedActivity();
         this.filteredActivity = this.activity;
-
-        this.loading = false;
     };
 
     @action
@@ -186,7 +182,6 @@ export default class ActivityStore {
 
     @action
     public async getFilters() {
-        this.loading = true;
         try {
             const filters = await Storage.getItem(ACTIVITY_FILTERS_KEY);
             if (filters) {
@@ -200,8 +195,6 @@ export default class ActivityStore {
             }
         } catch (error) {
             console.log('Loading activity filters failed', error);
-        } finally {
-            this.loading = false;
         }
 
         return this.filters;
@@ -209,7 +202,6 @@ export default class ActivityStore {
 
     @action
     public setFilters = async (filters: Filter, locale?: string) => {
-        this.loading = true;
         this.filters = filters;
         this.filteredActivity = ActivityFilterUtils.filterActivities(
             this.activity,
@@ -220,8 +212,7 @@ export default class ActivityStore {
                 activity.determineFormattedRemainingTimeUntilExpiry(locale);
             }
         });
-        await Storage.setItem(ACTIVITY_FILTERS_KEY, filters);
-        this.loading = false;
+        Storage.setItem(ACTIVITY_FILTERS_KEY, filters);
     };
 
     @action
