@@ -14,6 +14,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 import { Row } from '../..//components/layout/Row';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
@@ -36,6 +37,7 @@ interface LnurlPayState {
     satAmount: string | number;
     domain: string;
     comment: string;
+    loading: boolean;
 }
 
 @inject('InvoicesStore', 'LnurlPayStore')
@@ -48,13 +50,17 @@ export default class LnurlPay extends React.Component<
         super(props);
 
         try {
-            this.state = this.stateFromProps(props);
+            this.state = {
+                ...this.stateFromProps(props),
+                loading: false
+            };
         } catch (err: any) {
             this.state = {
                 amount: '',
                 satAmount: '',
                 domain: '',
-                comment: ''
+                comment: '',
+                loading: false
             };
 
             Alert.alert(
@@ -82,6 +88,8 @@ export default class LnurlPay extends React.Component<
     }
 
     sendValues(satAmount: string | number) {
+        this.setState({ loading: true });
+
         const { navigation, InvoicesStore, LnurlPayStore, route } = this.props;
         const { domain, comment } = this.state;
         const lnurl = route.params?.lnurlParams;
@@ -109,6 +117,8 @@ export default class LnurlPay extends React.Component<
             }))
             .then((data: any) => {
                 if (data.status === 'ERROR') {
+                    this.setState({ loading: false });
+
                     Alert.alert(
                         `[error] ${domain} says:`,
                         data.reason,
@@ -135,6 +145,8 @@ export default class LnurlPay extends React.Component<
                 const relays_sig = data.relays_sig;
 
                 InvoicesStore.getPayReq(pr).then(() => {
+                    this.setState({ loading: false });
+
                     if (InvoicesStore.getPayReqError) {
                         Alert.alert(
                             localeString(
@@ -182,7 +194,7 @@ export default class LnurlPay extends React.Component<
 
     render() {
         const { navigation, route } = this.props;
-        const { amount, satAmount, domain, comment } = this.state;
+        const { amount, satAmount, domain, comment, loading } = this.state;
 
         const lnurl = route.params?.lnurlParams;
 
@@ -197,6 +209,16 @@ export default class LnurlPay extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            {loading && <LoadingIndicator size={35} />}
+                        </View>
+                    }
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
@@ -284,10 +306,11 @@ export default class LnurlPay extends React.Component<
                             <AmountInput
                                 amount={amount}
                                 locked={
-                                    lnurl &&
+                                    loading ||
+                                    (lnurl &&
                                     lnurl.minSendable === lnurl.maxSendable
                                         ? true
-                                        : false
+                                        : false)
                                 }
                                 onAmountChange={(
                                     amount: string,
@@ -319,6 +342,7 @@ export default class LnurlPay extends React.Component<
                                     onChangeText={(text: string) => {
                                         this.setState({ comment: text });
                                     }}
+                                    locked={loading}
                                 />
                             </>
                         ) : null}
@@ -341,6 +365,7 @@ export default class LnurlPay extends React.Component<
                                 buttonStyle={{
                                     backgroundColor: themeColor('secondary')
                                 }}
+                                disabled={loading}
                             />
                         </View>
                     </View>
