@@ -1,13 +1,10 @@
 import * as React from 'react';
-import {
-    NativeModules,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
+
+import lndMobile from '../../../../lndmobile/LndMobileInjection';
+const { sweepRemoteClosed } = lndMobile.chantools;
 
 import Button from '../../../../components/Button';
 import DropdownSetting from '../../../../components/DropdownSetting';
@@ -334,7 +331,7 @@ export default class Sweepremoteclosed extends React.Component<
                                     });
                                     try {
                                         const response =
-                                            await NativeModules.LncModule.sweepRemoteClosed(
+                                            await sweepRemoteClosed(
                                                 seed,
                                                 apiUrl === 'Custom'
                                                     ? customApiUrl
