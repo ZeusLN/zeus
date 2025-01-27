@@ -90,9 +90,11 @@ export default class LightningNodeConnect {
     isConnected = async () => await this.lnc.isConnected();
     disconnect = () => this.lnc && this.lnc.disconnect();
 
-    getTransactions = async () =>
+    getTransactions = async (data: lnrpc.GetTransactionsRequest) =>
         await this.lnc.lnd.lightning
-            .getTransactions({})
+            .getTransactions({
+                max_transactions: data?.max_transactions || 500
+            })
             .then((data: lnrpc.TransactionDetails) => {
                 const formatted = snakeize(data);
                 return {
@@ -154,9 +156,12 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .getNetworkInfo({})
             .then((data: lnrpc.NetworkInfo) => snakeize(data));
-    getInvoices = async () =>
+    getInvoices = async (data: any) =>
         await this.lnc.lnd.lightning
-            .listInvoices({ reversed: true, num_max_invoices: 100 })
+            .listInvoices({
+                reversed: true,
+                num_max_invoices: data?.limit || 500
+            })
             .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
     createInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
@@ -173,10 +178,14 @@ export default class LightningNodeConnect {
                 route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
-    getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) =>
+    getPayments = async (
+        params: {
+            maxPayments?: number;
+            reversed?: boolean;
+        } = {
+            maxPayments: 500
+        }
+    ) =>
         await this.lnc.lnd.lightning
             .listPayments({
                 include_incomplete: true,

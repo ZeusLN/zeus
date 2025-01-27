@@ -235,9 +235,13 @@ export default class LND {
 
     getTransactions = (data: any) =>
         this.getRequest(
-            data && data.start_height
-                ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
-                : '/v1/transactions?end_height=-1'
+            `/v1/transactions?end_height=-1${
+                data?.start_height ? `&start_height=${data.start_height}` : ''
+            }${
+                data?.max_transactions
+                    ? `&max_transactions=${data.max_transactions}`
+                    : ''
+            }`
         ).then((data: any) => ({
             transactions: data.transactions
         }));
@@ -330,7 +334,11 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = (params?: { maxPayments?: number; reversed?: boolean }) =>
+    getPayments = (
+        params: { maxPayments?: number; reversed?: boolean } = {
+            maxPayments: 500
+        }
+    ) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
