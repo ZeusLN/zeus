@@ -145,4 +145,16 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      gocb.setCallback(::sendEvent)
      Lndmobile.invokeRPC(namespace, eventName, request, gocb)
   }
+
+  // chantools
+
+  @ReactMethod
+  fun sweepRemoteClosed(seedPhrase: String, apiURL: String, sweepAddr: String, recoveryWindow: Int, feeRate: Int, sleepSeconds: Int, publish: Boolean = false, isTestnet: Boolean = false, promise: Promise) {
+     try {
+        var response = Lndmobile.sweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish, isTestnet)
+        promise.resolve(response);
+     } catch(e: Throwable) {
+        promise.reject("request Error", e);
+     }
+  }
 }
