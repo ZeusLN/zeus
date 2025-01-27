@@ -161,6 +161,10 @@ import LSPS1Settings from './views/Settings/LSPS1/Settings';
 import OrdersPane from './views/Settings/LSPS1/OrdersPane';
 import Orders from './views/Settings/LSPS1/Order';
 
+// Chantools
+import Chantools from './views/Settings/EmbeddedNode/Chantools';
+import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
+
 import RawTxHex from './views/RawTxHex';
 
 import CustodialWalletWarning from './views/Settings/CustodialWalletWarning';
@@ -901,6 +905,16 @@ export default class App extends React.PureComponent {
                                                         name="OnChainAddresses" // @ts-ignore:next-line
                                                         component={
                                                             OnChainAddresses
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Chantools" // @ts-ignore:next-line
+                                                        component={Chantools}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Sweepremoteclosed" // @ts-ignore:next-line
+                                                        component={
+                                                            Sweepremoteclosed
                                                         }
                                                     />
                                                 </Stack.Navigator>
