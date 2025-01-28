@@ -193,7 +193,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'hardwareBackPress',
             this.handleBackButton.bind(this)
         );
-        this.getSettingsAndNavigate();
+
+        const { SettingsStore } = this.props;
+
+        if (
+            this.state.initialLoad ||
+            SettingsStore.posWasEnabled ||
+            SettingsStore.triggerSettingsRefresh
+        ) {
+            this.getSettingsAndNavigate();
+            SettingsStore.posWasEnabled = false;
+            SettingsStore.triggerSettingsRefresh = false;
+        }
     };
 
     private handleBlur = () => this.backPressSubscription?.remove();
@@ -235,8 +246,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
-        } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
-            this.props.navigation.navigate('Lockscreen');
+        } else if (nextAppState === 'active') {
+            if (SettingsStore.loginRequired()) {
+                this.props.navigation.navigate('Lockscreen');
+            } else {
+                this.getSettingsAndNavigate();
+            }
         }
     };
 
