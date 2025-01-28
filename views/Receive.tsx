@@ -1848,9 +1848,11 @@ export default class Receive extends React.Component<
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
                                                     value={unifiedInvoice || ''}
-                                                    copyText={localeString(
-                                                        'views.Receive.copyInvoice'
-                                                    )}
+                                                    iconOnly={true}
+                                                    copyIconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -1878,9 +1880,11 @@ export default class Receive extends React.Component<
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
-                                                    copyText={localeString(
-                                                        'views.Receive.copyInvoice'
-                                                    )}
+                                                    iconOnly={true}
+                                                    copyIconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -1908,9 +1912,11 @@ export default class Receive extends React.Component<
                                                     copyValue={
                                                         btcAddressCopyValue
                                                     }
-                                                    copyText={localeString(
-                                                        'views.Receive.copyAddress'
-                                                    )}
+                                                    iconOnly={true}
+                                                    copyIconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -1987,9 +1993,11 @@ export default class Receive extends React.Component<
                                             lightningAddress && (
                                                 <CollapsedQR
                                                     value={`lightning:${lightningAddress}`}
-                                                    copyText={localeString(
-                                                        'views.Receive.copyAddress'
-                                                    )}
+                                                    iconOnly={true}
+                                                    copyIconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     hideText
@@ -2020,9 +2028,11 @@ export default class Receive extends React.Component<
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
-                                                    copyText={localeString(
-                                                        'views.Receive.copyInvoice'
-                                                    )}
+                                                    iconOnly={true}
+                                                    copyIconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
