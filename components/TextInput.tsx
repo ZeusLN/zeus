@@ -19,6 +19,7 @@ interface TextInputProps {
     numberOfLines?: number;
     style?: ViewStyle;
     textInputStyle?: StyleProp<TextStyle>;
+    textColor?: string;
     placeholderTextColor?: string;
     locked?: boolean;
     keyboardType?: KeyboardTypeOptions;
@@ -36,6 +37,7 @@ interface TextInputProps {
     ref?: React.Ref<TextInputRN>;
     error?: boolean;
     onFocus?: any;
+    onBlur?: any;
     onSubmitEditing?: () => void;
 }
 
@@ -48,6 +50,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             numberOfLines,
             style,
             textInputStyle,
+            textColor,
             placeholderTextColor,
             locked,
             keyboardType,
@@ -62,7 +65,9 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             toggleUnits,
             onPressIn,
             right,
-            error
+            error,
+            onFocus,
+            onBlur
         } = props;
         const defaultStyle = numberOfLines
             ? {
@@ -153,9 +158,11 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     style={{
                         ...StyleSheet.flatten(textInputStyle),
                         ...styles.input,
-                        color: locked
-                            ? themeColor('secondaryText')
-                            : themeColor('text')
+                        color:
+                            textColor ||
+                            (locked
+                                ? themeColor('secondaryText')
+                                : themeColor('text'))
                     }}
                     placeholderTextColor={
                         placeholderTextColor || themeColor('secondaryText')
@@ -170,6 +177,8 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     onPressIn={onPressIn}
                     onSubmitEditing={props.onSubmitEditing}
                     ref={ref}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                 />
                 {suffix ? (
                     toggleUnits ? (
