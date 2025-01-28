@@ -67,7 +67,8 @@ export default class SetWalletPicture extends React.Component<
                 require('../../assets/images/Alby.jpg'),
                 require('../../assets/images/AlbyHub.jpg'),
                 require('../../assets/images/Cashu.jpg'),
-                require('../../assets/images/Nostr.jpg')
+                require('../../assets/images/Nostr.jpg'),
+                require('../../assets/images/NostrWalletConnect.jpg')
             ],
             spark: [require('../../assets/images/CLN.jpg')],
             'c-lightning-REST': [
