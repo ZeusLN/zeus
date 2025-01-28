@@ -146,10 +146,11 @@ export default class AmountInput extends React.Component<
             hideUnitChangeButton,
             FiatStore,
             UnitsStore,
-            SettingsStore
+            SettingsStore,
+            forceUnit
         } = this.props;
         const { units }: any = UnitsStore;
-        const effectiveUnits = this.props.forceUnit || units;
+        const effectiveUnits = forceUnit || units;
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
@@ -176,7 +177,7 @@ export default class AmountInput extends React.Component<
                             const formatted = text.replace(/[^\d.,-]/g, '');
                             const satAmount = getSatAmount(
                                 formatted,
-                                this.props.forceUnit
+                                forceUnit
                             );
                             onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
