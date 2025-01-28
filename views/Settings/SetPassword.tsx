@@ -262,12 +262,11 @@ export default class SetPassphrase extends React.Component<
                                             confirmDelete: true
                                         });
                                     } else if (this.state.isBiometryEnabled) {
-                                        this.props.ModalStore.toggleInfoModal(
-                                            localeString(
+                                        this.props.ModalStore.toggleInfoModal({
+                                            text: localeString(
                                                 'views.Settings.Security.biometricsWillBeDisabled'
                                             ),
-                                            undefined,
-                                            [
+                                            buttons: [
                                                 {
                                                     title: localeString(
                                                         'general.ok'
@@ -276,7 +275,7 @@ export default class SetPassphrase extends React.Component<
                                                         this.deletePassword()
                                                 }
                                             ]
-                                        );
+                                        });
                                     } else {
                                         this.deletePassword();
                                     }

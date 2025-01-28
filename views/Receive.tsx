@@ -230,7 +230,12 @@ export default class Receive extends React.Component<
 
         const settings = await getSettings();
 
-        if (settings?.lightningAddress?.enabled && !lightningAddressHandle) {
+        if (
+            settings?.lightningAddressByPubkey[
+                NodeInfoStore.nodeInfo.identity_pubkey
+            ]?.enabled &&
+            !lightningAddressHandle
+        ) {
             status();
         }
 

@@ -68,7 +68,7 @@ export default class NostrRelays extends React.Component<
             setup,
             relays: relays
                 ? relays
-                : settings.lightningAddress.nostrRelays || []
+                : settings.lightningAddressGlobal.nostrRelays || []
         });
     }
 
@@ -77,13 +77,7 @@ export default class NostrRelays extends React.Component<
         const { relays, addRelay, setup } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { lightningAddress } = settings;
-        const {
-            enabled,
-            automaticallyAccept,
-            allowComments,
-            nostrPrivateKey,
-            notifications
-        } = lightningAddress;
+        const { nostrPrivateKey } = lightningAddress;
         const { update, loading, error_msg } = LightningAddressStore;
 
         return (
@@ -207,17 +201,11 @@ export default class NostrRelays extends React.Component<
                                                             addRelay: ''
                                                         });
                                                         await updateSettings({
-                                                            lightningAddress: {
-                                                                enabled,
-                                                                automaticallyAccept,
-                                                                automaticallyRequestOlympusChannels:
-                                                                    false, // deprecated
-                                                                allowComments,
-                                                                nostrPrivateKey,
-                                                                nostrRelays:
-                                                                    newNostrRelays,
-                                                                notifications
-                                                            }
+                                                            lightningAddressGlobal:
+                                                                {
+                                                                    nostrRelays:
+                                                                        newNostrRelays
+                                                                }
                                                         });
                                                     });
                                                 } catch (e) {}
@@ -298,17 +286,10 @@ export default class NostrRelays extends React.Component<
                                                                         );
                                                                         await updateSettings(
                                                                             {
-                                                                                lightningAddress:
+                                                                                lightningAddressGlobal:
                                                                                     {
-                                                                                        enabled,
-                                                                                        automaticallyAccept,
-                                                                                        automaticallyRequestOlympusChannels:
-                                                                                            false, // deprecated
-                                                                                        allowComments,
-                                                                                        nostrPrivateKey,
                                                                                         nostrRelays:
-                                                                                            newNostrRelays,
-                                                                                        notifications
+                                                                                            newNostrRelays
                                                                                     }
                                                                             }
                                                                         );
