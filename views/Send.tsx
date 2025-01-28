@@ -35,7 +35,6 @@ import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import ContactStore from '../stores/ContactStore';
 
-import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import FeeLimit from '../components/FeeLimit';
@@ -987,47 +986,28 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                {!fundMax && (
-                                    <AmountInput
-                                        amount={amount}
-                                        title={localeString(
-                                            'views.Send.amount'
-                                        )}
-                                        onAmountChange={(
-                                            amount: string,
-                                            satAmount: string | number
-                                        ) => {
-                                            this.setState({
-                                                amount,
-                                                satAmount
-                                            });
-                                        }}
-                                        hideConversion={amount === 'all'}
-                                    />
-                                )}
-
-                                <View style={{ paddingBottom: 15 }}>
-                                    {fundMax && (
-                                        <>
-                                            <Amount
-                                                sats={
-                                                    utxoBalance > 0
-                                                        ? utxoBalance
-                                                        : confirmedBlockchainBalance
-                                                }
-                                                fixedUnits="BTC"
-                                            />
-                                            <Amount
-                                                sats={
-                                                    utxoBalance > 0
-                                                        ? utxoBalance
-                                                        : confirmedBlockchainBalance
-                                                }
-                                                fixedUnits="sats"
-                                            />
-                                        </>
-                                    )}
-                                </View>
+                                <AmountInput
+                                    amount={
+                                        fundMax
+                                            ? utxoBalance > 0
+                                                ? utxoBalance.toString()
+                                                : confirmedBlockchainBalance.toString()
+                                            : amount
+                                    }
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
+                                    hideConversion={amount === 'all'}
+                                    locked={fundMax}
+                                    forceUnit={fundMax ? 'sats' : undefined}
+                                />
 
                                 {BackendUtils.supportsOnchainSendMax() &&
                                     additionalOutputs.length === 0 &&
