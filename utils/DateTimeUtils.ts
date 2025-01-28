@@ -38,6 +38,23 @@ class DateTimeUtils {
 
         return `${time} | ${monthAndDay}${year}`;
     };
+
+    blocksToMonthsAndDays = (blocks: number) => {
+        const blocksPerDay = 144;
+        const daysPerMonth = 30;
+
+        // Calculate total days
+        const totalDays = Math.round(blocks / blocksPerDay);
+
+        // Calculate months and remaining days
+        const months =
+            Math.floor(Math.abs(totalDays) / daysPerMonth) *
+            Math.sign(totalDays);
+        const days =
+            (Math.abs(totalDays) % daysPerMonth) * Math.sign(totalDays);
+
+        return { months, days };
+    };
 }
 
 const dateTimeUtils = new DateTimeUtils();

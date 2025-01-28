@@ -119,3 +119,39 @@ describe('listFormattedDateOrder', () => {
         expect(result).toEqual(`05:06 am | ${dayName}, Jan 01, '${year % 100}`);
     });
 });
+
+describe('blocksToMonthsAndDays', () => {
+    it('handles positive values', () => {
+        expect(DateTimeUtils.blocksToMonthsAndDays(2016)).toEqual({
+            months: 0,
+            days: 14
+        });
+
+        expect(DateTimeUtils.blocksToMonthsAndDays(20160)).toEqual({
+            months: 4,
+            days: 20
+        });
+
+        expect(DateTimeUtils.blocksToMonthsAndDays(51280)).toEqual({
+            months: 11,
+            days: 26
+        });
+    });
+
+    it('handles negative values', () => {
+        expect(DateTimeUtils.blocksToMonthsAndDays(-2016)).toEqual({
+            months: -0,
+            days: -14
+        });
+
+        expect(DateTimeUtils.blocksToMonthsAndDays(-20160)).toEqual({
+            months: -4,
+            days: -20
+        });
+
+        expect(DateTimeUtils.blocksToMonthsAndDays(-51280)).toEqual({
+            months: -11,
+            days: -26
+        });
+    });
+});

@@ -4,22 +4,22 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Screen from '../../../components/Screen';
-import Header from '../../../components/Header';
-import { WarningMessage } from '../../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { themeColor } from '../../../utils/ThemeUtils';
-import BackendUtils from '../../../utils/BackendUtils';
-import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import Storage from '../../../storage';
+import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import SettingsStore from '../../../stores/SettingsStore';
-import InvoicesStore from '../../../stores/InvoicesStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
-import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
+import LSPStore, { LSPS1_ORDERS_KEY } from '../../stores/LSPStore';
+import SettingsStore from '../../stores/SettingsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import LSPS1OrderResponse from './OrderResponse';
 
 import { Order } from './OrdersPane';
 
@@ -39,7 +39,10 @@ interface OrdersState {
 
 @inject('LSPStore', 'SettingsStore', 'InvoicesStore', 'NodeInfoStore')
 @observer
-export default class Orders extends React.Component<OrderProps, OrdersState> {
+export default class LSPS1Order extends React.Component<
+    OrderProps,
+    OrdersState
+> {
     constructor(props: OrderProps) {
         super(props);
         this.state = {
@@ -71,15 +74,17 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         temporaryOrder = parsedOrder;
                         console.log('Order found in storage->', temporaryOrder);
 
-                        BackendUtils.supportsLSPS1rest()
-                            ? LSPStore.getOrderREST(
-                                  id,
-                                  temporaryOrder?.endpoint
-                              )
-                            : LSPStore.getOrderCustomMessage(
-                                  id,
-                                  temporaryOrder?.peer
-                              );
+                        if (BackendUtils.supportsLSPS1rest()) {
+                            LSPStore.lsps1GetOrderREST(
+                                id,
+                                temporaryOrder?.endpoint
+                            );
+                        } else if (BackendUtils.supportsLSPS1customMessage()) {
+                            LSPStore.lsps1GetOrderCustomMessage(
+                                id,
+                                temporaryOrder?.peer
+                            );
+                        }
 
                         setTimeout(() => {
                             if (LSPStore.error && LSPStore.error_msg !== '') {
@@ -87,7 +92,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                     order: temporaryOrder?.order,
                                     fetchOldOrder: true
                                 });
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS1 = false;
                                 console.log('Old Order state fetched!');
                             } else if (
                                 Object.keys(LSPStore.getOrderResponse)
@@ -102,7 +107,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                                     'Latest Order state fetched!',
                                     this.state.order
                                 );
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS1 = false;
                                 const result =
                                     getOrderData?.result || getOrderData;
                                 if (
@@ -191,7 +196,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Order',
+                        text: localeString('views.LSPS1.type'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -205,7 +210,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                     }}
                     navigation={navigation}
                 />
-                {LSPStore.loading ? (
+                {LSPStore.loadingLSPS1 ? (
                     <LoadingIndicator />
                 ) : (
                     <ScrollView>
