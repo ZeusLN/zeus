@@ -573,7 +573,8 @@ export default class TransactionsStore {
 
         // TODO add message for in-flight transactions
         if (
-            (status !== 'complete' &&
+            (status &&
+                status !== 'complete' &&
                 status !== 'SUCCEEDED' &&
                 status !== 'IN_FLIGHT' &&
                 result.payment_error !== '') ||

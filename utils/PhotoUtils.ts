@@ -17,9 +17,12 @@ const zeusillustration7a = require('..//assets/images/zeus-illustration-7a.jpg')
 const zeusillustration7b = require('..//assets/images/zeus-illustration-7b.jpg');
 
 const Alby = require('..//assets/images/Alby.jpg');
+const AlbyHub = require('..//assets/images/AlbyHub.jpg');
 const BTCpay = require('..//assets/images/BTCpay.jpg');
+const Cashu = require('..//assets/images/Cashu.jpg');
 const CLN = require('..//assets/images/CLN.jpg');
 const LND = require('..//assets/images/LND.jpg');
+const Nostr = require('..//assets/images/Nostr.jpg');
 
 const getPhoto = (photo: string | undefined): string => {
     if (typeof photo === 'string' && photo.includes('rnfs://')) {
@@ -46,9 +49,12 @@ const getPhoto = (photo: string | undefined): string => {
         if (fileName === 'zeusillustration7b') file = zeusillustration7b;
 
         if (fileName === 'alby') file = Alby;
+        if (fileName === 'albyhub') file = AlbyHub;
+        if (fileName === 'cashu') file = Cashu;
         if (fileName === 'btcpay') file = BTCpay;
         if (fileName === 'cln') file = CLN;
         if (fileName === 'lnd') file = LND;
+        if (fileName === 'nostr') file = Nostr;
 
         return Image.resolveAssetSource(file)?.uri || '';
     }

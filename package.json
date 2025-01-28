@@ -30,6 +30,7 @@
     "fetch-libraries": "bash fetch-libraries.sh"
   },
   "dependencies": {
+    "@getalby/sdk": "3.9.0",
     "@keystonehq/bc-ur-registry": "0.7.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.12",
@@ -78,6 +79,7 @@
     "lodash": "4.17.21",
     "long": "5.2.3",
     "lottie-react-native": "5.1.6",
+    "message-port-polyfill": "0.2.0",
     "mobx": "5.15.3",
     "mobx-react": "6.1.4",
     "moment": "2.29.4",
@@ -181,6 +183,7 @@
     "pod-install": "0.1.38",
     "prettier": "2.4.1",
     "protobufjs-cli": "1.1.1",
+    "react-native-url-polyfill": "2.0.0",
     "react-test-renderer": "18.2.0",
     "rn-nodeify": "10.3.0",
     "typescript": "4.8.4"

@@ -38,6 +38,8 @@ export interface Node {
     pairingPhrase?: string;
     mailboxServer?: string;
     customMailboxServer?: string;
+    // NWC
+    nostrWalletConnectUrl?: string;
 }
 
 interface PrivacySettings {
@@ -269,6 +271,7 @@ export const INTERFACE_KEYS: {
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
+    { key: 'Nostr Wallet Connect', value: 'nostr-wallet-connect' },
     { key: 'LNDHub', value: 'lndhub' },
     {
         key: '[DEPRECATED] Core Lightning (c-lightning-REST)',
@@ -286,7 +289,8 @@ export type Implementations =
     | 'lndhub'
     | 'c-lightning-REST'
     | 'spark'
-    | 'eclair';
+    | 'eclair'
+    | 'nostr-wallet-connect';
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
     { key: 'Mainnet', translateKey: 'network.mainnet', value: 'mainnet' },
@@ -1258,6 +1262,8 @@ export default class SettingsStore {
     @observable public adminMacaroon: string;
     @observable public embeddedLndNetwork: string;
     @observable public initialStart: boolean = true;
+    // NWC
+    @observable public nostrWalletConnectUrl: string;
 
     @action
     public setInitialStart = (status: boolean) => {
@@ -1449,6 +1455,8 @@ export default class SettingsStore {
                 this.walletPassword = node.walletPassword;
                 this.adminMacaroon = node.adminMacaroon;
                 this.embeddedLndNetwork = node.embeddedLndNetwork;
+                // NWC
+                this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
             }
         } catch (error) {
             console.error('Could not load settings', error);
@@ -1636,6 +1644,23 @@ export default class SettingsStore {
                 }
             }, 500);
         });
+    };
+
+    // NWC
+    @action
+    public connectNWC = async () => {
+        this.loading = true;
+
+        await BackendUtils.initNWC();
+
+        const error = await BackendUtils.connect();
+        if (error) {
+            this.error = true;
+            this.errorMsg = error;
+            return error;
+        }
+
+        this.loading = false;
     };
 
     public loginRequired = () => this.loginMethodConfigured() && !this.loggedIn;
