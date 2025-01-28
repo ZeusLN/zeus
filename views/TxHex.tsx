@@ -40,7 +40,7 @@ interface TxHexProps {
     ChannelsStore: ChannelsStore;
     NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
-    route: Route<'TxHex', { txHex: string }>;
+    route: Route<'TxHex', { txHex: string; hideWarning?: boolean }>;
 }
 
 interface TxHexState {
@@ -301,12 +301,16 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                             </Text>
                         </>
                     )}
-                    {!loading && pending_chan_ids.length === 0 && (
-                        <WarningMessage
-                            message={localeString('views.TxHex.channelWarning')}
-                            fontSize={13}
-                        />
-                    )}
+                    {!loading &&
+                        pending_chan_ids.length === 0 &&
+                        !this.props.route.params?.hideWarning && (
+                            <WarningMessage
+                                message={localeString(
+                                    'views.TxHex.channelWarning'
+                                )}
+                                fontSize={13}
+                            />
+                        )}
                     {loading && (
                         <View style={{ margin: 15 }}>
                             <LoadingIndicator />
