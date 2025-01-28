@@ -122,6 +122,9 @@ interface WalletConfigurationState {
     channelBackupsBase64: string;
     creatingWallet: boolean;
     errorCreatingWallet: boolean;
+    // NWC
+    nostrWalletConnectUrl: string;
+    // Errors
     lndhubUrlError: boolean;
     usernameError: boolean;
     hostError: boolean;
@@ -187,6 +190,9 @@ export default class WalletConfiguration extends React.Component<
         channelBackupsBase64: '',
         creatingWallet: false,
         errorCreatingWallet: false,
+        // NWC
+        nostrWalletConnectUrl: '',
+        // Errors
         lndhubUrlError: false,
         usernameError: false,
         hostError: false,
@@ -387,7 +393,9 @@ export default class WalletConfiguration extends React.Component<
                 seedPhrase,
                 walletPassword,
                 adminMacaroon,
-                embeddedLndNetwork
+                embeddedLndNetwork,
+                // NWC
+                nostrWalletConnectUrl
             } = node as any;
 
             this.setState({
@@ -420,7 +428,9 @@ export default class WalletConfiguration extends React.Component<
                 seedPhrase,
                 walletPassword,
                 adminMacaroon,
-                embeddedLndNetwork
+                embeddedLndNetwork,
+                // NWC
+                nostrWalletConnectUrl
             });
         } else {
             this.setState({
@@ -458,7 +468,8 @@ export default class WalletConfiguration extends React.Component<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            photo
+            photo,
+            nostrWalletConnectUrl
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -492,7 +503,8 @@ export default class WalletConfiguration extends React.Component<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            photo
+            photo,
+            nostrWalletConnectUrl
         };
 
         let nodes: Node[];
@@ -570,7 +582,8 @@ export default class WalletConfiguration extends React.Component<
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
-            photo
+            photo,
+            nostrWalletConnectUrl
         } = this.state;
         const { nodes } = settings;
 
@@ -592,7 +605,8 @@ export default class WalletConfiguration extends React.Component<
             pairingPhrase,
             mailboxServer,
             customMailboxServer,
-            photo
+            photo,
+            nostrWalletConnectUrl
         };
 
         navigation.navigate('WalletConfiguration', {
@@ -746,6 +760,7 @@ export default class WalletConfiguration extends React.Component<
             channelBackupsBase64,
             creatingWallet,
             errorCreatingWallet,
+            nostrWalletConnectUrl,
             lndhubUrlError,
             usernameError,
             hostError,
@@ -765,10 +780,12 @@ export default class WalletConfiguration extends React.Component<
 
         const supportsTor =
             implementation !== 'lightning-node-connect' &&
-            implementation !== 'embedded-lnd';
+            implementation !== 'embedded-lnd' &&
+            implementation !== 'nostr-wallet-connect';
         const supportsCertVerification =
             implementation !== 'lightning-node-connect' &&
-            implementation !== 'embedded-lnd';
+            implementation !== 'embedded-lnd' &&
+            implementation !== 'nostr-wallet-connect';
 
         const CertInstallInstructions = () => (
             <View style={styles.button}>
@@ -1354,6 +1371,32 @@ export default class WalletConfiguration extends React.Component<
                                         </View>
                                     </>
                                 )}
+                            </>
+                        )}
+                        {implementation === 'nostr-wallet-connect' && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.WalletConfiguration.nostrWalletConnectUrl'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'nostr+walletconnect://'}
+                                    value={nostrWalletConnectUrl}
+                                    autoCapitalize="none"
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            nostrWalletConnectUrl: text.trim(),
+                                            saved: false
+                                        })
+                                    }
+                                    locked={loading}
+                                    autoCorrect={false}
+                                />
                             </>
                         )}
                         {implementation === 'lndhub' && (
@@ -2325,7 +2368,9 @@ export default class WalletConfiguration extends React.Component<
                                             !enableTor &&
                                             implementation !==
                                                 'lightning-node-connect' &&
-                                            implementation !== 'embedded-lnd'
+                                            implementation !== 'embedded-lnd' &&
+                                            implementation !==
+                                                'nostr-wallet-connect'
                                         ) {
                                             this.setState({
                                                 showCertModal: true

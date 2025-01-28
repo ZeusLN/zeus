@@ -424,7 +424,8 @@ export default class BalancePane extends React.PureComponent<
                                     </View>
                                 </TouchableOpacity>
                             )}
-                        {implementation === 'lndhub' ? (
+                        {implementation === 'lndhub' ||
+                        implementation === 'nostr-wallet-connect' ? (
                             <View style={{ marginTop: 40 }}>
                                 <LightningBalance />
                             </View>
