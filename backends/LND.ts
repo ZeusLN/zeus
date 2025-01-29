@@ -313,9 +313,9 @@ export default class LND {
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (data: any) =>
         this.getRequest(
-            `/v1/invoices?reversed=true&num_max_invoices=${
-                (data && data.limit) || 500
-            }`
+            `/v1/invoices?reversed=${
+                data?.reversed !== undefined ? data.reversed : true
+            }&num_max_invoices=${data?.limit || 500}`
         );
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoices', {
@@ -332,13 +332,12 @@ export default class LND {
         });
     getPayments = (
         params: { maxPayments?: number; reversed?: boolean } = {
-            maxPayments: 500
+            maxPayments: 500,
+            reversed: true
         }
     ) =>
         this.getRequest(
-            `/v1/payments?include_incomplete=true${
-                params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
-            }${params?.reversed ? `&reversed=${params.reversed}` : ''}`
+            `/v1/payments?include_incomplete=true&max_payments=${params.maxPayments}&reversed=${params.reversed}`
         );
 
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
