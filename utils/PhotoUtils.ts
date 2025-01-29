@@ -50,7 +50,7 @@ const getPhoto = (photo: string | undefined): string => {
         if (fileName === 'cln') file = CLN;
         if (fileName === 'lnd') file = LND;
 
-        return Image.resolveAssetSource(file).uri || '';
+        return Image.resolveAssetSource(file)?.uri || '';
     }
     return photo || '';
 };
