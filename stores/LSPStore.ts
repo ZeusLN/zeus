@@ -70,7 +70,10 @@ export default class LSPStore {
         reaction(
             () => this.channelsStore.channels,
             () => {
-                if (this.channelsStore.channels.length !== 0) {
+                if (
+                    this.channelsStore.channels.length !== 0 &&
+                    BackendUtils.supportsLSPS1customMessage()
+                ) {
                     this.getExtendableChannels();
                 }
             }
