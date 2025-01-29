@@ -241,7 +241,7 @@
     "views.Settings.AddEditNode.showAccountQR": "Show account QR",
     "views.Settings.AddEditNode.hideAccountQR": "Hide account QR",
     "views.Settings.AddEditNode.nickname": "Nickname (optional)",
-    "views.Settings.AddEditNode.host": "Host",
+    "views.Settings.AddEditNode.serverAddress": "Server address",
     "views.Settings.AddEditNode.accessKey": "Access Key",
     "views.Settings.AddEditNode.restPort": "REST Port",
     "views.Settings.AddEditNode.macaroon": "Macaroon (Hex format)",

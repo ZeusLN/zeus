@@ -706,6 +706,8 @@ export default class WalletConfiguration extends React.Component<
     };
 
     render() {
+        const SERVER_ADDRESS_CHARS = "a-zA-Z0-9-._~!$&'()*+,;=";
+
         const { navigation, SettingsStore } = this.props;
         const {
             node,
@@ -1253,7 +1255,7 @@ export default class WalletConfiguration extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.AddEditNode.host'
+                                        'views.Settings.AddEditNode.serverAddress'
                                     )}
                                 </Text>
                                 <TextInput
@@ -1360,7 +1362,7 @@ export default class WalletConfiguration extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.AddEditNode.host'
+                                        'views.Settings.AddEditNode.serverAddress'
                                     )}
                                 </Text>
                                 <TextInput
@@ -1396,7 +1398,10 @@ export default class WalletConfiguration extends React.Component<
                                             (lndhubUrl?.length || 0) + 1
                                         ) {
                                             const cleanedText = text.replace(
-                                                /[^a-zA-Z0-9-.:/]/g,
+                                                new RegExp(
+                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                    'g'
+                                                ),
                                                 ''
                                             );
                                             this.setState({
@@ -1411,8 +1416,9 @@ export default class WalletConfiguration extends React.Component<
                                         this.setState({
                                             lndhubUrl: trimmedText,
                                             lndhubUrlError:
-                                                !ValidationUtils.isValidHostAndPort(
-                                                    trimmedText
+                                                !ValidationUtils.isValidServerAddress(
+                                                    trimmedText,
+                                                    { allowPort: true }
                                                 ),
                                             saved: false
                                         });
@@ -1421,8 +1427,9 @@ export default class WalletConfiguration extends React.Component<
                                         if (lndhubUrl) {
                                             this.setState({
                                                 lndhubUrlError:
-                                                    !ValidationUtils.isValidHostAndPort(
-                                                        lndhubUrl
+                                                    !ValidationUtils.isValidServerAddress(
+                                                        lndhubUrl,
+                                                        { allowPort: true }
                                                     )
                                             });
                                         }
@@ -1600,7 +1607,7 @@ export default class WalletConfiguration extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.AddEditNode.host'
+                                        'views.Settings.AddEditNode.serverAddress'
                                     )}
                                 </Text>
                                 <TextInput
@@ -1631,7 +1638,10 @@ export default class WalletConfiguration extends React.Component<
                                             (host?.length || 0) + 1
                                         ) {
                                             const cleanedText = text.replace(
-                                                /[^a-zA-Z0-9-./:]/g,
+                                                new RegExp(
+                                                    `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                    'g'
+                                                ),
                                                 ''
                                             );
                                             this.setState({
@@ -1646,7 +1656,7 @@ export default class WalletConfiguration extends React.Component<
                                         this.setState({
                                             host: trimmedText,
                                             hostError:
-                                                !ValidationUtils.isValidHostname(
+                                                !ValidationUtils.isValidServerAddress(
                                                     trimmedText
                                                 ),
                                             saved: false
@@ -1656,8 +1666,77 @@ export default class WalletConfiguration extends React.Component<
                                         if (host) {
                                             this.setState({
                                                 hostError:
-                                                    !ValidationUtils.isValidHostname(
+                                                    !ValidationUtils.isValidServerAddress(
                                                         host
+                                                    )
+                                            });
+                                        }
+                                    }}
+                                    locked={loading}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddEditNode.restPort'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    placeholder={'443/8080'}
+                                    textColor={
+                                        portError
+                                            ? themeColor('error')
+                                            : themeColor('text')
+                                    }
+                                    value={port}
+                                    onChangeText={(text: string) => {
+                                        this.setState({ portError: false });
+
+                                        // Allow backspace/delete operations without validation
+                                        if (text.length < (port?.length || 0)) {
+                                            this.setState({
+                                                port: text,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For single character additions
+                                        if (
+                                            text.length ===
+                                            (port?.length || 0) + 1
+                                        ) {
+                                            const cleanedText = text
+                                                .replace(/[^0-9]/g, '')
+                                                .replace(/^0+/, '');
+                                            this.setState({
+                                                port: cleanedText,
+                                                saved: false
+                                            });
+                                            return;
+                                        }
+
+                                        // For pasted content
+                                        const trimmedText = text.trim();
+                                        this.setState({
+                                            port: trimmedText,
+                                            portError:
+                                                !ValidationUtils.isValidPort(
+                                                    trimmedText
+                                                ),
+                                            saved: false
+                                        });
+                                    }}
+                                    onBlur={() => {
+                                        if (port) {
+                                            this.setState({
+                                                portError:
+                                                    !ValidationUtils.isValidPort(
+                                                        port
                                                     )
                                             });
                                         }
@@ -1810,75 +1889,6 @@ export default class WalletConfiguration extends React.Component<
                                         />
                                     </>
                                 )}
-
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.restPort'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    placeholder={'443/8080'}
-                                    textColor={
-                                        portError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    value={port}
-                                    onChangeText={(text: string) => {
-                                        this.setState({ portError: false });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (text.length < (port?.length || 0)) {
-                                            this.setState({
-                                                port: text,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (port?.length || 0) + 1
-                                        ) {
-                                            const cleanedText = text
-                                                .replace(/[^0-9]/g, '')
-                                                .replace(/^0+/, '');
-                                            this.setState({
-                                                port: cleanedText,
-                                                saved: false
-                                            });
-                                            return;
-                                        }
-
-                                        // For pasted content
-                                        const trimmedText = text.trim();
-                                        this.setState({
-                                            port: trimmedText,
-                                            portError:
-                                                !ValidationUtils.isValidPort(
-                                                    trimmedText
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        if (port) {
-                                            this.setState({
-                                                portError:
-                                                    !ValidationUtils.isValidPort(
-                                                        port
-                                                    )
-                                            });
-                                        }
-                                    }}
-                                    locked={loading}
-                                />
                             </>
                         )}
 
@@ -1942,7 +1952,10 @@ export default class WalletConfiguration extends React.Component<
 
                                                     const cleanedText =
                                                         text.replace(
-                                                            /[^a-zA-Z0-9-./:]/g,
+                                                            new RegExp(
+                                                                `[^${SERVER_ADDRESS_CHARS}:/]`,
+                                                                'g'
+                                                            ),
                                                             ''
                                                         );
                                                     this.setState({
@@ -1959,8 +1972,13 @@ export default class WalletConfiguration extends React.Component<
                                                     customMailboxServer:
                                                         trimmedText,
                                                     customMailboxServerError:
-                                                        !ValidationUtils.isValidHttpsHostAndPort(
-                                                            trimmedText
+                                                        !ValidationUtils.isValidServerAddress(
+                                                            trimmedText,
+                                                            {
+                                                                allowPort: true,
+                                                                requireHttps:
+                                                                    true
+                                                            }
                                                         ),
                                                     saved: false
                                                 });
@@ -1969,8 +1987,14 @@ export default class WalletConfiguration extends React.Component<
                                                 if (customMailboxServer) {
                                                     this.setState({
                                                         customMailboxServerError:
-                                                            !ValidationUtils.isValidHttpsHostAndPort(
-                                                                customMailboxServer
+                                                            !ValidationUtils.isValidServerAddress(
+                                                                customMailboxServer,
+                                                                {
+                                                                    allowPort:
+                                                                        true,
+                                                                    requireHttps:
+                                                                        true
+                                                                }
                                                             )
                                                     });
                                                 }
@@ -2313,7 +2337,7 @@ export default class WalletConfiguration extends React.Component<
                                         loading ||
                                         hostError ||
                                         (host &&
-                                            !ValidationUtils.isValidHostname(
+                                            !ValidationUtils.isValidServerAddress(
                                                 host
                                             )) ||
                                         portError ||
@@ -2333,13 +2357,18 @@ export default class WalletConfiguration extends React.Component<
                                             )) ||
                                         lndhubUrlError ||
                                         (lndhubUrl &&
-                                            !ValidationUtils.isValidHostAndPort(
-                                                lndhubUrl
+                                            !ValidationUtils.isValidServerAddress(
+                                                lndhubUrl,
+                                                { allowPort: true }
                                             )) ||
                                         customMailboxServerError ||
                                         (customMailboxServer &&
-                                            !ValidationUtils.isValidHttpsHostAndPort(
-                                                customMailboxServer
+                                            !ValidationUtils.isValidServerAddress(
+                                                customMailboxServer,
+                                                {
+                                                    allowPort: true,
+                                                    requireHttps: true
+                                                }
                                             )) ||
                                         pairingPhraseError ||
                                         (pairingPhrase &&
