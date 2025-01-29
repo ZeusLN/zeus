@@ -33,7 +33,6 @@ import RNPrint from 'react-native-print';
 import PosStore from '../stores/PosStore';
 
 const DEFAULT_CUSTOM_TIP_PERCENTAGE = '21';
-const DEFAULT_CUSTOM_TIP_SATS = '2100';
 
 interface OrderProps {
     navigation: StackNavigationProp<any, any>;
@@ -302,7 +301,10 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     } else if (customType === 'amount') {
                         const effectiveAmount =
                             customAmount === ''
-                                ? DEFAULT_CUSTOM_TIP_SATS
+                                ? new BigNumber(subTotalSats)
+                                      .multipliedBy(0.21)
+                                      .integerValue(BigNumber.ROUND_HALF_UP)
+                                      .toFixed(0)
                                 : customAmount;
                         if (units === 'fiat') {
                             const customSats = new BigNumber(effectiveAmount)
@@ -683,7 +685,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                     />
                                     <TextInput
                                         keyboardType="numeric"
-                                        placeholder={DEFAULT_CUSTOM_TIP_SATS}
+                                        placeholder={new BigNumber(subTotalSats)
+                                            .multipliedBy(0.21)
+                                            .integerValue(
+                                                BigNumber.ROUND_HALF_UP
+                                            )
+                                            .toFixed(0)}
                                         value={customAmount}
                                         onChangeText={(text: string) => {
                                             if (text.includes('-')) return;
