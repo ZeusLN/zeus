@@ -102,7 +102,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
             LSPStore.lsps1GetInfoREST();
-        } else if (BackendUtils.supportsLSPS1customMessage()) {
+        } else if (BackendUtils.supportsLSPScustomMessage()) {
             console.log('connecting');
             await this.connectPeer();
             console.log('connected');
@@ -397,7 +397,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'
-            : BackendUtils.supportsLSPS1customMessage()
+            : BackendUtils.supportsLSPScustomMessage()
             ? LSPStore.getLSPSPubkey()
             : LSPStore.getLSPS1Rest();
 
@@ -417,7 +417,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     onBack={() => LSPStore.resetLSPS1Data()}
                 />
                 <View style={{ paddingHorizontal: 18 }}>
-                    {BackendUtils.supportsLSPS1customMessage() &&
+                    {BackendUtils.supportsLSPScustomMessage() &&
                         !LSPStore.getLSPSPubkey() &&
                         !LSPStore.getLSPS1Host() && (
                             <ErrorMessage
@@ -1225,7 +1225,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 this.state
                                             );
                                         } else if (
-                                            BackendUtils.supportsLSPS1customMessage()
+                                            BackendUtils.supportsLSPScustomMessage()
                                         ) {
                                             LSPStore.lsps1CreateOrderCustomMessage(
                                                 this.state
@@ -1278,7 +1278,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         this.props.NodeInfoStore.nodeInfo.nodeId;
 
                                                     if (
-                                                        BackendUtils.supportsLSPS1customMessage()
+                                                        BackendUtils.supportsLSPScustomMessage()
                                                     ) {
                                                         orderData.peer =
                                                             LSPStore.getLSPSPubkey();
@@ -1379,7 +1379,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     if (BackendUtils.supportsLSPS1rest()) {
                                         LSPStore.lsps1GetInfoREST();
                                     } else if (
-                                        BackendUtils.supportsLSPS1customMessage()
+                                        BackendUtils.supportsLSPScustomMessage()
                                     ) {
                                         await this.connectPeer();
                                         await this.subscribeToCustomMessages();

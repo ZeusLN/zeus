@@ -255,7 +255,7 @@ export default class ChannelsSettings extends React.Component<
                         </View>
                     )}
 
-                    {(BackendUtils.supportsLSPS1customMessage() ||
+                    {(BackendUtils.supportsLSPScustomMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
                         <View style={{ flexDirection: 'row', marginTop: 20 }}>
                             <View style={{ flex: 1 }}>

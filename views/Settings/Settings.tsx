@@ -101,7 +101,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 style={styles.columnField}
                                 onPress={() => {
                                     const supportsLSPS1 =
-                                        BackendUtils.supportsLSPS1customMessage() ||
+                                        BackendUtils.supportsLSPScustomMessage() ||
                                         BackendUtils.supportsLSPS1rest();
                                     if (
                                         BackendUtils.supportsFlowLSP() &&

@@ -124,7 +124,7 @@ export default class LSPS1Settings extends React.Component<
             nodeInfo.isTestNet && restHost === DEFAULT_LSPS1_REST_TESTNET;
 
         const isOlympusCustomMessage =
-            BackendUtils.supportsLSPS1customMessage() &&
+            BackendUtils.supportsLSPScustomMessage() &&
             (isOlympusMainnetCustom || isOlympusTestnetCustom);
         const isOlympusRest =
             BackendUtils.supportsLSPS1rest() &&
@@ -148,7 +148,7 @@ export default class LSPS1Settings extends React.Component<
                     navigation={navigation}
                 />
                 <View style={{ flex: 1, padding: 12 }}>
-                    {BackendUtils.supportsLSPS1customMessage() && (
+                    {BackendUtils.supportsLSPScustomMessage() && (
                         <>
                             <Text
                                 style={{

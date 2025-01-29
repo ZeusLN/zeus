@@ -304,7 +304,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                     onBack={() => LSPStore.resetLSPS7Data()}
                 />
                 <View style={{ paddingHorizontal: 18 }}>
-                    {BackendUtils.supportsLSPS1customMessage() &&
+                    {BackendUtils.supportsLSPScustomMessage() &&
                         !LSPStore.getLSPSPubkey() &&
                         !LSPStore.getLSPS1Host() && (
                             <ErrorMessage

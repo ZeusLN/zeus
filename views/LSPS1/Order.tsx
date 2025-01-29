@@ -79,7 +79,7 @@ export default class LSPS1Order extends React.Component<
                                 id,
                                 temporaryOrder?.endpoint
                             );
-                        } else if (BackendUtils.supportsLSPS1customMessage()) {
+                        } else if (BackendUtils.supportsLSPScustomMessage()) {
                             LSPStore.lsps1GetOrderCustomMessage(
                                 id,
                                 temporaryOrder?.peer

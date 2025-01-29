@@ -115,7 +115,7 @@ export default class OrdersPane extends React.Component<
                                 response.clientPubkey ===
                                     this.props.NodeInfoStore.nodeInfo.nodeId
                         );
-                    } else if (BackendUtils.supportsLSPS1customMessage()) {
+                    } else if (BackendUtils.supportsLSPScustomMessage()) {
                         selectedOrders = decodedResponses.filter(
                             (response: LSPOrderResponse) =>
                                 response?.uri &&
