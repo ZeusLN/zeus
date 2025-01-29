@@ -517,6 +517,8 @@ export default class LSPStore {
 
     @action
     public lsps1GetInfoREST = () => {
+        this.loadingLSPS1 = true;
+
         const endpoint = `${this.getLSPS1Rest()}/api/v1/get_info`;
 
         console.log('Fetching data from:', endpoint);
@@ -580,6 +582,7 @@ export default class LSPStore {
 
     @action
     public lsps1CreateOrderREST = (state: any) => {
+        this.loadingLSPS1 = true;
         const data = JSON.stringify({
             lsp_balance_sat: state.lspBalanceSat.toString(),
             client_balance_sat: state.clientBalanceSat.toString(),
@@ -595,7 +598,6 @@ export default class LSPStore {
             announce_channel: state.announceChannel,
             public_key: this.nodeInfoStore.nodeInfo.nodeId
         });
-        this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
         const endpoint = `${this.getLSPS1Rest()}/api/v1/create_order`;
