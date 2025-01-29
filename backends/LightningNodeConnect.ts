@@ -154,11 +154,19 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .getNetworkInfo({})
             .then((data: lnrpc.NetworkInfo) => snakeize(data));
-    getInvoices = async (data: any) =>
+    getInvoices = async (
+        params: { limit?: number; reversed?: boolean } = {
+            limit: 500,
+            reversed: true
+        }
+    ) =>
         await this.lnc.lnd.lightning
             .listInvoices({
-                reversed: data?.reversed !== undefined ? data.reversed : true,
-                num_max_invoices: data?.limit || 500
+                reversed:
+                    params?.reversed !== undefined ? params.reversed : true,
+                ...(params?.limit && {
+                    num_max_invoices: params.limit
+                })
             })
             .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
     createInvoice = async (data: any) =>
@@ -188,8 +196,11 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .listPayments({
                 include_incomplete: true,
-                max_payments: params.maxPayments,
-                reversed: params.reversed
+                ...(params?.maxPayments && {
+                    max_payments: params.maxPayments
+                }),
+                reversed:
+                    params?.reversed !== undefined ? params.reversed : true
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>

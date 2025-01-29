@@ -311,11 +311,16 @@ export default class LND {
     };
     getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
-    getInvoices = (data: any) =>
+    getInvoices = (
+        params: { limit?: number; reversed?: boolean } = {
+            limit: 500,
+            reversed: true
+        }
+    ) =>
         this.getRequest(
             `/v1/invoices?reversed=${
-                data?.reversed !== undefined ? data.reversed : true
-            }&num_max_invoices=${data?.limit || 500}`
+                params?.reversed !== undefined ? params.reversed : true
+            }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
         );
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoices', {
@@ -337,7 +342,11 @@ export default class LND {
         }
     ) =>
         this.getRequest(
-            `/v1/payments?include_incomplete=true&max_payments=${params.maxPayments}&reversed=${params.reversed}`
+            `/v1/payments?include_incomplete=true${
+                params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
+            }&reversed=${
+                params?.reversed !== undefined ? params.reversed : true
+            }`
         );
 
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
