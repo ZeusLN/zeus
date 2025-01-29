@@ -72,7 +72,7 @@ export default class LSPStore {
             () => {
                 if (
                     this.channelsStore.channels.length !== 0 &&
-                    BackendUtils.supportsLSPS1customMessage()
+                    BackendUtils.supportsLSPScustomMessage()
                 ) {
                     this.getExtendableChannels();
                 }
@@ -121,7 +121,7 @@ export default class LSPStore {
             ? DEFAULT_LSPS1_PUBKEY_TESTNET
             : DEFAULT_LSPS1_PUBKEY_MAINNET;
         if (
-            BackendUtils.supportsLSPS1customMessage() &&
+            BackendUtils.supportsLSPScustomMessage() &&
             this.getLSPSPubkey() == olympusPubkey
         ) {
             return true;

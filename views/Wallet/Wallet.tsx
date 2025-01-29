@@ -525,7 +525,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ) {
                 await LSPStore.getLSPInfo();
             }
-            if (BackendUtils.supportsLSPS1customMessage()) {
+            if (BackendUtils.supportsLSPScustomMessage()) {
                 LSPStore.subscribeCustomMessages();
             }
             LSPStore.initChannelAcceptor();

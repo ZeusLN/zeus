@@ -339,7 +339,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOffline={totalOffline}
                 />
                 {settings?.lsps1ShowPurchaseButton &&
-                    (BackendUtils.supportsLSPS1customMessage() ||
+                    (BackendUtils.supportsLSPScustomMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
                         <ColorChangingButton
                             onPress={() => {
