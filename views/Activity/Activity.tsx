@@ -28,6 +28,7 @@ import {
     numberWithCommas,
     numberWithDecimals
 } from '../../utils/UnitsUtils';
+import PrivacyUtils from '../../utils/PrivacyUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -80,6 +81,7 @@ interface ActivityListItemProps {
         | 'warning'
         | 'warningReserve';
     order?: Order;
+    lurkerMode: boolean;
 }
 
 const ActivityListItem = React.memo(
@@ -88,7 +90,8 @@ const ActivityListItem = React.memo(
         selectedPaymentForOrder,
         onItemPress,
         getRightTitleTheme,
-        order
+        order,
+        lurkerMode
     }: ActivityListItemProps) => {
         const note = item.getNote;
         let displayName = item.model;
@@ -113,7 +116,11 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {keysendMessageOrMemo}
+                            {lurkerMode
+                                ? PrivacyUtils.sensitiveValue(
+                                      keysendMessageOrMemo
+                                  )?.toString()
+                                : keysendMessageOrMemo}
                         </Text>
                     ) : (
                         ''
@@ -133,7 +140,11 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {keysendMessageOrMemo}
+                            {lurkerMode
+                                ? PrivacyUtils.sensitiveValue(
+                                      keysendMessageOrMemo
+                                  )
+                                : keysendMessageOrMemo}
                         </Text>
                     ) : (
                         ''
@@ -444,6 +455,7 @@ export default class Activity extends React.PureComponent<
         const { filteredActivity, getActivityAndFilter } = ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
+        const lurkerMode = settings.privacy.lurkerMode || false;
         const { fiat } = settings;
 
         const order = route.params?.order;
@@ -609,6 +621,7 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 getRightTitleTheme={this.getRightTitleTheme}
                                 order={route.params?.order}
+                                lurkerMode={lurkerMode}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}
