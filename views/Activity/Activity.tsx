@@ -143,7 +143,7 @@ const ActivityListItem = React.memo(
                             {lurkerMode
                                 ? PrivacyUtils.sensitiveValue(
                                       keysendMessageOrMemo
-                                  )
+                                  )?.toString()
                                 : keysendMessageOrMemo}
                         </Text>
                     ) : (
@@ -311,7 +311,11 @@ const ActivityListItem = React.memo(
                                 }}
                                 ellipsizeMode="tail"
                             >
-                                {note.length > 150
+                                {lurkerMode
+                                    ? PrivacyUtils.sensitiveValue(
+                                          note
+                                      )?.toString()
+                                    : note.length > 150
                                     ? `${note.substring(0, 150)}...`
                                     : note}
                             </ListItem.Subtitle>
