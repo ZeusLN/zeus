@@ -81,7 +81,6 @@ interface ActivityListItemProps {
         | 'warning'
         | 'warningReserve';
     order?: Order;
-    lurkerMode: boolean;
 }
 
 const ActivityListItem = React.memo(
@@ -90,8 +89,7 @@ const ActivityListItem = React.memo(
         selectedPaymentForOrder,
         onItemPress,
         getRightTitleTheme,
-        order,
-        lurkerMode
+        order
     }: ActivityListItemProps) => {
         const note = item.getNote;
         let displayName = item.model;
@@ -116,11 +114,9 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {lurkerMode
-                                ? PrivacyUtils.sensitiveValue(
-                                      keysendMessageOrMemo
-                                  )?.toString()
-                                : keysendMessageOrMemo}
+                            {PrivacyUtils.sensitiveValue(
+                                keysendMessageOrMemo
+                            )?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -140,11 +136,9 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {lurkerMode
-                                ? PrivacyUtils.sensitiveValue(
-                                      keysendMessageOrMemo
-                                  )?.toString()
-                                : keysendMessageOrMemo}
+                            {PrivacyUtils.sensitiveValue(
+                                keysendMessageOrMemo
+                            )?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -311,13 +305,13 @@ const ActivityListItem = React.memo(
                                 }}
                                 ellipsizeMode="tail"
                             >
-                                {lurkerMode
-                                    ? PrivacyUtils.sensitiveValue(
+                                {note.length > 150
+                                    ? `${PrivacyUtils.sensitiveValue(
+                                          note.substring(0, 150)
+                                      )?.toString()}...`
+                                    : PrivacyUtils.sensitiveValue(
                                           note
-                                      )?.toString()
-                                    : note.length > 150
-                                    ? `${note.substring(0, 150)}...`
-                                    : note}
+                                      )?.toString()}
                             </ListItem.Subtitle>
                         </View>
                     )}
@@ -459,7 +453,6 @@ export default class Activity extends React.PureComponent<
         const { filteredActivity, getActivityAndFilter } = ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
-        const lurkerMode = settings.privacy.lurkerMode || false;
         const { fiat } = settings;
 
         const order = route.params?.order;
@@ -625,7 +618,6 @@ export default class Activity extends React.PureComponent<
                                 onItemPress={this.handleItemPress}
                                 getRightTitleTheme={this.getRightTitleTheme}
                                 order={route.params?.order}
-                                lurkerMode={lurkerMode}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}
