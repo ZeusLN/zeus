@@ -298,7 +298,15 @@ export default class ChannelsStore {
     @action
     getNodeInfo = (pubkey: string) => {
         this.loading = true;
-        return BackendUtils.getNodeInfo([pubkey])
+
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), 10000);
+        });
+
+        return Promise.race([
+            timeoutPromise,
+            BackendUtils.getNodeInfo([pubkey])
+        ])
             .then((data: any) => {
                 this.loading = false;
                 if (data?.node?.alias)
@@ -307,6 +315,7 @@ export default class ChannelsStore {
             })
             .catch(() => {
                 this.loading = false;
+                this.aliasMap.set(pubkey, localeString('general.unknown'));
             });
     };
 
