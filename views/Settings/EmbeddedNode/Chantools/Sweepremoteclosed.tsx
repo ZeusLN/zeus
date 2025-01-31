@@ -22,11 +22,27 @@ import { localeString } from '../../../../utils/LocaleUtils';
 import { themeColor } from '../../../../utils/ThemeUtils';
 
 import NodeInfoStore from '../../../../stores/NodeInfoStore';
+import SettingsStore from '../../../../stores/SettingsStore';
 
 import CaretDown from '../../../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../../../assets/images/SVG/Caret Right.svg';
 
-export const API_URL_KEYS = [
+const SEED_PHRASE_KEYS = [
+    {
+        key: "Current wallet's seed",
+        value: 'currentWalletsSeed',
+        translateKey:
+            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.currentWalletsSeed'
+    },
+    {
+        key: 'External wallet seed',
+        value: 'externalWalletSeed',
+        translateKey:
+            'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.externalWalletSeed'
+    }
+];
+
+const API_URL_KEYS = [
     {
         key: 'https://api.node-recovery.com',
         value: 'https://api.node-recovery.com'
@@ -36,16 +52,18 @@ export const API_URL_KEYS = [
         value: 'https://blockstream.info/api'
     },
     { key: 'https://mempool.space/api', value: 'https://mempool.space/api' },
-    { key: 'Custom', value: 'Custom' }
+    { key: 'Custom', value: 'custom', translateKey: 'general.custom' }
 ];
 
 interface SweepremoteclosedProps {
     navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
 }
 
 interface SweepremoteclosedState {
-    seed: string;
+    seedType: string;
+    externalSeed: string;
     sweepAddr: string;
     apiUrl: string;
     customApiUrl: string;
@@ -57,14 +75,15 @@ interface SweepremoteclosedState {
     error: string;
 }
 
-@inject('NodeInfoStore')
+@inject('NodeInfoStore', 'SettingsStore')
 @observer
 export default class Sweepremoteclosed extends React.Component<
     SweepremoteclosedProps,
     SweepremoteclosedState
 > {
     state = {
-        seed: '',
+        seedType: 'currentWalletsSeed',
+        externalSeed: '',
         sweepAddr: '',
         apiUrl: 'https://api.node-recovery.com',
         customApiUrl: '',
@@ -77,9 +96,10 @@ export default class Sweepremoteclosed extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore } = this.props;
         const {
-            seed,
+            seedType,
+            externalSeed,
             sweepAddr,
             apiUrl,
             customApiUrl,
@@ -107,30 +127,46 @@ export default class Sweepremoteclosed extends React.Component<
                     {error && <ErrorMessage message={error} dismissable />}
                     {loading && <LoadingIndicator />}
                     <ScrollView style={{ margin: 10 }}>
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.text,
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seed'
+                        <View style={{ marginTop: 10 }}>
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seedType'
                                 )}
-                            </Text>
-                            <TextInput
-                                placeholder={
-                                    'cherry truth mask employ box silver mass bunker fiscal vote'
-                                }
-                                value={seed}
-                                onChangeText={(text: string) =>
+                                selectedValue={seedType}
+                                onValueChange={(value: string) => {
                                     this.setState({
-                                        seed: text
-                                    })
-                                }
-                                locked={loading}
+                                        seedType: value
+                                    });
+                                }}
+                                values={SEED_PHRASE_KEYS}
                             />
-                        </>
+                        </View>
+                        {seedType === 'externalWalletSeed' && (
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.seed'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={
+                                        'cherry truth mask employ box silver mass bunker fiscal vote'
+                                    }
+                                    value={externalSeed}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            externalSeed: text
+                                        })
+                                    }
+                                    locked={loading}
+                                />
+                            </>
+                        )}
                         <>
                             <Text
                                 style={{
@@ -275,7 +311,7 @@ export default class Sweepremoteclosed extends React.Component<
                                         values={API_URL_KEYS}
                                     />
                                 </View>
-                                {apiUrl === 'Custom' && (
+                                {apiUrl === 'custom' && (
                                     <>
                                         <Text
                                             style={{
@@ -322,7 +358,12 @@ export default class Sweepremoteclosed extends React.Component<
                                         loading: true
                                     });
                                     console.log('start sweepremoteclosed', {
-                                        seed,
+                                        seed:
+                                            seedType === 'externalWalletSeed'
+                                                ? externalSeed
+                                                : SettingsStore?.seedPhrase.join(
+                                                      ' '
+                                                  ),
                                         apiUrl,
                                         customApiUrl,
                                         recoveryWindow,
@@ -332,8 +373,13 @@ export default class Sweepremoteclosed extends React.Component<
                                     try {
                                         const response =
                                             await sweepRemoteClosed(
-                                                seed,
-                                                apiUrl === 'Custom'
+                                                seedType ===
+                                                    'externalWalletSeed'
+                                                    ? externalSeed
+                                                    : SettingsStore?.seedPhrase.join(
+                                                          ' '
+                                                      ),
+                                                apiUrl === 'custom'
                                                     ? customApiUrl
                                                     : apiUrl,
                                                 sweepAddr,
@@ -341,8 +387,8 @@ export default class Sweepremoteclosed extends React.Component<
                                                 Number(feeRate || 2),
                                                 Number(sleepSeconds || 0),
                                                 false, // publish
-                                                this.props.NodeInfoStore
-                                                    ?.nodeInfo?.isTestNet // isTestNet
+                                                NodeInfoStore?.nodeInfo
+                                                    ?.isTestNet // isTestNet
                                             );
                                         navigation.navigate('TxHex', {
                                             txHex: response,
