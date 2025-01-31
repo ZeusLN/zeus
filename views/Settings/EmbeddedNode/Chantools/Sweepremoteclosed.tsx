@@ -293,10 +293,10 @@ export default class Sweepremoteclosed extends React.Component<
                                             value={customApiUrl}
                                             onChangeText={(text: string) =>
                                                 this.setState({
-                                                    sweepAddr: text
+                                                    customApiUrl: text
                                                 })
                                             }
-                                            locked={!!customApiUrl}
+                                            locked={loading}
                                         />
                                     </>
                                 )}
