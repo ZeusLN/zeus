@@ -230,7 +230,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
     connectPeer = async () => {
         const { ChannelsStore, LSPStore } = this.props;
         const node_pubkey_string: string = LSPStore.getLSPSPubkey();
-        const host: string = LSPStore.getLSPS1Host();
+        const host: string = LSPStore.getLSPSHost();
         try {
             return await ChannelsStore.connectPeer(
                 {
@@ -419,7 +419,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                 <View style={{ paddingHorizontal: 18 }}>
                     {BackendUtils.supportsLSPScustomMessage() &&
                         !LSPStore.getLSPSPubkey() &&
-                        !LSPStore.getLSPS1Host() && (
+                        !LSPStore.getLSPSHost() && (
                             <ErrorMessage
                                 message={localeString(
                                     'views.LSPS1.pubkeyAndHostNotFound'
@@ -1282,7 +1282,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     ) {
                                                         orderData.peer =
                                                             LSPStore.getLSPSPubkey();
-                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPS1Host()}`;
+                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
                                                     }
                                                     if (
                                                         BackendUtils.supportsLSPS1rest()
