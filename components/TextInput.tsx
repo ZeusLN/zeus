@@ -36,11 +36,12 @@ interface TextInputProps {
     ref?: React.Ref<TextInputRN>;
     error?: boolean;
     onFocus?: any;
+    onSubmitEditing?: () => void;
 }
 
 const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
-    (
-        {
+    (props, ref) => {
+        const {
             placeholder,
             value,
             onChangeText,
@@ -62,9 +63,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             onPressIn,
             right,
             error
-        },
-        ref
-    ) => {
+        } = props;
         const defaultStyle = numberOfLines
             ? {
                   paddingTop: 10
@@ -169,6 +168,7 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
                     autoFocus={autoFocus}
                     secureTextEntry={secureTextEntry}
                     onPressIn={onPressIn}
+                    onSubmitEditing={props.onSubmitEditing}
                     ref={ref}
                 />
                 {suffix ? (
@@ -185,7 +185,9 @@ const TextInput = React.forwardRef<TextInputRN, TextInputProps>(
             </View>
         );
     }
-);
+) as React.ForwardRefExoticComponent<
+    TextInputProps & React.RefAttributes<TextInputRN>
+>;
 
 const styles = StyleSheet.create({
     wrapper: {

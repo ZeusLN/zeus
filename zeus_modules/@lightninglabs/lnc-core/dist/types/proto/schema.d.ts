@@ -6,6 +6,7 @@ export declare const serviceNames: {
         Firewall: string;
         Autopilot: string;
         Sessions: string;
+        Status: string;
     };
     autopilotrpc: {
         Autopilot: string;

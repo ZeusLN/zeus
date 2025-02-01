@@ -51,7 +51,10 @@ export interface SetScoresResponse {
  * that can be used when deciding where to open channels.
  */
 export interface Autopilot {
-    /** Status returns whether the daemon's autopilot agent is active. */
+    /**
+     * lncli: `autopilot status`
+     * Status returns whether the daemon's autopilot agent is active.
+     */
     status(request?: DeepPartial<StatusRequest>): Promise<StatusResponse>;
     /**
      * ModifyStatus is used to modify the status of the autopilot agent, like
@@ -59,6 +62,7 @@ export interface Autopilot {
      */
     modifyStatus(request?: DeepPartial<ModifyStatusRequest>): Promise<ModifyStatusResponse>;
     /**
+     * lncli: `autopilot query`
      * QueryScores queries all available autopilot heuristics, in addition to any
      * active combination of these heruristics, for the scores they would give to
      * the given nodes.

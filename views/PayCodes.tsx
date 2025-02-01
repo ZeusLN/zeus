@@ -81,7 +81,7 @@ export default class PayCodes extends React.Component<PayCodesProps, {}> {
                     }}
                 >
                     {item.active
-                        ? localeString('views.Channel.active')
+                        ? localeString('general.active')
                         : localeString('views.Channel.inactive')}
                 </Text>
             </View>

@@ -72,7 +72,6 @@ RCT_EXTERN_METHOD(
 
 RCT_EXTERN_METHOD(
   gossipSync: (NSString *)serviceUrl
-  networkType: (NSString *)networkType
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )

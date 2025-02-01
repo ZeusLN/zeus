@@ -563,6 +563,11 @@ export default class TransactionsStore {
                 ? lnrpc.Payment.PaymentStatus[result.status]
                 : result.status;
 
+        const isKeysend =
+            result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
+                keySendPreimageType
+            ] != null;
+
         // TODO add message for in-flight transactions
         if (
             (status !== 'complete' &&
@@ -583,8 +588,10 @@ export default class TransactionsStore {
                                 )
                               : result.payment_error
                       )
-                    : errorToUserFriendly(result.failure_reason)) ||
-                errorToUserFriendly(result.payment_error);
+                    : errorToUserFriendly(
+                          result.failure_reason,
+                          isKeysend ? ['Keysend'] : undefined
+                      )) || errorToUserFriendly(result.payment_error);
         }
         // lndhub
         if (result.error) {

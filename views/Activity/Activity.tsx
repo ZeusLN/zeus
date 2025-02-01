@@ -50,9 +50,267 @@ interface ActivityProps {
 }
 
 interface ActivityState {
+    loading: boolean;
     selectedPaymentForOrder: any;
     isCsvModalVisible: boolean;
 }
+
+interface OrderItem {
+    id: string;
+    total_money: {
+        amount: number;
+    };
+}
+
+interface Order {
+    item: OrderItem;
+}
+
+interface ActivityListItemProps {
+    item: any;
+    selectedPaymentForOrder: any;
+    onItemPress: (item: any) => void;
+    getRightTitleTheme: (
+        item: any
+    ) =>
+        | 'text'
+        | 'highlight'
+        | 'secondaryText'
+        | 'success'
+        | 'warning'
+        | 'warningReserve';
+    order?: Order;
+}
+
+const ActivityListItem = React.memo(
+    ({
+        item,
+        selectedPaymentForOrder,
+        onItemPress,
+        getRightTitleTheme,
+        order
+    }: ActivityListItemProps) => {
+        const note = item.getNote;
+        let displayName = item.model;
+        let subTitle = item.model;
+
+        if (item instanceof Invoice) {
+            displayName = item.isPaid
+                ? item.is_amp
+                    ? localeString('views.Activity.youReceivedAmp')
+                    : localeString('views.Activity.youReceived')
+                : item.isExpired
+                ? localeString('views.Activity.expiredRequested')
+                : item.is_amp
+                ? localeString('views.Activity.requestedPaymentAmp')
+                : localeString('views.Activity.requestedPayment');
+            const keysendMessageOrMemo = item.getKeysendMessageOrMemo;
+            subTitle = (
+                <Text>
+                    {item.isPaid
+                        ? localeString('general.lightning')
+                        : localeString('views.PaymentRequest.title')}
+                    {keysendMessageOrMemo ? ': ' : ''}
+                    {keysendMessageOrMemo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {keysendMessageOrMemo}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item.model === localeString('views.Payment.title')) {
+            displayName = item.isFailed
+                ? localeString('views.Payment.failedPayment')
+                : item.isInTransit
+                ? localeString('views.Payment.inTransitPayment')
+                : localeString('views.Activity.youSent');
+            const keysendMessageOrMemo = item.getKeysendMessageOrMemo;
+            subTitle = (
+                <Text>
+                    {localeString('general.lightning')}
+                    {keysendMessageOrMemo ? ': ' : ''}
+                    {keysendMessageOrMemo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {keysendMessageOrMemo}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item.model === localeString('general.transaction')) {
+            displayName =
+                item.getAmount == 0
+                    ? localeString('views.Activity.channelOperation')
+                    : !item.getAmount.toString().includes('-')
+                    ? localeString('views.Activity.youReceived')
+                    : localeString('views.Activity.youSent');
+            subTitle =
+                item.num_confirmations == 0
+                    ? `${localeString('general.onchain')}: ${localeString(
+                          'general.unconfirmed'
+                      )}`
+                    : localeString('general.onchain');
+        }
+
+        return (
+            <ListItem
+                containerStyle={{
+                    borderBottomWidth: 0,
+                    backgroundColor: 'transparent'
+                }}
+                onPress={() => onItemPress(item)}
+            >
+                <ListItem.Content>
+                    <View style={styles.row}>
+                        <ListItem.Title
+                            style={{
+                                ...styles.leftCell,
+                                fontWeight: '600',
+                                color:
+                                    item === selectedPaymentForOrder
+                                        ? themeColor('highlight')
+                                        : themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {displayName}
+                        </ListItem.Title>
+
+                        <View
+                            style={{
+                                ...styles.rightCell,
+                                flexDirection: 'row',
+                                flexWrap: 'wrap',
+                                columnGap: 5,
+                                rowGap: -5,
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Amount
+                                sats={item.getAmount}
+                                sensitive
+                                color={getRightTitleTheme(item)}
+                            />
+                            {!!item.getFee && item.getFee != 0 && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 16
+                                        }}
+                                    >
+                                        +
+                                    </Text>
+                                    <Amount
+                                        sats={item.getFee}
+                                        sensitive
+                                        color={getRightTitleTheme(item)}
+                                        fee
+                                    />
+                                </>
+                            )}
+                        </View>
+                    </View>
+
+                    <View style={styles.row}>
+                        <ListItem.Subtitle
+                            right
+                            style={{
+                                ...styles.leftCell,
+                                color:
+                                    item === selectedPaymentForOrder
+                                        ? themeColor('highlight')
+                                        : themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {subTitle}
+                        </ListItem.Subtitle>
+
+                        <ListItem.Subtitle
+                            style={{
+                                ...styles.rightCell,
+                                color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {order
+                                ? item.getDisplayTimeOrder
+                                : item.getDisplayTimeShort}
+                        </ListItem.Subtitle>
+                    </View>
+
+                    {!item.isPaid &&
+                        !item.isExpired &&
+                        item.formattedTimeUntilExpiry && (
+                            <View style={styles.row}>
+                                <ListItem.Subtitle
+                                    style={{
+                                        ...styles.leftCell,
+                                        color:
+                                            item === selectedPaymentForOrder
+                                                ? themeColor('highlight')
+                                                : themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    {localeString('views.Invoice.expiration')}
+                                </ListItem.Subtitle>
+
+                                <ListItem.Subtitle
+                                    style={{
+                                        ...styles.rightCell,
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'Lato-Regular'
+                                    }}
+                                >
+                                    <Text textBreakStrategy="highQuality">
+                                        {item.formattedTimeUntilExpiry}
+                                    </Text>
+                                </ListItem.Subtitle>
+                            </View>
+                        )}
+                    {note && (
+                        <View style={styles.row}>
+                            <ListItem.Subtitle
+                                style={{
+                                    ...styles.leftCell,
+                                    color: themeColor('text'),
+                                    fontFamily: 'Lato-Regular',
+                                    flexShrink: 0,
+                                    flex: 0,
+                                    width: 'auto',
+                                    overflow: 'hidden'
+                                }}
+                                numberOfLines={1}
+                            >
+                                {localeString('general.note')}
+                            </ListItem.Subtitle>
+
+                            <ListItem.Subtitle
+                                style={{
+                                    ...styles.rightCell,
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'Lato-Regular',
+                                    flexWrap: 'wrap',
+                                    flexShrink: 1
+                                }}
+                                ellipsizeMode="tail"
+                            >
+                                {note.length > 150
+                                    ? `${note.substring(0, 150)}...`
+                                    : note}
+                            </ListItem.Subtitle>
+                        </View>
+                    )}
+                </ListItem.Content>
+            </ListItem>
+        );
+    }
+);
 
 @inject('ActivityStore', 'FiatStore', 'PosStore', 'SettingsStore', 'NotesStore')
 @observer
@@ -64,18 +322,23 @@ export default class Activity extends React.PureComponent<
     invoicesListener: any;
 
     state = {
+        loading: false,
         selectedPaymentForOrder: null,
         isCsvModalVisible: false
     };
 
     async UNSAFE_componentWillMount() {
-        const { ActivityStore, SettingsStore } = this.props;
-        const { getActivityAndFilter, getFilters } = ActivityStore;
+        const {
+            ActivityStore: { getActivityAndFilter, getFilters },
+            SettingsStore
+        } = this.props;
+        this.setState({ loading: true });
         const filters = await getFilters();
         await getActivityAndFilter(SettingsStore.settings.locale, filters);
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
+        this.setState({ loading: false });
     }
 
     UNSAFE_componentWillReceiveProps = (newProps: any) => {
@@ -142,6 +405,30 @@ export default class Activity extends React.PureComponent<
         return 'secondaryText';
     };
 
+    handleItemPress = (item: any) => {
+        const { navigation, route } = this.props;
+        const order = route.params?.order;
+
+        if (order) {
+            if (this.state.selectedPaymentForOrder === item) {
+                this.setState({ selectedPaymentForOrder: null });
+            } else {
+                this.setState({ selectedPaymentForOrder: item });
+            }
+            return;
+        }
+
+        if (item.model === localeString('views.Invoice.title')) {
+            navigation.navigate('Invoice', { invoice: item });
+        }
+        if (item.model === localeString('general.transaction')) {
+            navigation.navigate('Transaction', { transaction: item });
+        }
+        if (item.model === localeString('views.Payment.title')) {
+            navigation.navigate('Payment', { payment: item });
+        }
+    };
+
     render() {
         const {
             navigation,
@@ -151,10 +438,10 @@ export default class Activity extends React.PureComponent<
             SettingsStore,
             route
         } = this.props;
-        const { selectedPaymentForOrder, isCsvModalVisible } = this.state;
+        const { loading, selectedPaymentForOrder, isCsvModalVisible } =
+            this.state;
 
-        const { loading, filteredActivity, getActivityAndFilter } =
-            ActivityStore;
+        const { filteredActivity, getActivityAndFilter } = ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
@@ -313,366 +600,17 @@ export default class Activity extends React.PureComponent<
                 ) : filteredActivity?.length > 0 ? (
                     <FlatList
                         data={filteredActivity}
-                        renderItem={({ item }: { item: any }) => {
-                            const note = item.getNote;
-
-                            let displayName = item.model;
-                            let subTitle = item.model;
-
-                            if (item instanceof Invoice) {
-                                displayName = item.isPaid
-                                    ? item.is_amp
-                                        ? localeString(
-                                              'views.Activity.youReceivedAmp'
-                                          )
-                                        : localeString(
-                                              'views.Activity.youReceived'
-                                          )
-                                    : item.isExpired
-                                    ? localeString(
-                                          'views.Activity.expiredRequested'
-                                      )
-                                    : item.is_amp
-                                    ? localeString(
-                                          'views.Activity.requestedPaymentAmp'
-                                      )
-                                    : localeString(
-                                          'views.Activity.requestedPayment'
-                                      );
-                                subTitle = (
-                                    <Text>
-                                        {item.isPaid
-                                            ? localeString('general.lightning')
-                                            : localeString(
-                                                  'views.PaymentRequest.title'
-                                              )}
-                                        {item.memo ? ': ' : ''}
-                                        {item.memo ? (
-                                            <Text
-                                                style={{ fontStyle: 'italic' }}
-                                            >
-                                                {item.memo}
-                                            </Text>
-                                        ) : (
-                                            ''
-                                        )}
-                                    </Text>
-                                );
-                            } else if (
-                                item.model ===
-                                localeString('views.Payment.title')
-                            ) {
-                                displayName = item.isFailed
-                                    ? localeString(
-                                          'views.Payment.failedPayment'
-                                      )
-                                    : item.isInTransit
-                                    ? localeString(
-                                          'views.Payment.inTransitPayment'
-                                      )
-                                    : localeString('views.Activity.youSent');
-                                subTitle = (
-                                    <Text>
-                                        {localeString('general.lightning')}
-                                        {item.memo ? ': ' : ''}
-                                        {item.memo ? (
-                                            <Text
-                                                style={{ fontStyle: 'italic' }}
-                                            >
-                                                {item.memo}
-                                            </Text>
-                                        ) : (
-                                            ''
-                                        )}
-                                    </Text>
-                                );
-                            } else if (
-                                item.model ===
-                                localeString('general.transaction')
-                            ) {
-                                displayName =
-                                    item.getAmount == 0
-                                        ? localeString(
-                                              'views.Activity.channelOperation'
-                                          )
-                                        : !item.getAmount
-                                              .toString()
-                                              .includes('-')
-                                        ? localeString(
-                                              'views.Activity.youReceived'
-                                          )
-                                        : localeString(
-                                              'views.Activity.youSent'
-                                          );
-                                subTitle =
-                                    item.num_confirmations == 0
-                                        ? `${localeString(
-                                              'general.onchain'
-                                          )}: ${localeString(
-                                              'general.unconfirmed'
-                                          )}`
-                                        : localeString('general.onchain');
-                            }
-
-                            return (
-                                <React.Fragment>
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                        onPress={() => {
-                                            if (order) {
-                                                if (
-                                                    selectedPaymentForOrder ===
-                                                    item
-                                                ) {
-                                                    this.setState({
-                                                        selectedPaymentForOrder:
-                                                            null
-                                                    });
-                                                } else {
-                                                    this.setState({
-                                                        selectedPaymentForOrder:
-                                                            item
-                                                    });
-                                                }
-                                                return;
-                                            }
-                                            if (
-                                                item.model ===
-                                                localeString(
-                                                    'views.Invoice.title'
-                                                )
-                                            ) {
-                                                navigation.navigate('Invoice', {
-                                                    invoice: item
-                                                });
-                                            }
-
-                                            if (
-                                                item.model ===
-                                                localeString(
-                                                    'general.transaction'
-                                                )
-                                            ) {
-                                                navigation.navigate(
-                                                    'Transaction',
-                                                    {
-                                                        transaction: item
-                                                    }
-                                                );
-                                            }
-
-                                            if (
-                                                item.model ===
-                                                localeString(
-                                                    'views.Payment.title'
-                                                )
-                                            ) {
-                                                navigation.navigate('Payment', {
-                                                    payment: item
-                                                });
-                                            }
-                                        }}
-                                    >
-                                        <ListItem.Content>
-                                            <View style={styles.row}>
-                                                <ListItem.Title
-                                                    style={{
-                                                        ...styles.leftCell,
-                                                        fontWeight: '600',
-                                                        color:
-                                                            item ===
-                                                            selectedPaymentForOrder
-                                                                ? themeColor(
-                                                                      'highlight'
-                                                                  )
-                                                                : themeColor(
-                                                                      'text'
-                                                                  ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {displayName}
-                                                </ListItem.Title>
-
-                                                <View
-                                                    style={{
-                                                        ...styles.rightCell,
-                                                        flexDirection: 'row',
-                                                        flexWrap: 'wrap',
-                                                        columnGap: 5,
-                                                        rowGap: -5,
-                                                        justifyContent:
-                                                            'flex-end'
-                                                    }}
-                                                >
-                                                    <Amount
-                                                        sats={item.getAmount}
-                                                        sensitive
-                                                        color={this.getRightTitleTheme(
-                                                            item
-                                                        )}
-                                                    />
-                                                    {!!item.getFee &&
-                                                        item.getFee != 0 && (
-                                                            <>
-                                                                <Text
-                                                                    style={{
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        ),
-                                                                        fontSize: 16
-                                                                    }}
-                                                                >
-                                                                    +
-                                                                </Text>
-                                                                <Amount
-                                                                    sats={
-                                                                        item.getFee
-                                                                    }
-                                                                    sensitive
-                                                                    color={this.getRightTitleTheme(
-                                                                        item
-                                                                    )}
-                                                                    fee
-                                                                />
-                                                            </>
-                                                        )}
-                                                </View>
-                                            </View>
-
-                                            <View style={styles.row}>
-                                                <ListItem.Subtitle
-                                                    right
-                                                    style={{
-                                                        ...styles.leftCell,
-                                                        color:
-                                                            item ===
-                                                            selectedPaymentForOrder
-                                                                ? themeColor(
-                                                                      'highlight'
-                                                                  )
-                                                                : themeColor(
-                                                                      'secondaryText'
-                                                                  ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {subTitle}
-                                                </ListItem.Subtitle>
-
-                                                <ListItem.Subtitle
-                                                    style={{
-                                                        ...styles.rightCell,
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Book'
-                                                    }}
-                                                >
-                                                    {order
-                                                        ? item.getDisplayTimeOrder
-                                                        : item.getDisplayTimeShort}
-                                                </ListItem.Subtitle>
-                                            </View>
-
-                                            {!item.isPaid &&
-                                                !item.isExpired &&
-                                                item.formattedTimeUntilExpiry && (
-                                                    <View style={styles.row}>
-                                                        <ListItem.Subtitle
-                                                            style={{
-                                                                ...styles.leftCell,
-                                                                color:
-                                                                    item ===
-                                                                    selectedPaymentForOrder
-                                                                        ? themeColor(
-                                                                              'highlight'
-                                                                          )
-                                                                        : themeColor(
-                                                                              'secondaryText'
-                                                                          ),
-                                                                fontFamily:
-                                                                    'Lato-Regular'
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'views.Invoice.expiration'
-                                                            )}
-                                                        </ListItem.Subtitle>
-
-                                                        <ListItem.Subtitle
-                                                            style={{
-                                                                ...styles.rightCell,
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontFamily:
-                                                                    'Lato-Regular'
-                                                            }}
-                                                        >
-                                                            <Text textBreakStrategy="highQuality">
-                                                                {
-                                                                    item.formattedTimeUntilExpiry
-                                                                }
-                                                            </Text>
-                                                        </ListItem.Subtitle>
-                                                    </View>
-                                                )}
-                                            {note && (
-                                                <View style={styles.row}>
-                                                    <ListItem.Subtitle
-                                                        style={{
-                                                            ...styles.leftCell,
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontFamily:
-                                                                'Lato-Regular',
-                                                            flexShrink: 0,
-                                                            flex: 0,
-                                                            width: 'auto',
-                                                            overflow: 'hidden'
-                                                        }}
-                                                        numberOfLines={1}
-                                                    >
-                                                        {localeString(
-                                                            'general.note'
-                                                        )}
-                                                    </ListItem.Subtitle>
-
-                                                    <ListItem.Subtitle
-                                                        style={{
-                                                            ...styles.rightCell,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontFamily:
-                                                                'Lato-Regular',
-                                                            flexWrap: 'wrap',
-                                                            flexShrink: 1
-                                                        }}
-                                                        ellipsizeMode="tail"
-                                                    >
-                                                        {note.length > 150
-                                                            ? `${note.substring(
-                                                                  0,
-                                                                  150
-                                                              )}...`
-                                                            : note}
-                                                    </ListItem.Subtitle>
-                                                </View>
-                                            )}
-                                        </ListItem.Content>
-                                    </ListItem>
-                                </React.Fragment>
-                            );
-                        }}
+                        renderItem={({ item }: { item: any }) => (
+                            <ActivityListItem
+                                item={item}
+                                selectedPaymentForOrder={
+                                    selectedPaymentForOrder
+                                }
+                                onItemPress={this.handleItemPress}
+                                getRightTitleTheme={this.getRightTitleTheme}
+                                order={route.params?.order}
+                            />
+                        )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}

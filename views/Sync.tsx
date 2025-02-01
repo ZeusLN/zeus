@@ -13,6 +13,7 @@ import SyncStore from '../stores/SyncStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 
 interface SyncProps {
     navigation: StackNavigationProp<any, any>;
@@ -90,13 +91,13 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                                 keyValue={localeString(
                                     'views.Sync.currentBlockHeight'
                                 )}
-                                value={currentBlockHeight}
+                                value={numberWithCommas(currentBlockHeight)}
                             />
                         )}
                         {bestBlockHeight && (
                             <KeyValue
                                 keyValue={localeString('views.Sync.tip')}
-                                value={bestBlockHeight}
+                                value={numberWithCommas(bestBlockHeight)}
                             />
                         )}
                         {!!numBlocksUntilSynced && (
@@ -104,7 +105,7 @@ export default class Sync extends React.PureComponent<SyncProps, {}> {
                                 keyValue={localeString(
                                     'views.Sync.numBlocksUntilSynced'
                                 )}
-                                value={numBlocksUntilSynced}
+                                value={numberWithCommas(numBlocksUntilSynced)}
                             />
                         )}
                     </View>

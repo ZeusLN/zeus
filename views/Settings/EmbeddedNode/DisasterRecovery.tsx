@@ -3,7 +3,6 @@ import { ScrollView, Text, View } from 'react-native';
 import { ListItem, Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../../components/Button';
@@ -12,13 +11,19 @@ import Header from '../../../components/Header';
 import Switch from '../../../components/Switch';
 import KeyValue from '../../../components/KeyValue';
 
-import SettingsStore from '../../../stores/SettingsStore';
 import stores from '../../../stores/Stores';
+import SettingsStore from '../../../stores/SettingsStore';
+import {
+    LAST_CHANNEL_BACKUP_STATUS,
+    LAST_CHANNEL_BACKUP_TIME
+} from '../../../stores/ChannelBackupStore';
 
 import Base64Utils from '../../../utils/Base64Utils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
+
+import Storage from '../../../storage';
 
 import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
@@ -71,10 +76,9 @@ export default class DisasterRecovery extends React.Component<
 
     getLastBackupStatus = async () => {
         const lastDisasterRecoveryBackupStatus =
-            (await EncryptedStorage.getItem('LAST_CHANNEL_BACKUP_STATUS')) ||
-            '';
+            (await Storage.getItem(LAST_CHANNEL_BACKUP_STATUS)) || '';
         const lastDisasterRecoveryBackupTime =
-            (await EncryptedStorage.getItem('LAST_CHANNEL_BACKUP_TIME')) || '';
+            (await Storage.getItem(LAST_CHANNEL_BACKUP_TIME)) || '';
 
         this.setState({
             lastDisasterRecoveryBackupStatus,

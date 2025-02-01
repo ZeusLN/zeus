@@ -1,19 +1,29 @@
 import * as React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import {
+    View,
+    Text,
+    TouchableOpacity,
+    Image,
+    StyleSheet,
+    FlatListProps
+} from 'react-native';
+
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import cloneDeep from 'lodash/cloneDeep';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import NodeIdenticon, { NodeTitle } from '../../components/NodeIdenticon';
 import Screen from '../../components/Screen';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import BalanceStore from '../../stores/BalanceStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore, { INTERFACE_KEYS } from '../../stores/SettingsStore';
-import ChannelsStore from '../../stores/ChannelsStore';
+import SettingsStore, {
+    INTERFACE_KEYS,
+    Node
+} from '../../stores/SettingsStore';
 
 import { getPhoto } from '../../utils/PhotoUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -22,8 +32,13 @@ import BackendUtils from '../../utils/BackendUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import cloneDeep from 'lodash/cloneDeep';
+
+interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
+    data: T[];
+    keyExtractor: (item: T, index: number) => string;
+    renderItem: (info: DragListRenderItemInfo<T>) => React.ReactElement | null;
+    onReordered?: (fromIndex: number, toIndex: number) => Promise<void> | void;
+}
 
 interface NodesProps {
     nodes: any[];
@@ -31,9 +46,6 @@ interface NodesProps {
     edit?: boolean;
     loading?: boolean;
     selectedNode?: number;
-    BalanceStore: BalanceStore;
-    NodeInfoStore: NodeInfoStore;
-    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
 }
 
@@ -43,7 +55,9 @@ interface NodesState {
     loading: boolean;
 }
 
-@inject('BalanceStore', 'NodeInfoStore', 'ChannelsStore', 'SettingsStore')
+const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
+
+@inject('SettingsStore')
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
@@ -98,13 +112,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     );
 
     render() {
-        const {
-            navigation,
-            BalanceStore,
-            NodeInfoStore,
-            ChannelsStore,
-            SettingsStore
-        } = this.props;
+        const { navigation, SettingsStore } = this.props;
         const { loading, nodes, selectedNode } = this.state;
         const {
             updateSettings,
@@ -187,26 +195,27 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 {loading && <LoadingIndicator />}
                 {!loading && !!nodes && nodes.length > 0 && (
                     <View style={{ marginBottom: 50 }}>
-                        <DragList
+                        <TypedDragList
                             onReordered={onReordered}
                             data={nodes}
-                            keyExtractor={(item: any) => {
-                                return JSON.stringify(item);
+                            keyExtractor={(item, index) => {
+                                return JSON.stringify(item) + index;
                             }}
                             // keyExtractor={(item) => item}
                             renderItem={({
                                 item,
                                 index,
                                 onDragStart,
-                                onDragEnd,
-                                isActive
+                                onDragEnd
                             }: DragListRenderItemInfo<any>) => {
                                 let nodeSubtitle = '';
-                                if (
+                                const nodeActive =
                                     selectedNode === index ||
-                                    (!selectedNode && index === 0)
-                                ) {
-                                    nodeSubtitle = 'Active | ';
+                                    (!selectedNode && index === 0);
+                                if (nodeActive) {
+                                    nodeSubtitle = `${localeString(
+                                        'general.active'
+                                    )} | `;
                                 }
 
                                 nodeSubtitle +=
@@ -226,8 +235,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                         key={index}
                                         style={{
                                             borderBottomWidth: 0,
-                                            backgroundColor: isActive
-                                                ? themeColor('highlight')
+                                            backgroundColor: nodeActive
+                                                ? // match the LayerBalance sliders
+                                                  themeColor(
+                                                      'buttonBackground'
+                                                  ) || themeColor('secondary')
                                                 : 'transparent'
                                         }}
                                         onPress={async () => {
@@ -243,9 +255,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 nodes,
                                                 selectedNode: index
                                             }).then(() => {
-                                                BalanceStore.reset();
-                                                NodeInfoStore.reset();
-                                                ChannelsStore.reset();
                                                 setConnectingStatus(true);
                                                 setInitialStart(false);
                                                 navigation.popTo('Wallet', {
@@ -280,9 +289,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             <ListItem.Content>
                                                 <ListItem.Title
                                                     style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
+                                                        color: nodeActive
+                                                            ? themeColor(
+                                                                  'buttonText'
+                                                              )
+                                                            : themeColor(
+                                                                  'text'
+                                                              ),
                                                         fontFamily:
                                                             'PPNeueMontreal-Book'
                                                     }}
@@ -291,9 +304,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 </ListItem.Title>
                                                 <ListItem.Subtitle
                                                     style={{
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
+                                                        color: nodeActive
+                                                            ? themeColor(
+                                                                  'buttonText'
+                                                              )
+                                                            : themeColor(
+                                                                  'secondaryText'
+                                                              ),
                                                         fontFamily:
                                                             'PPNeueMontreal-Book'
                                                     }}
@@ -310,9 +327,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     icon={{
                                                         name: 'settings',
                                                         size: 35,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
+                                                        color: nodeActive
+                                                            ? themeColor(
+                                                                  'buttonText'
+                                                              )
+                                                            : themeColor('text')
                                                     }}
                                                     onPress={() =>
                                                         navigation.navigate(
@@ -322,9 +341,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                                     item
                                                                 ),
                                                                 index,
-                                                                active:
-                                                                    selectedNode ===
-                                                                    index,
+                                                                active: nodeActive,
                                                                 saved: true
                                                             }
                                                         )
@@ -341,9 +358,15 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         )}
                                                     >
                                                         <DragDots
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
+                                                            fill={
+                                                                nodeActive
+                                                                    ? themeColor(
+                                                                          'buttonText'
+                                                                      )
+                                                                    : themeColor(
+                                                                          'text'
+                                                                      )
+                                                            }
                                                             width="30"
                                                             height="30"
                                                             style={{

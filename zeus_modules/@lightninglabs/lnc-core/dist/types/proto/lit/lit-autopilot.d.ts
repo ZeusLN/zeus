@@ -22,6 +22,15 @@ export interface AddAutopilotSessionRequest {
     sessionRules: RulesMap | undefined;
     /** Set to true of the session should not make use of the privacy mapper. */
     noPrivacyMapper: boolean;
+    /** Set to the ID of the group to link this session to, if any. */
+    linkedGroupId: Uint8Array | string;
+    /**
+     * The privacy flags used by this session. If set, then privacy_flags_set must
+     * be set.
+     */
+    privacyFlags: string;
+    /** Indicates whether privacy flags are set. */
+    privacyFlagsSet: boolean;
 }
 export interface AddAutopilotSessionRequest_FeaturesEntry {
     key: string;
@@ -89,6 +98,13 @@ export interface Feature {
      * feature rules set contains a rule that Litd is unaware of.
      */
     requiresUpgrade: boolean;
+    /** The JSON-marshaled representation of a feature's default configuration. */
+    defaultConfig: string;
+    /**
+     * This feature may require relaxed privacy obfuscation that can be enabled
+     * with these flags.
+     */
+    privacyFlags: string;
 }
 export interface Feature_RulesEntry {
     key: string;

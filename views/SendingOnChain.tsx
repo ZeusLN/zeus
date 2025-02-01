@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -13,6 +12,8 @@ import SuccessAnimation from '../components/SuccessAnimation';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
+
+import Storage from '../storage';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
@@ -39,7 +40,7 @@ export default class SendingOnChain extends React.Component<
         const { TransactionsStore, navigation } = this.props;
         navigation.addListener('focus', () => {
             if (!TransactionsStore.txid) return;
-            EncryptedStorage.getItem('note-' + TransactionsStore.txid)
+            Storage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
                     this.setState({ storedNotes });
                 })

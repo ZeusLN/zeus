@@ -36,7 +36,7 @@ interface LockscreenProps {
             modifySecurityScreen: string;
             deletePin: boolean;
             deleteDuressPin: boolean;
-            attemptAdminLogin: boolean;
+            pendingNavigation?: { screen: string; params?: any };
         }
     >;
 }
@@ -84,15 +84,15 @@ export default class Lockscreen extends React.Component<
         };
     }
 
-    proceed = (navigationTarget?: string) => {
+    proceed = (targetScreen?: string, navigationParams?: any) => {
         const { SettingsStore, navigation } = this.props;
-        if (navigationTarget) {
-            navigation.navigate(navigationTarget);
+        if (targetScreen) {
+            navigation.popTo(targetScreen, navigationParams);
         } else if (
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
-            navigation.navigate('Wallets');
+            navigation.popTo('Wallets');
         } else {
             navigation.pop();
         }
@@ -105,18 +105,29 @@ export default class Lockscreen extends React.Component<
             modifySecurityScreen,
             deletePin,
             deleteDuressPin,
-            attemptAdminLogin
+            pendingNavigation
         } = route.params ?? {};
 
         const posEnabled: PosEnabled =
             (settings && settings.pos && settings.pos.posEnabled) ||
             PosEnabled.Disabled;
 
+        if (
+            posEnabled !== PosEnabled.Disabled &&
+            SettingsStore.posStatus === 'active' &&
+            !pendingNavigation &&
+            !deletePin &&
+            !deleteDuressPin
+        ) {
+            SettingsStore.setLoginStatus(true);
+            this.proceed('Wallet');
+            return;
+        }
+
         const isBiometryConfigured = SettingsStore.isBiometryConfigured();
 
         if (
             isBiometryConfigured &&
-            !attemptAdminLogin &&
             !deletePin &&
             !deleteDuressPin &&
             !modifySecurityScreen
@@ -129,22 +140,15 @@ export default class Lockscreen extends React.Component<
             );
 
             if (isVerified) {
+                SettingsStore.setPosStatus('inactive');
                 this.resetAuthenticationAttempts();
                 SettingsStore.setLoginStatus(true);
-                this.proceed();
+                this.proceed(
+                    pendingNavigation?.screen,
+                    pendingNavigation?.params
+                );
                 return;
             }
-        }
-
-        if (
-            posEnabled !== PosEnabled.Disabled &&
-            SettingsStore.posStatus === 'active' &&
-            !attemptAdminLogin &&
-            !deletePin &&
-            !deleteDuressPin
-        ) {
-            SettingsStore.setLoginStatus(true);
-            this.proceed('Wallet');
         }
 
         if (settings.authenticationAttempts) {
@@ -182,9 +186,9 @@ export default class Lockscreen extends React.Component<
                 });
             }
         } else if (settings && settings.nodes && settings?.nodes?.length > 0) {
-            this.proceed();
+            this.proceed(pendingNavigation?.screen, pendingNavigation?.params);
         } else {
-            navigation.navigate('IntroSplash');
+            navigation.popTo('IntroSplash');
         }
     }
 
@@ -210,7 +214,7 @@ export default class Lockscreen extends React.Component<
     };
 
     onAttemptLogIn = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const {
             passphrase,
             duressPassphrase,
@@ -243,7 +247,7 @@ export default class Lockscreen extends React.Component<
             }
             if (modifySecurityScreen) {
                 this.resetAuthenticationAttempts();
-                navigation.navigate(modifySecurityScreen);
+                navigation.popTo(modifySecurityScreen);
             } else if (deletePin) {
                 this.deletePin();
             } else if (deleteDuressPin) {
@@ -251,7 +255,11 @@ export default class Lockscreen extends React.Component<
             } else {
                 setPosStatus('inactive');
                 this.resetAuthenticationAttempts();
-                this.proceed();
+                const pendingNavigation = route.params?.pendingNavigation;
+                this.proceed(
+                    pendingNavigation?.screen,
+                    pendingNavigation?.params
+                );
             }
         } else if (
             (duressPassphrase && passphraseAttempt === duressPassphrase) ||
@@ -378,7 +386,7 @@ export default class Lockscreen extends React.Component<
         let incorrect = '';
 
         if (passphrase) {
-            incorrect = localeString('views.Lockscreen.incorrect');
+            incorrect = localeString('views.Lockscreen.incorrectPassword');
         } else {
             incorrect = localeString('views.Lockscreen.incorrectPin');
         }
@@ -393,7 +401,8 @@ export default class Lockscreen extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, route } = this.props;
+        const { navigation, SettingsStore } = this.props;
+        const pendingNavigation = this.props.route.params?.pendingNavigation;
         const { settings } = SettingsStore;
         const {
             passphrase,
@@ -406,31 +415,13 @@ export default class Lockscreen extends React.Component<
             deleteDuressPin
         } = this.state;
 
-        const { attemptAdminLogin } = route.params ?? {};
-
         return (
             <Screen>
                 {(!!modifySecurityScreen ||
                     deletePin ||
                     deleteDuressPin ||
-                    attemptAdminLogin) && (
-                    <Header
-                        leftComponent="Back"
-                        centerComponent={
-                            passphrase
-                                ? {
-                                      text: localeString(
-                                          'views.Lockscreen.enterPassphrase'
-                                      ),
-                                      style: {
-                                          color: themeColor('text'),
-                                          fontFamily: 'PPNeueMontreal-Book'
-                                      }
-                                  }
-                                : undefined
-                        }
-                        navigation={navigation}
-                    />
+                    pendingNavigation) && (
+                    <Header leftComponent="Back" navigation={navigation} />
                 )}
                 {!!passphrase && (
                     <View
@@ -450,6 +441,16 @@ export default class Lockscreen extends React.Component<
                                 message={this.generateErrorMessage()}
                             />
                         )}
+                        <View style={{ marginBottom: 40 }}>
+                            <Text
+                                style={{
+                                    ...styles.mainText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.Lockscreen.enterPassword')}
+                            </Text>
+                        </View>
                         <View style={styles.inputContainer}>
                             <TextInput
                                 placeholder={'****************'}
@@ -469,6 +470,7 @@ export default class Lockscreen extends React.Component<
                                     ...styles.textInput,
                                     paddingTop: passphraseAttempt === '' ? 6 : 2
                                 }}
+                                onSubmitEditing={() => this.onAttemptLogIn()}
                             />
                             <View style={styles.showHideToggle}>
                                 <ShowHideToggle

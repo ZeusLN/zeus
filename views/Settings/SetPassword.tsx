@@ -18,6 +18,7 @@ interface SetPassphraseProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     ModalStore: ModalStore;
+    route: { params?: { forBiometrics?: boolean } };
 }
 
 interface SetPassphraseState {
@@ -48,6 +49,8 @@ export default class SetPassphrase extends React.Component<
         isBiometryEnabled: false
     };
 
+    private firstInput = React.createRef<any>();
+
     async componentDidMount() {
         const { SettingsStore } = this.props;
         const settings = await SettingsStore.getSettings();
@@ -58,6 +61,8 @@ export default class SetPassphrase extends React.Component<
         if (settings.passphrase) {
             this.setState({ savedPassphrase: settings.passphrase });
         }
+
+        this.firstInput.current?.focus();
     }
 
     renderSeparator = () => (
@@ -70,7 +75,7 @@ export default class SetPassphrase extends React.Component<
     );
 
     saveSettings = async () => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, navigation, route } = this.props;
         const { passphrase, passphraseConfirm } = this.state;
         const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
 
@@ -102,7 +107,9 @@ export default class SetPassphrase extends React.Component<
         await updateSettings({ passphrase }).then(() => {
             setLoginStatus(true);
             getSettings();
-            navigation.popTo('Security', { refresh: true });
+            navigation.popTo('Security', {
+                enableBiometrics: route.params?.forBiometrics
+            });
         });
     };
 
@@ -176,6 +183,7 @@ export default class SetPassphrase extends React.Component<
                         {localeString('views.Settings.newPassword')}
                     </Text>
                     <TextInput
+                        ref={this.firstInput}
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
                         value={passphrase}

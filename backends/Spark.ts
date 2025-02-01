@@ -395,7 +395,7 @@ export default class Spark {
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
-    supportsLSPs = () => false;
+    supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;

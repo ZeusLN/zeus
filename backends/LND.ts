@@ -101,6 +101,74 @@ export default class LND {
             return response;
         } finally {
             calls.delete(id);
+        if (useTor === true) {
+            calls.set(
+                id,
+                doTorRequest(
+                    url,
+                    method as RequestMethod,
+                    JSON.stringify(data),
+                    headers
+                ).then((response: any) => {
+                    calls.delete(id);
+                    return response;
+                })
+            );
+        } else {
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout')), 30000);
+            });
+
+            const fetchPromise = ReactNativeBlobUtil.config({
+                trusty: !certVerification
+            })
+                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
+                .then((response: any) => {
+                    calls.delete(id);
+                    if (response.info().status < 300) {
+                        // handle ws responses
+                        if (response.data.includes('\n')) {
+                            const split = response.data.split('\n');
+                            const length = split.length;
+                            // last instance is empty
+                            return JSON.parse(split[length - 2]);
+                        }
+                        return response.json();
+                    } else {
+                        try {
+                            const errorInfo = response.json();
+                            throw new Error(
+                                (errorInfo.error && errorInfo.error.message) ||
+                                    errorInfo.message ||
+                                    errorInfo.error
+                            );
+                        } catch (e) {
+                            if (
+                                response.data &&
+                                typeof response.data === 'string'
+                            ) {
+                                throw new Error(response.data);
+                            } else {
+                                throw new Error(
+                                    localeString(
+                                        'backends.LND.restReq.connectionError'
+                                    )
+                                );
+                            }
+                        }
+                    }
+                });
+
+            const racePromise = Promise.race([
+                fetchPromise,
+                timeoutPromise
+            ]).catch((error) => {
+                calls.delete(id);
+                console.log('Request timed out for:', url);
+                throw error;
+            });
+
+            calls.set(id, racePromise);
         }
     };
 
@@ -309,11 +377,16 @@ export default class LND {
         });
     };
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
-    getInvoices = (data: any) =>
+    getInvoices = (
+        params: { limit?: number; reversed?: boolean } = {
+            limit: 500,
+            reversed: true
+        }
+    ) =>
         this.getRequest(
-            `/v1/invoices?reversed=true&num_max_invoices=${
-                (data && data.limit) || 500
-            }`
+            `/v1/invoices?reversed=${
+                params?.reversed !== undefined ? params.reversed : true
+            }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
         );
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoices', {
@@ -328,7 +401,20 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = () => this.getRequest('/v1/payments?include_incomplete=true');
+    getPayments = (
+        params: { maxPayments?: number; reversed?: boolean } = {
+            maxPayments: 500,
+            reversed: true
+        }
+    ) =>
+        this.getRequest(
+            `/v1/payments?include_incomplete=true${
+                params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
+            }&reversed=${
+                params?.reversed !== undefined ? params.reversed : true
+            }`
+        );
+
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
     getNewChangeAddress = (data: any) =>
         this.postRequest('/v2/wallet/address/next', data);
@@ -575,6 +661,8 @@ export default class LND {
         this.postRequest('/v1/funding/step', data);
     getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
     bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
+    bumpForceCloseFee = (data: any) =>
+        this.postRequest('/v2/wallet/BumpForceCloseFee', data);
     listAccounts = () => this.getRequest('/v2/wallet/accounts');
     listAddresses = () => this.getRequest('/v2/wallet/addresses');
     importAccount = (data: any) =>
@@ -686,6 +774,8 @@ export default class LND {
     supportsBumpFee = () => true;
     supportsLSPs = () => true;
     supportsNetworkInfo = () => false;
+    supportsFlowLSP = () => true;
+    supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
@@ -695,7 +785,9 @@ export default class LND {
     isLNDBased = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
-    supportsLSPS1customMessage = () => false;
+
+    supportsChannelFundMax = () => true;
+     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsOffers = (): Promise<boolean> | boolean => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');

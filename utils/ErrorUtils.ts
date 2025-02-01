@@ -5,6 +5,8 @@ const userFriendlyErrors: any = {
         'error.torBootstrap',
     'Error: called `Result::unwrap()` on an `Err` value: BootStrapError("Timeout waiting for boostrap")':
         'error.torBootstrap',
+    'Error: Failed to connect to': 'error.nodeConnectError',
+    'Error: Unable to resolve host': 'error.nodeConnectError',
     FAILURE_REASON_TIMEOUT: 'error.failureReasonTimeout',
     FAILURE_REASON_NO_ROUTE: 'error.failureReasonNoRoute',
     FAILURE_REASON_ERROR: 'error.failureReasonError',
@@ -17,7 +19,7 @@ const userFriendlyErrors: any = {
 
 const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
 
-const errorToUserFriendly = (error: Error, localize = true) => {
+const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     let errorMessage: string = error?.message;
     let errorObject: any;
 
@@ -44,18 +46,28 @@ const errorToUserFriendly = (error: Error, localize = true) => {
         errorMsg = errorMsg.charAt(0).toUpperCase() + errorMsg.slice(1);
     }
 
-    if (localize) {
-        const localeString = require('./LocaleUtils').localeString;
-        return (
-            localeString(userFriendlyErrors[errorMsg])?.replace(
-                'Zeus',
-                'ZEUS'
-            ) || errorMsg
-        );
-    } else {
-        const EN = require('../locales/en.json');
-        return EN[userFriendlyErrors[errorMsg]] || errorMsg;
+    const matchingPattern = Object.keys(userFriendlyErrors).find((pattern) =>
+        pattern === 'Error' ? errorMsg === pattern : errorMsg.includes(pattern)
+    );
+
+    let localeKey = matchingPattern
+        ? userFriendlyErrors[matchingPattern]
+        : null;
+
+    const localeString = require('./LocaleUtils').localeString;
+    let baseError = localeKey
+        ? localeString(localeKey)?.replace('Zeus', 'ZEUS')
+        : errorMsg;
+
+    if (
+        errorContext?.includes('Keysend') &&
+        errorMsg === 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'
+    ) {
+        baseError +=
+            ' ' +
+            localeString('error.failureReasonIncorrectPaymentDetailsKeysend');
     }
+    return baseError;
 };
 
 export { errorToUserFriendly };

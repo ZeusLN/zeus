@@ -1,7 +1,11 @@
 import BigNumber from 'bignumber.js';
-const bitcoin = require('bitcoinjs-lib');
+import * as bitcoin from 'bitcoinjs-lib';
+import ecc from '../zeus_modules/noble_ecc';
+
+bitcoin.initEccLib(ecc);
 
 import Base64Utils from '../utils/Base64Utils';
+import stores from '../stores/Stores';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
@@ -326,6 +330,153 @@ class AddressUtils {
             output = output.charAt(0).toUpperCase() + output.slice(1);
         }
         return output;
+    };
+
+    scriptPubKeyToAddress = (scriptPubKeyHex: string) => {
+        const nodeInfo = stores?.nodeInfoStore?.nodeInfo;
+        const { isTestNet, isRegTest } = nodeInfo;
+
+        let network = bitcoin.networks.bitcoin;
+        if (isTestNet) network = bitcoin.networks.testnet;
+        if (isRegTest) network = bitcoin.networks.regtest;
+
+        const scriptBuffer = Buffer.from(scriptPubKeyHex, 'hex');
+
+        const decodedScript = bitcoin.script.decompile(scriptBuffer);
+
+        // Handle P2WSH (Pay-to-Witness-Script-Hash)
+        if (
+            decodedScript && // Ensure the script is decoded
+            decodedScript.length === 2 && // P2WSH scripts have exactly 2 elements
+            decodedScript[0] === bitcoin.opcodes.OP_0 && // First element is OP_0
+            Buffer.isBuffer(decodedScript[1]) && // Second element is push data (a Buffer)
+            decodedScript[1].length === 32 // Push data length is exactly 32 bytes
+        ) {
+            try {
+                const witnessProgram = decodedScript[1];
+                const { address } = bitcoin.payments.p2wsh({
+                    hash: witnessProgram,
+                    network
+                });
+                return address;
+            } catch (e) {
+                console.log(
+                    `error decoding P2WSH pkscript: ${scriptPubKeyHex}:`,
+                    e
+                );
+                throw new Error('Invalid scriptPubKey format');
+            }
+        }
+
+        // Handle P2PKH (Pay-to-PubKey-Hash)
+        // TODO add address validation + tests
+        if (
+            decodedScript &&
+            decodedScript[0] === bitcoin.opcodes.OP_DUP &&
+            decodedScript[1] === bitcoin.opcodes.OP_HASH160 &&
+            Buffer.isBuffer(decodedScript[2]) && // Ensure it's a valid public key hash (20 bytes)
+            decodedScript[2].length === 20
+        ) {
+            console.log('attempting to decode P2PKH pkscript');
+            try {
+                const pubKeyHash = decodedScript[2];
+                const { address } = bitcoin.payments.p2pkh({
+                    hash: pubKeyHash,
+                    network
+                });
+                console.log('P2PKH address', address);
+                return address;
+            } catch (e) {
+                console.log(
+                    `error decoding P2PKH pkscript: ${scriptPubKeyHex}:`,
+                    e
+                );
+                throw new Error('Invalid scriptPubKey format');
+            }
+        }
+
+        // Handle P2PK (Pay-to-PubKey)
+        // TODO add address validation + tests
+        if (decodedScript && decodedScript[1] === bitcoin.opcodes.OP_CHECKSIG) {
+            console.log('attempting to decode P2PK pkscript');
+            try {
+                const pubkey: any = decodedScript[0];
+                const { address } = bitcoin.payments.p2pk({
+                    pubkey,
+                    network
+                });
+                console.log('P2PK address', address);
+                return address;
+            } catch (e) {
+                console.log(
+                    `error decoding P2PK pkscript: ${scriptPubKeyHex}`,
+                    e
+                );
+                throw new Error('Invalid scriptPubKey format');
+            }
+        }
+
+        // Handle P2SH (Pay-to-Script-Hash)
+        if (decodedScript && decodedScript[0] === bitcoin.opcodes.OP_HASH160) {
+            try {
+                const scriptHash: any = decodedScript[1];
+                const { address } = bitcoin.payments.p2sh({
+                    hash: scriptHash,
+                    network
+                });
+                return address;
+            } catch (e) {
+                console.log(
+                    `error decoding P2SH pkscript: ${scriptPubKeyHex}`,
+                    e
+                );
+                throw new Error('Invalid scriptPubKey format');
+            }
+        }
+
+        // Handle P2WPKH (Pay-to-Witness-PubKey-Hash) - SegWit
+        if (
+            decodedScript &&
+            decodedScript[0] === bitcoin.opcodes.OP_0 && // First element is OP_0
+            Buffer.isBuffer(decodedScript[1]) && // Second element is a buffer (push data)
+            decodedScript[1].length === 20 // Push data is exactly 20 bytes
+        ) {
+            try {
+                const pubKeyHash = decodedScript[1]; // Use the hash part, not the entire script
+                const { address } = bitcoin.payments.p2wpkh({
+                    hash: pubKeyHash,
+                    network
+                });
+                return address;
+            } catch (e) {
+                console.log(
+                    `error decoding P2WPKH pkscript: ${scriptPubKeyHex}`,
+                    e
+                );
+                throw new Error('Invalid scriptPubKey format');
+            }
+        }
+
+        // Handle P2TR (Pay-to-Taproot) - Taproot address
+        if (decodedScript && decodedScript[0] === 0x51) {
+            try {
+                const taprootPubKey: any = decodedScript[1];
+                const { address } = bitcoin.payments.p2tr({
+                    pubkey: taprootPubKey,
+                    network
+                });
+                return address;
+            } catch (e) {
+                console.log(
+                    `error decoding P2TR pkscript: ${scriptPubKeyHex}`,
+                    e
+                );
+                throw new Error('Invalid scriptPubKey format');
+            }
+        }
+
+        console.log('unknown address type for script pubkey', scriptPubKeyHex);
+        throw new Error('Unknown scriptPubKey format');
     };
 }
 

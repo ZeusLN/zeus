@@ -25,6 +25,7 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
+import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
@@ -43,9 +44,9 @@ import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import ContactStore from '../../stores/ContactStore';
 
-// @ts-ignore:next-line
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import Edit from '../../assets/images/SVG/Edit.svg';
-// @ts-ignore:next-line
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 
 interface ChannelProps {
@@ -62,6 +63,7 @@ interface ChannelState {
     satPerByte: string;
     forceCloseChannel: boolean;
     deliveryAddress: string;
+    aliasToggle: boolean;
     channel: Channel;
 }
 
@@ -82,6 +84,7 @@ export default class ChannelView extends React.Component<
             satPerByte: '',
             forceCloseChannel: false,
             deliveryAddress: '',
+            aliasToggle: false,
             channel
         };
 
@@ -218,7 +221,8 @@ export default class ChannelView extends React.Component<
             confirmCloseChannel,
             satPerByte,
             forceCloseChannel,
-            deliveryAddress
+            deliveryAddress,
+            aliasToggle
         } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
@@ -248,6 +252,7 @@ export default class ChannelView extends React.Component<
             shortChannelId,
             initiator,
             alias_scids,
+            peer_scid_alias,
             local_chan_reserve_sat,
             remote_chan_reserve_sat,
             displayName,
@@ -267,7 +272,8 @@ export default class ChannelView extends React.Component<
             closing,
             zero_conf,
             getCommitmentType,
-            pending_htlcs
+            pending_htlcs,
+            blocks_til_maturity
         } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
@@ -279,9 +285,16 @@ export default class ChannelView extends React.Component<
             closeHeight ||
             closing
         );
-        const bumpable: boolean = pendingOpen;
 
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
+
+        const showAliasScids =
+            !!alias_scids &&
+            alias_scids.length > 0 &&
+            !(
+                alias_scids.length === 1 &&
+                alias_scids[0].toString() === channelId
+            );
 
         const EditFees = () => (
             <TouchableOpacity
@@ -389,7 +402,7 @@ export default class ChannelView extends React.Component<
                             : closeHeight
                             ? localeString('views.Channel.closed')
                             : isActive
-                            ? localeString('views.Channel.active')
+                            ? localeString('general.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
                     {channelId && (
@@ -404,17 +417,71 @@ export default class ChannelView extends React.Component<
                             value={shortChannelId}
                         />
                     )}
-                    {!!alias_scids && alias_scids.length > 0 && (
-                        <KeyValue
-                            keyValue={
-                                alias_scids.length > 1
-                                    ? localeString('views.Channel.aliasScids')
-                                    : localeString('views.Channel.aliasScid')
-                            }
-                            value={PrivacyUtils.sensitiveValue(
-                                alias_scids.join(', ')
+
+                    {(!!peer_scid_alias || showAliasScids) && (
+                        <TouchableOpacity
+                            onPress={() => {
+                                this.setState({
+                                    aliasToggle: !aliasToggle
+                                });
+                            }}
+                        >
+                            <View>
+                                <Row justify="space-between">
+                                    <View style={{ width: '95%' }}>
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Channel.aliases'
+                                            )}
+                                        />
+                                    </View>
+                                    {aliasToggle ? (
+                                        <CaretDown
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    ) : (
+                                        <CaretRight
+                                            fill={themeColor('text')}
+                                            width="20"
+                                            height="20"
+                                        />
+                                    )}
+                                </Row>
+                            </View>
+                        </TouchableOpacity>
+                    )}
+
+                    {aliasToggle && (
+                        <>
+                            {showAliasScids && (
+                                <KeyValue
+                                    keyValue={
+                                        alias_scids.length > 1
+                                            ? localeString(
+                                                  'views.Channel.aliasScids'
+                                              )
+                                            : localeString(
+                                                  'views.Channel.aliasScid'
+                                              )
+                                    }
+                                    value={PrivacyUtils.sensitiveValue(
+                                        alias_scids.join(', ')
+                                    )}
+                                />
                             )}
-                        />
+                            {!!peer_scid_alias && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.peerAliasScid'
+                                    )}
+                                    value={PrivacyUtils.sensitiveValue(
+                                        peer_scid_alias
+                                    )}
+                                />
+                            )}
+                        </>
                     )}
                     {zero_conf && (
                         <KeyValue
@@ -576,6 +643,9 @@ export default class ChannelView extends React.Component<
                             />
                         </ListItem>
                     )}
+
+                    <Divider orientation="horizontal" style={{ margin: 20 }} />
+
                     <KeyValue
                         keyValue={localeString('views.Channel.channelBalance')}
                     />
@@ -717,7 +787,9 @@ export default class ChannelView extends React.Component<
                             }
                         />
                     )}
+
                     <Divider orientation="horizontal" style={{ margin: 20 }} />
+
                     {BackendUtils.isLNDBased() && editableFees && (
                         <FeeBreakdown
                             isActive={isActive}
@@ -733,20 +805,56 @@ export default class ChannelView extends React.Component<
                             csv_delay={csv_delay}
                         />
                     )}
-                    {BackendUtils.supportsBumpFee() && bumpable && (
+                    {BackendUtils.supportsBumpFee() && pendingOpen && (
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.BumpFee.titleAlt')}
                                 onPress={() =>
                                     navigation.navigate('BumpFee', {
                                         outpoint: channel.channel_point,
-                                        channel: true
+                                        pendingOpen: true
                                     })
                                 }
                                 noUppercase
                             />
                         </View>
                     )}
+                    {BackendUtils.supportsBumpFee() &&
+                        (pendingClose || closing) &&
+                        closing_txid && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.BumpFee.titleClose'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate('BumpFee', {
+                                            outpoint: `${closing_txid}:0`,
+                                            pendingClose: true
+                                        })
+                                    }
+                                    noUppercase
+                                />
+                            </View>
+                        )}
+                    {BackendUtils.supportsBumpFee() &&
+                        forceClose &&
+                        !blocks_til_maturity && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={localeString(
+                                        'views.BumpFee.titleClose'
+                                    )}
+                                    onPress={() =>
+                                        navigation.navigate('BumpFee', {
+                                            chan_point: channel.channel_point,
+                                            forceClose: true
+                                        })
+                                    }
+                                    noUppercase
+                                />
+                            </View>
+                        )}
                     {!closeHeight &&
                         !closing_txid &&
                         !pendingClose &&

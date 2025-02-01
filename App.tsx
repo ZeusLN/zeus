@@ -143,6 +143,7 @@ import EditFee from './views/EditFee';
 // Embedded LND
 import Seed from './views/Settings/Seed';
 import SeedRecovery from './views/Settings/SeedRecovery';
+import SeedQRExport from './views/Settings/SeedQRExport';
 import Sync from './views/Sync';
 import SyncRecovery from './views/SyncRecovery';
 import LspExplanationFees from './views/Explanations/LspExplanationFees';
@@ -623,6 +624,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="SeedRecovery" // @ts-ignore:next-line
                                                         component={SeedRecovery}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SeedQRExport" // @ts-ignore:next-line
+                                                        component={SeedQRExport}
                                                     />
                                                     <Stack.Screen
                                                         name="Sync" // @ts-ignore:next-line

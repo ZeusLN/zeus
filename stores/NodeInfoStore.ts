@@ -59,7 +59,7 @@ export default class NodeInfoStore {
         this.errorMsg = '';
         this.loading = true;
         const currentRequest = (this.currentRequest = {});
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             BackendUtils.getMyNodeInfo()
                 .then((data: any) => {
                     if (this.currentRequest !== currentRequest) {
@@ -81,7 +81,7 @@ export default class NodeInfoStore {
                     // handle error
                     this.errorMsg = errorToUserFriendly(error.toString());
                     this.getNodeInfoError();
-                    resolve(error);
+                    reject(error);
                 });
         });
     };
@@ -136,7 +136,7 @@ export default class NodeInfoStore {
     };
 
     @action
-    public lspNotConfigured = () => {
+    public flowLspNotConfigured = () => {
         const { implementation, certVerification } = this.settingsStore;
 
         const scidAlias =
@@ -145,7 +145,7 @@ export default class NodeInfoStore {
         const zeroConfConfig = zeroConf && scidAlias;
 
         const restIsConfigured = certVerification && zeroConfConfig;
-        const lspNotConfigured =
+        const flowLspNotConfigured =
             implementation === 'lnd'
                 ? !restIsConfigured
                 : implementation === 'embedded-lnd'
@@ -153,7 +153,7 @@ export default class NodeInfoStore {
                 : true;
 
         return {
-            lspNotConfigured,
+            flowLspNotConfigured,
             restIsConfigured,
             zeroConfConfig,
             zeroConf,

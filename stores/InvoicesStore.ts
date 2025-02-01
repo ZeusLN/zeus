@@ -268,7 +268,9 @@ export default class InvoicesStore {
                         hop_hints: [
                             {
                                 node_id: routeHintChannel.remotePubkey,
-                                chan_id: routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
+                                chan_id:
+                                    routeHintChannel.peer_scid_alias ||
+                                    routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
                                 fee_base_msat: Number(
                                     remotePolicy?.fee_base_msat
                                 ),
@@ -289,7 +291,7 @@ export default class InvoicesStore {
         if (customPreimage) req.preimage = customPreimage;
 
         if (
-            BackendUtils.supportsLSPs() &&
+            BackendUtils.supportsFlowLSP() &&
             this.settingsStore.settings?.enableLSP &&
             value &&
             value !== '0' &&
@@ -354,7 +356,7 @@ export default class InvoicesStore {
 
                 let jit_bolt11: string = '';
                 if (
-                    BackendUtils.supportsLSPs() &&
+                    BackendUtils.supportsFlowLSP() &&
                     this.settingsStore.settings?.enableLSP &&
                     value !== '0' &&
                     !noLsp

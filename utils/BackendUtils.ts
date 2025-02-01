@@ -120,6 +120,8 @@ class BackendUtils {
         this.call('publishTransaction', args);
     fundingStateStep = (...args: any[]) => this.call('fundingStateStep', args);
     bumpFee = (...args: any[]) => this.call('bumpFee', args);
+    bumpForceCloseFee = (...args: any[]) =>
+        this.call('bumpForceCloseFee', args);
     lookupInvoice = (...args: any[]) => this.call('lookupInvoice', args);
     subscribeInvoice = (...args: any[]) => this.call('subscribeInvoice', args);
     subscribeInvoices = (...args: any[]) =>
@@ -164,7 +166,7 @@ class BackendUtils {
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
     supportsBumpFee = () => this.call('supportsBumpFee');
-    supportsLSPs = () => this.call('supportsLSPs');
+    supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsNetworkInfo = () => this.call('supportsNetworkInfo');
     supportsSimpleTaprootChannels = () =>
         this.call('supportsSimpleTaprootChannels');
@@ -173,6 +175,7 @@ class BackendUtils {
     supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');
+    supportsChannelFundMax = () => this.call('supportsChannelFundMax');
     supportsOffers = () => this.call('supportsOffers');
     supportsBolt11BlindedRoutes = () =>
         this.call('supportsBolt11BlindedRoutes');

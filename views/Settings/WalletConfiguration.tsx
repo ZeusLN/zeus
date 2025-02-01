@@ -10,19 +10,20 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import cloneDeep from 'lodash/cloneDeep';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import { hash, STORAGE_KEY } from '../../backends/LNC/credentialStore';
+import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
+import Storage from '../../storage';
 
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
@@ -40,6 +41,7 @@ import {
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 import { Row } from '../../components/layout/Row';
+import ShowHideToggle from '../../components/ShowHideToggle';
 
 import SettingsStore, {
     INTERFACE_KEYS,
@@ -88,6 +90,7 @@ interface WalletConfigurationState {
     lndhubUrl: string; // lndhub
     username: string | undefined; // lndhub
     password: string | undefined; // lndhub, eclair
+    hidden: boolean;
     existingAccount: boolean; // lndhub
     dismissCustodialWarning: boolean;
     implementation: Implementations;
@@ -155,6 +158,7 @@ export default class WalletConfiguration extends React.Component<
         showCertModal: false,
         username: '',
         password: '',
+        hidden: true,
         accessKey: '',
         photo: undefined,
         // lnc
@@ -188,7 +192,8 @@ export default class WalletConfiguration extends React.Component<
             if (
                 clipboard.includes('lndconnect://') ||
                 clipboard.includes('lndhub://') ||
-                clipboard.includes('bluewallet:')
+                clipboard.includes('bluewallet:') ||
+                clipboard.includes('clnrest://')
             ) {
                 this.setState({
                     suggestImport: clipboard
@@ -239,6 +244,29 @@ export default class WalletConfiguration extends React.Component<
                     existingAccount
                 });
             }
+        } else if (suggestImport.includes('clnrest://')) {
+            const {
+                host,
+                rune,
+                port,
+                enableTor,
+                implementation
+            }: {
+                host: string;
+                rune: string;
+                port: string;
+                enableTor: boolean;
+                implementation: Implementations;
+            } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
+
+            this.setState({
+                host,
+                rune,
+                port,
+                enableTor,
+                implementation,
+                suggestImport: ''
+            });
         }
 
         Clipboard.setString('');
@@ -255,8 +283,8 @@ export default class WalletConfiguration extends React.Component<
 
         const { implementation, pairingPhrase } = this.state;
         if (implementation === 'lightning-node-connect') {
-            const key = `${STORAGE_KEY}:${hash(pairingPhrase)}`;
-            const json: any = await EncryptedStorage.getItem(key);
+            const key = `${LNC_STORAGE_KEY}:${hash(pairingPhrase)}`;
+            const json: any = await Storage.getItem(key);
             const parsed = JSON.parse(json);
             if (parsed) {
                 if (parsed.localKey && parsed.remoteKey) {
@@ -447,11 +475,13 @@ export default class WalletConfiguration extends React.Component<
         let nodes: Node[];
         let originalNode: Node;
         if (settings.nodes) {
-            nodes = settings.nodes;
+            nodes = [...settings.nodes];
             if (index != null) {
                 originalNode = nodes[index];
+                nodes[index] = node;
+            } else {
+                nodes.push(node);
             }
-            nodes[index != null ? index : settings.nodes.length] = node;
         } else {
             nodes = [node];
         }
@@ -545,6 +575,7 @@ export default class WalletConfiguration extends React.Component<
         navigation.navigate('WalletConfiguration', {
             node,
             newEntry: true,
+            active: false,
             saved: false,
             index: nodes!.length
         });
@@ -594,18 +625,22 @@ export default class WalletConfiguration extends React.Component<
             : undefined;
     }
 
-    setWalletConfigurationAsActive = () => {
+    setWalletConfigurationAsActive = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { updateSettings, setConnectingStatus, setInitialStart } =
+            SettingsStore;
         const { index } = this.state;
 
-        updateSettings({
+        await updateSettings({
             selectedNode: index
         });
 
         this.setState({
             active: true
         });
+
+        setConnectingStatus(true);
+        setInitialStart(false);
 
         navigation.popTo('Wallet', { refresh: true });
     };
@@ -1244,17 +1279,42 @@ export default class WalletConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.password'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            placeholder={'...'}
-                                            value={password}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    password: text.trim(),
-                                                    saved: false
-                                                });
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
                                             }}
-                                            locked={loading}
-                                        />
+                                        >
+                                            <TextInput
+                                                placeholder={'...'}
+                                                value={password}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        password: text.trim(),
+                                                        saved: false
+                                                    });
+                                                }}
+                                                locked={loading}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
+                                                autoCapitalize="none"
+                                                style={{
+                                                    flex: 1,
+                                                    marginRight: 15
+                                                }}
+                                            />
+                                            <ShowHideToggle
+                                                onPress={() =>
+                                                    this.setState({
+                                                        hidden: !this.state
+                                                            .hidden
+                                                    })
+                                                }
+                                            />
+                                        </View>
                                     </>
                                 )}
                             </>
@@ -1343,19 +1403,40 @@ export default class WalletConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.password'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            placeholder={'...'}
-                                            value={password}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    password: text.trim(),
-                                                    saved: false
-                                                })
-                                            }
-                                            locked={loading}
-                                            secureTextEntry={saved}
-                                            autoCapitalize="none"
-                                        />
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            <TextInput
+                                                placeholder={'...'}
+                                                value={password}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        password: text.trim(),
+                                                        saved: false
+                                                    })
+                                                }
+                                                locked={loading}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
+                                                autoCapitalize="none"
+                                                style={{
+                                                    flex: 1,
+                                                    marginRight: 15
+                                                }}
+                                            />
+                                            <ShowHideToggle
+                                                onPress={() =>
+                                                    this.setState({
+                                                        hidden: !this.state
+                                                            .hidden
+                                                    })
+                                                }
+                                            />
+                                        </View>
 
                                         {saved && (
                                             <CollapsedQR

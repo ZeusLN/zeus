@@ -7252,7 +7252,8 @@ export namespace lnrpc {
         STATIC_REMOTE_KEY = 2,
         ANCHORS = 3,
         SCRIPT_ENFORCED_LEASE = 4,
-        SIMPLE_TAPROOT = 5
+        SIMPLE_TAPROOT = 5,
+        SIMPLE_TAPROOT_OVERLAY = 6
     }
 
     /** Properties of a ChannelConstraints. */
@@ -7507,6 +7508,9 @@ export namespace lnrpc {
 
         /** Channel memo */
         memo?: string | null;
+
+        /** Channel custom_channel_data */
+        custom_channel_data?: Uint8Array | null;
     }
 
     /** Represents a Channel. */
@@ -7624,6 +7628,9 @@ export namespace lnrpc {
 
         /** Channel memo. */
         public memo: string;
+
+        /** Channel custom_channel_data. */
+        public custom_channel_data: Uint8Array;
 
         /**
          * Creates a new Channel instance using the specified properties.
@@ -10852,6 +10859,137 @@ export namespace lnrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 
+    /** Properties of a CloseOutput. */
+    interface ICloseOutput {
+        /** CloseOutput amount_sat */
+        amount_sat?: Long | null;
+
+        /** CloseOutput pk_script */
+        pk_script?: Uint8Array | null;
+
+        /** CloseOutput is_local */
+        is_local?: boolean | null;
+
+        /** CloseOutput custom_channel_data */
+        custom_channel_data?: Uint8Array | null;
+    }
+
+    /** Represents a CloseOutput. */
+    class CloseOutput implements ICloseOutput {
+        /**
+         * Constructs a new CloseOutput.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.ICloseOutput);
+
+        /** CloseOutput amount_sat. */
+        public amount_sat: Long;
+
+        /** CloseOutput pk_script. */
+        public pk_script: Uint8Array;
+
+        /** CloseOutput is_local. */
+        public is_local: boolean;
+
+        /** CloseOutput custom_channel_data. */
+        public custom_channel_data: Uint8Array;
+
+        /**
+         * Creates a new CloseOutput instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns CloseOutput instance
+         */
+        public static create(
+            properties?: lnrpc.ICloseOutput
+        ): lnrpc.CloseOutput;
+
+        /**
+         * Encodes the specified CloseOutput message. Does not implicitly {@link lnrpc.CloseOutput.verify|verify} messages.
+         * @param message CloseOutput message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: lnrpc.ICloseOutput,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified CloseOutput message, length delimited. Does not implicitly {@link lnrpc.CloseOutput.verify|verify} messages.
+         * @param message CloseOutput message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: lnrpc.ICloseOutput,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a CloseOutput message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns CloseOutput
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.CloseOutput;
+
+        /**
+         * Decodes a CloseOutput message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns CloseOutput
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.CloseOutput;
+
+        /**
+         * Verifies a CloseOutput message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a CloseOutput message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns CloseOutput
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.CloseOutput;
+
+        /**
+         * Creates a plain object from a CloseOutput message. Also converts values to other types if specified.
+         * @param message CloseOutput
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: lnrpc.CloseOutput,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this CloseOutput to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for CloseOutput
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
     /** Properties of a ChannelCloseUpdate. */
     interface IChannelCloseUpdate {
         /** ChannelCloseUpdate closing_txid */
@@ -10859,6 +10997,15 @@ export namespace lnrpc {
 
         /** ChannelCloseUpdate success */
         success?: boolean | null;
+
+        /** ChannelCloseUpdate local_close_output */
+        local_close_output?: lnrpc.ICloseOutput | null;
+
+        /** ChannelCloseUpdate remote_close_output */
+        remote_close_output?: lnrpc.ICloseOutput | null;
+
+        /** ChannelCloseUpdate additional_outputs */
+        additional_outputs?: lnrpc.ICloseOutput[] | null;
     }
 
     /** Represents a ChannelCloseUpdate. */
@@ -10874,6 +11021,15 @@ export namespace lnrpc {
 
         /** ChannelCloseUpdate success. */
         public success: boolean;
+
+        /** ChannelCloseUpdate local_close_output. */
+        public local_close_output?: lnrpc.ICloseOutput | null;
+
+        /** ChannelCloseUpdate remote_close_output. */
+        public remote_close_output?: lnrpc.ICloseOutput | null;
+
+        /** ChannelCloseUpdate additional_outputs. */
+        public additional_outputs: lnrpc.ICloseOutput[];
 
         /**
          * Creates a new ChannelCloseUpdate instance using the specified properties.
@@ -14181,6 +14337,9 @@ export namespace lnrpc {
 
             /** PendingChannel memo */
             memo?: string | null;
+
+            /** PendingChannel custom_channel_data */
+            custom_channel_data?: Uint8Array | null;
         }
 
         /** Represents a PendingChannel. */
@@ -14231,6 +14390,9 @@ export namespace lnrpc {
 
             /** PendingChannel memo. */
             public memo: string;
+
+            /** PendingChannel custom_channel_data. */
+            public custom_channel_data: Uint8Array;
 
             /**
              * Creates a new PendingChannel instance using the specified properties.
@@ -15944,6 +16106,9 @@ export namespace lnrpc {
 
         /** ChannelBalanceResponse pending_open_remote_balance */
         pending_open_remote_balance?: lnrpc.IAmount | null;
+
+        /** ChannelBalanceResponse custom_channel_data */
+        custom_channel_data?: Uint8Array | null;
     }
 
     /** Represents a ChannelBalanceResponse. */
@@ -15977,6 +16142,9 @@ export namespace lnrpc {
 
         /** ChannelBalanceResponse pending_open_remote_balance. */
         public pending_open_remote_balance?: lnrpc.IAmount | null;
+
+        /** ChannelBalanceResponse custom_channel_data. */
+        public custom_channel_data: Uint8Array;
 
         /**
          * Creates a new ChannelBalanceResponse instance using the specified properties.
@@ -17096,6 +17264,12 @@ export namespace lnrpc {
 
         /** Route total_amt_msat */
         total_amt_msat?: Long | null;
+
+        /** Route first_hop_amount_msat */
+        first_hop_amount_msat?: Long | null;
+
+        /** Route custom_channel_data */
+        custom_channel_data?: Uint8Array | null;
     }
 
     /** Represents a Route. */
@@ -17123,6 +17297,12 @@ export namespace lnrpc {
 
         /** Route total_amt_msat. */
         public total_amt_msat: Long;
+
+        /** Route first_hop_amount_msat. */
+        public first_hop_amount_msat: Long;
+
+        /** Route custom_channel_data. */
+        public custom_channel_data: Uint8Array;
 
         /**
          * Creates a new Route instance using the specified properties.
@@ -21254,6 +21434,9 @@ export namespace lnrpc {
 
         /** InvoiceHTLC amp */
         amp?: lnrpc.IAMP | null;
+
+        /** InvoiceHTLC custom_channel_data */
+        custom_channel_data?: Uint8Array | null;
     }
 
     /** Represents an InvoiceHTLC. */
@@ -21296,6 +21479,9 @@ export namespace lnrpc {
 
         /** InvoiceHTLC amp. */
         public amp?: lnrpc.IAMP | null;
+
+        /** InvoiceHTLC custom_channel_data. */
+        public custom_channel_data: Uint8Array;
 
         /**
          * Creates a new InvoiceHTLC instance using the specified properties.
@@ -22220,6 +22406,9 @@ export namespace lnrpc {
 
         /** Payment failure_reason */
         failure_reason?: lnrpc.PaymentFailureReason | null;
+
+        /** Payment first_hop_custom_records */
+        first_hop_custom_records?: { [k: string]: Uint8Array } | null;
     }
 
     /** Represents a Payment. */
@@ -22274,6 +22463,9 @@ export namespace lnrpc {
 
         /** Payment failure_reason. */
         public failure_reason: lnrpc.PaymentFailureReason;
+
+        /** Payment first_hop_custom_records. */
+        public first_hop_custom_records: { [k: string]: Uint8Array };
 
         /**
          * Creates a new Payment instance using the specified properties.
@@ -33917,6 +34109,25 @@ export namespace invoicesrpc {
         public lookupInvoiceV2(
             request: invoicesrpc.ILookupInvoiceMsg
         ): Promise<lnrpc.Invoice>;
+
+        /**
+         * Calls HtlcModifier.
+         * @param request HtlcModifyResponse message or plain object
+         * @param callback Node-style callback called with the error, if any, and HtlcModifyRequest
+         */
+        public htlcModifier(
+            request: invoicesrpc.IHtlcModifyResponse,
+            callback: invoicesrpc.Invoices.HtlcModifierCallback
+        ): void;
+
+        /**
+         * Calls HtlcModifier.
+         * @param request HtlcModifyResponse message or plain object
+         * @returns Promise
+         */
+        public htlcModifier(
+            request: invoicesrpc.IHtlcModifyResponse
+        ): Promise<invoicesrpc.HtlcModifyRequest>;
     }
 
     namespace Invoices {
@@ -33968,6 +34179,16 @@ export namespace invoicesrpc {
         type LookupInvoiceV2Callback = (
             error: Error | null,
             response?: lnrpc.Invoice
+        ) => void;
+
+        /**
+         * Callback as used by {@link invoicesrpc.Invoices#htlcModifier}.
+         * @param error Error, if any
+         * @param [response] HtlcModifyRequest
+         */
+        type HtlcModifierCallback = (
+            error: Error | null,
+            response?: invoicesrpc.HtlcModifyRequest
         ) => void;
     }
 
@@ -34953,6 +35174,396 @@ export namespace invoicesrpc {
 
         /**
          * Gets the default type url for LookupInvoiceMsg
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a CircuitKey. */
+    interface ICircuitKey {
+        /** CircuitKey chan_id */
+        chan_id?: Long | null;
+
+        /** CircuitKey htlc_id */
+        htlc_id?: Long | null;
+    }
+
+    /** Represents a CircuitKey. */
+    class CircuitKey implements ICircuitKey {
+        /**
+         * Constructs a new CircuitKey.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: invoicesrpc.ICircuitKey);
+
+        /** CircuitKey chan_id. */
+        public chan_id: Long;
+
+        /** CircuitKey htlc_id. */
+        public htlc_id: Long;
+
+        /**
+         * Creates a new CircuitKey instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns CircuitKey instance
+         */
+        public static create(
+            properties?: invoicesrpc.ICircuitKey
+        ): invoicesrpc.CircuitKey;
+
+        /**
+         * Encodes the specified CircuitKey message. Does not implicitly {@link invoicesrpc.CircuitKey.verify|verify} messages.
+         * @param message CircuitKey message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: invoicesrpc.ICircuitKey,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified CircuitKey message, length delimited. Does not implicitly {@link invoicesrpc.CircuitKey.verify|verify} messages.
+         * @param message CircuitKey message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: invoicesrpc.ICircuitKey,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a CircuitKey message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns CircuitKey
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): invoicesrpc.CircuitKey;
+
+        /**
+         * Decodes a CircuitKey message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns CircuitKey
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): invoicesrpc.CircuitKey;
+
+        /**
+         * Verifies a CircuitKey message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a CircuitKey message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns CircuitKey
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): invoicesrpc.CircuitKey;
+
+        /**
+         * Creates a plain object from a CircuitKey message. Also converts values to other types if specified.
+         * @param message CircuitKey
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: invoicesrpc.CircuitKey,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this CircuitKey to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for CircuitKey
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a HtlcModifyRequest. */
+    interface IHtlcModifyRequest {
+        /** HtlcModifyRequest invoice */
+        invoice?: lnrpc.IInvoice | null;
+
+        /** HtlcModifyRequest exit_htlc_circuit_key */
+        exit_htlc_circuit_key?: invoicesrpc.ICircuitKey | null;
+
+        /** HtlcModifyRequest exit_htlc_amt */
+        exit_htlc_amt?: Long | null;
+
+        /** HtlcModifyRequest exit_htlc_expiry */
+        exit_htlc_expiry?: number | null;
+
+        /** HtlcModifyRequest current_height */
+        current_height?: number | null;
+
+        /** HtlcModifyRequest exit_htlc_wire_custom_records */
+        exit_htlc_wire_custom_records?: { [k: string]: Uint8Array } | null;
+    }
+
+    /** Represents a HtlcModifyRequest. */
+    class HtlcModifyRequest implements IHtlcModifyRequest {
+        /**
+         * Constructs a new HtlcModifyRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: invoicesrpc.IHtlcModifyRequest);
+
+        /** HtlcModifyRequest invoice. */
+        public invoice?: lnrpc.IInvoice | null;
+
+        /** HtlcModifyRequest exit_htlc_circuit_key. */
+        public exit_htlc_circuit_key?: invoicesrpc.ICircuitKey | null;
+
+        /** HtlcModifyRequest exit_htlc_amt. */
+        public exit_htlc_amt: Long;
+
+        /** HtlcModifyRequest exit_htlc_expiry. */
+        public exit_htlc_expiry: number;
+
+        /** HtlcModifyRequest current_height. */
+        public current_height: number;
+
+        /** HtlcModifyRequest exit_htlc_wire_custom_records. */
+        public exit_htlc_wire_custom_records: { [k: string]: Uint8Array };
+
+        /**
+         * Creates a new HtlcModifyRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns HtlcModifyRequest instance
+         */
+        public static create(
+            properties?: invoicesrpc.IHtlcModifyRequest
+        ): invoicesrpc.HtlcModifyRequest;
+
+        /**
+         * Encodes the specified HtlcModifyRequest message. Does not implicitly {@link invoicesrpc.HtlcModifyRequest.verify|verify} messages.
+         * @param message HtlcModifyRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: invoicesrpc.IHtlcModifyRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified HtlcModifyRequest message, length delimited. Does not implicitly {@link invoicesrpc.HtlcModifyRequest.verify|verify} messages.
+         * @param message HtlcModifyRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: invoicesrpc.IHtlcModifyRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a HtlcModifyRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns HtlcModifyRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): invoicesrpc.HtlcModifyRequest;
+
+        /**
+         * Decodes a HtlcModifyRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns HtlcModifyRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): invoicesrpc.HtlcModifyRequest;
+
+        /**
+         * Verifies a HtlcModifyRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a HtlcModifyRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns HtlcModifyRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): invoicesrpc.HtlcModifyRequest;
+
+        /**
+         * Creates a plain object from a HtlcModifyRequest message. Also converts values to other types if specified.
+         * @param message HtlcModifyRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: invoicesrpc.HtlcModifyRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this HtlcModifyRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for HtlcModifyRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a HtlcModifyResponse. */
+    interface IHtlcModifyResponse {
+        /** HtlcModifyResponse circuit_key */
+        circuit_key?: invoicesrpc.ICircuitKey | null;
+
+        /** HtlcModifyResponse amt_paid */
+        amt_paid?: Long | null;
+
+        /** HtlcModifyResponse cancel_set */
+        cancel_set?: boolean | null;
+    }
+
+    /** Represents a HtlcModifyResponse. */
+    class HtlcModifyResponse implements IHtlcModifyResponse {
+        /**
+         * Constructs a new HtlcModifyResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: invoicesrpc.IHtlcModifyResponse);
+
+        /** HtlcModifyResponse circuit_key. */
+        public circuit_key?: invoicesrpc.ICircuitKey | null;
+
+        /** HtlcModifyResponse amt_paid. */
+        public amt_paid?: Long | null;
+
+        /** HtlcModifyResponse cancel_set. */
+        public cancel_set: boolean;
+
+        /** HtlcModifyResponse _amt_paid. */
+        public _amt_paid?: 'amt_paid';
+
+        /**
+         * Creates a new HtlcModifyResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns HtlcModifyResponse instance
+         */
+        public static create(
+            properties?: invoicesrpc.IHtlcModifyResponse
+        ): invoicesrpc.HtlcModifyResponse;
+
+        /**
+         * Encodes the specified HtlcModifyResponse message. Does not implicitly {@link invoicesrpc.HtlcModifyResponse.verify|verify} messages.
+         * @param message HtlcModifyResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: invoicesrpc.IHtlcModifyResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified HtlcModifyResponse message, length delimited. Does not implicitly {@link invoicesrpc.HtlcModifyResponse.verify|verify} messages.
+         * @param message HtlcModifyResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: invoicesrpc.IHtlcModifyResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a HtlcModifyResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns HtlcModifyResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): invoicesrpc.HtlcModifyResponse;
+
+        /**
+         * Decodes a HtlcModifyResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns HtlcModifyResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): invoicesrpc.HtlcModifyResponse;
+
+        /**
+         * Verifies a HtlcModifyResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a HtlcModifyResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns HtlcModifyResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): invoicesrpc.HtlcModifyResponse;
+
+        /**
+         * Creates a plain object from a HtlcModifyResponse message. Also converts values to other types if specified.
+         * @param message HtlcModifyResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: invoicesrpc.HtlcModifyResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this HtlcModifyResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for HtlcModifyResponse
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */
@@ -37591,6 +38202,44 @@ export namespace routerrpc {
         public updateChanStatus(
             request: routerrpc.IUpdateChanStatusRequest
         ): Promise<routerrpc.UpdateChanStatusResponse>;
+
+        /**
+         * Calls XAddLocalChanAliases.
+         * @param request AddAliasesRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and AddAliasesResponse
+         */
+        public xAddLocalChanAliases(
+            request: routerrpc.IAddAliasesRequest,
+            callback: routerrpc.Router.XAddLocalChanAliasesCallback
+        ): void;
+
+        /**
+         * Calls XAddLocalChanAliases.
+         * @param request AddAliasesRequest message or plain object
+         * @returns Promise
+         */
+        public xAddLocalChanAliases(
+            request: routerrpc.IAddAliasesRequest
+        ): Promise<routerrpc.AddAliasesResponse>;
+
+        /**
+         * Calls XDeleteLocalChanAliases.
+         * @param request DeleteAliasesRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and DeleteAliasesResponse
+         */
+        public xDeleteLocalChanAliases(
+            request: routerrpc.IDeleteAliasesRequest,
+            callback: routerrpc.Router.XDeleteLocalChanAliasesCallback
+        ): void;
+
+        /**
+         * Calls XDeleteLocalChanAliases.
+         * @param request DeleteAliasesRequest message or plain object
+         * @returns Promise
+         */
+        public xDeleteLocalChanAliases(
+            request: routerrpc.IDeleteAliasesRequest
+        ): Promise<routerrpc.DeleteAliasesResponse>;
     }
 
     namespace Router {
@@ -37773,6 +38422,26 @@ export namespace routerrpc {
             error: Error | null,
             response?: routerrpc.UpdateChanStatusResponse
         ) => void;
+
+        /**
+         * Callback as used by {@link routerrpc.Router#xAddLocalChanAliases}.
+         * @param error Error, if any
+         * @param [response] AddAliasesResponse
+         */
+        type XAddLocalChanAliasesCallback = (
+            error: Error | null,
+            response?: routerrpc.AddAliasesResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link routerrpc.Router#xDeleteLocalChanAliases}.
+         * @param error Error, if any
+         * @param [response] DeleteAliasesResponse
+         */
+        type XDeleteLocalChanAliasesCallback = (
+            error: Error | null,
+            response?: routerrpc.DeleteAliasesResponse
+        ) => void;
     }
 
     /** Properties of a SendPaymentRequest. */
@@ -37845,6 +38514,12 @@ export namespace routerrpc {
 
         /** SendPaymentRequest time_pref */
         time_pref?: number | null;
+
+        /** SendPaymentRequest cancelable */
+        cancelable?: boolean | null;
+
+        /** SendPaymentRequest first_hop_custom_records */
+        first_hop_custom_records?: { [k: string]: Uint8Array } | null;
     }
 
     /** Represents a SendPaymentRequest. */
@@ -37923,6 +38598,12 @@ export namespace routerrpc {
 
         /** SendPaymentRequest time_pref. */
         public time_pref: number;
+
+        /** SendPaymentRequest cancelable. */
+        public cancelable: boolean;
+
+        /** SendPaymentRequest first_hop_custom_records. */
+        public first_hop_custom_records: { [k: string]: Uint8Array };
 
         /**
          * Creates a new SendPaymentRequest instance using the specified properties.
@@ -38518,6 +39199,9 @@ export namespace routerrpc {
 
         /** SendToRouteRequest skip_temp_err */
         skip_temp_err?: boolean | null;
+
+        /** SendToRouteRequest first_hop_custom_records */
+        first_hop_custom_records?: { [k: string]: Uint8Array } | null;
     }
 
     /** Represents a SendToRouteRequest. */
@@ -38536,6 +39220,9 @@ export namespace routerrpc {
 
         /** SendToRouteRequest skip_temp_err. */
         public skip_temp_err: boolean;
+
+        /** SendToRouteRequest first_hop_custom_records. */
+        public first_hop_custom_records: { [k: string]: Uint8Array };
 
         /**
          * Creates a new SendToRouteRequest instance using the specified properties.
@@ -40814,6 +41501,9 @@ export namespace routerrpc {
 
         /** BuildRouteRequest payment_addr */
         payment_addr?: Uint8Array | null;
+
+        /** BuildRouteRequest first_hop_custom_records */
+        first_hop_custom_records?: { [k: string]: Uint8Array } | null;
     }
 
     /** Represents a BuildRouteRequest. */
@@ -40838,6 +41528,9 @@ export namespace routerrpc {
 
         /** BuildRouteRequest payment_addr. */
         public payment_addr: Uint8Array;
+
+        /** BuildRouteRequest first_hop_custom_records. */
+        public first_hop_custom_records: { [k: string]: Uint8Array };
 
         /**
          * Creates a new BuildRouteRequest instance using the specified properties.
@@ -42487,6 +43180,9 @@ export namespace routerrpc {
 
         /** ForwardHtlcInterceptRequest auto_fail_height */
         auto_fail_height?: number | null;
+
+        /** ForwardHtlcInterceptRequest in_wire_custom_records */
+        in_wire_custom_records?: { [k: string]: Uint8Array } | null;
     }
 
     /** Represents a ForwardHtlcInterceptRequest. */
@@ -42526,6 +43222,9 @@ export namespace routerrpc {
 
         /** ForwardHtlcInterceptRequest auto_fail_height. */
         public auto_fail_height: number;
+
+        /** ForwardHtlcInterceptRequest in_wire_custom_records. */
+        public in_wire_custom_records: { [k: string]: Uint8Array };
 
         /**
          * Creates a new ForwardHtlcInterceptRequest instance using the specified properties.
@@ -42642,12 +43341,23 @@ export namespace routerrpc {
 
         /** ForwardHtlcInterceptResponse failure_code */
         failure_code?: lnrpc.Failure.FailureCode | null;
+
+        /** ForwardHtlcInterceptResponse in_amount_msat */
+        in_amount_msat?: Long | null;
+
+        /** ForwardHtlcInterceptResponse out_amount_msat */
+        out_amount_msat?: Long | null;
+
+        /** ForwardHtlcInterceptResponse out_wire_custom_records */
+        out_wire_custom_records?: { [k: string]: Uint8Array } | null;
     }
 
     /**
      * ForwardHtlcInterceptResponse enables the caller to resolve a previously hold
      * forward. The caller can choose either to:
      * - `Resume`: Execute the default behavior (usually forward).
+     * - `ResumeModified`: Execute the default behavior (usually forward) with HTLC
+     * field modifications.
      * - `Reject`: Fail the htlc backwards.
      * - `Settle`: Settle this htlc with a given preimage.
      */
@@ -42677,6 +43387,15 @@ export namespace routerrpc {
 
         /** ForwardHtlcInterceptResponse failure_code. */
         public failure_code: lnrpc.Failure.FailureCode;
+
+        /** ForwardHtlcInterceptResponse in_amount_msat. */
+        public in_amount_msat: Long;
+
+        /** ForwardHtlcInterceptResponse out_amount_msat. */
+        public out_amount_msat: Long;
+
+        /** ForwardHtlcInterceptResponse out_wire_custom_records. */
+        public out_wire_custom_records: { [k: string]: Uint8Array };
 
         /**
          * Creates a new ForwardHtlcInterceptResponse instance using the specified properties.
@@ -42778,7 +43497,8 @@ export namespace routerrpc {
     enum ResolveHoldForwardAction {
         SETTLE = 0,
         FAIL = 1,
-        RESUME = 2
+        RESUME = 2,
+        RESUME_MODIFIED = 3
     }
 
     /** Properties of an UpdateChanStatusRequest. */
@@ -43008,6 +43728,458 @@ export namespace routerrpc {
 
         /**
          * Gets the default type url for UpdateChanStatusResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of an AddAliasesRequest. */
+    interface IAddAliasesRequest {
+        /** AddAliasesRequest alias_maps */
+        alias_maps?: lnrpc.IAliasMap[] | null;
+    }
+
+    /** Represents an AddAliasesRequest. */
+    class AddAliasesRequest implements IAddAliasesRequest {
+        /**
+         * Constructs a new AddAliasesRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: routerrpc.IAddAliasesRequest);
+
+        /** AddAliasesRequest alias_maps. */
+        public alias_maps: lnrpc.IAliasMap[];
+
+        /**
+         * Creates a new AddAliasesRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns AddAliasesRequest instance
+         */
+        public static create(
+            properties?: routerrpc.IAddAliasesRequest
+        ): routerrpc.AddAliasesRequest;
+
+        /**
+         * Encodes the specified AddAliasesRequest message. Does not implicitly {@link routerrpc.AddAliasesRequest.verify|verify} messages.
+         * @param message AddAliasesRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: routerrpc.IAddAliasesRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified AddAliasesRequest message, length delimited. Does not implicitly {@link routerrpc.AddAliasesRequest.verify|verify} messages.
+         * @param message AddAliasesRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: routerrpc.IAddAliasesRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an AddAliasesRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns AddAliasesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.AddAliasesRequest;
+
+        /**
+         * Decodes an AddAliasesRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns AddAliasesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.AddAliasesRequest;
+
+        /**
+         * Verifies an AddAliasesRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an AddAliasesRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns AddAliasesRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.AddAliasesRequest;
+
+        /**
+         * Creates a plain object from an AddAliasesRequest message. Also converts values to other types if specified.
+         * @param message AddAliasesRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: routerrpc.AddAliasesRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this AddAliasesRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for AddAliasesRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of an AddAliasesResponse. */
+    interface IAddAliasesResponse {
+        /** AddAliasesResponse alias_maps */
+        alias_maps?: lnrpc.IAliasMap[] | null;
+    }
+
+    /** Represents an AddAliasesResponse. */
+    class AddAliasesResponse implements IAddAliasesResponse {
+        /**
+         * Constructs a new AddAliasesResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: routerrpc.IAddAliasesResponse);
+
+        /** AddAliasesResponse alias_maps. */
+        public alias_maps: lnrpc.IAliasMap[];
+
+        /**
+         * Creates a new AddAliasesResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns AddAliasesResponse instance
+         */
+        public static create(
+            properties?: routerrpc.IAddAliasesResponse
+        ): routerrpc.AddAliasesResponse;
+
+        /**
+         * Encodes the specified AddAliasesResponse message. Does not implicitly {@link routerrpc.AddAliasesResponse.verify|verify} messages.
+         * @param message AddAliasesResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: routerrpc.IAddAliasesResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified AddAliasesResponse message, length delimited. Does not implicitly {@link routerrpc.AddAliasesResponse.verify|verify} messages.
+         * @param message AddAliasesResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: routerrpc.IAddAliasesResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an AddAliasesResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns AddAliasesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.AddAliasesResponse;
+
+        /**
+         * Decodes an AddAliasesResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns AddAliasesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.AddAliasesResponse;
+
+        /**
+         * Verifies an AddAliasesResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an AddAliasesResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns AddAliasesResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.AddAliasesResponse;
+
+        /**
+         * Creates a plain object from an AddAliasesResponse message. Also converts values to other types if specified.
+         * @param message AddAliasesResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: routerrpc.AddAliasesResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this AddAliasesResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for AddAliasesResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a DeleteAliasesRequest. */
+    interface IDeleteAliasesRequest {
+        /** DeleteAliasesRequest alias_maps */
+        alias_maps?: lnrpc.IAliasMap[] | null;
+    }
+
+    /** Represents a DeleteAliasesRequest. */
+    class DeleteAliasesRequest implements IDeleteAliasesRequest {
+        /**
+         * Constructs a new DeleteAliasesRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: routerrpc.IDeleteAliasesRequest);
+
+        /** DeleteAliasesRequest alias_maps. */
+        public alias_maps: lnrpc.IAliasMap[];
+
+        /**
+         * Creates a new DeleteAliasesRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DeleteAliasesRequest instance
+         */
+        public static create(
+            properties?: routerrpc.IDeleteAliasesRequest
+        ): routerrpc.DeleteAliasesRequest;
+
+        /**
+         * Encodes the specified DeleteAliasesRequest message. Does not implicitly {@link routerrpc.DeleteAliasesRequest.verify|verify} messages.
+         * @param message DeleteAliasesRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: routerrpc.IDeleteAliasesRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DeleteAliasesRequest message, length delimited. Does not implicitly {@link routerrpc.DeleteAliasesRequest.verify|verify} messages.
+         * @param message DeleteAliasesRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: routerrpc.IDeleteAliasesRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DeleteAliasesRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DeleteAliasesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.DeleteAliasesRequest;
+
+        /**
+         * Decodes a DeleteAliasesRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DeleteAliasesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.DeleteAliasesRequest;
+
+        /**
+         * Verifies a DeleteAliasesRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DeleteAliasesRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DeleteAliasesRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.DeleteAliasesRequest;
+
+        /**
+         * Creates a plain object from a DeleteAliasesRequest message. Also converts values to other types if specified.
+         * @param message DeleteAliasesRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: routerrpc.DeleteAliasesRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DeleteAliasesRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for DeleteAliasesRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a DeleteAliasesResponse. */
+    interface IDeleteAliasesResponse {
+        /** DeleteAliasesResponse alias_maps */
+        alias_maps?: lnrpc.IAliasMap[] | null;
+    }
+
+    /** Represents a DeleteAliasesResponse. */
+    class DeleteAliasesResponse implements IDeleteAliasesResponse {
+        /**
+         * Constructs a new DeleteAliasesResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: routerrpc.IDeleteAliasesResponse);
+
+        /** DeleteAliasesResponse alias_maps. */
+        public alias_maps: lnrpc.IAliasMap[];
+
+        /**
+         * Creates a new DeleteAliasesResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DeleteAliasesResponse instance
+         */
+        public static create(
+            properties?: routerrpc.IDeleteAliasesResponse
+        ): routerrpc.DeleteAliasesResponse;
+
+        /**
+         * Encodes the specified DeleteAliasesResponse message. Does not implicitly {@link routerrpc.DeleteAliasesResponse.verify|verify} messages.
+         * @param message DeleteAliasesResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: routerrpc.IDeleteAliasesResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DeleteAliasesResponse message, length delimited. Does not implicitly {@link routerrpc.DeleteAliasesResponse.verify|verify} messages.
+         * @param message DeleteAliasesResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: routerrpc.IDeleteAliasesResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DeleteAliasesResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DeleteAliasesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.DeleteAliasesResponse;
+
+        /**
+         * Decodes a DeleteAliasesResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DeleteAliasesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.DeleteAliasesResponse;
+
+        /**
+         * Verifies a DeleteAliasesResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DeleteAliasesResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DeleteAliasesResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.DeleteAliasesResponse;
+
+        /**
+         * Creates a plain object from a DeleteAliasesResponse message. Also converts values to other types if specified.
+         * @param message DeleteAliasesResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: routerrpc.DeleteAliasesResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DeleteAliasesResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for DeleteAliasesResponse
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */
@@ -47274,6 +48446,25 @@ export namespace walletrpc {
         ): Promise<walletrpc.BumpFeeResponse>;
 
         /**
+         * Calls BumpForceCloseFee.
+         * @param request BumpForceCloseFeeRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and BumpForceCloseFeeResponse
+         */
+        public bumpForceCloseFee(
+            request: walletrpc.IBumpForceCloseFeeRequest,
+            callback: walletrpc.WalletKit.BumpForceCloseFeeCallback
+        ): void;
+
+        /**
+         * Calls BumpForceCloseFee.
+         * @param request BumpForceCloseFeeRequest message or plain object
+         * @returns Promise
+         */
+        public bumpForceCloseFee(
+            request: walletrpc.IBumpForceCloseFeeRequest
+        ): Promise<walletrpc.BumpForceCloseFeeResponse>;
+
+        /**
          * Calls ListSweeps.
          * @param request ListSweepsRequest message or plain object
          * @param callback Node-style callback called with the error, if any, and ListSweepsResponse
@@ -47607,6 +48798,16 @@ export namespace walletrpc {
         type BumpFeeCallback = (
             error: Error | null,
             response?: walletrpc.BumpFeeResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#bumpForceCloseFee}.
+         * @param error Error, if any
+         * @param [response] BumpForceCloseFeeResponse
+         */
+        type BumpForceCloseFeeCallback = (
+            error: Error | null,
+            response?: walletrpc.BumpForceCloseFeeResponse
         ) => void;
 
         /**
@@ -52506,6 +53707,9 @@ export namespace walletrpc {
     interface IEstimateFeeResponse {
         /** EstimateFeeResponse sat_per_kw */
         sat_per_kw?: Long | null;
+
+        /** EstimateFeeResponse min_relay_fee_sat_per_kw */
+        min_relay_fee_sat_per_kw?: Long | null;
     }
 
     /** Represents an EstimateFeeResponse. */
@@ -52518,6 +53722,9 @@ export namespace walletrpc {
 
         /** EstimateFeeResponse sat_per_kw. */
         public sat_per_kw: Long;
+
+        /** EstimateFeeResponse min_relay_fee_sat_per_kw. */
+        public min_relay_fee_sat_per_kw: Long;
 
         /**
          * Creates a new EstimateFeeResponse instance using the specified properties.
@@ -53322,6 +54529,256 @@ export namespace walletrpc {
 
         /**
          * Gets the default type url for BumpFeeResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a BumpForceCloseFeeRequest. */
+    interface IBumpForceCloseFeeRequest {
+        /** BumpForceCloseFeeRequest chan_point */
+        chan_point?: lnrpc.IChannelPoint | null;
+
+        /** BumpForceCloseFeeRequest deadline_delta */
+        deadline_delta?: number | null;
+
+        /** BumpForceCloseFeeRequest starting_feerate */
+        starting_feerate?: Long | null;
+
+        /** BumpForceCloseFeeRequest immediate */
+        immediate?: boolean | null;
+
+        /** BumpForceCloseFeeRequest budget */
+        budget?: Long | null;
+    }
+
+    /** Represents a BumpForceCloseFeeRequest. */
+    class BumpForceCloseFeeRequest implements IBumpForceCloseFeeRequest {
+        /**
+         * Constructs a new BumpForceCloseFeeRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IBumpForceCloseFeeRequest);
+
+        /** BumpForceCloseFeeRequest chan_point. */
+        public chan_point?: lnrpc.IChannelPoint | null;
+
+        /** BumpForceCloseFeeRequest deadline_delta. */
+        public deadline_delta: number;
+
+        /** BumpForceCloseFeeRequest starting_feerate. */
+        public starting_feerate: Long;
+
+        /** BumpForceCloseFeeRequest immediate. */
+        public immediate: boolean;
+
+        /** BumpForceCloseFeeRequest budget. */
+        public budget: Long;
+
+        /**
+         * Creates a new BumpForceCloseFeeRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BumpForceCloseFeeRequest instance
+         */
+        public static create(
+            properties?: walletrpc.IBumpForceCloseFeeRequest
+        ): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeRequest message. Does not implicitly {@link walletrpc.BumpForceCloseFeeRequest.verify|verify} messages.
+         * @param message BumpForceCloseFeeRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IBumpForceCloseFeeRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeRequest message, length delimited. Does not implicitly {@link walletrpc.BumpForceCloseFeeRequest.verify|verify} messages.
+         * @param message BumpForceCloseFeeRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IBumpForceCloseFeeRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BumpForceCloseFeeRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BumpForceCloseFeeRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Decodes a BumpForceCloseFeeRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BumpForceCloseFeeRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Verifies a BumpForceCloseFeeRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BumpForceCloseFeeRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BumpForceCloseFeeRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.BumpForceCloseFeeRequest;
+
+        /**
+         * Creates a plain object from a BumpForceCloseFeeRequest message. Also converts values to other types if specified.
+         * @param message BumpForceCloseFeeRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.BumpForceCloseFeeRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BumpForceCloseFeeRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BumpForceCloseFeeRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a BumpForceCloseFeeResponse. */
+    interface IBumpForceCloseFeeResponse {
+        /** BumpForceCloseFeeResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a BumpForceCloseFeeResponse. */
+    class BumpForceCloseFeeResponse implements IBumpForceCloseFeeResponse {
+        /**
+         * Constructs a new BumpForceCloseFeeResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.IBumpForceCloseFeeResponse);
+
+        /** BumpForceCloseFeeResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new BumpForceCloseFeeResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns BumpForceCloseFeeResponse instance
+         */
+        public static create(
+            properties?: walletrpc.IBumpForceCloseFeeResponse
+        ): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeResponse message. Does not implicitly {@link walletrpc.BumpForceCloseFeeResponse.verify|verify} messages.
+         * @param message BumpForceCloseFeeResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: walletrpc.IBumpForceCloseFeeResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified BumpForceCloseFeeResponse message, length delimited. Does not implicitly {@link walletrpc.BumpForceCloseFeeResponse.verify|verify} messages.
+         * @param message BumpForceCloseFeeResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: walletrpc.IBumpForceCloseFeeResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a BumpForceCloseFeeResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns BumpForceCloseFeeResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Decodes a BumpForceCloseFeeResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns BumpForceCloseFeeResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Verifies a BumpForceCloseFeeResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a BumpForceCloseFeeResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns BumpForceCloseFeeResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.BumpForceCloseFeeResponse;
+
+        /**
+         * Creates a plain object from a BumpForceCloseFeeResponse message. Also converts values to other types if specified.
+         * @param message BumpForceCloseFeeResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: walletrpc.BumpForceCloseFeeResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this BumpForceCloseFeeResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for BumpForceCloseFeeResponse
          * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
          * @returns The default type url
          */

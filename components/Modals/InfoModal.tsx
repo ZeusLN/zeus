@@ -77,8 +77,10 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Book',
                                         color: themeColor('text'),
-                                        fontSize: 20,
-                                        marginBottom: 40
+                                        fontSize:
+                                            infoModalText.length > 3 ? 18 : 20,
+                                        marginBottom:
+                                            infoModalText.length > 3 ? 18 : 20
                                     }}
                                 >
                                     {text}

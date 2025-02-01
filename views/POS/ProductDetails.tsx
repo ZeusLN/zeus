@@ -388,9 +388,7 @@ export default class ProductDetails extends React.Component<
                                                     left: -10
                                                 }}
                                             >
-                                                {localeString(
-                                                    'views.Settings.POS.Product.active'
-                                                )}
+                                                {localeString('general.active')}
                                             </ListItem.Title>
                                             <View
                                                 style={{

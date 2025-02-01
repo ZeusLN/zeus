@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { CheckBox, Icon } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -29,8 +28,10 @@ import ContactUtils from '../utils/ContactUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import Storage from '../storage';
+
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-import ContactStore from '../stores/ContactStore';
+import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 
 import SelectOff from '../assets/images/SVG/Select Off.svg';
 import SelectOn from '../assets/images/SVG/Select On.svg';
@@ -407,9 +408,7 @@ export default class NostrContacts extends React.Component<
             );
 
             // Retrieve existing contacts from Encrypted storage
-            const contactsString = await EncryptedStorage.getItem(
-                'zeus-contacts'
-            );
+            const contactsString: any = await Storage.getItem(CONTACTS_KEY);
             const existingContacts: any = contactsString
                 ? JSON.parse(contactsString)
                 : [];
@@ -421,10 +420,7 @@ export default class NostrContacts extends React.Component<
             ].sort((a, b) => a.name.localeCompare(b.name));
 
             // Save the updated contacts to encrypted storage
-            await EncryptedStorage.setItem(
-                'zeus-contacts',
-                JSON.stringify(updatedContacts)
-            );
+            await Storage.setItem(CONTACTS_KEY, updatedContacts);
 
             console.log('Contacts imported successfully!');
 

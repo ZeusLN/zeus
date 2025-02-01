@@ -1,17 +1,18 @@
 import * as React from 'react';
-import { observer, inject } from 'mobx-react';
 import {
     TouchableOpacity,
     View,
     StyleSheet,
     Animated,
     Easing,
-    ScrollView
+    ScrollView,
+    FlatListProps
 } from 'react-native';
+
+import { observer, inject } from 'mobx-react';
 import Svg, { Text } from 'react-native-svg';
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
 import { Icon } from 'react-native-elements';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import isEmpty from 'lodash/isEmpty';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -25,15 +26,24 @@ import { Row } from '../../components/layout/Row';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
+
+import Storage from '../../storage';
+
 import FiatStore from '../../stores/FiatStore';
-import { CURRENCY_KEYS } from '../../stores/SettingsStore';
+import { CURRENCY_KEYS, CURRENCY_CODES_KEY } from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
 
-import { numberWithCommas } from '../../utils/UnitsUtils';
+interface Props<T> extends Omit<FlatListProps<T>, 'renderItem'> {
+    data: T[];
+    keyExtractor: (item: T, index: number) => string;
+    renderItem: (info: DragListRenderItemInfo<T>) => React.ReactElement | null;
+    onReordered?: (fromIndex: number, toIndex: number) => Promise<void> | void;
+}
 
 interface CurrencyConverterProps {
     navigation: StackNavigationProp<any, any>;
@@ -52,6 +62,8 @@ const EMOJI_REPLACEMENTS = {
     XAU: 'Au',
     XAG: 'Ag'
 };
+
+const TypedDragList = DragList as unknown as React.ComponentType<Props<string>>;
 
 @inject('FiatStore')
 @observer
@@ -95,9 +107,7 @@ export default class CurrencyConverter extends React.Component<
         try {
             const { inputValues } = this.state;
 
-            const inputValuesString = await EncryptedStorage.getItem(
-                'currency-codes'
-            );
+            const inputValuesString = await Storage.getItem(CURRENCY_CODES_KEY);
             const existingInputValues = inputValuesString
                 ? JSON.parse(inputValuesString)
                 : {};
@@ -110,10 +120,7 @@ export default class CurrencyConverter extends React.Component<
             }
 
             // Save updated inputValues to storage
-            await EncryptedStorage.setItem(
-                'currency-codes',
-                JSON.stringify(existingInputValues)
-            );
+            await Storage.setItem(CURRENCY_CODES_KEY, existingInputValues);
 
             // Update the state with the updated inputValues
             this.setState({ inputValues: existingInputValues });
@@ -124,10 +131,7 @@ export default class CurrencyConverter extends React.Component<
 
     saveInputValues = async () => {
         try {
-            await EncryptedStorage.setItem(
-                'currency-codes',
-                JSON.stringify(this.state.inputValues)
-            );
+            await Storage.setItem(CURRENCY_CODES_KEY, this.state.inputValues);
         } catch (error) {
             console.error('Error saving input values:', error);
         }
@@ -135,9 +139,7 @@ export default class CurrencyConverter extends React.Component<
 
     retrieveInputValues = async () => {
         try {
-            const inputValuesString = await EncryptedStorage.getItem(
-                'currency-codes'
-            );
+            const inputValuesString = await Storage.getItem(CURRENCY_CODES_KEY);
             if (inputValuesString) {
                 const inputValues = JSON.parse(inputValuesString);
                 this.setState({ inputValues });
@@ -295,9 +297,7 @@ export default class CurrencyConverter extends React.Component<
     handleDeleteCurrency = async (currency: string) => {
         try {
             // Retrieve inputValues from storage
-            const inputValuesString = await EncryptedStorage.getItem(
-                'currency-codes'
-            );
+            const inputValuesString = await Storage.getItem(CURRENCY_CODES_KEY);
             const existingInputValues = inputValuesString
                 ? JSON.parse(inputValuesString)
                 : {};
@@ -309,10 +309,7 @@ export default class CurrencyConverter extends React.Component<
             delete updatedInputValues[currency];
 
             // Save updated inputValues to storage
-            await EncryptedStorage.setItem(
-                'currency-codes',
-                JSON.stringify(updatedInputValues)
-            );
+            await Storage.setItem(CURRENCY_CODES_KEY, updatedInputValues);
 
             // Update the component state with the updated inputValues
             this.setState({ inputValues: updatedInputValues });
@@ -342,10 +339,7 @@ export default class CurrencyConverter extends React.Component<
 
         // Update state with reordered inputValues
         try {
-            await EncryptedStorage.setItem(
-                'currency-codes',
-                JSON.stringify(reorderedValues)
-            );
+            await Storage.setItem(CURRENCY_CODES_KEY, reorderedValues);
         } catch (error) {
             console.error('Error saving input values:', error);
         }
@@ -498,10 +492,10 @@ export default class CurrencyConverter extends React.Component<
                                 paddingBottom: 10
                             }}
                         >
-                            <DragList
+                            <TypedDragList
                                 onReordered={this.onReordered}
                                 data={Object.keys(inputValues)}
-                                keyExtractor={(item: any) => item}
+                                keyExtractor={(item) => String(item)}
                                 scrollEnabled={false}
                                 renderItem={({
                                     item,

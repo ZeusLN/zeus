@@ -187,6 +187,11 @@ export interface SignMessageReq {
      * privKey + h_tapTweak(internalKey || tapTweak)
      */
     schnorrSigTapTweak: Uint8Array | string;
+    /**
+     * An optional tag that can be provided when taking a tagged hash of a
+     * message. This option can only be used when schnorr_sig is true.
+     */
+    tag: Uint8Array | string;
 }
 export interface SignMessageResp {
     /** The signature for the given message in the fixed-size LN wire format. */
@@ -212,6 +217,11 @@ export interface VerifyMessageReq {
     pubkey: Uint8Array | string;
     /** Specifies if the signature is a Schnorr signature. */
     isSchnorrSig: boolean;
+    /**
+     * An optional tag that can be provided when taking a tagged hash of a
+     * message. This option can only be used when is_schnorr_sig is true.
+     */
+    tag: Uint8Array | string;
 }
 export interface VerifyMessageResp {
     /** Whether the signature was valid over the given message. */
@@ -275,7 +285,7 @@ export interface MuSig2CombineKeysRequest {
      */
     allSignerPubkeys: Uint8Array | string[];
     /**
-     * A series of optional generic tweaks to be applied to the the aggregated
+     * A series of optional generic tweaks to be applied to the aggregated
      * public key.
      */
     tweaks: TweakDesc[];
@@ -326,7 +336,7 @@ export interface MuSig2SessionRequest {
      */
     otherSignerPublicNonces: Uint8Array | string[];
     /**
-     * A series of optional generic tweaks to be applied to the the aggregated
+     * A series of optional generic tweaks to be applied to the aggregated
      * public key.
      */
     tweaks: TweakDesc[];
@@ -343,6 +353,15 @@ export interface MuSig2SessionRequest {
      * combined key and nonces are created.
      */
     version: MuSig2Version;
+    /**
+     * A set of pre generated secret local nonces to use in the musig2 session.
+     * This field is optional. This can be useful for protocols that need to send
+     * nonces ahead of time before the set of signer keys are known. This value
+     * MUST be 97 bytes and be the concatenation of two CSPRNG generated 32 byte
+     * values and local public key used for signing as specified in the key_loc
+     * field.
+     */
+    pregeneratedLocalNonce: Uint8Array | string;
 }
 export interface MuSig2SessionResponse {
     /**

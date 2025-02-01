@@ -73,54 +73,60 @@ export default class CLNRest {
                 })
             );
         } else {
-            calls.set(
-                id,
-                ReactNativeBlobUtil.config({
-                    trusty: !certVerification
-                })
-                    .fetch(
-                        method,
-                        url,
-                        headers,
-                        data ? JSON.stringify(data) : data
-                    )
-                    .then((response: any) => {
-                        calls.delete(id);
-                        if (response.info().status < 300) {
-                            // handle ws responses
-                            if (response.data.includes('\n')) {
-                                const split = response.data.split('\n');
-                                const length = split.length;
-                                // last instance is empty
-                                return JSON.parse(split[length - 2]);
-                            }
-                            return response.json();
-                        } else {
-                            try {
-                                const errorInfo = response.json();
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout')), 30000);
+            });
+
+            const fetchPromise = ReactNativeBlobUtil.config({
+                trusty: !certVerification
+            })
+                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
+                .then((response: any) => {
+                    calls.delete(id);
+                    if (response.info().status < 300) {
+                        // handle ws responses
+                        if (response.data.includes('\n')) {
+                            const split = response.data.split('\n');
+                            const length = split.length;
+                            // last instance is empty
+                            return JSON.parse(split[length - 2]);
+                        }
+                        return response.json();
+                    } else {
+                        try {
+                            const errorInfo = response.json();
+                            throw new Error(
+                                (errorInfo.error && errorInfo.error.message) ||
+                                    errorInfo.message ||
+                                    errorInfo.error
+                            );
+                        } catch (e) {
+                            if (
+                                response.data &&
+                                typeof response.data === 'string'
+                            ) {
+                                throw new Error(response.data);
+                            } else {
                                 throw new Error(
-                                    (errorInfo.error &&
-                                        errorInfo.error.message) ||
-                                        errorInfo.message ||
-                                        errorInfo.error
+                                    localeString(
+                                        'backends.LND.restReq.connectionError'
+                                    )
                                 );
-                            } catch (e) {
-                                if (
-                                    response.data &&
-                                    typeof response.data === 'string'
-                                ) {
-                                    throw new Error(response.data);
-                                } else {
-                                    throw new Error(
-                                        localeString(
-                                            'backends.LND.restReq.connectionError'
-                                        )
-                                    );
-                                }
                             }
                         }
-                    })
-            );
+                    }
+                });
+
+            const racePromise = Promise.race([
+                fetchPromise,
+                timeoutPromise
+            ]).catch((error) => {
+                calls.delete(id);
+                console.log('Request timed out for:', url);
+                throw error;
+            });
+
+            calls.set(id, racePromise);
         }
 
         return await calls.get(id);
@@ -209,9 +215,11 @@ export default class CLNRest {
         return this.postRequest('/v1/withdraw', request);
     };
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
-    getInvoices = () =>
+    getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
-            query: "SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT 150;"
+            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
+                data?.limit ? data.limit : 150
+            };`
         }).then((data: any) => {
             const invoiceList: any[] = [];
             data.rows.forEach((invoice: any) => {
@@ -238,7 +246,7 @@ export default class CLNRest {
         this.postRequest('/v1/invoice', {
             description: data.memo,
             label: 'zeus.' + Math.random() * 1000000,
-            amount_msat: Number(data.value) * 1000,
+            amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
             expiry: Number(data.expiry),
             exposeprivatechannels: true
         });
@@ -274,24 +282,16 @@ export default class CLNRest {
         const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
             .times(1000)
             .toString()}perkb`;
-        if (data.utxos && data.utxos.length > 0) {
-            request = {
-                id: data.id,
-                amount: data.satoshis,
-                feerate: feeRate,
-                announce: !data.privateChannel ? true : false,
-                minconf: data.min_confs,
-                utxos: data.utxos
-            };
-        } else {
-            request = {
-                id: data.id,
-                amount: data.satoshis,
-                feerate: feeRate,
-                announce: !data.privateChannel ? true : false,
-                minconf: data.min_confs
-            };
-        }
+
+        request = {
+            id: data.id,
+            amount: data.fundMax ? 'all' : data.satoshis,
+            feerate: feeRate,
+            announce: !data.privateChannel ? true : false,
+            minconf: data.min_confs
+        };
+
+        if (data.utxos && data.utxos.length > 0) request.utxos = data.utxos;
 
         return this.postRequest('/v1/fundchannel', request);
     };
@@ -406,7 +406,7 @@ export default class CLNRest {
     supportsAddressTypeSelection = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
-    supportsLSPs = () => false;
+    supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;
     supportsCustomPreimages = () => false;
@@ -414,6 +414,7 @@ export default class CLNRest {
     supportsOnchainSendMax = () => true;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
+    supportsChannelFundMax = () => true;
     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;

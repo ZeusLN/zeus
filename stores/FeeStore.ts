@@ -22,6 +22,7 @@ export default class FeeStore {
     @observable public setFeesError = false;
     @observable public setFeesErrorMsg: string;
     @observable public setFeesSuccess = false;
+    @observable public tempFee: string = '';
 
     @observable public dayEarned: string | number;
     @observable public weekEarned: string | number;
@@ -81,7 +82,12 @@ export default class FeeStore {
         this.fees = {};
         this.loadingFees = false;
         this.bumpFeeSuccess = false;
+        this.resetErrors();
+    };
+
+    resetErrors = () => {
         this.bumpFeeError = false;
+        this.bumpFeeErrorMsg = '';
     };
 
     @action
@@ -178,6 +184,10 @@ export default class FeeStore {
             });
     };
 
+    @action setTempFee = (fee: string) => {
+        this.tempFee = fee;
+    };
+
     forwardingError = () => {
         this.forwardingEvents = [];
         this.forwardingHistoryError = true;
@@ -240,6 +250,30 @@ export default class FeeStore {
     };
 
     @action
+    public bumpForceCloseFee = (params?: any) => {
+        this.loading = true;
+        this.bumpFeeSuccess = false;
+        this.bumpFeeError = false;
+        const [funding_txid_str, output_index] = params.chan_point.split(':');
+        BackendUtils.bumpForceCloseFee({
+            ...params,
+            chan_point: {
+                funding_txid_str,
+                output_index: Number(output_index) || 0
+            }
+        })
+            .then(() => {
+                this.bumpFeeSuccess = true;
+                this.loading = false;
+            })
+            .catch((err: Error) => {
+                this.bumpFeeError = true;
+                this.bumpFeeErrorMsg = errorToUserFriendly(err);
+                this.loading = false;
+            });
+    };
+
+    @action
     public bumpFeeOpeningChannel = (params?: any) => {
         this.loading = true;
         this.bumpFeeSuccess = false;
@@ -260,8 +294,11 @@ export default class FeeStore {
                 // if output isn't correct (it'll be index 0 or 1), try alternate input
                 // NOTE: this will only work for single-party funded channels
                 if (
-                    err.toString() ===
-                    'Error: the passed output does not belong to the wallet'
+                    err
+                        .toString()
+                        .includes(
+                            'the passed output does not belong to the wallet'
+                        )
                 ) {
                     const newOutputIndex = output_index === '0' ? 1 : 0;
                     this.bumpFeeErrorMsg = `${err}. Retrying with input ${newOutputIndex}`;

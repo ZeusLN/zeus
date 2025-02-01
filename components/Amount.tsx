@@ -11,7 +11,7 @@ import { Row } from './layout/Row';
 import { Body } from './text/Body';
 import LoadingIndicator from './LoadingIndicator';
 
-import { localeString } from '../utils/LocaleUtils';
+import { localeString, formatInlineNoun } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { formatBitcoinWithSpaces } from '../utils/UnitsUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
@@ -151,9 +151,9 @@ function AmountDisplay({
                                 {plural ? 'sats' : 'sat'}
                                 {fee
                                     ? ' ' +
-                                      localeString(
-                                          'views.Payment.fee'
-                                      ).toLowerCase()
+                                      formatInlineNoun(
+                                          localeString('views.Payment.fee')
+                                      )
                                     : ''}
                             </Body>
                         </View>
@@ -179,9 +179,9 @@ function AmountDisplay({
                                         color={color}
                                         colorOverride={colorOverride}
                                     >
-                                        {localeString(
-                                            'views.Payment.fee'
-                                        ).toLowerCase()}
+                                        {formatInlineNoun(
+                                            localeString('views.Payment.fee')
+                                        )}
                                     </Body>
                                     <Spacer width={2} />
                                 </>
@@ -246,9 +246,11 @@ function AmountDisplay({
                                             color={color}
                                             colorOverride={colorOverride}
                                         >
-                                            {localeString(
-                                                'views.Payment.fee'
-                                            ).toLowerCase()}
+                                            {formatInlineNoun(
+                                                localeString(
+                                                    'views.Payment.fee'
+                                                )
+                                            )}
                                         </Body>
                                     </View>
                                 </>
@@ -333,7 +335,14 @@ export default class Amount extends React.Component<AmountProps, {}> {
             if (toggleable) {
                 return (
                     <TouchableOpacity
-                        onPress={() => UnitsStore.changeUnits()}
+                        onPress={() => {
+                            if (lurkerExposed || !lurkerMode) {
+                                UnitsStore.changeUnits();
+                                if (lurkerExposed) {
+                                    SettingsStore.toggleLurker();
+                                }
+                            }
+                        }}
                         onLongPress={() => {
                             if (!lurkerExposed && lurkerMode) {
                                 SettingsStore.toggleLurker();
@@ -397,7 +406,14 @@ export default class Amount extends React.Component<AmountProps, {}> {
         if (toggleable) {
             return (
                 <TouchableOpacity
-                    onPress={() => UnitsStore.changeUnits()}
+                    onPress={() => {
+                        if (lurkerExposed || !lurkerMode) {
+                            UnitsStore.changeUnits();
+                            if (lurkerExposed) {
+                                SettingsStore.toggleLurker();
+                            }
+                        }
+                    }}
                     onLongPress={() => {
                         if (!lurkerExposed && lurkerMode) {
                             SettingsStore.toggleLurker();

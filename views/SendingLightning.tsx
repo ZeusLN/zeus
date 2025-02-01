@@ -1,5 +1,4 @@
 import * as React from 'react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import {
     BackHandler,
     Dimensions,
@@ -26,6 +25,8 @@ import PaymentsStore from '../stores/PaymentsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import Storage from '../storage';
 
 import Clock from '../assets/images/SVG/Clock.svg';
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
@@ -68,7 +69,7 @@ export default class SendingLightning extends React.Component<
         navigation.addListener('focus', () => {
             const noteKey: string = TransactionsStore.noteKey;
             if (!noteKey) return;
-            EncryptedStorage.getItem(noteKey)
+            Storage.getItem(noteKey)
                 .then((storedNotes) => {
                     this.setState({ storedNotes: storedNotes || '' });
                 })
@@ -98,7 +99,10 @@ export default class SendingLightning extends React.Component<
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
         try {
-            const payments = await PaymentsStore.getPayments();
+            const payments = await PaymentsStore.getPayments({
+                maxPayments: 5,
+                reversed: true
+            });
             const matchingPayment = payments.find(
                 (payment: any) =>
                     payment.payment_preimage ===
@@ -406,7 +410,6 @@ export default class SendingLightning extends React.Component<
                                     secondary
                                     buttonStyle={{ height: 40, width: '100%' }}
                                     containerStyle={{
-                                        backgroundColor: 'red',
                                         maxWidth: '45%',
                                         margin: 10
                                     }}

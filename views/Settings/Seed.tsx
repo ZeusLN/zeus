@@ -8,9 +8,9 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import Button from '../../components/Button';
@@ -23,7 +23,10 @@ import SettingsStore from '../../stores/SettingsStore';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
+import Storage from '../../storage';
+
 import Skull from '../../assets/images/SVG/Skull.svg';
+import QR from '../../assets/images/SVG/QR.svg';
 
 interface SeedProps {
     navigation: StackNavigationProp<any, any>;
@@ -109,6 +112,15 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             </TouchableOpacity>
         );
 
+        const QRExport = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('SeedQRExport')}
+                style={{ marginLeft: 20 }}
+            >
+                <QR fill={themeColor('text')} />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -122,7 +134,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     }}
                     rightComponent={
                         understood && seedPhrase ? (
-                            <DangerouslyCopySeed />
+                            <Row>
+                                <DangerouslyCopySeed />
+                                <QRExport />
+                            </Row>
                         ) : undefined
                     }
                     navigation={navigation}
@@ -317,9 +332,9 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    await EncryptedStorage.setItem(
+                                    await Storage.setItem(
                                         'backup-complete',
-                                        JSON.stringify(true)
+                                        true
                                     );
                                     navigation.popTo('Wallet');
                                 }}

@@ -367,7 +367,9 @@ export default class EditFee extends React.Component<
                                         keyboardType="numeric"
                                         value={this.state.customFee}
                                         onChangeText={(text: string) => {
-                                            text = text.replace(/[^0-9]*/g, '');
+                                            text = text
+                                                .replace(/[^0-9]*/g, '')
+                                                .replace(/^0+/, '');
                                             this.setState({
                                                 customFee: text,
                                                 fee: text,
@@ -388,10 +390,12 @@ export default class EditFee extends React.Component<
                                             'views.EditFee.confirmFee'
                                         )}
                                         onPress={() => {
-                                            this.props.route.params.onNavigateBack(
-                                                fee
+                                            FeeStore.setTempFee(
+                                                selectedFee === 'custom'
+                                                    ? customFee
+                                                    : fee
                                             );
-                                            this.props.navigation.goBack();
+                                            navigation.goBack();
                                         }}
                                         disabled={
                                             !fee ||

@@ -23,7 +23,6 @@ import { inject, observer } from 'mobx-react';
 import RNRestart from 'react-native-restart';
 import { StackNavigationProp } from '@react-navigation/stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 import ChannelsPane from '../Channels/ChannelsPane';
 import BalancePane from './BalancePane';
@@ -48,8 +47,11 @@ import {
     expressGraphSync
 } from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+
+import Storage from '../../storage';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
@@ -162,16 +164,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         });
     }
 
-    async UNSAFE_componentWillMount(): Promise<void> {
-        const {
-            SettingsStore: { updateSettings }
-        } = this.props;
-
-        const supportedBiometryType = await getSupportedBiometryType();
-
-        await updateSettings({ supportedBiometryType });
-    }
-
     private handleBackButton() {
         const tabNavigator = this.tabNavigationRef.current;
         if (!tabNavigator) {
@@ -215,6 +207,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'change',
             this.handleAppStateChange
         );
+
+        const {
+            SettingsStore: { updateSettings }
+        } = this.props;
+
+        const supportedBiometryType = await getSupportedBiometryType();
+
+        await updateSettings({ supportedBiometryType });
     }
 
     componentWillUnmount() {
@@ -415,14 +415,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
             }
             if (recovery) {
-                const isBackedUp = await EncryptedStorage.getItem(
-                    'backup-complete'
-                );
+                const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
                 if (!isBackedUp) {
-                    await EncryptedStorage.setItem(
-                        'backup-complete',
-                        JSON.stringify(true)
-                    );
+                    await Storage.setItem(IS_BACKED_UP_KEY, true);
                 }
                 if (isSyncing) return;
                 try {
@@ -443,9 +438,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         } else if (implementation === 'lndhub') {
             if (connecting) {
-                await login({ login: username, password }).then(async () => {
-                    BalanceStore.getLightningBalance(true);
-                });
+                try {
+                    await login({ login: username, password });
+                    await BalanceStore.getLightningBalance(true);
+                } catch (connectionError) {
+                    console.log('LNDHub connection failed:', connectionError);
+                    return;
+                }
             } else {
                 BalanceStore.getLightningBalance(true);
             }
@@ -455,22 +454,33 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 error = await connect();
             }
             if (!error) {
-                await BackendUtils.checkPerms();
-                await NodeInfoStore.getNodeInfo();
-                if (BackendUtils.supportsAccounts())
-                    await UTXOsStore.listAccounts();
-                await BalanceStore.getCombinedBalance();
-                if (BackendUtils.supportsChannelManagement())
-                    ChannelsStore.getChannels();
+                try {
+                    await BackendUtils.checkPerms();
+                    await NodeInfoStore.getNodeInfo();
+                    if (BackendUtils.supportsAccounts())
+                        await UTXOsStore.listAccounts();
+                    await BalanceStore.getCombinedBalance();
+                    if (BackendUtils.supportsChannelManagement())
+                        ChannelsStore.getChannels();
+                } catch (connectionError) {
+                    console.log('LNC connection failed:', connectionError);
+                    return;
+                }
             }
         } else {
-            await NodeInfoStore.getNodeInfo();
-            if (BackendUtils.supportsAccounts()) {
-                UTXOsStore.listAccounts();
+            try {
+                await NodeInfoStore.getNodeInfo();
+                if (BackendUtils.supportsAccounts()) {
+                    UTXOsStore.listAccounts();
+                }
+                await BalanceStore.getCombinedBalance();
+                ChannelsStore.getChannels();
+            } catch (connectionError) {
+                console.log('Node connection failed:', connectionError);
+                NodeInfoStore.getNodeInfoError();
+                setConnectingStatus(false);
+                return;
             }
-
-            await BalanceStore.getCombinedBalance();
-            ChannelsStore.getChannels();
         }
 
         if (
@@ -504,13 +514,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
             );
             setConnectingStatus(false);
+            SettingsStore.setInitialStart(false);
         }
 
-        if (BackendUtils.supportsLSPs()) {
+        if (BackendUtils.supportsFlowLSP()) {
             if (
                 SettingsStore.settings.enableLSP &&
                 (implementation !== 'lnd' ||
-                    !this.props.NodeInfoStore.lspNotConfigured)
+                    !this.props.NodeInfoStore.flowLspNotConfigured)
             ) {
                 await LSPStore.getLSPInfo();
             }
@@ -850,7 +861,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                 )}
                                         </>
                                     )}
-                                    {posStatus !== 'active' && (
+                                    {posStatus !== 'active' && !error && (
                                         <Tab.Screen
                                             name="Camera"
                                             component={CameraScreen}

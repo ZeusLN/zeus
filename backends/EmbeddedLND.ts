@@ -43,6 +43,7 @@ const {
     signMessageNodePubkey,
     verifyMessageNodePubkey,
     bumpFee,
+    bumpForceCloseFee,
     fundPsbt,
     signPsbt,
     finalizePsbt,
@@ -97,7 +98,10 @@ export default class EmbeddedLND extends LND {
             preimage: data.preimage,
             route_hints: data.route_hints
         });
-    getPayments = async () => await listPayments();
+    getPayments = async (params?: {
+        maxPayments?: number;
+        reversed?: boolean;
+    }) => await listPayments(params);
     getNewAddress = async (data: any) =>
         await newAddress(data.type, data.account);
     getNewChangeAddress = async (data: any) =>
@@ -278,6 +282,7 @@ export default class EmbeddedLND extends LND {
 
     getUTXOs = async (data: any) => await listUnspent(data);
     bumpFee = async (data: any) => await bumpFee(data);
+    bumpForceCloseFee = async (data: any) => await bumpForceCloseFee(data);
     lookupInvoice = async (data: any) => await lookupInvoice(data.r_hash);
 
     listAccounts = async () => await listAccounts();
@@ -312,7 +317,7 @@ export default class EmbeddedLND extends LND {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
-    supportsLSPs = () => true;
+    supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
     supportsCustomPreimages = () => true;
@@ -321,6 +326,7 @@ export default class EmbeddedLND extends LND {
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     isLNDBased = () => true;
+    supportsChannelFundMax = () => true;
     supportsLSPS1customMessage = () => true;
     supportsLSPS1rest = () => false;
     supportsOffers = () => false;

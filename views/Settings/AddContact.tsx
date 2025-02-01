@@ -38,6 +38,19 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
 
+interface ContactInputFieldProps {
+    icon: React.ReactNode;
+    value: string;
+    onChangeText: (text: string) => void;
+    onValidate: (text: string) => void;
+    placeholder: string;
+    isValid: boolean;
+    index: number;
+    setValidationState: (index: number, isValid: boolean) => void;
+    isAdditionalField?: boolean;
+    onDelete?: () => void;
+}
+
 interface AddContactProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'AddContact', { isEdit: boolean; isNostrContact: boolean }>;
@@ -79,15 +92,65 @@ interface AddContactState {
     showExtraFieldModal: boolean;
     confirmDelete: boolean;
     isFavourite: boolean;
-    isValidOnchainAddress: boolean;
-    isValidLightningAddress: boolean;
-    isValidBolt12Address: boolean;
-    isValidBolt12Offer: boolean;
-    isValidNIP05: boolean;
-    isValidNpub: boolean;
-    isValidPubkey: boolean;
+    isValidLightningAddress: boolean[];
+    isValidBolt12Address: boolean[];
+    isValidBolt12Offer: boolean[];
+    isValidPubkey: boolean[];
+    isValidOnchainAddress: boolean[];
+    isValidNIP05: boolean[];
+    isValidNpub: boolean[];
     [key: string]: string[] | any;
 }
+
+const ContactInputField = ({
+    icon,
+    value,
+    onChangeText,
+    onValidate,
+    placeholder,
+    isValid,
+    index,
+    setValidationState,
+    isAdditionalField,
+    onDelete
+}: ContactInputFieldProps) => (
+    <>
+        <View style={styles.inputContainer}>
+            <View style={styles.icons}>{icon}</View>
+            <TextInput
+                onChangeText={(text) => {
+                    onChangeText(text);
+                    onValidate(text);
+                    if (!text) {
+                        setValidationState(index, true);
+                    } else {
+                        onValidate(text);
+                    }
+                }}
+                value={value}
+                placeholder={placeholder}
+                placeholderTextColor={themeColor('secondaryText')}
+                style={{
+                    ...styles.textInput,
+                    color: isValid ? themeColor('text') : themeColor('error')
+                }}
+                autoCapitalize="none"
+            />
+            {isAdditionalField && (
+                <TouchableOpacity style={styles.deleteIcon}>
+                    <Icon
+                        name="close"
+                        onPress={onDelete}
+                        color={themeColor('text')}
+                        underlayColor="transparent"
+                        size={16}
+                    />
+                </TouchableOpacity>
+            )}
+        </View>
+        <Divider orientation="horizontal" style={{ marginTop: 10 }} />
+    </>
+);
 
 @inject('ContactStore')
 @observer
@@ -112,13 +175,13 @@ export default class AddContact extends React.Component<
             showExtraFieldModal: false,
             confirmDelete: false,
             isFavourite: false,
-            isValidOnchainAddress: true,
-            isValidLightningAddress: true,
-            isValidBolt12Address: true,
-            isValidBolt12Offer: true,
-            isValidNIP05: true,
-            isValidNpub: true,
-            isValidPubkey: true
+            isValidLightningAddress: [true],
+            isValidBolt12Address: [true],
+            isValidBolt12Offer: [true],
+            isValidPubkey: [true],
+            isValidOnchainAddress: [true],
+            isValidNIP05: [true],
+            isValidNpub: [true]
         };
     }
 
@@ -194,56 +257,89 @@ export default class AddContact extends React.Component<
         );
     };
 
-    onChangeOnchainAddress = (text: string) => {
-        const isValid = AddressUtils.isValidBitcoinAddress(text, true); // Pass true for testnet
-        this.setState({
-            isValidOnchainAddress: isValid
-        });
-    };
-
-    onChangeLightningAddress = (text: string) => {
+    onChangeLightningAddress = (text: string, index: number) => {
         const isValid =
             AddressUtils.isValidLightningPaymentRequest(text) ||
             AddressUtils.isValidLightningAddress(text) ||
             AddressUtils.isValidBitcoinAddress(text, true);
-        this.setState({
-            isValidLightningAddress: isValid
-        });
+
+        this.setState((prevState) => ({
+            isValidLightningAddress: Object.assign(
+                [...prevState.isValidLightningAddress],
+                {
+                    [index]: isValid
+                }
+            )
+        }));
     };
 
-    onChangeBolt12Address = (text: string) => {
+    onChangeBolt12Address = (text: string, index: number) => {
         const isValid = AddressUtils.isValidLightningAddress(text);
-        this.setState({
-            isValidBolt12Address: isValid
-        });
+
+        this.setState((prevState) => ({
+            isValidBolt12Address: Object.assign(
+                [...prevState.isValidBolt12Address],
+                {
+                    [index]: isValid
+                }
+            )
+        }));
     };
 
-    onChangeBolt12Offer = (text: string) => {
+    onChangeBolt12Offer = (text: string, index: number) => {
         const isValid = AddressUtils.isValidLightningOffer(text);
-        this.setState({
-            isValidBolt12Offer: isValid
-        });
+
+        this.setState((prevState) => ({
+            isValidBolt12Offer: Object.assign(
+                [...prevState.isValidBolt12Offer],
+                {
+                    [index]: isValid
+                }
+            )
+        }));
     };
 
-    onChangeNIP05 = (text: string) => {
-        const isValid = AddressUtils.isValidLightningAddress(text);
-        this.setState({
-            isValidNIP05: isValid
-        });
-    };
-
-    onChangeNpub = (text: string) => {
-        const isValid = AddressUtils.isValidNpub(text);
-        this.setState({
-            isValidNpub: isValid
-        });
-    };
-
-    onChangePubkey = (text: string) => {
+    onChangePubkey = (text: string, index: number) => {
         const isValid = AddressUtils.isValidLightningPubKey(text);
-        this.setState({
-            isValidPubkey: isValid
-        });
+
+        this.setState((prevState) => ({
+            isValidPubkey: Object.assign([...prevState.isValidPubkey], {
+                [index]: isValid
+            })
+        }));
+    };
+
+    onChangeOnchainAddress = (text: string, index: number) => {
+        const isValid = AddressUtils.isValidBitcoinAddress(text, true); // Pass true for testnet
+
+        this.setState((prevState) => ({
+            isValidOnchainAddress: Object.assign(
+                [...prevState.isValidOnchainAddress],
+                {
+                    [index]: isValid
+                }
+            )
+        }));
+    };
+
+    onChangeNIP05 = (text: string, index: number) => {
+        const isValid = AddressUtils.isValidLightningAddress(text);
+
+        this.setState((prevState) => ({
+            isValidNIP05: Object.assign([...prevState.isValidNIP05], {
+                [index]: isValid
+            })
+        }));
+    };
+
+    onChangeNpub = (text: string, index: number) => {
+        const isValid = AddressUtils.isValidNpub(text);
+
+        this.setState((prevState) => ({
+            isValidNpub: Object.assign([...prevState.isValidNpub], {
+                [index]: isValid
+            })
+        }));
     };
 
     toggleFavorite = () => {
@@ -270,7 +366,36 @@ export default class AddContact extends React.Component<
         const { ContactStore } = this.props;
 
         if (ContactStore.prefillContact) {
-            this.setState({ ...ContactStore.prefillContact });
+            // Since invalid data cannot be saved, we know all existing fields are valid.
+            // Array length matches the number of fields for each type, defaulting to 1 for empty arrays.
+            const validationStates = {
+                isValidLightningAddress: Array(
+                    ContactStore.prefillContact.lnAddress?.length || 1
+                ).fill(true),
+                isValidBolt12Address: Array(
+                    ContactStore.prefillContact.bolt12Address?.length || 1
+                ).fill(true),
+                isValidBolt12Offer: Array(
+                    ContactStore.prefillContact.bolt12Offer?.length || 1
+                ).fill(true),
+                isValidPubkey: Array(
+                    ContactStore.prefillContact.pubkey?.length || 1
+                ).fill(true),
+                isValidOnchainAddress: Array(
+                    ContactStore.prefillContact.onchainAddress?.length || 1
+                ).fill(true),
+                isValidNIP05: Array(
+                    ContactStore.prefillContact.nip05?.length || 1
+                ).fill(true),
+                isValidNpub: Array(
+                    ContactStore.prefillContact.nostrNpub?.length || 1
+                ).fill(true)
+            };
+
+            this.setState({
+                ...ContactStore.prefillContact,
+                ...validationStates
+            });
         }
     };
 
@@ -550,833 +675,508 @@ export default class AddContact extends React.Component<
                             style={{
                                 marginTop: 14
                             }}
-                            color={
-                                lnAddress?.length == 1 &&
-                                !isValidLightningAddress &&
-                                themeColor('error')
-                            }
                         />
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <LightningBolt />
-                            </View>
-                            <TextInput
+
+                        <ContactInputField
+                            icon={<LightningBolt />}
+                            value={lnAddress?.length ? lnAddress[0] : ''}
+                            onChangeText={(text) => {
+                                this.setState({
+                                    lnAddress: Object.assign([...lnAddress], {
+                                        [0]: text
+                                    })
+                                });
+                            }}
+                            onValidate={(text) =>
+                                this.onChangeLightningAddress(text, 0)
+                            }
+                            placeholder={localeString(
+                                'views.Settings.AddContact.lnAddress'
+                            )}
+                            isValid={
+                                isValidLightningAddress?.length > 0 &&
+                                isValidLightningAddress[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidLightningAddress: Object.assign(
+                                        [...this.state.isValidLightningAddress],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {lnAddress?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<LightningBolt />}
+                                value={address}
                                 onChangeText={(text) => {
-                                    this.onChangeLightningAddress(text);
-                                    const updatedAddresses = [...lnAddress];
-                                    updatedAddresses[0] = text;
                                     this.setState({
-                                        lnAddress: updatedAddresses
+                                        lnAddress: Object.assign(
+                                            [...lnAddress],
+                                            { [index + 1]: text }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidLightningAddress: true
-                                        });
-                                    }
                                 }}
-                                value={lnAddress && lnAddress[0]}
+                                onValidate={(text) =>
+                                    this.onChangeLightningAddress(
+                                        text,
+                                        index + 1
+                                    )
+                                }
                                 placeholder={localeString(
                                     'views.Settings.AddContact.lnAddress'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {lnAddress?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        index === lnAddress?.length - 2 &&
-                                        !isValidLightningAddress &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <LightningBolt />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangeLightningAddress(
-                                                    text
-                                                );
-                                                const updatedAddresses = [
-                                                    ...lnAddress
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    lnAddress: updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidLightningAddress:
-                                                            true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.AddContact.lnAddress'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidLightningAddress && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'lnAddress',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{ marginTop: 10 }}
-                            color={
-                                bolt12Address?.length == 1 &&
-                                (!isValidLightningAddress ||
-                                    !isValidBolt12Address) &&
-                                themeColor('error')
-                            }
-                        />
-
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <LightningBolt />
-                            </View>
-                            <TextInput
-                                onChangeText={(text) => {
-                                    this.onChangeBolt12Address(text);
-                                    const updatedAddresses = bolt12Address
-                                        ? [...bolt12Address]
-                                        : [];
-                                    updatedAddresses[0] = text;
+                                isValid={isValidLightningAddress[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
                                     this.setState({
-                                        bolt12Address: updatedAddresses
+                                        isValidLightningAddress: Object.assign(
+                                            [
+                                                ...this.state
+                                                    .isValidLightningAddress
+                                            ],
+                                            { [index]: isValid }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidBolt12Address: true
-                                        });
-                                    }
                                 }}
-                                value={bolt12Address && bolt12Address[0]}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField('lnAddress', index)
+                                }
+                            />
+                        ))}
+
+                        <ContactInputField
+                            icon={<LightningBolt />}
+                            value={
+                                bolt12Address?.length ? bolt12Address[0] : ''
+                            }
+                            onChangeText={(text) => {
+                                this.setState({
+                                    bolt12Address: Object.assign(
+                                        [...bolt12Address],
+                                        {
+                                            [0]: text
+                                        }
+                                    )
+                                });
+                            }}
+                            onValidate={(text) =>
+                                this.onChangeBolt12Address(text, 0)
+                            }
+                            placeholder={localeString(
+                                'views.Settings.Bolt12Address'
+                            )}
+                            isValid={
+                                isValidBolt12Address?.length > 0 &&
+                                isValidBolt12Address[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidBolt12Address: Object.assign(
+                                        [...this.state.isValidBolt12Address],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {bolt12Address?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<LightningBolt />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        bolt12Address: Object.assign(
+                                            [...bolt12Address],
+                                            { [index + 1]: text }
+                                        )
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangeBolt12Address(text, index + 1)
+                                }
                                 placeholder={localeString(
                                     'views.Settings.Bolt12Address'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {bolt12Address?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        index === bolt12Address?.length - 2 &&
-                                        !isValidBolt12Address &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <LightningBolt />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangeBolt12Address(
-                                                    text
-                                                );
-                                                const updatedAddresses = [
-                                                    ...bolt12Address
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    bolt12Address:
-                                                        updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidBolt12Address:
-                                                            true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.Bolt12Address'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidBolt12Address && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'bolt12Address',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{ marginTop: 10 }}
-                            color={
-                                bolt12Offer?.length == 1 &&
-                                (!isValidBolt12Address ||
-                                    !isValidBolt12Offer) &&
-                                themeColor('error')
-                            }
-                        />
-
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <LightningBolt />
-                            </View>
-                            <TextInput
-                                onChangeText={(text) => {
-                                    this.onChangeBolt12Offer(text);
-                                    const updatedAddresses = bolt12Offer
-                                        ? [...bolt12Offer]
-                                        : [];
-                                    updatedAddresses[0] = text;
+                                isValid={isValidBolt12Address[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
                                     this.setState({
-                                        bolt12Offer: updatedAddresses
+                                        isValidBolt12Address: Object.assign(
+                                            [
+                                                ...this.state
+                                                    .isValidBolt12Address
+                                            ],
+                                            { [index]: isValid }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidBolt12Offer: true
-                                        });
-                                    }
                                 }}
-                                value={bolt12Offer && bolt12Offer[0]}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField(
+                                        'bolt12Address',
+                                        index
+                                    )
+                                }
+                            />
+                        ))}
+
+                        <ContactInputField
+                            icon={<LightningBolt />}
+                            value={bolt12Offer?.length ? bolt12Offer[0] : ''}
+                            onChangeText={(text) => {
+                                this.setState({
+                                    bolt12Offer: Object.assign(
+                                        [...bolt12Offer],
+                                        {
+                                            [0]: text
+                                        }
+                                    )
+                                });
+                            }}
+                            onValidate={(text) =>
+                                this.onChangeBolt12Offer(text, 0)
+                            }
+                            placeholder={localeString(
+                                'views.Settings.Bolt12Offer'
+                            )}
+                            isValid={
+                                isValidBolt12Offer?.length > 0 &&
+                                isValidBolt12Offer[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidBolt12Offer: Object.assign(
+                                        [...this.state.isValidBolt12Offer],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {bolt12Offer?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<LightningBolt />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        bolt12Offer: Object.assign(
+                                            [...bolt12Offer],
+                                            { [index + 1]: text }
+                                        )
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangeBolt12Offer(text, index + 1)
+                                }
                                 placeholder={localeString(
                                     'views.Settings.Bolt12Offer'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {bolt12Offer?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        index === bolt12Offer?.length - 2 &&
-                                        !isValidBolt12Offer &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <LightningBolt />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangeBolt12Offer(text);
-                                                const updatedAddresses = [
-                                                    ...bolt12Offer
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    bolt12Offer:
-                                                        updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidBolt12Offer: true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.Bolt12Offer'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidBolt12Offer && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'bolt12Offer',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{ marginTop: 10 }}
-                            color={
-                                pubkey?.length == 1 &&
-                                (!isValidBolt12Offer || !isValidPubkey) &&
-                                themeColor('error')
-                            }
-                        />
-
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <LightningBolt />
-                            </View>
-                            <TextInput
-                                onChangeText={(text) => {
-                                    this.onChangePubkey(text);
-                                    const updatedAddresses = [...pubkey];
-                                    updatedAddresses[0] = text;
+                                isValid={isValidBolt12Offer[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
                                     this.setState({
-                                        pubkey: updatedAddresses
+                                        isValidBolt12Offer: Object.assign(
+                                            [...this.state.isValidBolt12Offer],
+                                            { [index]: isValid }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidPubkey: true
-                                        });
-                                    }
                                 }}
-                                value={pubkey && pubkey[0]}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField('bolt12Offer', index)
+                                }
+                            />
+                        ))}
+
+                        <ContactInputField
+                            icon={<LightningBolt />}
+                            value={pubkey?.length ? pubkey[0] : ''}
+                            onChangeText={(text) => {
+                                this.setState({
+                                    pubkey: Object.assign([...pubkey], {
+                                        [0]: text
+                                    })
+                                });
+                            }}
+                            onValidate={(text) => this.onChangePubkey(text, 0)}
+                            placeholder={localeString(
+                                'views.Settings.AddContact.pubkey'
+                            )}
+                            isValid={
+                                isValidPubkey?.length > 0 && isValidPubkey[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidPubkey: Object.assign(
+                                        [...this.state.isValidPubkey],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {pubkey?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<LightningBolt />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        pubkey: Object.assign([...pubkey], {
+                                            [index + 1]: text
+                                        })
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangePubkey(text, index + 1)
+                                }
                                 placeholder={localeString(
                                     'views.Settings.AddContact.pubkey'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {pubkey?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        pubkey.length > 1 &&
-                                        index === pubkey?.length - 2 &&
-                                        (!isValidPubkey ||
-                                            !isValidLightningAddress) &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <LightningBolt />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangePubkey(text);
-                                                const updatedAddresses = [
-                                                    ...pubkey
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    pubkey: updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidPubkey: true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.AddContact.pubkey'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidPubkey && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'pubkey',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{
-                                marginTop: 10
-                            }}
-                            color={
-                                onchainAddress?.length == 1 &&
-                                (!isValidOnchainAddress || !isValidPubkey) &&
-                                themeColor('error')
-                            }
-                        />
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <BitcoinIcon />
-                            </View>
-                            <TextInput
-                                onChangeText={(text) => {
-                                    this.onChangeOnchainAddress(text);
-                                    const updatedAddresses = [
-                                        ...onchainAddress
-                                    ];
-                                    updatedAddresses[0] = text;
+                                isValid={isValidPubkey[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
                                     this.setState({
-                                        onchainAddress: updatedAddresses
+                                        isValidPubkey: Object.assign(
+                                            [...this.state.isValidPubkey],
+                                            { [index]: isValid }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidOnchainAddress: true
-                                        });
-                                    }
                                 }}
-                                value={onchainAddress && onchainAddress[0]}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField('pubkey', index)
+                                }
+                            />
+                        ))}
+
+                        <ContactInputField
+                            icon={<BitcoinIcon />}
+                            value={
+                                onchainAddress?.length ? onchainAddress[0] : ''
+                            }
+                            onChangeText={(text) => {
+                                this.setState({
+                                    onchainAddress: Object.assign(
+                                        [...onchainAddress],
+                                        {
+                                            [0]: text
+                                        }
+                                    )
+                                });
+                            }}
+                            onValidate={(text) =>
+                                this.onChangeOnchainAddress(text, 0)
+                            }
+                            placeholder={localeString(
+                                'views.Settings.AddContact.onchainAddress'
+                            )}
+                            isValid={
+                                isValidOnchainAddress?.length > 0 &&
+                                isValidOnchainAddress[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidOnchainAddress: Object.assign(
+                                        [...this.state.isValidOnchainAddress],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {onchainAddress?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<BitcoinIcon />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        onchainAddress: Object.assign(
+                                            [...onchainAddress],
+                                            { [index + 1]: text }
+                                        )
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangeOnchainAddress(text, index + 1)
+                                }
                                 placeholder={localeString(
                                     'views.Settings.AddContact.onchainAddress'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                numberOfLines={1}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {onchainAddress?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        index === onchainAddress?.length - 2 &&
-                                        (!isValidOnchainAddress ||
-                                            !isValidPubkey) &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <BitcoinIcon />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangeOnchainAddress(
-                                                    text
-                                                );
-                                                const updatedAddresses = [
-                                                    ...onchainAddress
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    onchainAddress:
-                                                        updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidOnchainAddress:
-                                                            true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.AddContact.onchainAddress'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidOnchainAddress && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'onchainAddress',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{ marginTop: 10 }}
-                            color={
-                                nip05?.length == 1 &&
-                                (!isValidOnchainAddress || !isValidNIP05) &&
-                                themeColor('error')
-                            }
-                        />
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <VerifiedAccount />
-                            </View>
-                            <TextInput
-                                onChangeText={(text) => {
-                                    this.onChangeNIP05(text);
-                                    const updatedAddresses = [...nip05];
-                                    updatedAddresses[0] = text;
+                                isValid={isValidOnchainAddress[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
                                     this.setState({
-                                        nip05: updatedAddresses
+                                        isValidOnchainAddress: Object.assign(
+                                            [
+                                                ...this.state
+                                                    .isValidOnchainAddress
+                                            ],
+                                            { [index]: isValid }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidNIP05: true
-                                        });
-                                    }
                                 }}
-                                value={nip05 && nip05[0]}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField(
+                                        'onchainAddress',
+                                        index
+                                    )
+                                }
+                            />
+                        ))}
+
+                        <ContactInputField
+                            icon={<VerifiedAccount />}
+                            value={nip05?.length ? nip05[0] : ''}
+                            onChangeText={(text) => {
+                                this.setState({
+                                    nip05: Object.assign([...nip05], {
+                                        [0]: text
+                                    })
+                                });
+                            }}
+                            onValidate={(text) => this.onChangeNIP05(text, 0)}
+                            placeholder={localeString(
+                                'views.Settings.AddContact.nip05'
+                            )}
+                            isValid={
+                                isValidNIP05?.length > 0 && isValidNIP05[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidNIP05: Object.assign(
+                                        [...this.state.isValidNIP05],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {nip05?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<VerifiedAccount />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        nip05: Object.assign([...nip05], {
+                                            [index + 1]: text
+                                        })
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangeNIP05(text, index + 1)
+                                }
                                 placeholder={localeString(
                                     'views.Settings.AddContact.nip05'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {nip05?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        index === nip05.length - 2 &&
-                                        (!isValidOnchainAddress ||
-                                            !isValidNIP05) &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <VerifiedAccount />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangeNIP05(text);
-                                                const updatedAddresses = [
-                                                    ...nip05
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    nip05: updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidNIP05: true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.AddContact.nip05'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidNIP05 && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'nip05',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{ marginTop: 10 }}
-                            color={
-                                nostrNpub?.length == 1 &&
-                                (!isValidNIP05 || !isValidNpub) &&
-                                themeColor('error')
-                            }
-                        />
-                        <View style={styles.inputContainer}>
-                            <View style={styles.icons}>
-                                <KeySecurity />
-                            </View>
-                            <TextInput
-                                onChangeText={(text) => {
-                                    this.onChangeNpub(text);
-                                    const updatedAddresses = [...nostrNpub];
-                                    updatedAddresses[0] = text;
+                                isValid={isValidNIP05[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
                                     this.setState({
-                                        nostrNpub: updatedAddresses
+                                        isValidNIP05: Object.assign(
+                                            [...this.state.isValidNIP05],
+                                            { [index]: isValid }
+                                        )
                                     });
-                                    if (!text) {
-                                        this.setState({
-                                            isValidNpub: true
-                                        });
-                                    }
                                 }}
-                                value={nostrNpub && nostrNpub[0]}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField('nip05', index)
+                                }
+                            />
+                        ))}
+
+                        <ContactInputField
+                            icon={<KeySecurity />}
+                            value={nostrNpub?.length ? nostrNpub[0] : ''}
+                            onChangeText={(text) => {
+                                this.setState({
+                                    nostrNpub: Object.assign([...nostrNpub], {
+                                        [0]: text
+                                    })
+                                });
+                            }}
+                            onValidate={(text) => this.onChangeNpub(text, 0)}
+                            placeholder={localeString(
+                                'views.Settings.AddContact.nostrNpub'
+                            )}
+                            isValid={isValidNpub?.length > 0 && isValidNpub[0]}
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidNpub: Object.assign(
+                                        [...this.state.isValidNpub],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {nostrNpub?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<KeySecurity />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        nostrNpub: Object.assign(
+                                            [...nostrNpub],
+                                            { [index + 1]: text }
+                                        )
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangeNpub(text, index + 1)
+                                }
                                 placeholder={localeString(
                                     'views.Settings.AddContact.nostrNpub'
                                 )}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                numberOfLines={1}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
+                                isValid={isValidNpub[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
+                                    this.setState({
+                                        isValidNpub: Object.assign(
+                                            [...this.state.isValidNpub],
+                                            { [index]: isValid }
+                                        )
+                                    });
                                 }}
-                                autoCapitalize="none"
-                            />
-                        </View>
-                        {nostrNpub?.slice(1).map((address, index) => (
-                            <>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 16 }}
-                                    color={
-                                        index === nostrNpub?.length - 2 &&
-                                        (!isValidNIP05 || !isValidNpub) &&
-                                        themeColor('error')
-                                    }
-                                />
-                                <View key={index} style={styles.inputContainer}>
-                                    <View style={styles.icons}>
-                                        <KeySecurity />
-                                    </View>
-                                    <View>
-                                        <TextInput
-                                            onChangeText={(text) => {
-                                                this.onChangeNpub(text);
-                                                const updatedAddresses = [
-                                                    ...nostrNpub
-                                                ];
-                                                updatedAddresses[index + 1] =
-                                                    text;
-                                                this.setState({
-                                                    nostrNpub: updatedAddresses
-                                                });
-                                                if (!text) {
-                                                    this.setState({
-                                                        isValidNpub: true
-                                                    });
-                                                }
-                                            }}
-                                            value={address}
-                                            placeholder={localeString(
-                                                'views.Settings.AddContact.nostrNpub'
-                                            )}
-                                            placeholderTextColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                            style={{
-                                                ...styles.textInput,
-                                                color: themeColor('text')
-                                            }}
-                                            autoCapitalize="none"
-                                        />
-                                    </View>
-                                    {isValidNpub && (
-                                        <TouchableOpacity
-                                            style={styles.deleteIcon}
-                                        >
-                                            <Icon
-                                                name="close"
-                                                onPress={() =>
-                                                    this.removeExtraField(
-                                                        'nostrNpub',
-                                                        index
-                                                    )
-                                                }
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={16}
-                                            />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            </>
-                        ))}
-                        <Divider
-                            orientation="horizontal"
-                            style={{ marginTop: 10 }}
-                            color={!isValidNpub && themeColor('error')}
-                        />
-                    </ScrollView>
-                    {(lnAddress[0] || onchainAddress[0]) &&
-                        isValidLightningAddress &&
-                        isValidPubkey &&
-                        isValidOnchainAddress &&
-                        isValidNIP05 &&
-                        isValidNpub && (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    this.setState({ showExtraFieldModal: true })
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField('nostrNpub', index)
                                 }
-                                style={{
-                                    alignSelf: 'center',
-                                    marginTop: 10
-                                }}
-                            >
-                                <Text
-                                    style={{
-                                        ...styles.addExtraFieldText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddContact.addExtraField'
-                                    )}
-                                </Text>
-                            </TouchableOpacity>
-                        )}
-
+                            />
+                        ))}
+                    </ScrollView>
+                    <TouchableOpacity
+                        onPress={() =>
+                            this.setState({ showExtraFieldModal: true })
+                        }
+                        style={{
+                            alignSelf: 'center',
+                            marginTop: 10
+                        }}
+                    >
+                        <Text
+                            style={{
+                                ...styles.addExtraFieldText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.AddContact.addExtraField'
+                            )}
+                        </Text>
+                    </TouchableOpacity>
                     <View style={styles.button}>
                         <Button
                             title={localeString(
@@ -1385,50 +1185,22 @@ export default class AddContact extends React.Component<
                             onPress={async () => {
                                 this.saveContact();
                             }}
-                            containerStyle={{
-                                opacity:
-                                    isValidOnchainAddress &&
-                                    isValidLightningAddress &&
-                                    isValidBolt12Address &&
-                                    isValidBolt12Offer &&
-                                    isValidNIP05 &&
-                                    isValidNpub &&
-                                    isValidPubkey
-                                        ? 1
-                                        : 0.5
-                            }}
                             disabled={
-                                !isValidOnchainAddress ||
-                                !isValidLightningAddress ||
-                                !isValidBolt12Address ||
-                                !isValidBolt12Offer ||
-                                !isValidNIP05 ||
-                                !isValidNpub ||
-                                !isValidPubkey ||
-                                (lnAddress?.length > 1 &&
-                                    lnAddress[lnAddress.length - 1] === '') ||
-                                (bolt12Address?.length > 1 &&
-                                    bolt12Address[bolt12Address.length - 1] ===
-                                        '') ||
-                                (bolt12Offer?.length > 1 &&
-                                    bolt12Offer[bolt12Offer.length - 1] ===
-                                        '') ||
-                                (pubkey?.length > 1 &&
-                                    pubkey[pubkey.length - 1] === '') ||
-                                (onchainAddress?.length > 1 &&
-                                    onchainAddress[
-                                        onchainAddress.length - 1
-                                    ]) === '' ||
-                                (nip05?.length > 1 &&
-                                    nip05[nip05.length - 1] === '') ||
-                                (nostrNpub?.length > 1 &&
-                                    nostrNpub[nostrNpub.length - 1] === '') ||
+                                isValidLightningAddress.includes(false) ||
+                                isValidBolt12Address.includes(false) ||
+                                isValidBolt12Offer.includes(false) ||
+                                isValidPubkey.includes(false) ||
+                                isValidOnchainAddress.includes(false) ||
+                                isValidNIP05.includes(false) ||
+                                isValidNpub.includes(false) ||
                                 !(
-                                    lnAddress[0] ||
-                                    bolt12Address[0] ||
-                                    bolt12Offer[0] ||
-                                    onchainAddress[0] ||
-                                    pubkey[0]
+                                    (lnAddress?.length && lnAddress[0]) ||
+                                    (bolt12Address?.length &&
+                                        bolt12Address[0]) ||
+                                    (bolt12Offer?.length && bolt12Offer[0]) ||
+                                    (onchainAddress?.length &&
+                                        onchainAddress[0]) ||
+                                    (pubkey?.length && pubkey[0])
                                 )
                             }
                         />
@@ -1487,7 +1259,7 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'ios' ? 9 : 0,
         paddingBottom: Platform.OS === 'ios' ? 9 : 0,
         paddingRight: Platform.OS === 'ios' ? 9 : 0,
-        marginLeft: 24,
+        marginHorizontal: 24,
         flexDirection: 'row',
         alignItems: 'center'
     },

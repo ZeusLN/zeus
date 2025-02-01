@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
@@ -173,9 +173,10 @@ export default class InvoicesSettings extends React.Component<
                     }
                     navigation={navigation}
                 />
-                <View
+                <ScrollView
                     style={{
-                        padding: 20
+                        paddingHorizontal: 15,
+                        marginTop: 5
                     }}
                 >
                     <Text
@@ -340,159 +341,244 @@ export default class InvoicesSettings extends React.Component<
                     )}
 
                     {BackendUtils.isLNDBased() && (
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    top: 20
-                                }}
-                                infoModalText={[
-                                    localeString(
-                                        'views.Receive.routeHintSwitchExplainer1'
-                                    ),
-                                    localeString(
-                                        'views.Receive.routeHintSwitchExplainer2'
-                                    )
-                                ]}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                    infoModalText={[
+                                        localeString(
+                                            'views.Receive.routeHintSwitchExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Receive.routeHintSwitchExplainer2'
+                                        )
+                                    ]}
+                                >
+                                    {localeString('views.Receive.routeHints')}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
-                                {localeString('views.Receive.routeHints')}
-                            </Text>
-                            <Switch
-                                value={routeHints}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        routeHints: !routeHints
-                                    });
-                                    await updateSettings({
-                                        invoices: {
-                                            addressType,
-                                            memo,
-                                            expiry,
-                                            timePeriod,
-                                            expirySeconds,
-                                            routeHints: !routeHints,
-                                            ampInvoice,
-                                            blindedPaths,
-                                            showCustomPreimageField
-                                        }
-                                    });
-                                }}
-                                disabled={blindedPaths}
-                            />
-                        </>
+                                <Switch
+                                    value={routeHints}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            routeHints: !routeHints
+                                        });
+                                        await updateSettings({
+                                            invoices: {
+                                                addressType,
+                                                memo,
+                                                expiry,
+                                                timePeriod,
+                                                expirySeconds,
+                                                routeHints: !routeHints,
+                                                ampInvoice,
+                                                blindedPaths,
+                                                showCustomPreimageField
+                                            }
+                                        });
+                                    }}
+                                    disabled={blindedPaths}
+                                />
+                            </View>
+                        </View>
                     )}
 
                     {BackendUtils.supportsAMP() && (
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    top: 20
-                                }}
-                                infoModalText={[
-                                    localeString(
-                                        'views.Receive.ampSwitchExplainer1'
-                                    ),
-                                    localeString(
-                                        'views.Receive.ampSwitchExplainer2'
-                                    )
-                                ]}
-                                infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                    infoModalText={[
+                                        localeString(
+                                            'views.Receive.ampSwitchExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Receive.ampSwitchExplainer2'
+                                        )
+                                    ]}
+                                    infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                >
+                                    {localeString('views.Receive.ampInvoice')}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
-                                {localeString('views.Receive.ampInvoice')}
-                            </Text>
-                            <Switch
-                                value={ampInvoice}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        ampInvoice: !ampInvoice
-                                    });
-                                    await updateSettings({
-                                        invoices: {
-                                            addressType,
-                                            memo,
-                                            expiry,
-                                            timePeriod,
-                                            expirySeconds,
-                                            routeHints,
-                                            ampInvoice: !ampInvoice,
-                                            showCustomPreimageField
-                                        }
-                                    });
-                                }}
-                                disabled={blindedPaths}
-                            />
-                        </>
+                                <Switch
+                                    value={ampInvoice}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            ampInvoice: !ampInvoice
+                                        });
+                                        await updateSettings({
+                                            invoices: {
+                                                addressType,
+                                                memo,
+                                                expiry,
+                                                timePeriod,
+                                                expirySeconds,
+                                                routeHints,
+                                                ampInvoice: !ampInvoice,
+                                                showCustomPreimageField
+                                            }
+                                        });
+                                    }}
+                                    disabled={blindedPaths}
+                                />
+                            </View>
+                        </View>
                     )}
 
                     {BackendUtils.supportsBolt11BlindedRoutes() && (
-                        <>
-                            <Text
-                                style={{
-                                    ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    top: 20
-                                }}
-                                infoModalText={[
-                                    localeString(
-                                        'views.Receive.blindedPathsExplainer1'
-                                    ),
-                                    localeString(
-                                        'views.Receive.blindedPathsExplainer2'
-                                    )
-                                ]}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                    infoModalText={[
+                                        localeString(
+                                            'views.Receive.blindedPathsExplainer1'
+                                        ),
+                                        localeString(
+                                            'views.Receive.blindedPathsExplainer2'
+                                        )
+                                    ]}
+                                >
+                                    {localeString('views.Receive.blindedPaths')}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
                             >
-                                {localeString('views.Receive.blindedPaths')}
-                            </Text>
-                            <Switch
-                                value={blindedPaths}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        blindedPaths: !blindedPaths,
-                                        ampInvoice: false,
-                                        routeHints: false
-                                    });
-
-                                    await updateSettings({
-                                        invoices: {
-                                            addressType,
-                                            memo,
-                                            expiry,
-                                            timePeriod,
-                                            expirySeconds,
-                                            routeHints: false,
-                                            ampInvoice: false,
+                                <Switch
+                                    value={blindedPaths}
+                                    onValueChange={async () => {
+                                        this.setState({
                                             blindedPaths: !blindedPaths,
-                                            showCustomPreimageField
-                                        }
-                                    });
-                                }}
-                            />
-                        </>
+                                            ampInvoice: false,
+                                            routeHints: false
+                                        });
+
+                                        await updateSettings({
+                                            invoices: {
+                                                addressType,
+                                                memo,
+                                                expiry,
+                                                timePeriod,
+                                                expirySeconds,
+                                                routeHints: false,
+                                                ampInvoice: false,
+                                                blindedPaths: !blindedPaths,
+                                                showCustomPreimageField
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
                     )}
 
                     {BackendUtils.supportsCustomPreimages() && (
-                        <>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        ...styles.secondaryText,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Invoices.showCustomPreimageField'
+                                    )}
+                                    {}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={showCustomPreimageField}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            showCustomPreimageField:
+                                                !showCustomPreimageField
+                                        });
+                                        await updateSettings({
+                                            invoices: {
+                                                addressType,
+                                                memo,
+                                                expiry,
+                                                timePeriod,
+                                                expirySeconds,
+                                                routeHints,
+                                                ampInvoice,
+                                                showCustomPreimageField:
+                                                    !showCustomPreimageField
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 20
+                        }}
+                    >
+                        <View style={{ flex: 1 }}>
                             <Text
                                 style={{
                                     ...styles.secondaryText,
-                                    color: themeColor('secondaryText'),
-                                    top: 20
+                                    color: themeColor('secondaryText')
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.Invoices.showCustomPreimageField'
+                                    'views.Settings.Invoices.displayAmountOnInvoice'
                                 )}
                                 {}
                             </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
-                                value={showCustomPreimageField}
+                                value={displayAmountOnInvoice}
                                 onValueChange={async () => {
                                     this.setState({
-                                        showCustomPreimageField:
-                                            !showCustomPreimageField
+                                        displayAmountOnInvoice:
+                                            !displayAmountOnInvoice
                                     });
                                     await updateSettings({
                                         invoices: {
@@ -503,59 +589,22 @@ export default class InvoicesSettings extends React.Component<
                                             expirySeconds,
                                             routeHints,
                                             ampInvoice,
-                                            showCustomPreimageField:
-                                                !showCustomPreimageField
+                                            showCustomPreimageField,
+                                            displayAmountOnInvoice:
+                                                !displayAmountOnInvoice
                                         }
                                     });
                                 }}
                             />
-                        </>
-                    )}
-
-                    <>
-                        <Text
-                            style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText'),
-                                top: 20
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Invoices.displayAmountOnInvoice'
-                            )}
-                            {}
-                        </Text>
-                        <Switch
-                            value={displayAmountOnInvoice}
-                            onValueChange={async () => {
-                                this.setState({
-                                    displayAmountOnInvoice:
-                                        !displayAmountOnInvoice
-                                });
-                                await updateSettings({
-                                    invoices: {
-                                        addressType,
-                                        memo,
-                                        expiry,
-                                        timePeriod,
-                                        expirySeconds,
-                                        routeHints,
-                                        ampInvoice,
-                                        showCustomPreimageField,
-                                        displayAmountOnInvoice:
-                                            !displayAmountOnInvoice
-                                    }
-                                });
-                            }}
-                        />
-                    </>
-                </View>
+                        </View>
+                    </View>
+                </ScrollView>
                 <ModalBox
                     style={{
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: 450,
+                        height: BackendUtils.supportsTaproot() ? 450 : 350,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}
@@ -564,69 +613,77 @@ export default class InvoicesSettings extends React.Component<
                     position="bottom"
                     ref={this.modalBoxRef}
                 >
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            fontSize: 24,
-                            fontWeight: 'bold',
-                            paddingTop: 24,
-                            paddingBottom: 24
-                        }}
-                    >
-                        {localeString('views.Receive.addressType')}
-                    </Text>
-                    {_map(ADDRESS_TYPES, (d, index) => (
-                        <TouchableOpacity
-                            key={index}
-                            onPress={async () => {
-                                this.setState({ addressType: d.value });
-                                await updateSettings({
-                                    invoices: {
-                                        addressType: d.value,
-                                        memo,
-                                        expiry,
-                                        timePeriod,
-                                        expirySeconds,
-                                        routeHints,
-                                        ampInvoice,
-                                        showCustomPreimageField
-                                    }
-                                });
-                                this.modalBoxRef.current?.close();
-                            }}
+                    <ScrollView>
+                        <Text
                             style={{
-                                backgroundColor: themeColor('secondary'),
-                                borderColor:
-                                    d.value === addressType
-                                        ? themeColor('highlight')
-                                        : themeColor('secondaryText'),
-                                borderRadius: 4,
-                                borderWidth: d.value === addressType ? 2 : 1,
-                                padding: 16,
-                                marginBottom: 24
+                                color: themeColor('text'),
+                                fontSize: 24,
+                                fontWeight: 'bold',
+                                paddingTop: 24,
+                                paddingBottom: 24
                             }}
                         >
-                            <Text
+                            {localeString('views.Receive.addressType')}
+                        </Text>
+                        {_map(ADDRESS_TYPES, (d, index) => (
+                            <TouchableOpacity
+                                key={index}
+                                onPress={async () => {
+                                    // If same address type is selected, close modal
+                                    if (d.value === addressType) {
+                                        this.modalBoxRef.current?.close();
+                                        return;
+                                    }
+                                    this.setState({ addressType: d.value });
+                                    await updateSettings({
+                                        invoices: {
+                                            addressType: d.value,
+                                            memo,
+                                            expiry,
+                                            timePeriod,
+                                            expirySeconds,
+                                            routeHints,
+                                            ampInvoice,
+                                            showCustomPreimageField
+                                        }
+                                    });
+                                    this.modalBoxRef.current?.close();
+                                }}
                                 style={{
-                                    color: themeColor('text'),
-                                    fontSize: 16,
-                                    fontWeight: 'bold',
-                                    marginBottom: 4
+                                    backgroundColor: themeColor('secondary'),
+                                    borderColor:
+                                        d.value === addressType
+                                            ? themeColor('highlight')
+                                            : themeColor('secondaryText'),
+                                    borderRadius: 4,
+                                    borderWidth:
+                                        d.value === addressType ? 2 : 1,
+                                    padding: 16,
+                                    marginBottom: 24
                                 }}
                             >
-                                {d.key}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    fontSize: 16,
-                                    fontWeight: 'normal'
-                                }}
-                            >
-                                {d.description}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 16,
+                                        fontWeight: 'bold',
+                                        marginBottom: 4
+                                    }}
+                                >
+                                    {d.key}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 16,
+                                        fontWeight: 'normal'
+                                    }}
+                                >
+                                    {d.description}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </ModalBox>
             </Screen>
         );
