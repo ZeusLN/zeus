@@ -1,11 +1,13 @@
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import ReactNativeBlobUtil, { StatefulPromise } from 'react-native-blob-util';
 import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { BackendRequestCancelledError } from '../utils/BackendUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import { AbortSignal } from 'abort-controller';
 
 interface Headers {
     macaroon?: string;
@@ -15,12 +17,18 @@ interface Headers {
 }
 
 // keep track of all active calls so we can cancel when appropriate
-const calls = new Map<string, Promise<any>>();
+const calls = new Map<
+    string,
+    { resultPromise: Promise<any>; cancellablePromise?: StatefulPromise<any> }
+>();
 
 export default class LND {
     torSocksPort?: number = undefined;
 
-    clearCachedCalls = () => calls.clear();
+    clearCachedCalls = () => {
+        calls.forEach((call) => call.cancellablePromise?.cancel());
+        calls.clear();
+    };
 
     restReq = async (
         headers: Headers | any,
@@ -28,87 +36,109 @@ export default class LND {
         method: any,
         data?: any,
         certVerification?: boolean,
-        useTor?: boolean
+        useTor?: boolean,
+        abortSignal?: AbortSignal
     ) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
         const id = data ? `${url}${JSON.stringify(data)}` : url;
         if (calls.has(id)) {
-            return calls.get(id);
+            return calls.get(id)!.resultPromise;
         }
         // API is a bit of a mess but
         // If tor enabled in setting, start up the daemon here
         if (useTor === true) {
-            calls.set(
-                id,
-                doTorRequest(
+            calls.set(id, {
+                resultPromise: doTorRequest(
                     url,
                     method as RequestMethod,
                     JSON.stringify(data),
                     headers
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
-            );
+                )
+                    .then((response: any) => {
+                        if (calls.delete(id)) {
+                            return response;
+                        }
+                        throw new BackendRequestCancelledError();
+                    })
+                    .catch((error) => {
+                        if (calls.delete(id)) {
+                            throw error;
+                        }
+                        throw new BackendRequestCancelledError();
+                    })
+            });
         } else {
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('Request timeout')), 30000);
             });
 
-            const fetchPromise = ReactNativeBlobUtil.config({
+            const fetchStatefulPromise = ReactNativeBlobUtil.config({
                 trusty: !certVerification
-            })
-                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-                .then((response: any) => {
-                    calls.delete(id);
-                    if (response.info().status < 300) {
-                        // handle ws responses
-                        if (response.data.includes('\n')) {
-                            const split = response.data.split('\n');
-                            const length = split.length;
-                            // last instance is empty
-                            return JSON.parse(split[length - 2]);
-                        }
-                        return response.json();
-                    } else {
-                        try {
-                            const errorInfo = response.json();
+            }).fetch(method, url, headers, data ? JSON.stringify(data) : data);
+
+            const onAbort = () => fetchStatefulPromise.cancel();
+            abortSignal?.addEventListener('abort', onAbort);
+
+            const fetchPromise = fetchStatefulPromise.then((response: any) => {
+                calls.delete(id);
+                abortSignal?.removeEventListener('abort', onAbort);
+                if (response.info().status < 300) {
+                    // handle ws responses
+                    if (response.data.includes('\n')) {
+                        const split = response.data.split('\n');
+                        const length = split.length;
+                        // last instance is empty
+                        return JSON.parse(split[length - 2]);
+                    }
+                    return response.json();
+                } else {
+                    try {
+                        const errorInfo = response.json();
+                        throw new Error(
+                            (errorInfo.error && errorInfo.error.message) ||
+                                errorInfo.message ||
+                                errorInfo.error
+                        );
+                    } catch (e) {
+                        if (
+                            response.data &&
+                            typeof response.data === 'string'
+                        ) {
+                            throw new Error(response.data);
+                        } else {
                             throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
+                                localeString(
+                                    'backends.LND.restReq.connectionError'
+                                )
                             );
-                        } catch (e) {
-                            if (
-                                response.data &&
-                                typeof response.data === 'string'
-                            ) {
-                                throw new Error(response.data);
-                            } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
-                                    )
-                                );
-                            }
                         }
                     }
-                });
+                }
+            });
 
             const racePromise = Promise.race([
                 fetchPromise,
                 timeoutPromise
             ]).catch((error) => {
                 calls.delete(id);
-                console.log('Request timed out for:', url);
+                if (error.name === 'ReactNativeBlobUtilCanceledFetch') {
+                    throw new BackendRequestCancelledError();
+                }
+                abortSignal?.removeEventListener('abort', onAbort);
+                if (error.message === 'Request timeout') {
+                    console.log('Request timed out for:', url);
+                }
                 throw error;
             });
 
-            calls.set(id, racePromise);
+            calls.set(id, {
+                resultPromise: racePromise,
+                cancellablePromise: fetchStatefulPromise
+            });
         }
 
-        return await calls.get(id);
+        return calls.get(id)?.resultPromise;
     };
 
     supports = (minVersion: string, eosVersion?: string) => {
@@ -196,7 +226,13 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, params?: any) => {
+    request = (
+        route: string,
+        method: string,
+        data?: any,
+        params?: any,
+        abortSignal?: AbortSignal
+    ) => {
         const {
             host,
             lndhubUrl,
@@ -223,21 +259,24 @@ export default class LND {
             method,
             data,
             certVerification,
-            enableTor
+            enableTor,
+            abortSignal
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+    getRequest = (route: string, data?: any, abortSignal?: AbortSignal) =>
+        this.request(route, 'get', null, data, abortSignal);
     postRequest = (route: string, data?: any) =>
         this.request(route, 'post', data);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = (data: any) =>
+    getTransactions = (data: any, abortSignal: AbortSignal) =>
         this.getRequest(
             data && data.start_height
                 ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
-                : '/v1/transactions?end_height=-1'
+                : '/v1/transactions?end_height=-1',
+            undefined,
+            abortSignal
         ).then((data: any) => ({
             transactions: data.transactions
         }));
@@ -339,14 +378,17 @@ export default class LND {
         params: { maxPayments?: number; reversed?: boolean } = {
             maxPayments: 500,
             reversed: true
-        }
+        },
+        abortSignal: AbortSignal
     ) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
-            }`
+            }`,
+            undefined,
+            abortSignal
         );
 
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
