@@ -21,7 +21,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
-export const LSPS1_ORDERS_KEY = 'zeus-lsps1-orders';
+export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
 
 const CUSTOM_MESSAGE_TYPE = 37913;
 const JSON_RPC_VERSION = '2.0';

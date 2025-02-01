@@ -12,7 +12,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import LSPStore from '../../stores/LSPStore';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import SettingsStore from '../../stores/SettingsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -73,7 +73,7 @@ export default class LSPS7Order extends React.Component<
         const orderShouldUpdate = route.params?.orderShouldUpdate;
 
         console.log('Looking for order in storage...');
-        Storage.getItem('orderResponses')
+        Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
@@ -150,7 +150,7 @@ export default class LSPS7Order extends React.Component<
 
     updateOrderInStorage(order: Order) {
         console.log('Updating order in encrypted storage...');
-        Storage.getItem('orderResponses')
+        Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     let responseArray = JSON.parse(responseArrayString);
@@ -175,7 +175,7 @@ export default class LSPS7Order extends React.Component<
 
                         // Save the updated order array back to encrypted storage
                         Storage.setItem(
-                            'orderResponses',
+                            LSPS_ORDERS_KEY,
                             JSON.stringify(responseArray)
                         ).then(() => {
                             console.log('Order updated in encrypted storage!');

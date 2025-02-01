@@ -56,7 +56,7 @@ import {
     HIDDEN_ACCOUNTS_KEY
 } from '../stores/UTXOsStore';
 
-import { LEGACY_LSPS1_ORDERS_KEY, LSPS1_ORDERS_KEY } from '../stores/LSPStore';
+import { LEGACY_LSPS1_ORDERS_KEY, LSPS_ORDERS_KEY } from '../stores/LSPStore';
 
 import { LNC_STORAGE_KEY, hash } from '../backends/LNC/credentialStore';
 
@@ -682,7 +682,7 @@ class MigrationsUtils {
                 if (lsps1orders) {
                     console.log('Attemping LSPS1 orders migration');
                     const writeSuccess = await Storage.setItem(
-                        LSPS1_ORDERS_KEY,
+                        LSPS_ORDERS_KEY,
                         lsps1orders
                     );
                     console.log('LSPS1 orders migration status', writeSuccess);

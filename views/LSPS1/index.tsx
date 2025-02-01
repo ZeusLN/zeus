@@ -37,7 +37,7 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../stores/LSPStore';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -1235,7 +1235,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                         const orderId = result.order_id;
 
                                         // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        Storage.getItem(LSPS1_ORDERS_KEY)
+                                        Storage.getItem(LSPS_ORDERS_KEY)
                                             .then((responseArrayString) => {
                                                 let responseArray = [];
                                                 if (responseArrayString) {
@@ -1308,7 +1308,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
                                                     // Save the updated array back to encrypted storage
                                                     Storage.setItem(
-                                                        LSPS1_ORDERS_KEY,
+                                                        LSPS_ORDERS_KEY,
                                                         responseArray
                                                     )
                                                         .then(() => {
