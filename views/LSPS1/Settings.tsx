@@ -67,7 +67,7 @@ export default class LSPS1Settings extends React.Component<
 
         this.setState({
             pubkey: LSPStore.getLSPSPubkey(),
-            host: LSPStore.getLSPS1Host(),
+            host: LSPStore.getLSPSHost(),
             restHost: LSPStore.getLSPS1Rest(),
             lsps1ShowPurchaseButton:
                 settings?.lsps1ShowPurchaseButton !== null

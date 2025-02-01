@@ -145,7 +145,7 @@ export default class LSPStore {
             ? this.settingsStore.settings.lsps1PubkeyTestnet
             : this.settingsStore.settings.lsps1PubkeyMainnet;
 
-    getLSPS1Host = () =>
+    getLSPSHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1HostTestnet
             : this.settingsStore.settings.lsps1HostMainnet;

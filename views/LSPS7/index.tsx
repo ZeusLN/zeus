@@ -306,7 +306,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                 <View style={{ paddingHorizontal: 18 }}>
                     {BackendUtils.supportsLSPScustomMessage() &&
                         !LSPStore.getLSPSPubkey() &&
-                        !LSPStore.getLSPS1Host() && (
+                        !LSPStore.getLSPSHost() && (
                             <ErrorMessage
                                 message={localeString(
                                     'views.LSPS1.pubkeyAndHostNotFound'
@@ -754,7 +754,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                                         nodeInfo?.nodeId;
                                                     orderData.peer =
                                                         LSPStore.getLSPSPubkey();
-                                                    orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPS1Host()}`;
+                                                    orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
                                                     orderData.service = 'LSPS7';
 
                                                     console.log(orderData);
