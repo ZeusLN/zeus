@@ -4,7 +4,9 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import isEqual from 'lodash/isEqual';
 
-import BackendUtils from '../utils/BackendUtils';
+import BackendUtils, {
+    BackendRequestCancelledError
+} from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
@@ -1682,8 +1684,7 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
-        this.error = false;
-        this.errorMsg = '';
+        this.resetError();
         this.createAccountSuccess = '';
         this.createAccountError = '';
         this.loading = true;
@@ -1701,6 +1702,10 @@ export default class SettingsStore {
                     resolve(data);
                 })
                 .catch((error: any) => {
+                    if (error instanceof BackendRequestCancelledError) {
+                        this.resetError();
+                        throw error;
+                    }
                     runInAction(() => {
                         this.loading = false;
                         this.error = true;
@@ -1730,6 +1735,10 @@ export default class SettingsStore {
 
         const error = await BackendUtils.connect();
         if (error) {
+            if (error instanceof BackendRequestCancelledError) {
+                this.resetError();
+                throw error;
+            }
             runInAction(() => {
                 this.error = true;
                 this.errorMsg = error;
@@ -1808,11 +1817,16 @@ export default class SettingsStore {
     public setLoginStatus = (status = false) => (this.loggedIn = status);
 
     @action
+    public resetError = () => {
+        this.error = false;
+        this.errorMsg = '';
+    };
+
+    @action
     public setConnectingStatus = (status = false) => {
         // reset error on reconnect
         if (status) {
-            this.error = false;
-            this.errorMsg = '';
+            this.resetError();
             BackendUtils.clearCachedCalls();
             // remove fetchLock on reconnect
             this.fetchLock = false;

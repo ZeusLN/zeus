@@ -1,120 +1,15 @@
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { settingsStore, nodeInfoStore } from '../stores/Stores';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
+import { AbortSignal } from 'abort-controller';
+import { LndClnRestBase } from './LndClnRestBase';
 
-interface Headers {
-    macaroon?: string;
-    encodingtype?: string;
-    'Grpc-Metadata-Macaroon'?: string;
-    'Grpc-Metadata-macaroon'?: string;
-}
-
-// keep track of all active calls so we can cancel when appropriate
-const calls = new Map<string, Promise<any>>();
-
-export default class LND {
+export default class LND extends LndClnRestBase {
     torSocksPort?: number = undefined;
-    private defaultTimeout: number = 30000;
-    clearCachedCalls = () => calls.clear();
-
-    restReq = async (
-        headers: Headers | any,
-        url: string,
-        method: any,
-        data?: any,
-        certVerification?: boolean,
-        useTor?: boolean,
-        timeout?: number
-    ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
-        if (calls.has(id)) {
-            return calls.get(id);
-        }
-        // API is a bit of a mess but
-        // If tor enabled in setting, start up the daemon here
-        if (useTor === true) {
-            calls.set(
-                id,
-                doTorRequest(
-                    url,
-                    method as RequestMethod,
-                    JSON.stringify(data),
-                    headers
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
-            );
-        } else {
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(
-                    () => reject(new Error('Request timeout')),
-                    timeout || this.defaultTimeout
-                );
-            });
-
-            const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
-            })
-                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-                .then((response: any) => {
-                    calls.delete(id);
-                    if (response.info().status < 300) {
-                        // handle ws responses
-                        if (response.data.includes('\n')) {
-                            const split = response.data.split('\n');
-                            const length = split.length;
-                            // last instance is empty
-                            return JSON.parse(split[length - 2]);
-                        }
-                        return response.json();
-                    } else {
-                        try {
-                            const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
-                        } catch (e) {
-                            if (
-                                response.data &&
-                                typeof response.data === 'string'
-                            ) {
-                                throw new Error(response.data);
-                            } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
-                                    )
-                                );
-                            }
-                        }
-                    }
-                });
-
-            const racePromise = Promise.race([
-                fetchPromise,
-                timeoutPromise
-            ]).catch((error) => {
-                calls.delete(id);
-                console.log('Request timed out for:', url);
-                throw error;
-            });
-
-            calls.set(id, racePromise);
-        }
-
-        return await calls.get(id);
-    };
 
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = nodeInfoStore;
@@ -181,32 +76,13 @@ export default class LND {
         };
     };
 
-    getURL = (
-        host: string,
-        port: string | number,
-        route: string,
-        ws?: boolean
-    ) => {
-        const hostPath = host.includes('://') ? host : `https://${host}`;
-        let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
-
-        if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
-        }
-
-        if (baseUrl[baseUrl.length - 1] === '/') {
-            baseUrl = baseUrl.slice(0, -1);
-        }
-
-        return `${baseUrl}${route}`;
-    };
-
     request = (
         route: string,
         method: string,
         data?: any,
         params?: any,
-        timeout?: number
+        timeout?: number,
+        abortSignal?: AbortSignal
     ) => {
         const {
             host,
@@ -235,21 +111,24 @@ export default class LND {
             data,
             certVerification,
             enableTor,
-            timeout
+            timeout,
+            abortSignal
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+    getRequest = (route: string, data?: any, abortSignal?: AbortSignal) =>
+        this.request(route, 'get', null, data, undefined, abortSignal);
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = (data: any) =>
+    getTransactions = (data: any, abortSignal: AbortSignal) =>
         this.getRequest(
             data && data.start_height
                 ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
-                : '/v1/transactions?end_height=-1'
+                : '/v1/transactions?end_height=-1',
+            undefined,
+            abortSignal
         ).then((data: any) => ({
             transactions: data.transactions
         }));
@@ -351,14 +230,17 @@ export default class LND {
         params: { maxPayments?: number; reversed?: boolean } = {
             maxPayments: 500,
             reversed: true
-        }
+        },
+        abortSignal: AbortSignal
     ) =>
         this.getRequest(
             `/v1/payments?include_incomplete=true${
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
-            }`
+            }`,
+            undefined,
+            abortSignal
         );
 
     getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);

@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { AbortController } from 'abort-controller';
 
 import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
@@ -47,6 +48,8 @@ export default class CashuTokenView extends React.Component<
     CashuTokenProps,
     CashuTokenState
 > {
+    private readonly abortController = new AbortController();
+
     state = {
         updatedToken: undefined,
         success: false,
@@ -90,6 +93,7 @@ export default class CashuTokenView extends React.Component<
                     });
                     clearInterval(checkInterval); // Stop checking once spent
                     activityStore.getActivityAndFilter(
+                        this.abortController.signal,
                         settingsStore.settings.locale
                     );
                 } else {
@@ -97,6 +101,10 @@ export default class CashuTokenView extends React.Component<
                 }
             }, 5000);
         }
+    }
+
+    componentWillUnmount(): void {
+        this.abortController.abort();
     }
 
     render() {
