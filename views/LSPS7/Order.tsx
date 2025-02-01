@@ -48,6 +48,7 @@ interface OrderProps {
 }
 
 interface OrdersState {
+    loading: boolean;
     order: any;
     fetchOldOrder: boolean;
 }
@@ -61,6 +62,7 @@ export default class LSPS7Order extends React.Component<
     constructor(props: OrderProps) {
         super(props);
         this.state = {
+            loading: true,
             order: null,
             fetchOldOrder: false
         };
@@ -89,6 +91,11 @@ export default class LSPS7Order extends React.Component<
                         temporaryOrder = parsedOrder;
                         console.log('Order found in storage->', temporaryOrder);
 
+                        this.setState({
+                            loading: false,
+                            order: temporaryOrder?.order
+                        });
+
                         LSPStore.lsps7GetOrderCustomMessage(
                             id,
                             temporaryOrder?.peer
@@ -97,7 +104,6 @@ export default class LSPS7Order extends React.Component<
                         setTimeout(() => {
                             if (LSPStore.error && LSPStore.error_msg !== '') {
                                 this.setState({
-                                    order: temporaryOrder?.order,
                                     fetchOldOrder: true
                                 });
                                 LSPStore.loadingLSPS7 = false;
@@ -199,7 +205,7 @@ export default class LSPS7Order extends React.Component<
 
     render() {
         const { navigation, LSPStore } = this.props;
-        const { order, fetchOldOrder } = this.state;
+        const { loading, order, fetchOldOrder } = this.state;
         const result = order?.result || order;
 
         return (
@@ -213,6 +219,18 @@ export default class LSPS7Order extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            {LSPStore.loadingLSPS7 && (
+                                <LoadingIndicator size={30} />
+                            )}
+                        </View>
+                    }
                     onBack={() => {
                         LSPStore.getExtensionOrderResponse = {};
                         LSPStore.error = false;
@@ -221,7 +239,7 @@ export default class LSPS7Order extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                {LSPStore.loadingLSPS7 ? (
+                {loading ? (
                     <LoadingIndicator />
                 ) : (
                     <ScrollView>
