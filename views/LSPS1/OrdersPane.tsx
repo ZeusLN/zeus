@@ -10,14 +10,13 @@ import Amount from '../../components/Amount';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 
-import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../stores/LSPStore';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
 interface OrdersPaneProps {
@@ -88,7 +87,7 @@ export default class OrdersPane extends React.Component<
             try {
                 // Retrieve saved responses from encrypted storage
                 const responseArrayString = await Storage.getItem(
-                    LSPS1_ORDERS_KEY
+                    LSPS_ORDERS_KEY
                 );
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
@@ -108,21 +107,15 @@ export default class OrdersPane extends React.Component<
                     );
 
                     let selectedOrders;
-                    if (BackendUtils.supportsLSPS1rest()) {
-                        selectedOrders = decodedResponses.filter(
-                            (response: LSPOrderResponse) =>
-                                response?.endpoint &&
+                    selectedOrders = decodedResponses.filter(
+                        (response: LSPOrderResponse) =>
+                            (response?.endpoint &&
                                 response.clientPubkey ===
-                                    this.props.NodeInfoStore.nodeInfo.nodeId
-                        );
-                    } else if (BackendUtils.supportsLSPScustomMessage()) {
-                        selectedOrders = decodedResponses.filter(
-                            (response: LSPOrderResponse) =>
-                                response?.uri &&
+                                    this.props.NodeInfoStore.nodeInfo.nodeId) ||
+                            (response?.uri &&
                                 response.clientPubkey ===
-                                    this.props.NodeInfoStore.nodeInfo.nodeId
-                        );
-                    }
+                                    this.props.NodeInfoStore.nodeInfo.nodeId)
+                    );
 
                     const orders = selectedOrders.map(
                         (response: LSPOrderResponse) => {

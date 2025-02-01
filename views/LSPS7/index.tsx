@@ -28,7 +28,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 
-import LSPStore from '../../stores/LSPStore';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -711,7 +711,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
                                         const orderId = result.order_id;
 
                                         // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        Storage.getItem('orderResponses')
+                                        Storage.getItem(LSPS_ORDERS_KEY)
                                             .then((responseArrayString) => {
                                                 let responseArray = [];
                                                 if (responseArrayString) {
@@ -772,7 +772,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
 
                                                     // Save the updated array back to encrypted storage
                                                     Storage.setItem(
-                                                        'orderResponses',
+                                                        LSPS_ORDERS_KEY,
                                                         JSON.stringify(
                                                             responseArray
                                                         )
