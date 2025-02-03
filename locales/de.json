@@ -128,6 +128,7 @@
     "general.experimental": "Experimentell",
     "general.defaultNodeNickname": "Meine Lightning-Node",
     "general.active": "Aktiv",
+    "general.unknown": "Unknown",
     "restart.title": "Neustart erforderlich",
     "restart.msg": "ZEUS muss neu gestartet werden, bevor die neue Konfiguration angewendet werden kann.",
     "restart.msg1": "Möchtest du jetzt neu starten?",
