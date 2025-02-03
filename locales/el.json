@@ -128,6 +128,7 @@
     "general.experimental": "Experimental",
     "general.defaultNodeNickname": "My Lightning Node",
     "general.active": "Ενεργός",
+    "general.unknown": "Unknown",
     "restart.title": "Απαιτείται επανεκκίνηση",
     "restart.msg": "Το Zeus πρέπει να κάνει επανεκκίνηση πριν εφαρμοστούν οι καινούριες ρυθμίσεις.",
     "restart.msg1": "Θέλετε να γίνει επανεκκίνηση τώρα;",
