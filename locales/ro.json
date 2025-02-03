@@ -128,6 +128,7 @@
     "general.experimental": "Experimental",
     "general.defaultNodeNickname": "Nodul meu Lightning",
     "general.active": "Activ",
+    "general.unknown": "Unknown",
     "restart.title": "Este necesară repornirea",
     "restart.msg": "ZEUS trebuie repornit înainte ca noua configurație să fie aplicată.",
     "restart.msg1": "Doriți să reporniți acum?",
