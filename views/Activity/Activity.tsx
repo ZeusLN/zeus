@@ -28,6 +28,7 @@ import {
     numberWithCommas,
     numberWithDecimals
 } from '../../utils/UnitsUtils';
+import PrivacyUtils from '../../utils/PrivacyUtils';
 
 import ActivityStore from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
@@ -113,7 +114,9 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {keysendMessageOrMemo}
+                            {PrivacyUtils.sensitiveValue(
+                                keysendMessageOrMemo
+                            )?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -133,7 +136,9 @@ const ActivityListItem = React.memo(
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
-                            {keysendMessageOrMemo}
+                            {PrivacyUtils.sensitiveValue(
+                                keysendMessageOrMemo
+                            )?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -301,8 +306,12 @@ const ActivityListItem = React.memo(
                                 ellipsizeMode="tail"
                             >
                                 {note.length > 150
-                                    ? `${note.substring(0, 150)}...`
-                                    : note}
+                                    ? `${PrivacyUtils.sensitiveValue(
+                                          note.substring(0, 150)
+                                      )?.toString()}...`
+                                    : PrivacyUtils.sensitiveValue(
+                                          note
+                                      )?.toString()}
                             </ListItem.Subtitle>
                         </View>
                     )}
