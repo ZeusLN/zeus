@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Dimensions,
+    Image,
     Platform,
     StyleSheet,
     Text,
@@ -50,7 +51,12 @@ const ForwardedQRCode = React.forwardRef<QRCodeElement, ExtendedQRCodeProps>(
             getRef={(c) => {
                 if (c && c.toDataURL && !(ref as any).current) {
                     (ref as any).current = c;
-                    props.parent?.setState({ qrReady: true });
+                    Image.getSize(
+                        Image.resolveAssetSource(defaultLogo).uri,
+                        () => {
+                            props.parent?.setState({ qrReady: true });
+                        }
+                    );
                 }
             }}
         />

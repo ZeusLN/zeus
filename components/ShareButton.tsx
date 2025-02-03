@@ -34,12 +34,9 @@ export default class ShareButton extends React.Component<ShareButtonProps> {
     shareContent = async () => {
         const { value, qrRef, onShareComplete } = this.props;
         try {
-            if (!qrRef?.current) {
-                return;
-            }
+            if (!qrRef?.current) return;
 
-            const svgElement = qrRef.current;
-            const base64Data = await captureRef(svgElement, {
+            const base64Data = await captureRef(qrRef.current, {
                 format: 'png',
                 quality: 1
             });
