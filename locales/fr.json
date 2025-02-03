@@ -128,6 +128,7 @@
     "general.experimental": "Expérimental",
     "general.defaultNodeNickname": "Mon nœud Lightning",
     "general.active": "Actif",
+    "general.unknown": "Unknown",
     "restart.title": "Redémarrage requis",
     "restart.msg": "ZEUS doit être redémarré avant que la nouvelle configuration ne soit appliquée.",
     "restart.msg1": "Souhaitez-vous redémarrer maintenant ?",
