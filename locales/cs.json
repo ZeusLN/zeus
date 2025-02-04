@@ -128,7 +128,7 @@
     "general.experimental": "Experimentální",
     "general.defaultNodeNickname": "Můj lightningový uzel",
     "general.active": "Aktivní",
-    "general.unknown": "Unknown",
+    "general.unknown": "Není známo",
     "restart.title": "Je vyžadován restart",
     "restart.msg": "ZEUS musí být restartován dříve, než bude aplikováno nové nastavení.",
     "restart.msg1": "Přejete si aplikaci restartovat nyní?",
