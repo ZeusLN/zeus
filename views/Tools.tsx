@@ -23,6 +23,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import SettingsStore from '../stores/SettingsStore';
+import { Icon } from 'react-native-elements';
 
 interface ToolsProps {
     navigation: StackNavigationProp<any, any>;
@@ -286,6 +287,44 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('ActivityExportOptions')
+                            }
+                        >
+                            <View style={styles.icon}>
+                                <Icon
+                                    name="download"
+                                    type="feather"
+                                    color={themeColor('text')}
+                                    underlayColor="transparent"
+                                    size={18}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString('views.activityExport.title')}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
             </Screen>
         );
