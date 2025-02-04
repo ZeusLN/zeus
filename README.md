@@ -31,7 +31,7 @@ and
 - [x] Bitcoin only wallet
 - [x] Self-custodial
 - [x] No KYC
-- [x] Fully open source (APGLv3)
+- [x] Fully open source (AGPLv3)
 - [x] [Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node](https://docs.zeusln.app/category/remote-connections)
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
