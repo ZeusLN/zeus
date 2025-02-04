@@ -135,6 +135,7 @@ import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 
 import PendingHTLCs from './views/PendingHTLCs';
+import ActivityExportOptions from './views/ActivityExportOptions';
 
 // POS
 import Order from './views/Order';
@@ -936,6 +937,12 @@ export default class App extends React.PureComponent {
                                                         name="Sweepremoteclosed" // @ts-ignore:next-line
                                                         component={
                                                             Sweepremoteclosed
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ActivityExportOptions" // @ts-ignore:next-line
+                                                        component={
+                                                            ActivityExportOptions
                                                         }
                                                     />
                                                 </Stack.Navigator>
