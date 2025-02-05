@@ -6,7 +6,8 @@ import {
     Text,
     TouchableOpacity,
     View,
-    StyleSheet
+    StyleSheet,
+    EmitterSubscription
 } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
@@ -327,8 +328,8 @@ export default class Activity extends React.PureComponent<
     ActivityProps,
     ActivityState
 > {
-    transactionListener: any;
-    invoicesListener: any;
+    private transactionListener: EmitterSubscription;
+    private invoicesListener: EmitterSubscription;
 
     state = {
         loading: false,
@@ -357,10 +358,8 @@ export default class Activity extends React.PureComponent<
     };
 
     componentWillUnmount() {
-        if (this.transactionListener && this.transactionListener.stop)
-            this.transactionListener.stop();
-        if (this.invoicesListener && this.invoicesListener.stop)
-            this.invoicesListener.stop();
+        if (this.transactionListener) this.transactionListener.remove();
+        if (this.invoicesListener) this.invoicesListener.remove();
     }
 
     subscribeEvents = () => {
