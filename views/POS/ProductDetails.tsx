@@ -157,13 +157,8 @@ export default class ProductDetails extends React.Component<
                     break;
 
                 case 'price':
-                    if (
-                        value === '' ||
-                        value === '0' ||
-                        value === null ||
-                        isNaN(parseFloat(value))
-                    ) {
-                        value = '0';
+                    if (value === null || isNaN(parseFloat(value))) {
+                        value = '';
                     } else {
                         value = value.replace(/^0+(?=\d)/, '');
                     }
