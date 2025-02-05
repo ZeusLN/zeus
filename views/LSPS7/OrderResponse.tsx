@@ -114,14 +114,16 @@ export default class LSPS7OrderResponse extends React.Component<
                                         channel.max_channel_extension_expiry_blocks
                                     )}
                                 />
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.LSPS7.expirationBlock'
-                                    )}
-                                    value={numberWithCommas(
-                                        channel.expiration_block
-                                    )}
-                                />
+                                {channel.expiration_block !== 0 && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.LSPS7.expirationBlock'
+                                        )}
+                                        value={numberWithCommas(
+                                            channel.expiration_block
+                                        )}
+                                    />
+                                )}
                                 {channel.original_order && (
                                     <>
                                         <KeyValue
@@ -140,16 +142,18 @@ export default class LSPS7OrderResponse extends React.Component<
                                         />
                                     </>
                                 )}
-                                {channel.extension_order_ids && (
-                                    <KeyValue
-                                        keyValue={localeString(
-                                            'views.LSPS7.extensionOrderIds'
-                                        )}
-                                        value={channel.extension_order_ids.join(
-                                            ', '
-                                        )}
-                                    />
-                                )}
+                                {channel.extension_order_ids &&
+                                    channel.extension_order_ids.length !==
+                                        0 && (
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.LSPS7.extensionOrderIds'
+                                            )}
+                                            value={channel.extension_order_ids.join(
+                                                ', '
+                                            )}
+                                        />
+                                    )}
                             </>
                         )}
                         {/* BOLT11 */}
