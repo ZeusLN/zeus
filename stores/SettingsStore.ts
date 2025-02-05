@@ -1129,7 +1129,7 @@ export default class SettingsStore {
             disableTips: false,
             squareDevMode: false,
             showKeypad: true,
-            taxPercentage: '0',
+            taxPercentage: '',
             enablePrinter: false,
             defaultView: 'Products'
         },
