@@ -109,7 +109,11 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
-		<string>ppneuemontreal-medium.otf</string>
+		<string>PPNeueMontreal-Bold.otf</string>
+		<string>PPNeueMontreal-Book.otf</string>
+		<string>PPNeueMontreal-Medium.otf</string>
+		<string>Lato-Bold.ttf</string>
+		<string>Lato-Regular.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
