@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { AbortController } from 'abort-controller';
 
 import LnurlPaySuccess from './LnurlPay/Success';
 
@@ -53,6 +54,8 @@ export default class SendingLightning extends React.Component<
     SendingLightningState
 > {
     private backPressSubscription: NativeEventSubscription;
+
+    private readonly abortController = new AbortController();
 
     constructor(props: SendingLightningProps) {
         super(props);
@@ -99,10 +102,13 @@ export default class SendingLightning extends React.Component<
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
         try {
-            const payments = await PaymentsStore.getPayments({
-                maxPayments: 5,
-                reversed: true
-            });
+            const payments = await PaymentsStore.getPayments(
+                this.abortController.signal,
+                {
+                    maxPayments: 5,
+                    reversed: true
+                }
+            );
             const matchingPayment = payments.find(
                 (payment: any) =>
                     payment.payment_preimage ===
@@ -129,6 +135,7 @@ export default class SendingLightning extends React.Component<
 
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
+        this.abortController.abort();
     }
 
     private successfullySent(transactionStore: TransactionsStore): boolean {

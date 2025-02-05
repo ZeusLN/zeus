@@ -196,3 +196,9 @@ class BackendUtils {
 
 const backendUtils = new BackendUtils();
 export default backendUtils;
+
+export class BackendRequestCancelledError extends Error {
+    constructor() {
+        super('Backend request was cancelled');
+    }
+}

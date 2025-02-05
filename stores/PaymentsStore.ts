@@ -1,9 +1,9 @@
-//PaymentStore.tsx
 import { action, observable } from 'mobx';
 import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from './../utils/BackendUtils';
+import { AbortSignal } from 'abort-controller';
 
 export default class PaymentsStore {
     @observable loading = false;
@@ -30,13 +30,16 @@ export default class PaymentsStore {
     };
 
     @action
-    public getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) => {
+    public getPayments = async (
+        abortSignal: AbortSignal,
+        params?: {
+            maxPayments?: number;
+            reversed?: boolean;
+        }
+    ) => {
         this.loading = true;
         try {
-            const data = await BackendUtils.getPayments(params);
+            const data = await BackendUtils.getPayments(params, abortSignal);
             const payments = data.payments;
             this.payments = payments
                 .slice()

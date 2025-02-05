@@ -4,6 +4,7 @@ import { action, reaction, observable } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { AbortSignal } from 'abort-controller';
 
 import FundedPsbt from '../models/FundedPsbt';
 import Transaction from '../models/Transaction';
@@ -108,9 +109,9 @@ export default class TransactionsStore {
     };
 
     @action
-    public getTransactions = async () => {
+    public getTransactions = async (abortSignal?: AbortSignal) => {
         this.loading = true;
-        await BackendUtils.getTransactions()
+        await BackendUtils.getTransactions(undefined, abortSignal)
             .then((data: any) => {
                 this.transactions = data.transactions
                     .slice()

@@ -4,7 +4,9 @@ import NodeInfo from '../models/NodeInfo';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore from './SettingsStore';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import BackendUtils from '../utils/BackendUtils';
+import BackendUtils, {
+    BackendRequestCancelledError
+} from '../utils/BackendUtils';
 
 import Channel from '../models/Channel';
 
@@ -74,6 +76,10 @@ export default class NodeInfoStore {
                     resolve(nodeInfo);
                 })
                 .catch((error: any) => {
+                    if (error instanceof BackendRequestCancelledError) {
+                        this.reset();
+                        return;
+                    }
                     if (this.currentRequest !== currentRequest) {
                         resolve('Old getNodeInfo call');
                         return;
@@ -98,7 +104,10 @@ export default class NodeInfoStore {
                 return this.networkInfo;
             })
             .catch((error: any) => {
-                // handle error
+                if (error instanceof BackendRequestCancelledError) {
+                    this.reset();
+                    return;
+                }
                 this.errorMsg = errorToUserFriendly(error.toString());
                 this.getNetworkInfoError();
             });
