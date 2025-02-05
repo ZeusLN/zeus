@@ -16,7 +16,7 @@ import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
 import SettingsStore from '../../stores/SettingsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import LSPS1OrderResponse from './OrderResponse';
+import LSPS7OrderResponse from './OrderResponse';
 
 import { Payment } from '../../views/LSPS1/OrdersPane';
 
@@ -255,7 +255,7 @@ export default class LSPS7Order extends React.Component<
                             </View>
                         )}
                         {order && Object.keys(order).length > 0 ? (
-                            <LSPS1OrderResponse
+                            <LSPS7OrderResponse
                                 orderResponse={result}
                                 orderView={true}
                                 navigation={navigation}
