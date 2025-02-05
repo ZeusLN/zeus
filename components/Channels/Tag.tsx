@@ -11,7 +11,7 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
 
     // TODO: should all these colors be in the theme?
     switch (status) {
-        case Status.Good:
+        case Status.Online:
             colors.background = '#2C553D';
             colors.dot = '#46E80E';
             break;
@@ -35,6 +35,9 @@ export function Tag({ status }: { status: Status | ExpirationStatus }) {
             break;
         case ExpirationStatus.Expired:
             colors.background = themeColor('error');
+            break;
+        case ExpirationStatus.LSPDiscretion:
+            colors.background = themeColor('warning');
             break;
     }
 
