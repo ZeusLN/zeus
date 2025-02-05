@@ -1037,7 +1037,7 @@ export default class WalletConfiguration extends React.Component<
 
                 <ScrollView
                     ref={this.scrollViewRef}
-                    style={{ flex: 1, paddingLeft: 15, paddingRight: 15 }}
+                    style={{ flex: 1, paddingHorizontal: 20 }}
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={styles.form}>
@@ -1054,6 +1054,19 @@ export default class WalletConfiguration extends React.Component<
                                     message={createAccountSuccess}
                                 />
                             )}
+
+                        <View style={{ marginLeft: 64 }}>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.AddEditNode.nickname'
+                                )}
+                            </Text>
+                        </View>
                         <View style={styles.container}>
                             <TouchableOpacity
                                 onPress={
@@ -1111,20 +1124,9 @@ export default class WalletConfiguration extends React.Component<
                             <View
                                 style={{
                                     flex: 1,
-                                    marginLeft: 14,
-                                    marginTop: -16
+                                    marginLeft: 14
                                 }}
                             >
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.nickname'
-                                    )}
-                                </Text>
                                 <TextInput
                                     placeholder={localeString(
                                         'general.defaultNodeNickname'
@@ -2032,9 +2034,7 @@ const styles = StyleSheet.create({
         fontFamily: 'PPNeueMontreal-Book'
     },
     form: {
-        paddingTop: 20,
-        paddingLeft: 5,
-        paddingRight: 5,
+        marginTop: 5,
         width: '100%'
     },
     pickerWrapper: {
@@ -2077,7 +2077,7 @@ const styles = StyleSheet.create({
     imageBackground: {
         width: 50,
         height: 50,
-        borderRadius: 24,
+        borderRadius: 25,
         justifyContent: 'center'
     },
     photo: {
