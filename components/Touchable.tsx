@@ -3,6 +3,7 @@ import { Pressable, TouchableOpacity } from 'react-native';
 
 interface TouchableProps {
     touch: () => void;
+    onLongPress?: () => void;
     highlight: boolean;
     children: JSX.Element;
     style?: any;
@@ -10,6 +11,7 @@ interface TouchableProps {
 
 export default function Touchable({
     touch,
+    onLongPress,
     highlight,
     children,
     style
@@ -17,7 +19,11 @@ export default function Touchable({
     return (
         <>
             {highlight && (
-                <TouchableOpacity style={style} onPress={touch}>
+                <TouchableOpacity
+                    style={style}
+                    onPress={touch}
+                    onLongPress={onLongPress}
+                >
                     {children}
                 </TouchableOpacity>
             )}
