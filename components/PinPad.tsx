@@ -356,6 +356,10 @@ export default function PinPad({
                                 decrementPinValueLength();
                                 deleteValue();
                             }}
+                            onLongPress={() => {
+                                clearPinValueLength();
+                                clearValue();
+                            }}
                             highlight={numberHighlight}
                             style={styles.key}
                         >
