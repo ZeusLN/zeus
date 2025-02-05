@@ -90,9 +90,11 @@ export default class LightningNodeConnect {
     isConnected = async () => await this.lnc.isConnected();
     disconnect = () => this.lnc && this.lnc.disconnect();
 
-    getTransactions = async () =>
+    getTransactions = async (data: lnrpc.GetTransactionsRequest) =>
         await this.lnc.lnd.lightning
-            .getTransactions({})
+            .getTransactions({
+                max_transactions: data?.max_transactions || 500
+            })
             .then((data: lnrpc.TransactionDetails) => {
                 const formatted = snakeize(data);
                 return {
