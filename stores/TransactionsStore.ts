@@ -7,7 +7,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import FundedPsbt from '../models/FundedPsbt';
 import Transaction from '../models/Transaction';
-import TransactionRequest from '../models/TransactionRequest';
+import TransactionRequest, { OutPoint } from '../models/TransactionRequest';
 import Payment from '../models/Payment';
 
 import SettingsStore from './SettingsStore';
@@ -391,12 +391,15 @@ export default class TransactionsStore {
             transactionRequest.account === 'default' &&
             BackendUtils.supportsOnchainSendMax()
         ) {
+            const outpoints: OutPoint[] = [];
             transactionRequest.utxos.forEach((input) => {
                 const [txid_str, output_index] = input.split(':');
-                const inputs = [];
-                inputs.push({ txid_str, output_index: Number(output_index) });
-                transactionRequest.outpoints = inputs;
+                outpoints.push({
+                    txid_str,
+                    output_index: Number(output_index)
+                });
             });
+            transactionRequest.outpoints = outpoints;
         } else if (
             (BackendUtils.isLNDBased() &&
                 transactionRequest.utxos &&
