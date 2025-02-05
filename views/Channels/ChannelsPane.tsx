@@ -43,7 +43,7 @@ import Channel from '../../models/Channel';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
-    Good = localeString('channel.status.good'),
+    Online = localeString('views.Wallet.Channels.online'),
     Stable = localeString('channel.status.stable'),
     Unstable = localeString('channel.status.unstable'),
     Offline = localeString('channel.status.offline'),
@@ -53,7 +53,8 @@ export enum Status {
 
 export enum ExpirationStatus {
     Expiring = localeString('channel.expirationStatus.expiring'),
-    Expired = localeString('channel.expirationStatus.expired')
+    Expired = localeString('channel.expirationStatus.expired'),
+    LSPDiscretion = localeString('general.warning')
 }
 
 interface ChannelsProps {
@@ -114,7 +115,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
         const getStatus = () => {
             if (item.isActive) {
-                return Status.Good;
+                return Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
             } else if (item.pendingClose || item.forceClose || item.closing) {
@@ -153,6 +154,9 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             ) {
                 // less than 2 weeks
                 return ExpirationStatus.Expiring;
+            } else if (renewalInfo?.expiration_block === 0) {
+                // at LSP's discretion
+                return ExpirationStatus.LSPDiscretion;
             }
 
             return undefined;
