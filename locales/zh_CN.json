@@ -128,6 +128,7 @@
     "general.experimental": "实验性",
     "general.defaultNodeNickname": "我的闪电网络节点",
     "general.active": "活跃",
+    "general.unknown": "Unknown",
     "restart.title": "需要重启",
     "restart.msg": "应用新配置之前必须重新启动 ZEUS。",
     "restart.msg1": "您想现在重启吗？",

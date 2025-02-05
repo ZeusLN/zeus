@@ -128,6 +128,7 @@
     "general.experimental": "Experimental",
     "general.defaultNodeNickname": "Mi nodo Lightning",
     "general.active": "Activo",
+    "general.unknown": "Unknown",
     "restart.title": "Reinicio requerido",
     "restart.msg": "Es necesario reiniciar ZEUS antes de aplicar la nueva configuración.",
     "restart.msg1": "¿Quieres reiniciar ahora?",
