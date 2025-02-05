@@ -88,10 +88,10 @@ export default class AmountInput extends React.Component<
         super(props);
 
         const { amount, onAmountChange } = props;
-        let satAmount = '0';
+        let satAmount: string | number = '0';
         if (amount) satAmount = getSatAmount(amount).toString();
 
-        onAmountChange(amount, satAmount);
+        onAmountChange(amount || '', satAmount);
         this.state = {
             satAmount
         };
@@ -99,8 +99,8 @@ export default class AmountInput extends React.Component<
 
     componentDidMount() {
         const { amount, onAmountChange }: any = this.props;
-        const satAmount = getSatAmount(amount);
-        onAmountChange(amount, satAmount);
+        const satAmount = getSatAmount(amount || '');
+        onAmountChange(amount || '', satAmount);
         this.setState({ satAmount });
     }
 
@@ -117,8 +117,8 @@ export default class AmountInput extends React.Component<
     onChangeUnits = () => {
         const { amount, onAmountChange, UnitsStore }: any = this.props;
         UnitsStore.changeUnits();
-        const satAmount = getSatAmount(amount);
-        onAmountChange(amount, satAmount);
+        const satAmount = getSatAmount(amount || '');
+        onAmountChange(amount || '', satAmount);
         this.setState({ satAmount });
     };
 
