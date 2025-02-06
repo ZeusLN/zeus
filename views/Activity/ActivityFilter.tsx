@@ -62,6 +62,7 @@ export default class ActivityFilter extends React.Component<
             setFilters,
             filters,
             setAmountFilter,
+            setMaximumAmountFilter,
             setStartDateFilter,
             setEndDateFilter,
             clearStartDateFilter,
@@ -81,6 +82,7 @@ export default class ActivityFilter extends React.Component<
             ampInvoices,
             zeusPay,
             minimumAmount,
+            maximumAmount,
             startDate,
             endDate,
             memo
@@ -247,6 +249,12 @@ export default class ActivityFilter extends React.Component<
                 condition: true
             },
             {
+                label: localeString('views.ActivityFilter.maximumAmount'),
+                value: maximumAmount,
+                type: 'Amount',
+                condition: true
+            },
+            {
                 label: localeString('views.ActivityFilter.startDate'),
                 type: 'StartDate',
                 condition: true
@@ -345,6 +353,7 @@ export default class ActivityFilter extends React.Component<
                                                 keyboardType="numeric"
                                                 placeholder="0"
                                                 value={
+                                                    item.value === undefined ||
                                                     item.value === 0
                                                         ? ''
                                                         : String(item.value)
@@ -352,14 +361,47 @@ export default class ActivityFilter extends React.Component<
                                                 onChangeText={(
                                                     text: string
                                                 ) => {
-                                                    const newMinAmount = !isNaN(
-                                                        Number(text)
-                                                    )
-                                                        ? Number(text)
-                                                        : 0;
-                                                    setAmountFilter(
-                                                        newMinAmount
-                                                    );
+                                                    const newAmount =
+                                                        text.trim() === '' &&
+                                                        item.label ===
+                                                            localeString(
+                                                                'views.ActivityFilter.minimumAmount'
+                                                            )
+                                                            ? 0
+                                                            : text.trim() ===
+                                                                  '' &&
+                                                              item.label ===
+                                                                  localeString(
+                                                                      'views.ActivityFilter.maximumAmount'
+                                                                  )
+                                                            ? Infinity
+                                                            : text.trim() !== ''
+                                                            ? !isNaN(
+                                                                  Number(text)
+                                                              )
+                                                                ? Number(text)
+                                                                : 0
+                                                            : 0;
+
+                                                    if (
+                                                        item.label ===
+                                                        localeString(
+                                                            'views.ActivityFilter.minimumAmount'
+                                                        )
+                                                    ) {
+                                                        setAmountFilter(
+                                                            newAmount
+                                                        );
+                                                    } else if (
+                                                        item.label ===
+                                                        localeString(
+                                                            'views.ActivityFilter.maximumAmount'
+                                                        )
+                                                    ) {
+                                                        setMaximumAmountFilter(
+                                                            newAmount
+                                                        );
+                                                    }
                                                 }}
                                                 style={{
                                                     marginBottom: 0,

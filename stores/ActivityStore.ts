@@ -34,6 +34,7 @@ export interface Filter {
     startDate?: Date;
     endDate?: Date;
     memo: string;
+    maximumAmount: number;
 }
 
 export const DEFAULT_FILTERS = {
@@ -51,7 +52,8 @@ export const DEFAULT_FILTERS = {
     minimumAmount: 0,
     startDate: undefined,
     endDate: undefined,
-    memo: ''
+    memo: '',
+    maximumAmount: Infinity
 };
 
 export default class ActivityStore {
@@ -98,7 +100,8 @@ export default class ActivityStore {
             minimumAmount: 0,
             startDate: undefined,
             endDate: undefined,
-            memo: ''
+            memo: '',
+            maximumAmount: Infinity
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -106,6 +109,12 @@ export default class ActivityStore {
     @action
     public setAmountFilter = (filter: any) => {
         this.filters.minimumAmount = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setMaximumAmountFilter = (filter: any) => {
+        this.filters.maximumAmount = filter;
         this.setFilters(this.filters);
     };
 
