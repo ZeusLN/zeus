@@ -167,6 +167,8 @@ export default class CLightningREST extends LND {
     getNewAddress = () => this.getRequest('/v1/newaddr?addrType=bech32');
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
+        const satPerVbyte = data.satPerVbyte ?? '0'; // Default to '0' if undefined
+        const feeRate = `${new BigNumber(satPerVbyte)
         const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
             .times(1000)
             .toString()}perkb`;
@@ -176,7 +178,7 @@ export default class CLightningREST extends LND {
                 satoshis: data.satoshis,
                 feeRate,
                 announce: !data.privateChannel ? 'true' : 'false',
-                minfConf: data.min_confs,
+                minfConf: data.minConfs,
                 utxos: data.utxos
             };
         } else {
@@ -185,7 +187,7 @@ export default class CLightningREST extends LND {
                 satoshis: data.satoshis,
                 feeRate,
                 announce: !data.privateChannel ? 'true' : 'false',
-                minfConf: data.min_confs
+                minfConf: data.minConfs
             };
         }
 

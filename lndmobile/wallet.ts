@@ -523,6 +523,8 @@ export const subscribeInvoices = async (): Promise<string> => {
             false
         );
         return response;
+    } catch (e) {
+        throw (e as Error).message;
     } catch (e: any) {
         throw e.message;
     }

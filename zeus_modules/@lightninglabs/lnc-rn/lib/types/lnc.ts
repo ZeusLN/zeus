@@ -37,10 +37,12 @@ export interface CredentialStore {
     /** Stores the remote static key which LNC uses to reestablish a connection */
     remoteKey: string;
     /**
+     *
      * Read-only field which should return `true` if the client app has prior
      * credentials persisted in the store
      */
     isPaired: boolean;
     /** Clears any persisted data in the store */
     clear(): void;
+    load?: (pairingPhrase?: string) => Promise<void>;
 }

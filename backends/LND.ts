@@ -21,11 +21,59 @@ export default class LND {
     torSocksPort?: number = undefined;
 
     clearCachedCalls = () => calls.clear();
-
+    private handleTorRequest(
+        url: string,
+        method: RequestMethod,
+        data: any,
+        headers: Headers | any
+    ) {
+        return doTorRequest(url, method, JSON.stringify(data), headers);
+    }
+    private async handleRegularRequest(
+        url: string,
+        method: RequestMethod,
+        data: any,
+        headers: Headers | any,
+        certVerification?: boolean
+    ) {
+        const response = await ReactNativeBlobUtil.config({
+            trusty: !certVerification
+        }).fetch(method, url, headers, data ? JSON.stringify(data) : undefined);
+        if (response.info().status < 300) {
+            return this.handleSuccessResponse(response);
+        } else {
+            this.handleErrorResponse(response);
+        }
+    }
+    private handleSuccessResponse(response: any): any {
+        if (response.data.includes('\n')) {
+            const split = response.data.split('\n');
+            return JSON.parse(split[split.length - 2]);
+        }
+        return response.json();
+    }
+    private handleErrorResponse(response: any): never {
+        try {
+            const errorInfo = response.json();
+            throw new Error(
+                (errorInfo.error && errorInfo.error.message) ||
+                    errorInfo.message ||
+                    errorInfo.error
+            );
+        } catch (e) {
+            if (response.data && typeof response.data === 'string') {
+                throw new Error(response.data);
+            } else {
+                throw new Error(
+                    localeString('backends.LND.restReq.connectionError')
+                );
+            }
+        }
+    }
     restReq = async (
         headers: Headers | any,
         url: string,
-        method: any,
+        method: RequestMethod,
         data?: any,
         certVerification?: boolean,
         useTor?: boolean
@@ -38,6 +86,21 @@ export default class LND {
         }
         // API is a bit of a mess but
         // If tor enabled in setting, start up the daemon here
+        const request = useTor
+            ? this.handleTorRequest(url, method, data, headers)
+            : this.handleRegularRequest(
+                  url,
+                  method,
+                  data,
+                  headers,
+                  certVerification
+              );
+        calls.set(id, request);
+        try {
+            const response = await request;
+            return response;
+        } finally {
+            calls.delete(id);
         if (useTor === true) {
             calls.set(
                 id,
@@ -107,8 +170,6 @@ export default class LND {
 
             calls.set(id, racePromise);
         }
-
-        return await calls.get(id);
     };
 
     supports = (minVersion: string, eosVersion?: string) => {
@@ -196,7 +257,12 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, params?: any) => {
+    request = (
+        route: string,
+        method: RequestMethod,
+        data?: any,
+        params?: any
+    ) => {
         const {
             host,
             lndhubUrl,
@@ -228,10 +294,11 @@ export default class LND {
     };
 
     getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+        this.request(route, RequestMethod.GET, null, data);
     postRequest = (route: string, data?: any) =>
-        this.request(route, 'post', data);
-    deleteRequest = (route: string) => this.request(route, 'delete', null);
+        this.request(route, RequestMethod.POST, data);
+    deleteRequest = (route: string) =>
+        this.request(route, RequestMethod.DELETE, null);
 
     getTransactions = (data: any) =>
         this.getRequest(
@@ -309,7 +376,6 @@ export default class LND {
             console.log('subscribeCustomMessages ws close');
         });
     };
-    getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
     getInvoices = (
         params: { limit?: number; reversed?: boolean } = {
@@ -356,16 +422,15 @@ export default class LND {
         let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount || 0,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            local_funding_amount: data.localFundingAmount,
+            min_confs: data.minConfs,
+            node_pubkey_string: data.nodePubkeyString,
+            sat_per_vbyte: data.satoshis,
+            spend_unconfirmed: data.spendUnconfirmed
         };
 
         if (data.fundMax) {
             request.fund_max = true;
-            delete request.local_funding_amount;
         }
 
         if (data.simpleTaprootChannel) {
@@ -389,11 +454,11 @@ export default class LND {
         let request: any = {
             private: data.privateChannel,
             scid_alias: data.scidAlias,
-            local_funding_amount: data.local_funding_amount,
-            min_confs: data.min_confs,
-            node_pubkey_string: data.node_pubkey_string,
-            sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            local_funding_amount: data.localFundingAmount,
+            min_confs: data.minConfs,
+            node_pubkey_string: data.nodePubkeyString,
+            sat_per_vbyte: data.satPerByte,
+            spend_unconfirmed: data.spendUnconfirmed
         };
 
         if (data.fundMax) {
@@ -414,14 +479,14 @@ export default class LND {
             });
         }
 
-        if (data.node_pubkey_string) {
+        if (data.nodePubkeyString) {
             request.node_pubkey = Base64Utils.hexToBase64(
-                data.node_pubkey_string
+                data.nodePubkeyString
             );
         }
 
-        if (data.funding_shim) {
-            request.funding_shim = data.funding_shim;
+        if (data.fundingShim) {
+            request.funding_shim = data.fundingShim;
             delete request.sat_per_vbyte;
         }
 
@@ -474,7 +539,7 @@ export default class LND {
         });
     };
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
-    decodePaymentRequest = (urlParams?: Array<string>) =>
+    decodePaymentRequest = (urlParams: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = async (data: any) => {
         if (data.pubkey) delete data.pubkey;
@@ -516,7 +581,7 @@ export default class LND {
 
         return this.deleteRequest(requestString);
     };
-    getNodeInfo = (urlParams?: Array<string>) =>
+    getNodeInfo = (urlParams: Array<string>) =>
         this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
     getFees = () => this.getRequest('/v1/fees');
     setFees = (data: any) => {
@@ -567,7 +632,7 @@ export default class LND {
             min_htlc_msat_specified: min_htlc ? true : false
         });
     };
-    getRoutes = (urlParams?: Array<string>) =>
+    getRoutes = (urlParams: Array<string>) =>
         this.getRequest(
             `/v1/graph/routes/${urlParams && urlParams[0]}/${
                 urlParams && urlParams[1]
@@ -707,6 +772,8 @@ export default class LND {
     supportsAddressTypeSelection = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
+    supportsLSPs = () => true;
+    supportsNetworkInfo = () => false;
     supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');
@@ -715,8 +782,12 @@ export default class LND {
     supportsOnchainSendMax = () => this.supports('v0.18.3');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
+    isLNDBased = () => true;
+    supportsLSPS1customMessage = () => true;
+    supportsLSPS1rest = () => false;
+
     supportsChannelFundMax = () => true;
-    supportsLSPS1customMessage = () => false;
+     supportsLSPS1customMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsOffers = (): Promise<boolean> | boolean => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
