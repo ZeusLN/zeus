@@ -103,10 +103,11 @@ class ActivityFilterUtils {
             );
         }
 
-        if (filter.maximumAmount < Infinity) {
+        if (filter.maximumAmount !== undefined) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
-                    Math.abs(Number(activity.getAmount)) <= filter.maximumAmount
+                    Math.abs(Number(activity.getAmount)) <=
+                    (filter.maximumAmount ?? Infinity)
             );
         }
 
