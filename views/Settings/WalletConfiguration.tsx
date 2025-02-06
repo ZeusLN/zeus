@@ -133,6 +133,7 @@ interface WalletConfigurationState {
     portError: boolean;
     customMailboxServerError: boolean;
     pairingPhraseError: boolean;
+    nostrWalletConnectUrlError: boolean;
 }
 
 const ScanBadge = ({ onPress }: { onPress: () => void }) => (
@@ -200,7 +201,8 @@ export default class WalletConfiguration extends React.Component<
         macaroonHexError: false,
         portError: false,
         customMailboxServerError: false,
-        pairingPhraseError: false
+        pairingPhraseError: false,
+        nostrWalletConnectUrlError: false
     };
 
     scrollViewRef = React.createRef<ScrollView>();
@@ -768,7 +770,8 @@ export default class WalletConfiguration extends React.Component<
             macaroonHexError,
             portError,
             customMailboxServerError,
-            pairingPhraseError
+            pairingPhraseError,
+            nostrWalletConnectUrlError
         } = this.state;
         const {
             loading,
@@ -1386,11 +1389,22 @@ export default class WalletConfiguration extends React.Component<
                                 </Text>
                                 <TextInput
                                     placeholder={'nostr+walletconnect://'}
+                                    textColor={
+                                        nostrWalletConnectUrlError
+                                            ? themeColor('error')
+                                            : themeColor('text')
+                                    }
                                     value={nostrWalletConnectUrl}
                                     autoCapitalize="none"
                                     onChangeText={(text: string) =>
                                         this.setState({
-                                            nostrWalletConnectUrl: text.trim(),
+                                            nostrWalletConnectUrl: text
+                                                .trim()
+                                                .replace(/\s+/g, ' '),
+                                            nostrWalletConnectUrlError:
+                                                !text.startsWith(
+                                                    'nostr+walletconnect://'
+                                                ),
                                             saved: false
                                         })
                                     }
@@ -2422,6 +2436,7 @@ export default class WalletConfiguration extends React.Component<
                                             !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
                                                 pairingPhrase
                                             )) ||
+                                        nostrWalletConnectUrlError ||
                                         // Required input check
                                         // Port is optional, it will fallback to 80 or 443
                                         (implementation === 'lndhub' &&
