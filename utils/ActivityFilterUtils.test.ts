@@ -183,6 +183,67 @@ describe('ActivityFilterUtils', () => {
             '6'
         ]);
     });
+    // New test case for maximumAmount filtering
+    it('supports filtering by maximum amount', () => {
+        const activities: any[] = [
+            new Invoice({
+                value: '100',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString()
+            }),
+            new Payment({
+                value: '200',
+                creation_date: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString()
+            }),
+            new Payment({
+                value: '300',
+                creation_date: (
+                    new Date(2000, 1, 3, 3, 4, 4).getTime() / 1000
+                ).toString()
+            })
+        ];
+
+        const filter = getDefaultFilter();
+        filter.maximumAmount = 250;
+
+        const filteredActivities = ActivityFilterUtils.filterActivities(
+            activities,
+            filter
+        );
+
+        expect(filteredActivities.map((a) => Number(a.getAmount))).toEqual([
+            100, 200
+        ]);
+    });
+
+    //    test case for Memo Filter
+    it('supports filtering by memo', () => {
+        const activities: any[] = [
+            {
+                getNote: 'Payment for invoice'
+            },
+            {
+                getNote: 'Refund issued'
+            },
+            {
+                getNote: 'Monthly subscription'
+            }
+        ];
+
+        const filter = getDefaultFilter();
+        filter.memo = 'invoice';
+
+        const filteredActivities = ActivityFilterUtils.filterActivities(
+            activities,
+            filter
+        );
+
+        expect(filteredActivities.length).toBe(1);
+        expect(filteredActivities[0].getNote).toBe('Payment for invoice');
+    });
 
     const getDefaultFilter = () =>
         ({
