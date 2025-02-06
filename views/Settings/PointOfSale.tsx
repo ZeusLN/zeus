@@ -59,7 +59,7 @@ export default class PointOfSale extends React.Component<
         disableTips: false,
         squareDevMode: false,
         showKeypad: true,
-        taxPercentage: '0',
+        taxPercentage: '',
         enablePrinter: false,
         defaultView: 'Products'
     };
@@ -79,7 +79,7 @@ export default class PointOfSale extends React.Component<
             disableTips: settings?.pos?.disableTips || false,
             squareDevMode: settings?.pos?.squareDevMode || false,
             showKeypad: settings?.pos?.showKeypad || false,
-            taxPercentage: settings?.pos?.taxPercentage || '0',
+            taxPercentage: settings?.pos?.taxPercentage || '',
             enablePrinter: settings?.pos?.enablePrinter || false,
             defaultView:
                 (settings?.pos && settings?.pos?.defaultView) || 'Products'
@@ -592,6 +592,7 @@ export default class PointOfSale extends React.Component<
                                     )}
                                 </Text>
                                 <TextInput
+                                    placeholder={'0'}
                                     value={taxPercentage}
                                     keyboardType="numeric"
                                     onChangeText={async (text: string) => {
