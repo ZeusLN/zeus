@@ -31,10 +31,10 @@ export interface Filter {
     unconfirmed: boolean;
     zeusPay: boolean;
     minimumAmount: number;
+    maximumAmount?: number;
     startDate?: Date;
     endDate?: Date;
     memo: string;
-    maximumAmount: number;
 }
 
 export const DEFAULT_FILTERS = {
@@ -50,10 +50,10 @@ export const DEFAULT_FILTERS = {
     ampInvoices: true,
     zeusPay: true,
     minimumAmount: 0,
+    maximumAmount: undefined,
     startDate: undefined,
     endDate: undefined,
-    memo: '',
-    maximumAmount: Infinity
+    memo: ''
 };
 
 export default class ActivityStore {
@@ -98,10 +98,10 @@ export default class ActivityStore {
             unconfirmed: true,
             zeusPay: true,
             minimumAmount: 0,
+            maximumAmount: undefined,
             startDate: undefined,
             endDate: undefined,
-            memo: '',
-            maximumAmount: Infinity
+            memo: ''
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };

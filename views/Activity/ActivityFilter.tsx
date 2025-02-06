@@ -351,10 +351,9 @@ export default class ActivityFilter extends React.Component<
                                         <View style={{ flex: 1 }}>
                                             <TextInput
                                                 keyboardType="numeric"
-                                                placeholder="0"
+                                                placeholder="No limit"
                                                 value={
-                                                    item.value === undefined ||
-                                                    item.value === 0
+                                                    item.value === undefined
                                                         ? ''
                                                         : String(item.value)
                                                 }
@@ -374,7 +373,7 @@ export default class ActivityFilter extends React.Component<
                                                                   localeString(
                                                                       'views.ActivityFilter.maximumAmount'
                                                                   )
-                                                            ? Infinity
+                                                            ? undefined
                                                             : text.trim() !== ''
                                                             ? !isNaN(
                                                                   Number(text)
