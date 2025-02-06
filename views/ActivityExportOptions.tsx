@@ -6,8 +6,7 @@ import {
     StyleSheet,
     Alert,
     Platform,
-    ScrollView,
-    ActivityIndicator
+    ScrollView
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import Icon from 'react-native-vector-icons/Feather';
@@ -115,113 +114,131 @@ export default class ActivityExportOptions extends React.Component<
     };
 
     downloadCsv = async (type: 'invoice' | 'payment' | 'transaction') => {
-        const { filteredActivity } = this.state;
+        this.setState({ isCsvLoading: true }, async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            let { filteredActivity } = this.state;
 
-        // If filteredActivity is empty, try fetching it again
-        if (!filteredActivity || filteredActivity.length === 0) {
-            Alert.alert(
-                localeString('general.warning'),
-                localeString('views.ActivityToCsv.noData')
-            );
-            await this.fetchAndFilterActivity();
-            return;
-        }
-
-        this.setState({ isCsvLoading: true });
-
-        let keysToInclude: any;
-        let filteredData: any;
-
-        switch (type) {
-            case 'invoice':
-                keysToInclude = [
-                    { label: 'Amount Paid (sat)', value: 'getAmount' },
-                    { label: 'Payment Request', value: 'getPaymentRequest' },
-                    { label: 'Payment Hash', value: 'getRHash' },
-                    { label: 'Memo', value: 'getMemo' },
-                    { label: 'Note', value: 'getNote' },
-                    { label: 'Creation Date', value: 'getCreationDate' },
-                    { label: 'Expiry', value: 'formattedTimeUntilExpiry' }
-                ];
-                filteredData = filteredActivity.filter(
-                    (item: any) => item instanceof Invoice
+            if (!filteredActivity || filteredActivity.length === 0) {
+                console.log('No activity data found, fetching again...');
+                Alert.alert(
+                    localeString('general.warning'),
+                    localeString('views.ActivityToCsv.noData')
                 );
-                break;
+                await this.fetchAndFilterActivity();
+                this.setState({ isCsvLoading: false });
+                return;
+            }
 
-            case 'payment':
-                keysToInclude = [
-                    { label: 'Destination', value: 'getDestination' },
-                    { label: 'Payment Request', value: 'getPaymentRequest' },
-                    { label: 'Payment Hash', value: 'paymentHash' },
-                    { label: 'Amount Paid (sat)', value: 'getAmount' },
-                    { label: 'Memo', value: 'getMemo' },
-                    { label: 'Note', value: 'getNote' },
-                    { label: 'Creation Date', value: 'getDate' }
-                ];
-                filteredData = filteredActivity.filter(
-                    (item: any) =>
-                        item instanceof Payment && item?.getDestination
+            let keysToInclude: any;
+            let filteredData: any;
+
+            switch (type) {
+                case 'invoice':
+                    keysToInclude = [
+                        { label: 'Amount Paid (sat)', value: 'getAmount' },
+                        {
+                            label: 'Payment Request',
+                            value: 'getPaymentRequest'
+                        },
+                        { label: 'Payment Hash', value: 'getRHash' },
+                        { label: 'Memo', value: 'getMemo' },
+                        { label: 'Note', value: 'getNote' },
+                        { label: 'Creation Date', value: 'getCreationDate' },
+                        { label: 'Expiry', value: 'formattedTimeUntilExpiry' }
+                    ];
+                    filteredData = filteredActivity.filter(
+                        (item: any) => item instanceof Invoice
+                    );
+                    break;
+
+                case 'payment':
+                    keysToInclude = [
+                        { label: 'Destination', value: 'getDestination' },
+                        {
+                            label: 'Payment Request',
+                            value: 'getPaymentRequest'
+                        },
+                        { label: 'Payment Hash', value: 'paymentHash' },
+                        { label: 'Amount Paid (sat)', value: 'getAmount' },
+                        { label: 'Memo', value: 'getMemo' },
+                        { label: 'Note', value: 'getNote' },
+                        { label: 'Creation Date', value: 'getDate' }
+                    ];
+                    filteredData = filteredActivity.filter(
+                        (item: any) =>
+                            item instanceof Payment && item?.getDestination
+                    );
+                    break;
+
+                case 'transaction':
+                    keysToInclude = [
+                        { label: 'Transaction Hash', value: 'tx' },
+                        { label: 'Amount (sat)', value: 'getAmount' },
+                        { label: 'Total Fees (sat)', value: 'getFee' },
+                        { label: 'Note', value: 'getNote' },
+                        { label: 'Timestamp', value: 'getDate' }
+                    ];
+                    filteredData = filteredActivity.filter(
+                        (item: any) => item instanceof Transaction
+                    );
+                    break;
+
+                default:
+                    keysToInclude = [];
+                    filteredData = [];
+                    break;
+            }
+
+            if (!filteredData || filteredData.length === 0) {
+                console.log('No valid data found for', type);
+                this.setState({ isCsvLoading: false });
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.ActivityToCsv.noData')
                 );
-                break;
+                return;
+            }
 
-            case 'transaction':
-                keysToInclude = [
-                    { label: 'Transaction Hash', value: 'tx' },
-                    { label: 'Amount (sat)', value: 'getAmount' },
-                    { label: 'Total Fees (sat)', value: 'getFee' },
-                    { label: 'Note', value: 'getNote' },
-                    { label: 'Timestamp', value: 'getDate' }
-                ];
-                filteredData = filteredActivity.filter(
-                    (item: any) => item instanceof Transaction
+            const csvData = await this.convertActivityToCsv(
+                filteredData,
+                keysToInclude
+            );
+
+            if (!csvData) {
+                this.setState({ isCsvLoading: false });
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.ActivityToCsv.noData')
                 );
-                break;
+                return;
+            }
 
-            default:
-                keysToInclude = [];
-                filteredData = [];
-                break;
-        }
+            try {
+                const dateTime = this.getFormattedDateTime();
+                const baseFileName = `zeus_${dateTime}_${type}.csv`;
+                const filePath =
+                    Platform.OS === 'android'
+                        ? `${RNFS.DownloadDirectoryPath}/${baseFileName}`
+                        : `${RNFS.DocumentDirectoryPath}/${baseFileName}`;
 
-        const csvData = await this.convertActivityToCsv(
-            filteredData,
-            keysToInclude
-        );
+                console.log('Saving file to:', filePath);
 
-        if (!csvData) {
-            this.setState({ isCsvLoading: false });
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.ActivityToCsv.noData')
-            );
-            return;
-        }
+                await RNFS.writeFile(filePath, csvData, 'utf8');
 
-        try {
-            const dateTime = this.getFormattedDateTime();
-            const baseFileName = `zeus_${dateTime}_${type}.csv`;
-            const filePath =
-                Platform.OS === 'android'
-                    ? `${RNFS.DownloadDirectoryPath}/${baseFileName}`
-                    : `${RNFS.DocumentDirectoryPath}/${baseFileName}`;
-
-            await RNFS.writeFile(filePath, csvData, 'utf8');
-
-            this.setState({ isCsvLoading: false });
-
-            Alert.alert(
-                localeString('general.success'),
-                localeString('views.ActivityToCsv.csvDownloaded')
-            );
-        } catch (err) {
-            console.error('Failed to save CSV file:', err);
-            Alert.alert(
-                localeString('general.error'),
-                localeString('views.ActivityToCsv.csvDownloadFailed')
-            );
-        } finally {
-            this.setState({ isCsvLoading: false });
-        }
+                Alert.alert(
+                    localeString('general.success'),
+                    localeString('views.ActivityToCsv.csvDownloaded')
+                );
+            } catch (err) {
+                console.error('Failed to save CSV file:', err);
+                Alert.alert(
+                    localeString('general.error'),
+                    localeString('views.ActivityToCsv.csvDownloadFailed')
+                );
+            } finally {
+                this.setState({ isCsvLoading: false });
+            }
+        });
     };
 
     render() {
@@ -240,12 +257,7 @@ export default class ActivityExportOptions extends React.Component<
                     }}
                     navigation={this.props.navigation}
                 />
-                {isCsvLoading && (
-                    <ActivityIndicator
-                        size="large"
-                        color={themeColor('text')}
-                    />
-                )}
+                {isCsvLoading && <LoadingIndicator />}
 
                 <View
                     style={{
