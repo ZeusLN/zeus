@@ -22,6 +22,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 
 import Storage from '../../storage';
 
@@ -333,7 +334,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             <Button
                                 onPress={async () => {
                                     await Storage.setItem(
-                                        'backup-complete',
+                                        IS_BACKED_UP_KEY,
                                         true
                                     );
                                     navigation.popTo('Wallet');
