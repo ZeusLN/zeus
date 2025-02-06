@@ -103,6 +103,13 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.maximumAmount < Infinity) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    Math.abs(Number(activity.getAmount)) <= filter.maximumAmount
+            );
+        }
+
         if (filter.startDate) {
             const startDate = new Date(
                 filter.startDate.getFullYear(),
