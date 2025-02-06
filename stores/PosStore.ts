@@ -200,14 +200,19 @@ export default class PosStore {
             this.currentOrder.total_money.sats = totalSats.toNumber();
 
             // calculate taxes
-            if (this.settingsStore?.settings?.pos?.taxPercentage !== '0') {
+            const { settings } = this.settingsStore;
+            const { taxPercentage } = settings.pos;
+
+            if (
+                taxPercentage &&
+                taxPercentage !== '0' &&
+                taxPercentage !== ''
+            ) {
                 this.currentOrder.total_tax_money.amount = new BigNumber(
                     totalFiat
                 )
                     .div(100)
-                    .multipliedBy(
-                        this.settingsStore?.settings?.pos?.taxPercentage || 0
-                    )
+                    .multipliedBy(taxPercentage)
                     .toNumber();
                 if (this.fiatStore.fiatRates) {
                     const fiatEntry = this.fiatStore.fiatRates.filter(
