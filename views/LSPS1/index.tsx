@@ -11,40 +11,39 @@ import {
 import { ButtonGroup, Icon } from 'react-native-elements';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { v4 as uuidv4 } from 'uuid';
 
-import CaretDown from '../../../assets/images/SVG/Caret Down.svg';
-import CaretRight from '../../../assets/images/SVG/Caret Right.svg';
-import OrderList from '../../../assets/images/SVG/order-list.svg';
-import OlympusSVG from '../../../assets/images/SVG/Olympus.svg';
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
+import OrderList from '../../assets/images/SVG/order-list.svg';
+import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
-import Button from '../../../components/Button';
-import Header from '../../../components/Header';
-import KeyValue from '../../../components/KeyValue';
-import LoadingIndicator from '../../../components/LoadingIndicator';
-import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
-import Screen from '../../../components/Screen';
-import Switch from '../../../components/Switch';
-import Text from '../../../components/Text';
-import TextInput from '../../../components/TextInput';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import LSPS1OrderResponse from './OrderResponse';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import { Row } from '../../../components/layout/Row';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
 
-import BackendUtils from '../../../utils/BackendUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import { numberWithCommas } from '../../../utils/UnitsUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
-import Storage from '../../../storage';
+import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import InvoicesStore from '../../../stores/InvoicesStore';
-import ChannelsStore from '../../../stores/ChannelsStore';
-import SettingsStore from '../../../stores/SettingsStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import ChannelsStore from '../../stores/ChannelsStore';
+import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import { LSPS1OrderResponse as Order } from './OrdersPane';
+import { LSPOrderResponse as Order } from './OrdersPane';
 
 interface LSPS1Props {
     LSPStore: LSPStore;
@@ -102,13 +101,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
         if (BackendUtils.supportsLSPS1rest()) {
-            LSPStore.getInfoREST();
-        } else {
+            LSPStore.lsps1GetInfoREST();
+        } else if (BackendUtils.supportsLSPScustomMessage()) {
             console.log('connecting');
             await this.connectPeer();
             console.log('connected');
             await this.subscribeToCustomMessages();
-            this.sendCustomMessage_lsps1();
+            LSPStore.lsps1GetInfoCustomMessage();
         }
 
         navigation.addListener('focus', () => {
@@ -228,85 +227,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         }
     }
 
-    sendCustomMessage_lsps1() {
-        const { LSPStore } = this.props;
-        LSPStore.loading = true;
-        LSPStore.error = false;
-        LSPStore.error_msg = '';
-        const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
-        const type = 37913;
-        const id = uuidv4();
-        LSPStore.getInfoId = id;
-        const data = this.encodeMesage({
-            jsonrpc: '2.0',
-            method: 'lsps1.get_info',
-            params: {},
-            id: LSPStore.getInfoId
-        });
-
-        LSPStore.sendCustomMessage({
-            peer: node_pubkey_string,
-            type,
-            data
-        })
-            .then((response) => {
-                console.log('Custom message sent:', response);
-            })
-            .catch((error) => {
-                console.error(
-                    'Error sending (get_info) custom message:',
-                    error
-                );
-            });
-    }
-
-    lsps1_createorder = () => {
-        const { LSPStore } = this.props;
-        const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
-        const type = 37913;
-        const id = uuidv4();
-        LSPStore.createOrderId = id;
-        LSPStore.loading = true;
-        LSPStore.error = false;
-        LSPStore.error_msg = '';
-        const data = this.encodeMesage({
-            jsonrpc: '2.0',
-            method: 'lsps1.create_order',
-            params: {
-                lsp_balance_sat: this.state.lspBalanceSat.toString(),
-                client_balance_sat: this.state.clientBalanceSat.toString(),
-                required_channel_confirmations: parseInt(
-                    this.state.requiredChannelConfirmations
-                ),
-                funding_confirms_within_blocks: parseInt(
-                    this.state.confirmsWithinBlocks
-                ),
-                channel_expiry_blocks: this.state.channelExpiryBlocks,
-                token: this.state.token,
-                refund_onchain_address: this.state.refundOnchainAddress,
-                announce_channel: this.state.announceChannel
-            },
-            id: LSPStore.createOrderId
-        });
-
-        LSPStore.sendCustomMessage({
-            peer: node_pubkey_string,
-            type,
-            data
-        })
-            .then(() => {})
-            .catch((error) => {
-                console.error(
-                    'Error sending (create_order) custom message:',
-                    error
-                );
-            });
-    };
-
     connectPeer = async () => {
         const { ChannelsStore, LSPStore } = this.props;
-        const node_pubkey_string: string = LSPStore.getLSPS1Pubkey();
-        const host: string = LSPStore.getLSPS1Host();
+        const node_pubkey_string: string = LSPStore.getLSPSPubkey();
+        const host: string = LSPStore.getLSPSHost();
         try {
             return await ChannelsStore.connectPeer(
                 {
@@ -473,8 +397,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'
-            : BackendUtils.supportsLSPS1customMessage()
-            ? LSPStore.getLSPS1Pubkey()
+            : BackendUtils.supportsLSPScustomMessage()
+            ? LSPStore.getLSPSPubkey()
             : LSPStore.getLSPS1Rest();
 
         return (
@@ -485,7 +409,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     rightComponent={
                         <Row>
                             <SettingsBtn />
-                            {!LSPStore.loading && !LSPStore.error && (
+                            {!LSPStore.loadingLSPS1 && !LSPStore.error && (
                                 <OrderlistBtn />
                             )}
                         </Row>
@@ -493,9 +417,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     onBack={() => LSPStore.resetLSPS1Data()}
                 />
                 <View style={{ paddingHorizontal: 18 }}>
-                    {BackendUtils.supportsLSPS1customMessage() &&
-                        !LSPStore.getLSPS1Pubkey() &&
-                        !LSPStore.getLSPS1Host() && (
+                    {BackendUtils.supportsLSPScustomMessage() &&
+                        !LSPStore.getLSPSPubkey() &&
+                        !LSPStore.getLSPSHost() && (
                             <ErrorMessage
                                 message={localeString(
                                     'views.LSPS1.pubkeyAndHostNotFound'
@@ -510,7 +434,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                             <ErrorMessage message={LSPStore.error_msg} />
                         )}
                 </View>
-                {LSPStore.loading ? (
+                {LSPStore.loadingLSPS1 ? (
                     <LoadingIndicator />
                 ) : (LSPStore?.error && LSPStore?.error_msg) ===
                   localeString('views.LSPS1.timeoutError') ? (
@@ -866,33 +790,37 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             )}
                                         </Text>
                                     </Row>
-                                    <Slider
-                                        style={{
-                                            width: '100%',
-                                            height: 40,
-                                            marginBottom: 10
-                                        }}
-                                        minimumValue={parseInt(
-                                            info?.min_initial_lsp_balance_sat
-                                        )}
-                                        maximumValue={parseInt(
-                                            info?.max_initial_lsp_balance_sat
-                                        )}
-                                        minimumTrackTintColor={themeColor(
-                                            'highlight'
-                                        )}
-                                        maximumTrackTintColor="black"
-                                        thumbTintColor={themeColor('highlight')}
-                                        value={parseInt(
-                                            lspBalanceSat.toString()
-                                        )}
-                                        onValueChange={(value: number) =>
-                                            this.setState({
-                                                lspBalanceSat: value
-                                            })
-                                        }
-                                        step={10000}
-                                    />
+                                    {info.min_initial_lsp_balance_sat && (
+                                        <Slider
+                                            style={{
+                                                width: '100%',
+                                                height: 40,
+                                                marginBottom: 10
+                                            }}
+                                            minimumValue={parseInt(
+                                                info?.min_initial_lsp_balance_sat
+                                            )}
+                                            maximumValue={parseInt(
+                                                info?.max_initial_lsp_balance_sat
+                                            )}
+                                            minimumTrackTintColor={themeColor(
+                                                'highlight'
+                                            )}
+                                            maximumTrackTintColor="black"
+                                            thumbTintColor={themeColor(
+                                                'highlight'
+                                            )}
+                                            value={parseInt(
+                                                lspBalanceSat.toString()
+                                            )}
+                                            onValueChange={(value: number) =>
+                                                this.setState({
+                                                    lspBalanceSat: value
+                                                })
+                                            }
+                                            step={10000}
+                                        />
+                                    )}
 
                                     <>
                                         <Text
@@ -1293,17 +1221,21 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                             .length === 0
                                     ) {
                                         if (BackendUtils.supportsLSPS1rest()) {
-                                            LSPStore.createOrderREST(
+                                            LSPStore.lsps1CreateOrderREST(
                                                 this.state
                                             );
-                                        } else {
-                                            this.lsps1_createorder();
+                                        } else if (
+                                            BackendUtils.supportsLSPScustomMessage()
+                                        ) {
+                                            LSPStore.lsps1CreateOrderCustomMessage(
+                                                this.state
+                                            );
                                         }
                                     } else {
                                         const orderId = result.order_id;
 
                                         // Retrieve existing responses from encrypted storage or initialize an empty array
-                                        Storage.getItem(LSPS1_ORDERS_KEY)
+                                        Storage.getItem(LSPS_ORDERS_KEY)
                                             .then((responseArrayString) => {
                                                 let responseArray = [];
                                                 if (responseArrayString) {
@@ -1346,11 +1278,11 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         this.props.NodeInfoStore.nodeInfo.nodeId;
 
                                                     if (
-                                                        BackendUtils.supportsLSPS1customMessage()
+                                                        BackendUtils.supportsLSPScustomMessage()
                                                     ) {
                                                         orderData.peer =
-                                                            LSPStore.getLSPS1Pubkey();
-                                                        orderData.uri = `${LSPStore.getLSPS1Pubkey()}@${LSPStore.getLSPS1Host()}`;
+                                                            LSPStore.getLSPSPubkey();
+                                                        orderData.uri = `${LSPStore.getLSPSPubkey()}@${LSPStore.getLSPSHost()}`;
                                                     }
                                                     if (
                                                         BackendUtils.supportsLSPS1rest()
@@ -1358,6 +1290,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                         orderData.endpoint =
                                                             LSPStore.getLSPS1Rest();
                                                     }
+
+                                                    orderData.service = 'LSPS1';
 
                                                     console.log(orderData);
 
@@ -1374,7 +1308,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
                                                     // Save the updated array back to encrypted storage
                                                     Storage.setItem(
-                                                        LSPS1_ORDERS_KEY,
+                                                        LSPS_ORDERS_KEY,
                                                         responseArray
                                                     )
                                                         .then(() => {
@@ -1428,7 +1362,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     </>
                 )}
 
-                {!LSPStore.loading &&
+                {!LSPStore.loadingLSPS1 &&
                     LSPStore.error &&
                     LSPStore.error_msg ===
                         localeString('views.LSPS1.timeoutError') && (
@@ -1440,14 +1374,16 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                             }}
                         >
                             <Button
-                                title="Retry"
+                                title={localeString('general.retry')}
                                 onPress={async () => {
                                     if (BackendUtils.supportsLSPS1rest()) {
-                                        LSPStore.getInfoREST();
-                                    } else {
+                                        LSPStore.lsps1GetInfoREST();
+                                    } else if (
+                                        BackendUtils.supportsLSPScustomMessage()
+                                    ) {
                                         await this.connectPeer();
                                         await this.subscribeToCustomMessages();
-                                        this.sendCustomMessage_lsps1();
+                                        LSPStore.lsps1GetInfoCustomMessage();
                                     }
                                 }}
                             />

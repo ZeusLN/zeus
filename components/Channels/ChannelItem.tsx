@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { Body } from '../../components/text/Body';
 import { BalanceBar } from '../../components/Channels/BalanceBar';
 import { Row } from '../../components/layout/Row';
-import { Status } from '../../views/Channels/ChannelsPane';
+import { Status, ExpirationStatus } from '../../views/Channels/ChannelsPane';
 import Amount from '../Amount';
 import { Tag } from './Tag';
 
@@ -28,6 +28,7 @@ export function ChannelItem({
     outboundReserve = 0,
     largestTotal,
     status,
+    expirationStatus,
     pendingHTLCs,
     pendingTimelock,
     noBorder,
@@ -46,6 +47,7 @@ export function ChannelItem({
     outboundReserve?: string | number;
     largestTotal?: number;
     status?: Status;
+    expirationStatus?: ExpirationStatus;
     pendingHTLCs?: boolean;
     pendingTimelock?: string;
     noBorder?: boolean;
@@ -133,6 +135,7 @@ export function ChannelItem({
                         <Body small={true}>{pendingTimelock}</Body>
                     </View>
                 ) : null}
+                {expirationStatus && <Tag status={expirationStatus} />}
                 {status && <Tag status={status} />}
             </Row>
             {localBalance &&

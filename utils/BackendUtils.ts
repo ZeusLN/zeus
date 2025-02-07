@@ -138,12 +138,13 @@ class BackendUtils {
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
 
-    // cln
-    supportsLSPS1customMessage = () => this.call('supportsLSPS1customMessage');
-    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
-
     // lndhub
     login = (...args: any[]) => this.call('login', args);
+
+    // services
+    supportsFlowLSP = () => this.call('supportsFlowLSP');
+    supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
+    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
 
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
@@ -166,7 +167,6 @@ class BackendUtils {
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
     supportsBumpFee = () => this.call('supportsBumpFee');
-    supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsNetworkInfo = () => this.call('supportsNetworkInfo');
     supportsSimpleTaprootChannels = () =>
         this.call('supportsSimpleTaprootChannels');
