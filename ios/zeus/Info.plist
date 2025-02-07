@@ -114,6 +114,7 @@
 		<string>PPNeueMontreal-Medium.otf</string>
 		<string>Lato-Bold.ttf</string>
 		<string>Lato-Regular.ttf</string>
+		<string>DroidSansMono.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

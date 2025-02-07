@@ -2,6 +2,14 @@
   "migIndex": 1,
   "data": [
     {
+      "path": "assets/fonts/DroidSansMono Apache License.txt",
+      "sha1": "26add7f7fb98fea4f180937290743d1b7ca03ea5"
+    },
+    {
+      "path": "assets/fonts/DroidSansMono.ttf",
+      "sha1": "133fb6cf26ea073b456fb557b94ce8c46143b117"
+    },
+    {
       "path": "assets/fonts/Lato-Bold.ttf",
       "sha1": "d67fee08c79a82ce375ab9629ae5a903da8bb321"
     },
