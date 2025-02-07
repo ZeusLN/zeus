@@ -183,6 +183,9 @@ class BackendUtils {
         this.call('supportsAddressesWithDerivationPaths');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
+    supportsDevTools = () => {
+        return this.isLNDBased() || this.call('supportsDevTools');
+    };
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

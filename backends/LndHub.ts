@@ -163,4 +163,5 @@ export default class LndHub extends LND {
     supportsOffers = () => false;
     isLNDBased = () => false;
     supportInboundFees = () => false;
+    supportsDevTools = () => true;
 }
