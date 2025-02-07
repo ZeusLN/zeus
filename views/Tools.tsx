@@ -65,7 +65,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Tools', // localeString('views.Settings.title'),
+                        text: localeString('views.Tools.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
