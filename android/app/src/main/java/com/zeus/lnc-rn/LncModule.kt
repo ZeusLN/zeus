@@ -10,6 +10,7 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.net.Proxy;
 import java.security.cert.X509Certificate
+import kotlinx.coroutines.*
 
 import app.zeusln.zeus.AndroidCallback
 
@@ -148,13 +149,34 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
 
   // chantools
 
-  @ReactMethod
-  fun sweepRemoteClosed(seedPhrase: String, apiURL: String, sweepAddr: String, recoveryWindow: Int, feeRate: Int, sleepSeconds: Int, publish: Boolean = false, isTestnet: Boolean = false, promise: Promise) {
-     try {
-        var response = Lndmobile.sweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish, isTestnet)
-        promise.resolve(response);
-     } catch(e: Throwable) {
-        promise.reject("request Error", e);
-     }
-  }
+   @ReactMethod
+   fun sweepRemoteClosed(
+      seedPhrase: String,
+      apiURL: String,
+      sweepAddr: String,
+      recoveryWindow: Int,
+      feeRate: Int,
+      sleepSeconds: Int,
+      publish: Boolean = false,
+      isTestnet: Boolean = false,
+      promise: Promise
+   ) {
+      // Launch a coroutine in the background to avoid blocking the main thread
+      GlobalScope.launch(Dispatchers.IO) {
+         try {
+               // Perform the long-running task
+               val response = Lndmobile.sweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish, isTestnet)
+               
+               // When done, switch back to the main thread to resolve the promise
+               withContext(Dispatchers.Main) {
+                  promise.resolve(response)
+               }
+         } catch (e: Throwable) {
+               // Handle errors, and make sure to switch back to the main thread to reject the promise
+               withContext(Dispatchers.Main) {
+                  promise.reject("request Error", e)
+               }
+         }
+      }
+   }
 }
