@@ -183,6 +183,8 @@ export default class Sweepremoteclosed extends React.Component<
                                 onChangeText={(text: string) =>
                                     this.setState({
                                         sweepAddr: text
+                                            .trim()
+                                            .replace(/^\s\n+|\s\n+$/g, '')
                                     })
                                 }
                                 locked={loading}
@@ -330,6 +332,11 @@ export default class Sweepremoteclosed extends React.Component<
                                             onChangeText={(text: string) =>
                                                 this.setState({
                                                     customApiUrl: text
+                                                        .trim()
+                                                        .replace(
+                                                            /^\s\n+|\s\n+$/g,
+                                                            ''
+                                                        )
                                                 })
                                             }
                                             locked={loading}
