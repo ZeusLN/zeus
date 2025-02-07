@@ -163,6 +163,8 @@ export default class Sweepremoteclosed extends React.Component<
                                             externalSeed: text
                                         })
                                     }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
                                     locked={loading}
                                 />
                             </>
@@ -187,6 +189,8 @@ export default class Sweepremoteclosed extends React.Component<
                                             .replace(/^\s\n+|\s\n+$/g, '')
                                     })
                                 }
+                                autoCapitalize="none"
+                                autoCorrect={false}
                                 locked={loading}
                             />
                         </>
@@ -266,7 +270,7 @@ export default class Sweepremoteclosed extends React.Component<
                                         value={recoveryWindow}
                                         onChangeText={(text: string) =>
                                             this.setState({
-                                                recoveryWindow: text
+                                                recoveryWindow: text.trim()
                                             })
                                         }
                                         locked={loading}
@@ -292,7 +296,7 @@ export default class Sweepremoteclosed extends React.Component<
                                         value={sleepSeconds}
                                         onChangeText={(text: string) =>
                                             this.setState({
-                                                sleepSeconds: text
+                                                sleepSeconds: text.trim()
                                             })
                                         }
                                         locked={loading}
@@ -339,6 +343,8 @@ export default class Sweepremoteclosed extends React.Component<
                                                         )
                                                 })
                                             }
+                                            autoCapitalize="none"
+                                            autoCorrect={false}
                                             locked={loading}
                                         />
                                     </>
