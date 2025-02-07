@@ -381,7 +381,7 @@ export default class Spark {
     supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
-    supportsLSPS1customMessage = () => false;
+    supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;

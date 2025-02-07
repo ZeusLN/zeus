@@ -11,6 +11,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 import { StackNavigationProp } from '@react-navigation/stack';
+import BigNumber from 'bignumber.js';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
@@ -30,6 +31,8 @@ import {
 } from '@react-navigation/native';
 
 import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
+import LSPStore from '../../stores/LSPStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -40,17 +43,25 @@ import Channel from '../../models/Channel';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
-    Good = 'Good',
-    Stable = 'Stable',
-    Unstable = 'Unstable',
-    Offline = 'Offline',
-    Opening = 'Opening',
-    Closing = 'Closing'
+    Online = localeString('views.Wallet.Channels.online'),
+    Stable = localeString('channel.status.stable'),
+    Unstable = localeString('channel.status.unstable'),
+    Offline = localeString('channel.status.offline'),
+    Opening = localeString('channel.status.opening'),
+    Closing = localeString('channel.status.closing')
+}
+
+export enum ExpirationStatus {
+    Expiring = localeString('channel.expirationStatus.expiring'),
+    Expired = localeString('channel.expirationStatus.expired'),
+    LSPDiscretion = localeString('general.warning')
 }
 
 interface ChannelsProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
+    LSPStore?: LSPStore;
+    NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
 }
 
@@ -93,7 +104,7 @@ const ColorChangingButton = ({ onPress }: { onPress: () => void }) => {
     );
 };
 
-@inject('ChannelsStore', 'SettingsStore')
+@inject('ChannelsStore', 'LSPStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
     private tabNavigationRef = React.createRef<NavigationContainerRef<any>>();
@@ -104,7 +115,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
 
         const getStatus = () => {
             if (item.isActive) {
-                return Status.Good;
+                return Status.Online;
             } else if (item.pendingOpen) {
                 return Status.Opening;
             } else if (item.pendingClose || item.forceClose || item.closing) {
@@ -112,6 +123,43 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
             } else {
                 return Status.Offline;
             }
+        };
+
+        const getLSPExpirationStatus = () => {
+            const { LSPStore, NodeInfoStore } = this.props;
+            const currentBlockHeight =
+                NodeInfoStore?.nodeInfo?.currentBlockHeight;
+
+            const renewalInfo = LSPStore?.getExtendableOrdersData?.filter(
+                (extendableChannel: any) => {
+                    return (
+                        extendableChannel.short_channel_id ===
+                        item.shortChannelId
+                    );
+                }
+            )[0];
+
+            let expiresInBlocks;
+            if (currentBlockHeight && renewalInfo?.expiration_block) {
+                expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
+                    .minus(currentBlockHeight)
+                    .toNumber();
+            }
+
+            if (expiresInBlocks && new BigNumber(expiresInBlocks).lt(0)) {
+                return ExpirationStatus.Expired;
+            } else if (
+                expiresInBlocks &&
+                new BigNumber(expiresInBlocks).lt(2016)
+            ) {
+                // less than 2 weeks
+                return ExpirationStatus.Expiring;
+            } else if (renewalInfo?.expiration_block === 0) {
+                // at LSP's discretion
+                return ExpirationStatus.LSPDiscretion;
+            }
+
+            return undefined;
         };
 
         const forceCloseTimeLabel = (maturity: number) => {
@@ -130,6 +178,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     <ChannelItem
                         title={item.displayName}
                         status={getStatus()}
+                        expirationStatus={getLSPExpirationStatus()}
                         pendingHTLCs={item?.pending_htlcs?.length > 0}
                         localBalance={item.localBalance}
                         remoteBalance={item.remoteBalance}
@@ -294,7 +343,7 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOffline={totalOffline}
                 />
                 {settings?.lsps1ShowPurchaseButton &&
-                    (BackendUtils.supportsLSPS1customMessage() ||
+                    (BackendUtils.supportsLSPScustomMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
                         <ColorChangingButton
                             onPress={() => {

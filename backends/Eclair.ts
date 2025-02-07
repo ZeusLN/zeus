@@ -509,7 +509,7 @@ export default class Eclair {
     supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
-    supportsLSPS1customMessage = () => false;
+    supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;

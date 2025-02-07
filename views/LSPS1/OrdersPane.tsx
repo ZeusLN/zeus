@@ -4,21 +4,20 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { View, FlatList, TouchableOpacity, Text } from 'react-native';
 
-import Header from '../../../components/Header';
-import Screen from '../../../components/Screen';
-import Amount from '../../../components/Amount';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Amount from '../../components/Amount';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
 
-import { themeColor } from '../../../utils/ThemeUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import BackendUtils from '../../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
-import Storage from '../../../storage';
+import Storage from '../../storage';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
-
-import { WarningMessage } from '../../../components/SuccessErrorMessage';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 interface OrdersPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -39,7 +38,7 @@ interface Bolt11 {
     state: string;
 }
 
-interface Payment {
+export interface Payment {
     bolt11: Bolt11;
 }
 
@@ -59,12 +58,13 @@ export interface Order {
     result?: Order | any;
 }
 
-export interface LSPS1OrderResponse {
+export interface LSPOrderResponse {
     order: Order;
     clientPubkey: string;
     endpoint: string;
     uri?: string;
     peer?: string;
+    service?: string;
 }
 
 @inject('LSPStore', 'NodeInfoStore')
@@ -87,7 +87,7 @@ export default class OrdersPane extends React.Component<
             try {
                 // Retrieve saved responses from encrypted storage
                 const responseArrayString = await Storage.getItem(
-                    LSPS1_ORDERS_KEY
+                    LSPS_ORDERS_KEY
                 );
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
@@ -107,24 +107,18 @@ export default class OrdersPane extends React.Component<
                     );
 
                     let selectedOrders;
-                    if (BackendUtils.supportsLSPS1customMessage()) {
-                        selectedOrders = decodedResponses.filter(
-                            (response: LSPS1OrderResponse) =>
-                                response?.uri &&
+                    selectedOrders = decodedResponses.filter(
+                        (response: LSPOrderResponse) =>
+                            (response?.endpoint &&
                                 response.clientPubkey ===
-                                    this.props.NodeInfoStore.nodeInfo.nodeId
-                        );
-                    } else if (BackendUtils.supportsLSPS1rest()) {
-                        selectedOrders = decodedResponses.filter(
-                            (response: LSPS1OrderResponse) =>
-                                response?.endpoint &&
+                                    this.props.NodeInfoStore.nodeInfo.nodeId) ||
+                            (response?.uri &&
                                 response.clientPubkey ===
-                                    this.props.NodeInfoStore.nodeInfo.nodeId
-                        );
-                    }
+                                    this.props.NodeInfoStore.nodeInfo.nodeId)
+                    );
 
                     const orders = selectedOrders.map(
-                        (response: LSPS1OrderResponse) => {
+                        (response: LSPOrderResponse) => {
                             const order =
                                 response?.order?.result || response?.order;
                             return {
@@ -132,7 +126,10 @@ export default class OrdersPane extends React.Component<
                                 state: order?.order_state,
                                 createdAt: order?.created_at,
                                 fundedAt: order?.channel?.funded_at,
-                                lspBalanceSat: order?.lsp_balance_sat
+                                lspBalanceSat: order?.lsp_balance_sat,
+                                channel_extension_expiry_blocks:
+                                    order?.channel_extension_expiry_blocks,
+                                service: response?.service || 'LSPS1'
                             };
                         }
                     );
@@ -188,14 +185,22 @@ export default class OrdersPane extends React.Component<
 
         return (
             <TouchableOpacity
-                onPress={() =>
-                    this.props.navigation.navigate('LSPS1Order', {
-                        orderId: item.orderId,
-                        orderShouldUpdate:
-                            item?.state === 'FAILED' ||
-                            item?.state === 'COMPLETED'
-                    })
-                }
+                onPress={() => {
+                    const orderId = item.order_id || item.orderId;
+                    const orderShouldUpdate =
+                        item?.state === 'FAILED' || item?.state === 'COMPLETED';
+                    if (item.service === 'LSPS7') {
+                        this.props.navigation.navigate('LSPS7Order', {
+                            orderId,
+                            orderShouldUpdate
+                        });
+                    } else {
+                        this.props.navigation.navigate('LSPS1Order', {
+                            orderId,
+                            orderShouldUpdate
+                        });
+                    }
+                }}
                 style={{
                     padding: 15
                 }}
@@ -208,9 +213,18 @@ export default class OrdersPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {localeString('views.LSPS1.lspBalance')}
+                        {localeString('general.type')}
                     </Text>
-                    <Amount sats={item.lspBalanceSat} sensitive toggleable />
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            fontSize: 16
+                        }}
+                    >
+                        {item.service === 'LSPS7'
+                            ? localeString('views.LSPS7.type')
+                            : localeString('views.LSPS1.type')}
+                    </Text>
                 </View>
                 <View
                     style={{
@@ -226,6 +240,51 @@ export default class OrdersPane extends React.Component<
                         {item.state}
                     </Text>
                 </View>
+                {item.service === 'LSPS7' && (
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            marginBottom: 5
+                        }}
+                    >
+                        <Text
+                            style={{ color: themeColor('text'), fontSize: 16 }}
+                        >
+                            {localeString('views.LSPS7.extensionExpiryBlocks')}
+                        </Text>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontSize: 16
+                            }}
+                        >
+                            {numberWithCommas(
+                                item.channel_extension_expiry_blocks
+                            )}
+                        </Text>
+                    </View>
+                )}
+                {item.service !== 'LSPS7' && (
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            marginBottom: 5
+                        }}
+                    >
+                        <Text
+                            style={{ color: themeColor('text'), fontSize: 16 }}
+                        >
+                            {localeString('views.LSPS1.lspBalance')}
+                        </Text>
+                        <Amount
+                            sats={item.lspBalanceSat}
+                            sensitive
+                            toggleable
+                        />
+                    </View>
+                )}
                 <View
                     style={{
                         flexDirection: 'row',
@@ -303,7 +362,7 @@ export default class OrdersPane extends React.Component<
                             leftComponent="Back"
                             centerComponent={{
                                 text: `${localeString(
-                                    'views.LSPS1.lsps1Orders'
+                                    'views.LSPS1.lspOrders'
                                 )} (${orders.length})`,
                                 style: {
                                     color: themeColor('text'),

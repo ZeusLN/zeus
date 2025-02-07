@@ -3,15 +3,15 @@ import { View } from 'react-native';
 import { Body } from '../../components/text/Body';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
-import { Status } from '../../views/Channels/ChannelsPane';
+import { ExpirationStatus, Status } from '../../views/Channels/ChannelsPane';
+import { themeColor } from '../../utils/ThemeUtils';
 
-export function Tag({ status }: { status: Status }) {
-    // Garish colors to let you know you fucked up
-    const colors = { background: 'pink', dot: 'blue' };
+export function Tag({ status }: { status: Status | ExpirationStatus }) {
+    const colors = { background: '', dot: '' };
 
     // TODO: should all these colors be in the theme?
     switch (status) {
-        case Status.Good:
+        case Status.Online:
             colors.background = '#2C553D';
             colors.dot = '#46E80E';
             break;
@@ -30,6 +30,15 @@ export function Tag({ status }: { status: Status }) {
             colors.background = '#A7A9AC';
             colors.dot = '#E5E5E5';
             break;
+        case ExpirationStatus.Expiring:
+            colors.background = themeColor('warning');
+            break;
+        case ExpirationStatus.Expired:
+            colors.background = themeColor('error');
+            break;
+        case ExpirationStatus.LSPDiscretion:
+            colors.background = themeColor('warning');
+            break;
     }
 
     return (
@@ -40,20 +49,22 @@ export function Tag({ status }: { status: Status }) {
                 paddingTop: 3,
                 paddingBottom: 3,
                 backgroundColor: colors.background,
-                borderRadius: 4
+                borderRadius: 4,
+                marginLeft: 8
             }}
         >
             <Row>
-                <View
-                    style={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: 6,
-                        backgroundColor: colors.dot
-                    }}
-                />
-                <Spacer width={6} />
-                {/* TODO: localize */}
+                {colors.dot && (
+                    <View
+                        style={{
+                            width: 6,
+                            height: 6,
+                            borderRadius: 6,
+                            backgroundColor: colors.dot
+                        }}
+                    />
+                )}
+                {colors.dot && <Spacer width={6} />}
                 <Body colorOverride="white" small>
                     {status}
                 </Body>

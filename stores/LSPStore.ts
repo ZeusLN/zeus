@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,27 +21,38 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
-export const LSPS1_ORDERS_KEY = 'zeus-lsps1-orders';
+export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
+
+const CUSTOM_MESSAGE_TYPE = 37913;
+const JSON_RPC_VERSION = '2.0';
 
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
     @observable public feeId: string | undefined;
     @observable public pubkey: string;
-    @observable public getInfoId: string;
-    @observable public createOrderId: string;
-    @observable public getOrderId: string;
-    @observable public loading: boolean = true;
+    @observable public loadingLSPS1: boolean = true;
+    @observable public loadingLSPS7: boolean = true;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
+    @observable public resolvedCustomMessage: boolean;
+    // LSPS1
+    @observable public getInfoId: string;
+    @observable public createOrderId: string;
+    @observable public getOrderId: string;
     @observable public getInfoData: any = {};
     @observable public createOrderResponse: any = {};
     @observable public getOrderResponse: any = {};
-
-    @observable public resolvedCustomMessage: boolean;
+    // LSPS7
+    @observable public getExtendableOrdersId: string;
+    @observable public getExtendableOrdersData: any = [];
+    @observable public createExtensionOrderId: string;
+    @observable public createExtensionOrderResponse: any = {};
+    @observable public getExtensionOrderId: string;
+    @observable public getExtensionOrderResponse: any = {};
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -55,6 +66,18 @@ export default class LSPStore {
         this.settingsStore = settingsStore;
         this.channelsStore = channelsStore;
         this.nodeInfoStore = nodeInfoStore;
+
+        reaction(
+            () => this.channelsStore.channels,
+            () => {
+                if (
+                    this.channelsStore.channels.length !== 0 &&
+                    BackendUtils.supportsLSPScustomMessage()
+                ) {
+                    this.getExtendableChannels();
+                }
+            }
+        );
     }
 
     @action
@@ -77,7 +100,15 @@ export default class LSPStore {
     public resetLSPS1Data = () => {
         this.createOrderResponse = {};
         this.getInfoData = {};
-        this.loading = true;
+        this.loadingLSPS1 = false;
+        this.error = false;
+        this.error_msg = '';
+    };
+
+    @action
+    public resetLSPS7Data = () => {
+        this.createExtensionOrderResponse = {};
+        this.loadingLSPS7 = false;
         this.error = false;
         this.error_msg = '';
     };
@@ -90,8 +121,8 @@ export default class LSPStore {
             ? DEFAULT_LSPS1_PUBKEY_TESTNET
             : DEFAULT_LSPS1_PUBKEY_MAINNET;
         if (
-            BackendUtils.supportsLSPS1customMessage() &&
-            this.getLSPS1Pubkey() == olympusPubkey
+            BackendUtils.supportsLSPScustomMessage() &&
+            this.getLSPSPubkey() == olympusPubkey
         ) {
             return true;
         } else if (
@@ -104,17 +135,17 @@ export default class LSPStore {
         return false;
     };
 
-    getLSPHost = () =>
+    getFlowHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lspTestnet
             : this.settingsStore.settings.lspMainnet;
 
-    getLSPS1Pubkey = () =>
+    getLSPSPubkey = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1PubkeyTestnet
             : this.settingsStore.settings.lsps1PubkeyMainnet;
 
-    getLSPS1Host = () =>
+    getLSPSHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1HostTestnet
             : this.settingsStore.settings.lsps1HostMainnet;
@@ -126,12 +157,14 @@ export default class LSPStore {
 
     encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
 
+    // Flow 2.0
+
     @action
     public getLSPInfo = () => {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
-                `${this.getLSPHost()}/api/v1/info`,
+                `${this.getFlowHost()}/api/v1/info`,
                 {
                     'Content-Type': 'application/json'
                 }
@@ -191,7 +224,7 @@ export default class LSPStore {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${this.getLSPHost()}/api/v1/fee`,
+                `${this.getFlowHost()}/api/v1/fee`,
                 settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
@@ -300,7 +333,7 @@ export default class LSPStore {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
-                `${this.getLSPHost()}/api/v1/proposal`,
+                `${this.getFlowHost()}/api/v1/proposal`,
                 settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
@@ -341,6 +374,8 @@ export default class LSPStore {
         });
     };
 
+    // LSPS0
+
     @action
     public sendCustomMessage = ({
         peer,
@@ -374,33 +409,61 @@ export default class LSPStore {
         const peer = Base64Utils.base64ToHex(decoded.peer);
         const data = JSON.parse(Base64Utils.base64ToUtf8(decoded.data));
 
-        console.log('peer', peer);
-        console.log('data', data);
+        console.log('Received custom message', { peer, data });
 
         if (data.id === this.getInfoId) {
             this.getInfoData = data;
-            this.loading = false;
+            this.loadingLSPS1 = false;
         } else if (data.id === this.createOrderId) {
             if (data.error) {
                 this.error = true;
-                this.loading = false;
                 this.error_msg = data?.error?.data?.message
                     ? errorToUserFriendly(data?.error?.data?.message)
                     : '';
             } else {
                 this.createOrderResponse = data;
-                this.loading = false;
             }
+            this.loadingLSPS1 = false;
         } else if (data.id === this.getOrderId) {
             if (data.error) {
                 this.error = true;
-                this.loading = false;
                 this.error_msg = data?.error?.message
                     ? errorToUserFriendly(data?.error?.message)
                     : '';
             } else {
                 this.getOrderResponse = data;
             }
+            this.loadingLSPS1 = false;
+        } else if (data.id === this.getExtendableOrdersId) {
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.message
+                    ? errorToUserFriendly(data?.error?.message)
+                    : '';
+            } else {
+                this.getExtendableOrdersData = data?.result?.extendable_orders;
+            }
+            this.loadingLSPS7 = false;
+        } else if (data.id === this.createExtensionOrderId) {
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : '';
+            } else {
+                this.createExtensionOrderResponse = data;
+            }
+            this.loadingLSPS7 = false;
+        } else if (data.id === this.getExtensionOrderId) {
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : '';
+            } else {
+                this.getExtensionOrderResponse = data;
+            }
+            this.loadingLSPS7 = false;
         }
     };
 
@@ -413,7 +476,8 @@ export default class LSPStore {
             if (!this.resolvedCustomMessage) {
                 this.error = true;
                 this.error_msg = localeString('views.LSPS1.timeoutError');
-                this.loading = false;
+                this.loadingLSPS1 = false;
+                this.loadingLSPS7 = false;
             }
         }, timer);
 
@@ -452,8 +516,12 @@ export default class LSPStore {
         }
     };
 
+    // LSPS1
+
     @action
-    public getInfoREST = () => {
+    public lsps1GetInfoREST = () => {
+        this.loadingLSPS1 = true;
+
         const endpoint = `${this.getLSPS1Rest()}/api/v1/get_info`;
 
         console.log('Fetching data from:', endpoint);
@@ -468,22 +536,56 @@ export default class LSPStore {
                         const pubkey = uri.split('@')[0];
                         this.pubkey = pubkey;
                     } catch (e) {}
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                 } else {
                     this.error = true;
                     this.error_msg = 'Error fetching get_info data';
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                 }
             })
             .catch(() => {
                 this.error = true;
                 this.error_msg = 'Error fetching get_info data';
-                this.loading = false;
+                this.loadingLSPS1 = false;
             });
     };
 
     @action
-    public createOrderREST = (state: any) => {
+    public lsps1GetInfoCustomMessage = () => {
+        this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
+
+        this.getInfoId = uuidv4();
+        const method = 'lsps1.get_info';
+
+        this.sendCustomMessage({
+            peer: this.getLSPSPubkey(),
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {},
+                id: this.getInfoId
+            })
+        })
+            .then((response) => {
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    };
+
+    @action
+    public lsps1CreateOrderREST = (state: any) => {
+        this.loadingLSPS1 = true;
         const data = JSON.stringify({
             lsp_balance_sat: state.lspBalanceSat.toString(),
             client_balance_sat: state.clientBalanceSat.toString(),
@@ -499,7 +601,6 @@ export default class LSPStore {
             announce_channel: state.announceChannel,
             public_key: this.nodeInfoStore.nodeInfo.nodeId
         });
-        this.loading = true;
         this.error = false;
         this.error_msg = '';
         const endpoint = `${this.getLSPS1Rest()}/api/v1/create_order`;
@@ -518,10 +619,10 @@ export default class LSPStore {
                 if (responseData.error) {
                     this.error = true;
                     this.error_msg = errorToUserFriendly(responseData.message);
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                 } else {
                     this.createOrderResponse = responseData;
-                    this.loading = false;
+                    this.loadingLSPS1 = false;
                     console.log('Response received:', responseData);
                 }
             })
@@ -532,13 +633,59 @@ export default class LSPStore {
                 );
                 this.error = true;
                 this.error_msg = errorToUserFriendly(error);
-                this.loading = false;
+                this.loadingLSPS1 = false;
             });
     };
 
     @action
-    public getOrderREST(id: string, RESTHost: string) {
-        this.loading = true;
+    public lsps1CreateOrderCustomMessage = (state: any) => {
+        this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
+
+        this.createOrderId = uuidv4();
+        const method = 'lsps1.create_order';
+
+        this.sendCustomMessage({
+            peer: this.getLSPSPubkey(),
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {
+                    lsp_balance_sat: state.lspBalanceSat.toString(),
+                    client_balance_sat: state.clientBalanceSat.toString(),
+                    required_channel_confirmations: parseInt(
+                        state.requiredChannelConfirmations
+                    ),
+                    funding_confirms_within_blocks: parseInt(
+                        state.confirmsWithinBlocks
+                    ),
+                    channel_expiry_blocks: state.channelExpiryBlocks,
+                    token: state.token,
+                    refund_onchain_address: state.refundOnchainAddress,
+                    announce_channel: state.announceChannel
+                },
+                id: this.createOrderId
+            })
+        })
+            .then((response) => {
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    };
+
+    @action
+    public lsps1GetOrderREST(id: string, RESTHost: string) {
+        this.loadingLSPS1 = true;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
         console.log('Sending data to:', endpoint);
@@ -555,41 +702,149 @@ export default class LSPStore {
                 } else {
                     this.getOrderResponse = responseData;
                 }
+                this.loadingLSPS1 = false;
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
                 this.error = true;
                 this.error_msg = errorToUserFriendly(error);
-                this.loading = false;
+                this.loadingLSPS1 = false;
             });
     }
 
     @action
-    public getOrderCustomMessage(orderId: string, peer: string) {
-        console.log('Requesting LSPS1...');
-        this.loading = true;
-        const type = 37913;
-        const id = uuidv4();
-        this.getOrderId = id;
-        const data = this.encodeMesage({
-            jsonrpc: '2.0',
-            method: 'lsps1.get_order',
-            params: {
-                order_id: orderId
-            },
-            id: this.getOrderId
-        });
+    public lsps1GetOrderCustomMessage(orderId: string, peer: string) {
+        this.loadingLSPS1 = true;
+
+        this.getOrderId = uuidv4();
+        const method = 'lsps1.get_order';
 
         this.sendCustomMessage({
             peer,
-            type,
-            data
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {
+                    order_id: orderId
+                },
+                id: this.getOrderId
+            })
         })
             .then((response) => {
-                console.log('Custom message sent:', response);
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
             })
             .catch((error) => {
-                console.error('Error sending custom message:', error);
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    }
+
+    // LSPS7
+
+    @action
+    public getExtendableChannels = () => {
+        this.error = false;
+        this.error_msg = '';
+
+        this.getExtendableOrdersId = uuidv4();
+        const method = 'lsps7.get_extendable_channels';
+
+        this.sendCustomMessage({
+            peer: this.getLSPSPubkey(),
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {},
+                id: this.getExtendableOrdersId
+            })
+        })
+            .then((response) => {
+                console.log(`Custom message (${method}) sent:`, response);
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    };
+
+    @action
+    public lsps7CreateOrderCustomMessage = (state: any) => {
+        this.loadingLSPS7 = true;
+        this.error = false;
+        this.error_msg = '';
+
+        this.createExtensionOrderId = uuidv4();
+        const method = 'lsps7.create_order';
+
+        this.sendCustomMessage({
+            peer: this.getLSPSPubkey(),
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {
+                    short_channel_id: state.chanId,
+                    channel_extension_expiry_blocks:
+                        state.channelExtensionBlocks,
+                    token: state.token,
+                    refund_onchain_address: state.refundOnchainAddress
+                },
+                id: this.createExtensionOrderId
+            })
+        })
+            .then((response) => {
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
+            });
+    };
+
+    @action
+    public lsps7GetOrderCustomMessage(orderId: string, peer: string) {
+        this.loadingLSPS7 = true;
+
+        this.getExtensionOrderId = uuidv4();
+        const method = 'lsps7.get_order';
+
+        this.sendCustomMessage({
+            peer,
+            type: CUSTOM_MESSAGE_TYPE,
+            data: this.encodeMesage({
+                jsonrpc: JSON_RPC_VERSION,
+                method,
+                params: {
+                    order_id: orderId
+                },
+                id: this.getExtensionOrderId
+            })
+        })
+            .then((response) => {
+                console.log(
+                    `Response for custom message (${method}) received:`,
+                    response
+                );
+            })
+            .catch((error) => {
+                console.error(
+                    `Error sending (${method}) custom message:`,
+                    error
+                );
             });
     }
 }

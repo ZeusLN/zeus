@@ -202,7 +202,7 @@ export default class LightningAddress extends React.Component<
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
         const supportsLSPS1 =
-            BackendUtils.supportsLSPS1customMessage() ||
+            BackendUtils.supportsLSPScustomMessage() ||
             BackendUtils.supportsLSPS1rest();
 
         const InfoButton = () => (
