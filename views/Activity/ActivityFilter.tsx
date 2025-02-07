@@ -351,7 +351,9 @@ export default class ActivityFilter extends React.Component<
                                         <View style={{ flex: 1 }}>
                                             <TextInput
                                                 keyboardType="numeric"
-                                                placeholder="No limit"
+                                                placeholder={localeString(
+                                                    'views.ActivityFilter.maximumAmountPlaceHolder'
+                                                )}
                                                 value={
                                                     item.value === undefined
                                                         ? ''
@@ -412,7 +414,9 @@ export default class ActivityFilter extends React.Component<
                                     {item.type === 'TextInput' && (
                                         <View style={{ flex: 1 }}>
                                             <TextInput
-                                                placeholder="Enter Memo/Note"
+                                                placeholder={localeString(
+                                                    'views.ActivityFilter.memoPlaceHolder'
+                                                )}
                                                 value={item.value}
                                                 onChangeText={async (
                                                     text: string
