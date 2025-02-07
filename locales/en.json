@@ -1047,7 +1047,7 @@
     "views.Sync.currentBlockHeight": "Current block height",
     "views.Sync.tip": "Tip",
     "views.Sync.numBlocksUntilSynced": "Number of blocks until synced",
-    "views.LSPS1.type": "In advance channel purchase",
+    "views.LSPS1.type": "Channel lease purchase",
     "views.LSPS1.pubkeyAndHostNotFound": "Node pubkey and host are not set",
     "views.SyncRecovery.title": "Recovering wallet",
     "views.LSPS1.timeoutError": "Did not receive response from server",
