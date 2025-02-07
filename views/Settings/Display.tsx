@@ -99,7 +99,7 @@ export default class Display extends React.Component<
             showMillisatoshiAmounts,
             selectNodeOnStartup
         } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { settings, updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -127,13 +127,8 @@ export default class Display extends React.Component<
                             });
                             await updateSettings({
                                 display: {
-                                    theme: value,
-                                    displayNickname,
-                                    bigKeypadButtons,
-                                    defaultView,
-                                    showAllDecimalPlaces,
-                                    removeDecimalSpaces,
-                                    showMillisatoshiAmounts
+                                    ...settings.display,
+                                    theme: value
                                 }
                             });
                             SystemNavigationBar.setNavigationColor(
@@ -158,13 +153,8 @@ export default class Display extends React.Component<
                             });
                             await updateSettings({
                                 display: {
-                                    defaultView: value,
-                                    displayNickname,
-                                    bigKeypadButtons,
-                                    theme,
-                                    showAllDecimalPlaces,
-                                    removeDecimalSpaces,
-                                    showMillisatoshiAmounts
+                                    ...settings.display,
+                                    defaultView: value
                                 }
                             });
                         }}
@@ -194,13 +184,8 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            bigKeypadButtons,
-                                            displayNickname: !displayNickname,
-                                            showAllDecimalPlaces,
-                                            removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                            ...settings.display,
+                                            displayNickname: !displayNickname
                                         }
                                     });
                                 }}
@@ -231,13 +216,8 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons: !bigKeypadButtons,
-                                            showAllDecimalPlaces,
-                                            removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                            ...settings.display,
+                                            bigKeypadButtons: !bigKeypadButtons
                                         }
                                     });
                                 }}
@@ -269,14 +249,9 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons,
+                                            ...settings.display,
                                             showAllDecimalPlaces:
-                                                !showAllDecimalPlaces,
-                                            removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                                !showAllDecimalPlaces
                                         }
                                     });
                                 }}
@@ -308,14 +283,9 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons,
-                                            showAllDecimalPlaces,
+                                            ...settings.display,
                                             removeDecimalSpaces:
-                                                !removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                                !removeDecimalSpaces
                                         }
                                     });
                                 }}
@@ -347,12 +317,7 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons,
-                                            showAllDecimalPlaces,
-                                            removeDecimalSpaces,
+                                            ...settings.display,
                                             showMillisatoshiAmounts:
                                                 !showMillisatoshiAmounts
                                         }
