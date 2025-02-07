@@ -96,6 +96,7 @@ import {
 } from './wallet';
 import { status, modifyStatus, queryScores, setScores } from './autopilot';
 import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjoberg): This could be its own injection "LndMobileScheduledSync"
+import { sweepRemoteClosed } from './chantools';
 import {
     lnrpc,
     signrpc,
@@ -473,6 +474,18 @@ export interface ILndMobileInjections {
     scheduledSync: {
         checkScheduledSyncWorkStatus: () => Promise<WorkInfo>;
     };
+    chantools: {
+        sweepRemoteClosed: (
+            seed: string,
+            apiUrl: string,
+            sweepAddr: string,
+            recoveryWindow: number,
+            feeRate: number,
+            sleepSeconds: number,
+            publish: boolean,
+            isTestNet: boolean
+        ) => Promise<string>;
+    };
 }
 
 // @ts-ignore:next-line
@@ -579,5 +592,8 @@ export default {
     },
     scheduledSync: {
         checkScheduledSyncWorkStatus
+    },
+    chantools: {
+        sweepRemoteClosed
     }
 } as ILndMobileInjections;
