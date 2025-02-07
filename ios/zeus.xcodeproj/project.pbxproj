@@ -62,6 +62,7 @@
 		3F27B2AEC00B42F18A4CF173 /* zeus-illustration-2a.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 24096E86BD2D4234A2A6CF8B /* zeus-illustration-2a.jpg */; };
 		3F8350397EF648A19AB90BC5 /* MailboxFlagDown.svg in Resources */ = {isa = PBXBuildFile; fileRef = A2CD93C2F46A45DC8987CBF8 /* MailboxFlagDown.svg */; };
 		41B122855F004201ADD12DD5 /* Hourglass.svg in Resources */ = {isa = PBXBuildFile; fileRef = B4D00602022C4AE1BFA1A2C1 /* Hourglass.svg */; };
+		4983F905D5584DEE9306C67C /* DroidSansMono Apache License.txt in Resources */ = {isa = PBXBuildFile; fileRef = 3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */; };
 		4A9A9C2189D54ED78D4029E2 /* Wrench.svg in Resources */ = {isa = PBXBuildFile; fileRef = C18B7331C6704C59A8BB7DCA /* Wrench.svg */; };
 		4C6F91D982594013B7386FB0 /* z-icon-black.svg in Resources */ = {isa = PBXBuildFile; fileRef = F1A8538F290E4FDEAA97DB02 /* z-icon-black.svg */; };
 		4EE81C6E19444556B31C4756 /* splash.png in Resources */ = {isa = PBXBuildFile; fileRef = 107D5D19C89849838D993B6C /* splash.png */; };
@@ -103,6 +104,7 @@
 		745E06AA295CB0E500597EE8 /* Caret Down.svg in Resources */ = {isa = PBXBuildFile; fileRef = 745E06A9295CB0E500597EE8 /* Caret Down.svg */; };
 		74668A582AE3CBB90023695A /* Marlide-Display-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A562AE3CBB90023695A /* Marlide-Display-Bold.ttf */; };
 		74668A592AE3CBB90023695A /* Marlide-Display.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A572AE3CBB90023695A /* Marlide-Display.ttf */; };
+		749E81B02D55D70800A2A7C0 /* DroidSansMono.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 749E81AF2D55D70800A2A7C0 /* DroidSansMono.ttf */; };
 		74B637822A5A350B00750202 /* LncModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B637792A5A350A00750202 /* LncModule.mm */; };
 		74B637832A5A350B00750202 /* StreamingCallback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377A2A5A350A00750202 /* StreamingCallback.mm */; };
 		74B637842A5A350B00750202 /* Callback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377C2A5A350A00750202 /* Callback.mm */; };
@@ -448,6 +450,7 @@
 		3CF3D28EF4DE5068AD876EAB /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = zeus/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		3D193586DE804DF89F2C9EC4 /* Leaving.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Leaving.svg; path = ../assets/images/SVG/Leaving.svg; sourceTree = "<group>"; };
 		3D59A2AA7B0142ACBD9EA7D6 /* Select On.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Select On.svg"; path = "../assets/images/SVG/Select On.svg"; sourceTree = "<group>"; };
+		3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "DroidSansMono Apache License.txt"; path = "../assets/fonts/DroidSansMono Apache License.txt"; sourceTree = "<group>"; };
 		40F4A5039C1D4227B0638700 /* columns.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = columns.json; path = ../assets/images/Lottie/columns.json; sourceTree = "<group>"; };
 		437DCF69B6CF4C98AD8655B8 /* hyper.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = hyper.jpg; path = ../assets/images/hyper.jpg; sourceTree = "<group>"; };
 		4473313D956D45C09134B919 /* Stopwatch.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Stopwatch.svg; path = ../assets/images/SVG/Stopwatch.svg; sourceTree = "<group>"; };
@@ -507,6 +510,7 @@
 		74668A572AE3CBB90023695A /* Marlide-Display.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = "Marlide-Display.ttf"; path = "../assets/fonts/Marlide-Display.ttf"; sourceTree = "<group>"; };
 		748C27FFB1334BE0942F2811 /* payment-sent-bounce.json */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "payment-sent-bounce.json"; path = "../assets/images/Lottie/payment-sent-bounce.json"; sourceTree = "<group>"; };
 		748C86FB5D4F4CB0B3F9FF0C /* Key.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Key.svg; path = ../assets/images/SVG/Key.svg; sourceTree = "<group>"; };
+		749E81AF2D55D70800A2A7C0 /* DroidSansMono.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = DroidSansMono.ttf; path = ../assets/fonts/DroidSansMono.ttf; sourceTree = SOURCE_ROOT; };
 		74A116702A55DEE600F7078C /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		74B637792A5A350A00750202 /* LncModule.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LncModule.mm; sourceTree = "<group>"; };
 		74B6377A2A5A350A00750202 /* StreamingCallback.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StreamingCallback.mm; sourceTree = "<group>"; };
@@ -951,6 +955,7 @@
 				74C5F9772D5311BC003840C4 /* PPNeueMontreal-Bold.otf */,
 				74C5F9782D5311BC003840C4 /* PPNeueMontreal-Book.otf */,
 				74C5F9792D5311BC003840C4 /* PPNeueMontreal-Medium.otf */,
+				749E81AF2D55D70800A2A7C0 /* DroidSansMono.ttf */,
 			);
 			name = Fonts;
 			path = "../node_modules/react-native-vector-icons/Fonts";
@@ -1145,6 +1150,7 @@
 				2E486A0626B94C35A6D89D3F /* zeus-illustration-6b.jpg */,
 				C393457FE2A142E5A62D8FC7 /* zeus-illustration-7a.jpg */,
 				DFF1D2DEE7664CDFBF9491AB /* zeus-illustration-7b.jpg */,
+				3F7B4CF939F548A09B5B64C9 /* DroidSansMono Apache License.txt */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -1654,6 +1660,7 @@
 				5722C18075C14AB294BA9AF2 /* pay-z-black.png in Resources */,
 				AB5FA5F2F8004F38A35818D3 /* pay-z-white.png in Resources */,
 				1A6AA189E83E4DCC8842AAAF /* zeus-illustration-1a.jpg in Resources */,
+				749E81B02D55D70800A2A7C0 /* DroidSansMono.ttf in Resources */,
 				7682ABAE72B940CE8DA4BD4F /* zeus-illustration-1b.jpg in Resources */,
 				3F27B2AEC00B42F18A4CF173 /* zeus-illustration-2a.jpg in Resources */,
 				5C6DCB3E504C45498A83D589 /* zeus-illustration-2b.jpg in Resources */,
@@ -1667,6 +1674,7 @@
 				26B4545A849B455FA3E7156B /* zeus-illustration-6b.jpg in Resources */,
 				9F5466FFEE6147BD8D2F2C36 /* zeus-illustration-7a.jpg in Resources */,
 				151EEBAD78204306A3787D93 /* zeus-illustration-7b.jpg in Resources */,
+				4983F905D5584DEE9306C67C /* DroidSansMono Apache License.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
