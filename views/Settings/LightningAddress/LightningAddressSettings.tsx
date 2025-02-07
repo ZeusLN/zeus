@@ -85,12 +85,10 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAcceptAttestationLevel,
             routeHints,
             allowComments,
-            nostrPrivateKey,
             nostrRelays,
             notifications
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
-        const enabled = settings?.lightningAddress?.enabled;
         const { loading, update, error_msg } = LightningAddressStore;
 
         return (
@@ -151,17 +149,9 @@ export default class LightningAddressSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             lightningAddress: {
-                                                enabled,
+                                                ...settings.lightningAddress,
                                                 automaticallyAccept:
-                                                    !automaticallyAccept,
-                                                automaticallyAcceptAttestationLevel,
-                                                automaticallyRequestOlympusChannels:
-                                                    false, // deprecated
-                                                routeHints,
-                                                allowComments,
-                                                nostrPrivateKey,
-                                                nostrRelays,
-                                                notifications
+                                                    !automaticallyAccept
                                             }
                                         });
                                     }}
@@ -183,17 +173,9 @@ export default class LightningAddressSettings extends React.Component<
                                     });
                                     await updateSettings({
                                         lightningAddress: {
-                                            enabled,
-                                            automaticallyAccept,
+                                            ...settings.lightningAddress,
                                             automaticallyAcceptAttestationLevel:
-                                                value,
-                                            automaticallyRequestOlympusChannels:
-                                                false, // deprecated
-                                            routeHints,
-                                            allowComments,
-                                            nostrPrivateKey,
-                                            nostrRelays,
-                                            notifications
+                                                value
                                         }
                                     });
                                 }}
@@ -237,16 +219,8 @@ export default class LightningAddressSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             lightningAddress: {
-                                                enabled,
-                                                automaticallyAccept,
-                                                automaticallyAcceptAttestationLevel,
-                                                automaticallyRequestOlympusChannels:
-                                                    false, // deprecated
-                                                routeHints: !routeHints,
-                                                allowComments,
-                                                nostrPrivateKey,
-                                                nostrRelays,
-                                                notifications
+                                                ...settings.lightningAddress,
+                                                routeHints: !routeHints
                                             }
                                         });
                                     }}
@@ -288,17 +262,9 @@ export default class LightningAddressSettings extends React.Component<
                                                 });
                                                 await updateSettings({
                                                     lightningAddress: {
-                                                        enabled,
-                                                        automaticallyAccept,
-                                                        automaticallyAcceptAttestationLevel,
-                                                        automaticallyRequestOlympusChannels:
-                                                            false, // deprecated
-                                                        routeHints,
+                                                        ...settings.lightningAddress,
                                                         allowComments:
-                                                            !allowComments,
-                                                        nostrPrivateKey,
-                                                        nostrRelays,
-                                                        notifications
+                                                            !allowComments
                                                     }
                                                 });
                                             });
@@ -323,15 +289,7 @@ export default class LightningAddressSettings extends React.Component<
                                             });
                                             await updateSettings({
                                                 lightningAddress: {
-                                                    enabled,
-                                                    automaticallyAccept,
-                                                    automaticallyAcceptAttestationLevel,
-                                                    automaticallyRequestOlympusChannels:
-                                                        false, // deprecated
-                                                    routeHints,
-                                                    allowComments,
-                                                    nostrPrivateKey,
-                                                    nostrRelays,
+                                                    ...settings.lightningAddress,
                                                     notifications: value
                                                 }
                                             });

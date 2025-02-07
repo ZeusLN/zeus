@@ -185,17 +185,8 @@ export default class PointOfSale extends React.Component<
                                 }
                                 await updateSettings({
                                     pos: {
-                                        posEnabled: value,
-                                        squareAccessToken,
-                                        squareLocationId,
-                                        merchantName,
-                                        confirmationPreference,
-                                        disableTips,
-                                        squareDevMode,
-                                        showKeypad,
-                                        taxPercentage,
-                                        enablePrinter,
-                                        defaultView
+                                        ...settings.pos,
+                                        posEnabled: value
                                     }
                                 });
                             }}
@@ -223,17 +214,8 @@ export default class PointOfSale extends React.Component<
 
                                         await updateSettings({
                                             pos: {
-                                                posEnabled,
-                                                squareAccessToken: text,
-                                                squareLocationId,
-                                                merchantName,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode,
-                                                showKeypad,
-                                                taxPercentage,
-                                                enablePrinter,
-                                                defaultView
+                                                ...settings.pos,
+                                                squareAccessToken: text
                                             }
                                         });
                                     }}
@@ -258,17 +240,8 @@ export default class PointOfSale extends React.Component<
 
                                         await updateSettings({
                                             pos: {
-                                                posEnabled,
-                                                squareAccessToken,
-                                                squareLocationId: text,
-                                                merchantName,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode,
-                                                showKeypad,
-                                                taxPercentage,
-                                                enablePrinter,
-                                                defaultView
+                                                ...settings.pos,
+                                                squareLocationId: text
                                             }
                                         });
                                     }}
@@ -307,18 +280,9 @@ export default class PointOfSale extends React.Component<
                                                 });
                                                 await updateSettings({
                                                     pos: {
-                                                        squareAccessToken,
-                                                        squareLocationId,
-                                                        posEnabled,
-                                                        merchantName,
-                                                        confirmationPreference,
-                                                        disableTips,
+                                                        ...settings.pos,
                                                         squareDevMode:
-                                                            !squareDevMode,
-                                                        showKeypad,
-                                                        taxPercentage,
-                                                        enablePrinter,
-                                                        defaultView
+                                                            !squareDevMode
                                                     }
                                                 });
                                             }}
@@ -349,17 +313,8 @@ export default class PointOfSale extends React.Component<
 
                                         await updateSettings({
                                             pos: {
-                                                posEnabled,
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName: text,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode,
-                                                showKeypad,
-                                                taxPercentage,
-                                                enablePrinter,
-                                                defaultView
+                                                ...settings.pos,
+                                                merchantName: text
                                             }
                                         });
                                     }}
@@ -375,16 +330,8 @@ export default class PointOfSale extends React.Component<
                                         });
                                         await updateSettings({
                                             pos: {
-                                                posEnabled,
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName,
-                                                confirmationPreference: value,
-                                                disableTips,
-                                                squareDevMode,
-                                                showKeypad,
-                                                taxPercentage,
-                                                defaultView
+                                                ...settings.pos,
+                                                confirmationPreference: value
                                             }
                                         });
                                     }}
@@ -404,15 +351,7 @@ export default class PointOfSale extends React.Component<
                                             });
                                             await updateSettings({
                                                 pos: {
-                                                    posEnabled,
-                                                    squareAccessToken,
-                                                    squareLocationId,
-                                                    merchantName,
-                                                    confirmationPreference,
-                                                    disableTips,
-                                                    squareDevMode,
-                                                    showKeypad,
-                                                    taxPercentage,
+                                                    ...settings.pos,
                                                     defaultView: value
                                                 }
                                             });
@@ -453,18 +392,9 @@ export default class PointOfSale extends React.Component<
                                                 });
                                                 await updateSettings({
                                                     pos: {
-                                                        squareAccessToken,
-                                                        squareLocationId,
-                                                        posEnabled,
-                                                        merchantName,
-                                                        confirmationPreference,
+                                                        ...settings.pos,
                                                         disableTips:
-                                                            !disableTips,
-                                                        squareDevMode,
-                                                        showKeypad,
-                                                        taxPercentage,
-                                                        enablePrinter,
-                                                        defaultView
+                                                            !disableTips
                                                     }
                                                 });
                                             }}
@@ -509,18 +439,9 @@ export default class PointOfSale extends React.Component<
                                                     });
                                                     await updateSettings({
                                                         pos: {
-                                                            squareAccessToken,
-                                                            squareLocationId,
-                                                            posEnabled,
-                                                            merchantName,
-                                                            confirmationPreference,
-                                                            disableTips,
-                                                            squareDevMode,
-                                                            showKeypad,
-                                                            taxPercentage,
+                                                            ...settings.pos,
                                                             enablePrinter:
-                                                                !enablePrinter,
-                                                            defaultView
+                                                                !enablePrinter
                                                         }
                                                     });
                                                 }}
@@ -565,16 +486,8 @@ export default class PointOfSale extends React.Component<
                                                 });
                                                 await updateSettings({
                                                     pos: {
-                                                        squareAccessToken,
-                                                        squareLocationId,
-                                                        posEnabled,
-                                                        merchantName,
-                                                        confirmationPreference,
-                                                        disableTips,
-                                                        squareDevMode,
-                                                        taxPercentage,
-                                                        showKeypad: !showKeypad,
-                                                        defaultView
+                                                        ...settings.pos,
+                                                        showKeypad: !showKeypad
                                                     }
                                                 });
                                             }}
@@ -602,16 +515,8 @@ export default class PointOfSale extends React.Component<
 
                                         await updateSettings({
                                             pos: {
-                                                posEnabled,
-                                                squareAccessToken,
-                                                squareLocationId,
-                                                merchantName,
-                                                confirmationPreference,
-                                                disableTips,
-                                                squareDevMode,
-                                                taxPercentage: text,
-                                                showKeypad,
-                                                defaultView
+                                                ...settings.pos,
+                                                taxPercentage: text
                                             }
                                         });
                                     }}

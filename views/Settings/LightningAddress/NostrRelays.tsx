@@ -77,13 +77,7 @@ export default class NostrRelays extends React.Component<
         const { relays, addRelay, setup } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { lightningAddress } = settings;
-        const {
-            enabled,
-            automaticallyAccept,
-            allowComments,
-            nostrPrivateKey,
-            notifications
-        } = lightningAddress;
+        const { nostrPrivateKey } = lightningAddress;
         const { update, loading, error_msg } = LightningAddressStore;
 
         return (
@@ -208,15 +202,9 @@ export default class NostrRelays extends React.Component<
                                                         });
                                                         await updateSettings({
                                                             lightningAddress: {
-                                                                enabled,
-                                                                automaticallyAccept,
-                                                                automaticallyRequestOlympusChannels:
-                                                                    false, // deprecated
-                                                                allowComments,
-                                                                nostrPrivateKey,
+                                                                ...settings.lightningAddress,
                                                                 nostrRelays:
-                                                                    newNostrRelays,
-                                                                notifications
+                                                                    newNostrRelays
                                                             }
                                                         });
                                                     });
@@ -300,15 +288,8 @@ export default class NostrRelays extends React.Component<
                                                                             {
                                                                                 lightningAddress:
                                                                                     {
-                                                                                        enabled,
-                                                                                        automaticallyAccept,
-                                                                                        automaticallyRequestOlympusChannels:
-                                                                                            false, // deprecated
-                                                                                        allowComments,
-                                                                                        nostrPrivateKey,
-                                                                                        nostrRelays:
-                                                                                            newNostrRelays,
-                                                                                        notifications
+                                                                                        ...settings.lightningAddress,
+                                                                                        relays: newNostrRelays
                                                                                     }
                                                                             }
                                                                         );
