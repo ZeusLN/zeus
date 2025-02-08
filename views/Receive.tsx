@@ -1149,7 +1149,7 @@ export default class Receive extends React.Component<
         const { lightningAddress } = LightningAddressStore;
         const lightningAddressLoading = LightningAddressStore.loading;
 
-        const error_msg = LSPStore.error_msg || InvoicesStore.error_msg;
+        const error_msg = LSPStore.flow_error_msg || InvoicesStore.error_msg;
 
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;

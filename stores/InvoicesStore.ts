@@ -324,7 +324,7 @@ export default class InvoicesStore {
             }
         }
 
-        if (this.lspStore.error) {
+        if (this.lspStore.flow_error) {
             this.creatingInvoice = false;
             return;
         }

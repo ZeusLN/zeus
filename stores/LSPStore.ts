@@ -35,6 +35,8 @@ export default class LSPStore {
     @observable public loadingLSPS7: boolean = true;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
+    @observable public flow_error: boolean = false;
+    @observable public flow_error_msg: string = '';
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
@@ -86,6 +88,8 @@ export default class LSPStore {
         this.resetFee();
         this.error = false;
         this.error_msg = '';
+        this.flow_error = false;
+        this.flow_error_msg = '';
         this.showLspSettings = false;
         this.channelAcceptor = undefined;
         this.customMessagesSubscriber = undefined;
@@ -193,8 +197,8 @@ export default class LSPStore {
                             );
                         } catch (e) {}
                     } else {
-                        this.error = true;
-                        this.error_msg = errorToUserFriendly(data.message);
+                        this.flow_error = true;
+                        this.flow_error_msg = errorToUserFriendly(data.message);
                         // handle LSP geoblocking :(
                         if (
                             this.error_msg.includes(
@@ -207,8 +211,8 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    this.error = true;
-                    this.error_msg = localeString(
+                    this.flow_error = true;
+                    this.flow_error_msg = localeString(
                         'stores.LSPStore.connectionError'
                     );
                     this.showLspSettings = true;
@@ -251,15 +255,15 @@ export default class LSPStore {
                                   )
                                 : undefined;
                         this.feeId = data.id;
-                        this.error = false;
+                        this.flow_error = false;
                         resolve(this.zeroConfFee);
                     } else {
-                        this.error = true;
+                        this.flow_error = true;
                         reject();
                     }
                 })
                 .catch(() => {
-                    this.error = true;
+                    this.flow_error = true;
                     reject();
                 });
         });
@@ -324,8 +328,8 @@ export default class LSPStore {
 
     @action
     public getZeroConfInvoice = (bolt11: string) => {
-        this.error = false;
-        this.error_msg = '';
+        this.flow_error = false;
+        this.flow_error_msg = '';
         this.showLspSettings = false;
 
         const { settings } = this.settingsStore;
@@ -354,8 +358,8 @@ export default class LSPStore {
                     if (status == 200 || status == 201) {
                         resolve(data.jit_bolt11);
                     } else {
-                        this.error = true;
-                        this.error_msg = `${localeString(
+                        this.flow_error = true;
+                        this.flow_error_msg = `${localeString(
                             'stores.LSPStore.error'
                         )}: ${data.message}`;
                         if (
@@ -368,7 +372,7 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    this.error = true;
+                    this.flow_error = true;
                     reject();
                 });
         });
