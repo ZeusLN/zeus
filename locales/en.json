@@ -1013,7 +1013,6 @@
     "views.ActivityFilter.lightningPayments": "Lightning payments",
     "views.ActivityFilter.onChainPayments": "On-chain payments",
     "views.ActivityFilter.minimumAmount": "Minimum Amount (sats)",
-    "views.ActivityFilter.minimumAmountPlaceHolder":"0",
     "views.ActivityFilter.maximumAmount": "Maximum Amount (sats)",
     "views.ActivityFilter.maximumAmountPlaceHolder":"No limit",
     "views.ActivityFilter.memo": "Memo/Note",
