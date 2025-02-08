@@ -351,11 +351,21 @@ export default class ActivityFilter extends React.Component<
                                         <View style={{ flex: 1 }}>
                                             <TextInput
                                                 keyboardType="numeric"
-                                                placeholder={localeString(
-                                                    'views.ActivityFilter.maximumAmountPlaceHolder'
-                                                )}
+                                                placeholder={
+                                                    item.label ===
+                                                    localeString(
+                                                        'views.ActivityFilter.minimumAmount'
+                                                    )
+                                                        ? localeString(
+                                                              'views.ActivityFilter.minimumAmountPlaceHolder'
+                                                          )
+                                                        : localeString(
+                                                              'views.ActivityFilter.maximumAmountPlaceHolder'
+                                                          )
+                                                }
                                                 value={
-                                                    item.value === undefined
+                                                    item.value === undefined ||
+                                                    item.value === 0
                                                         ? ''
                                                         : String(item.value)
                                                 }
