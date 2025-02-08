@@ -356,9 +356,7 @@ export default class ActivityFilter extends React.Component<
                                                     localeString(
                                                         'views.ActivityFilter.minimumAmount'
                                                     )
-                                                        ? localeString(
-                                                              'views.ActivityFilter.minimumAmountPlaceHolder'
-                                                          )
+                                                        ? '0'
                                                         : localeString(
                                                               'views.ActivityFilter.maximumAmountPlaceHolder'
                                                           )
