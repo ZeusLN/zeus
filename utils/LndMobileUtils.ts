@@ -197,22 +197,15 @@ const writeLndConfig = async (
 export async function expressGraphSync() {
     return await new Promise(async (resolve) => {
         stores.syncStore.setExpressGraphSyncStatus(true);
-
         const start = new Date();
 
-        const timer = setInterval(async () => {
-            console.log('Express graph sync is running...');
-            // Check if the cancellation token is set
-            if (!stores.syncStore.isInExpressGraphSync) {
-                clearInterval(timer);
-                // call cancellation to LND here
-                console.log('Express graph sync cancelling...');
-                cancelGossipSync();
-
-                console.log('Express graph sync cancelled...');
-                resolve(true);
-            }
-        }, 1000);
+        stores.syncStore.waitForExpressGraphSyncEnd().then(() => {
+            // call cancellation to LND here
+            console.log('Express graph sync cancelling...');
+            cancelGossipSync();
+            console.log('Express graph sync cancelled...');
+            resolve(true);
+        });
 
         if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
             log.d('Clearing speedloader files');
@@ -231,8 +224,6 @@ export async function expressGraphSync() {
                     : stores.settingsStore?.settings?.speedloader ||
                           DEFAULT_SPEEDLOADER
             );
-
-            clearInterval(timer);
 
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
