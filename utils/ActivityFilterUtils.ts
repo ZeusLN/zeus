@@ -140,9 +140,18 @@ class ActivityFilterUtils {
             const memoFilter = filter.memo.trim().toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
+                let note = activity.getNote
+                    ? activity.getNote.toLowerCase()
+                    : '';
                 let memo = '';
-                memo = activity.getNote ? activity.getNote.toLowerCase() : '';
-                return memo.includes(memoFilter);
+                if (activity instanceof Invoice) {
+                    memo = activity.memo ? activity.memo.toLowerCase() : '';
+                } else if (activity instanceof Payment) {
+                    memo = activity.getMemo
+                        ? activity.getMemo.toLowerCase()
+                        : '';
+                }
+                return note.includes(memoFilter) || memo.includes(memoFilter);
             });
         }
 
