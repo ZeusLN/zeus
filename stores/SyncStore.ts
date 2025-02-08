@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, when } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import BackendUtils from '../utils/BackendUtils';
@@ -35,6 +35,10 @@ export default class SyncStore {
 
     setExpressGraphSyncStatus = (syncing: boolean) => {
         this.isInExpressGraphSync = syncing;
+    };
+
+    public waitForExpressGraphSyncEnd = () => {
+        return when(() => !this.isInExpressGraphSync);
     };
 
     setSyncInfo = async () => {
