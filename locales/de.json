@@ -1264,6 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Fehler beim Abrufen der Offer",
     "views.Settings.Bolt12Address.error.handleTaken": "Nutzername ist schon vergeben",
     "views.Settings.Bolt12Address.error.failedToCreate": "Fehler beim Erstellen der Adresse",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
     "view.Settings.LSPServicesList.title": "LSP-Services",
     "view.Settings.LSPServicesList.flow2": "Just-in-Time-Kanäle",
     "view.Settings.LSPServicesList.lsps1": "Kanäle im Voraus anfordern",
