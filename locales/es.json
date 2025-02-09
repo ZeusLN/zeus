@@ -1264,6 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "No se pudo obtener la oferta",
     "views.Settings.Bolt12Address.error.handleTaken": "Este mango esta tomado",
     "views.Settings.Bolt12Address.error.failedToCreate": "No se pudo crear la dirección",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
     "view.Settings.LSPServicesList.title": "Servicios LSP",
     "view.Settings.LSPServicesList.flow2": "Canales justo a tiempo",
     "view.Settings.LSPServicesList.lsps1": "Solicitar canales con antelación",

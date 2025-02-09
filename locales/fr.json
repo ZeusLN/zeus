@@ -1264,6 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Impossible d'obtenir l'offre",
     "views.Settings.Bolt12Address.error.handleTaken": "La poignée est prise",
     "views.Settings.Bolt12Address.error.failedToCreate": "Échec de la création de l'adresse",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
     "view.Settings.LSPServicesList.title": "Services LSP",
     "view.Settings.LSPServicesList.flow2": "Canaux juste à temps",
     "view.Settings.LSPServicesList.lsps1": "Demander des chaînes à l'avance",

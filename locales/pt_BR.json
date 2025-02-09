@@ -1264,6 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Falha ao receber oferta",
     "views.Settings.Bolt12Address.error.handleTaken": "Seu identificador é levado",
     "views.Settings.Bolt12Address.error.failedToCreate": "Falha ao criar endereço",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
     "view.Settings.LSPServicesList.title": "Serviços LSP",
     "view.Settings.LSPServicesList.flow2": "Canais just-in-time",
     "view.Settings.LSPServicesList.lsps1": "Solicite canais com antecedência",
