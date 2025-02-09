@@ -335,7 +335,7 @@ export default class WalletConfiguration extends React.Component<
                 interfaceKeys = interfaceKeys.filter(
                     (item) => item.value !== 'embedded-lnd'
                 );
-                if (!adminMacaroon) {
+                if (!adminMacaroon && implementation === 'embedded-lnd') {
                     this.setState({
                         implementation: 'lnd'
                     });
