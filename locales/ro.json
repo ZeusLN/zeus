@@ -1264,6 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Nu s-a putut obține oferta",
     "views.Settings.Bolt12Address.error.handleTaken": "Aliasul este luat",
     "views.Settings.Bolt12Address.error.failedToCreate": "Nu s-a putut crea adresa",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
     "view.Settings.LSPServicesList.title": "Servicii LSP",
     "view.Settings.LSPServicesList.flow2": "Canale la timp",
     "view.Settings.LSPServicesList.lsps1": "Solicitați canalele în avans",
