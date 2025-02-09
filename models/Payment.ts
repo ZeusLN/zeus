@@ -44,6 +44,10 @@ export default class Payment extends BaseModel {
     bolt11?: string;
     htlcs?: Array<any>;
     nodes?: any;
+    // NWC
+    amount?: number;
+    fees_paid?: number;
+    invoice?: string;
 
     constructor(data?: any, nodes?: any) {
         super(data);
@@ -62,7 +66,7 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getPaymentRequest(): string | undefined {
-        return this.payment_request || this.bolt11;
+        return this.payment_request || this.bolt11 || this.invoice;
     }
 
     @computed public get getDestination(): string | undefined {
@@ -199,6 +203,7 @@ export default class Payment extends BaseModel {
                   this.value ||
                   Number(this.msatoshi_sent) / 1000 ||
                   Number(this.amount_sent_msat) / 1000 ||
+                  Number(this.amount) ||
                   0;
     }
 
@@ -218,6 +223,11 @@ export default class Payment extends BaseModel {
             );
             const fee = Number(msatoshi_sent - msatoshi) / 1000;
             return fee.toString();
+        }
+
+        // NWC
+        if (this.fees_paid) {
+            return this.fees_paid.toString();
         }
 
         return '0';

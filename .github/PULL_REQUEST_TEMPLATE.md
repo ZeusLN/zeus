@@ -39,6 +39,7 @@ I have tested this PR with the following types of nodes (please specify node ver
 - [ ] LND (REST)
 - [ ] LND (Lightning Node Connect)
 - [ ] Core Lightning (CLNRest)
+- [ ] Nostr Wallet Connect
 - [ ] LndHub
 - [ ] [DEPRECATED] Core Lightning (c-lightning-REST)
 - [ ] [DEPRECATED] Core Lightning (Spark)

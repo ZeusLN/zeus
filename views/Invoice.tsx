@@ -64,7 +64,7 @@ export default class InvoiceView extends React.Component<
             getKeysendMessage,
             getMemo,
             receipt,
-            creation_date,
+            formattedCreationDate,
             getDescriptionHash,
             payment_hash,
             getRPreimage,
@@ -199,12 +199,12 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        {!!creation_date && (
+                        {formattedCreationDate && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.creationDate'
                                 )}
-                                value={invoice.formattedCreationDate}
+                                value={formattedCreationDate}
                                 sensitive
                             />
                         )}
