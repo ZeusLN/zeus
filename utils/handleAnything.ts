@@ -288,7 +288,8 @@ const handleAnything = async (
             'WalletConfiguration',
             {
                 node: {
-                    nostrWalletConnectUrl: value
+                    nostrWalletConnectUrl: value,
+                    implementation: 'nostr-wallet-connect'
                 },
                 newEntry: true,
                 isValid: true
