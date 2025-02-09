@@ -1264,6 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Αποτυχία λήψης προσφοράς",
     "views.Settings.Bolt12Address.error.handleTaken": "Τ' όνομα χρησιμοποιείται ήδη",
     "views.Settings.Bolt12Address.error.failedToCreate": "Αποτυχία δημιουργίας διεύθυνσης ",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
     "view.Settings.LSPServicesList.title": "Υπηρεσίες LSP",
     "view.Settings.LSPServicesList.flow2": "Κανάλια Just-in-time",
     "view.Settings.LSPServicesList.lsps1": "Αίτηση καναλιών εκ των προτέρων",
