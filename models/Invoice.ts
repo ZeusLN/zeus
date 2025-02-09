@@ -77,6 +77,13 @@ export default class Invoice extends BaseModel {
     public expire_time?: number;
     public millisatoshis?: string;
     public pay_req?: string;
+    // LNC
+    public paymentRequest?: string;
+    public amount?: number;
+    public state?: string;
+    public created_at?: number;
+    public settled_at?: number;
+    public invoice?: string;
 
     public amount_received_msat?: string | number;
 
@@ -153,7 +160,13 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get isPaid(): boolean {
-        return this.status === 'paid' || this.settled || this.ispaid || false;
+        return (
+            this.status === 'paid' ||
+            this.state === 'settled' ||
+            this.settled ||
+            this.ispaid ||
+            false
+        );
     }
 
     @computed public get key(): string {
@@ -161,7 +174,14 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getPaymentRequest(): string {
-        return this.bolt11 || this.payment_request || this.pay_req || '';
+        return (
+            this.invoice ||
+            this.bolt11 ||
+            this.payment_request ||
+            this.pay_req ||
+            this.paymentRequest ||
+            ''
+        );
     }
 
     // return amount in satoshis
@@ -177,6 +197,9 @@ export default class Invoice extends BaseModel {
         if (this.amount_received_msat) {
             const msatoshi = this.amount_received_msat.toString();
             return Number(msatoshi.replace('msat', '')) / 1000;
+        }
+        if (this.amount) {
+            return Number(this.amount);
         }
         return this.settled
             ? Number(this.amt_paid_sat)
@@ -204,7 +227,11 @@ export default class Invoice extends BaseModel {
         return this.isPaid
             ? this.formattedSettleDate
             : DateTimeUtils.listFormattedDate(
-                  this.expires_at || this.creation_date || this.timestamp || 0
+                  this.expires_at ||
+                      this.created_at ||
+                      this.creation_date ||
+                      this.timestamp ||
+                      0
               );
     }
 
@@ -212,7 +239,11 @@ export default class Invoice extends BaseModel {
         return DateTimeUtils.listFormattedDateOrder(
             new Date(
                 Number(
-                    this.settle_date || this.paid_at || this.timestamp || 0
+                    this.settled_at ||
+                        this.settle_date ||
+                        this.paid_at ||
+                        this.timestamp ||
+                        0
                 ) * 1000
             )
         );
@@ -221,10 +252,18 @@ export default class Invoice extends BaseModel {
     @computed public get getDisplayTimeShort(): string {
         return this.isPaid && !this.is_amp
             ? DateTimeUtils.listFormattedDateShort(
-                  this.settle_date || this.paid_at || this.timestamp || 0
+                  this.settled_at ||
+                      this.settle_date ||
+                      this.paid_at ||
+                      this.timestamp ||
+                      0
               )
             : DateTimeUtils.listFormattedDateShort(
-                  this.expires_at || this.creation_date || this.timestamp || 0
+                  this.expires_at ||
+                      this.created_at ||
+                      this.creation_date ||
+                      this.timestamp ||
+                      0
               );
     }
 
@@ -243,28 +282,44 @@ export default class Invoice extends BaseModel {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listDate(
-                  this.expires_at || this.creation_date || this.timestamp || 0
+                  this.expires_at ||
+                      this.created_at ||
+                      this.creation_date ||
+                      this.timestamp ||
+                      0
               );
     }
 
     @computed public get settleDate(): Date {
         return DateTimeUtils.listDate(
-            this.settle_date || this.paid_at || this.timestamp || 0
+            this.settled_at ||
+                this.settle_date ||
+                this.paid_at ||
+                this.timestamp ||
+                0
         );
     }
 
     @computed public get formattedSettleDate(): string {
         return DateTimeUtils.listFormattedDate(
-            this.settle_date || this.paid_at || this.timestamp || 0
+            this.settled_at ||
+                this.settle_date ||
+                this.paid_at ||
+                this.timestamp ||
+                0
         );
     }
 
     @computed public get getCreationDate(): Date {
-        return DateTimeUtils.listDate(this.creation_date);
+        return DateTimeUtils.listDate(this.created_at || this.creation_date);
     }
 
     @computed public get formattedCreationDate(): string {
-        return DateTimeUtils.listFormattedDate(this.creation_date);
+        return !!this.created_at || !!this.creation_date
+            ? DateTimeUtils.listFormattedDate(
+                  this.created_at || this.creation_date
+              )
+            : '';
     }
 
     @computed public get isExpired(): boolean {

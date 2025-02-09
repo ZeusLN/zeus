@@ -321,6 +321,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connecting,
             setConnectingStatus,
             connect,
+            connectNWC,
             posStatus,
             walletPassword,
             embeddedLndNetwork,
@@ -467,6 +468,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
+        } else if (implementation === 'nostr-wallet-connect') {
+            let error;
+            if (connecting) {
+                error = await connectNWC();
+            }
+            if (!error) {
+                try {
+                    await BalanceStore.getLightningBalance(true);
+                } catch (connectionError) {
+                    console.log('NWC connection failed:', connectionError);
+                    return;
+                }
+            }
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
@@ -580,7 +594,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const showKeypad: boolean = settings?.pos?.showKeypad || false;
 
-        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
+        const dataAvailable =
+            implementation === 'lndhub' ||
+            implementation === 'nostr-wallet-connect' ||
+            nodeInfo.version;
 
         // Define the type for implementationDisplayValue
         interface ImplementationDisplayValue {
@@ -928,7 +945,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                     : localeString(
                                                           'views.Wallet.Wallet.startingNode'
                                                       ).replace('Zeus', 'ZEUS')
-                                                : implementation === 'lndhub'
+                                                : implementation === 'lndhub' ||
+                                                  implementation ===
+                                                      'nostr-wallet-connect'
                                                 ? localeString(
                                                       'views.Wallet.Wallet.loadingAccount'
                                                   ).replace('Zeus', 'ZEUS')

@@ -11,6 +11,7 @@ import Spark from '../backends/Spark';
 import Eclair from '../backends/Eclair';
 // Custodial
 import LndHub from '../backends/LndHub';
+import NostrWalletConnect from '../backends/NostrWalletConnect';
 
 class BackendUtils {
     lnd: LND;
@@ -21,6 +22,7 @@ class BackendUtils {
     spark: Spark;
     eclair: Eclair;
     lndHub: LndHub;
+    nostrWalletConnect: NostrWalletConnect;
     constructor() {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
@@ -30,6 +32,7 @@ class BackendUtils {
         this.spark = new Spark();
         this.eclair = new Eclair();
         this.lndHub = new LndHub();
+        this.nostrWalletConnect = new NostrWalletConnect();
     }
 
     getClass = () => {
@@ -51,6 +54,8 @@ class BackendUtils {
                 return this.eclair;
             case 'lndhub':
                 return this.lndHub;
+            case 'nostr-wallet-connect':
+                return this.nostrWalletConnect;
             default:
                 return this.lnd;
         }
@@ -193,6 +198,9 @@ class BackendUtils {
     checkPerms = () => this.call('checkPerms');
     isConnected = (...args: any[]) => this.call('isConnected', args);
     disconnect = (...args: any[]) => this.call('disconnect', args);
+
+    // NWC
+    initNWC = (...args: any[]) => this.call('initNWC', args);
 
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
