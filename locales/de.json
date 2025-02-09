@@ -464,7 +464,7 @@
     "views.Channel.zeroConf": "Zero-Conf",
     "views.Channel.commitmentType": "Commitment-Typ",
     "views.Channel.lease.expiresIn": "Verfällt in",
-    "views.Channel.lease.outboundChannel": "Outbound channel",
+    "views.Channel.lease.outboundChannel": "Ausgehender Kanal",
     "views.Channel.lease.lspDiscretion": "Kann durch den LSP bei Bedarf geschlossen werden",
     "views.Channel.lease.lspDiscretion.explainer1": "Der Lightning Service Provider (LSP) behält sich das Recht vor, deinen Kanal jederzeit zu schließen. Kanäle mit hohen Guthaben auf der Seite des LSP werden mit höherer Wahrscheinlichkeit geschlossen.",
     "views.Channel.lease.lspDiscretion.explainer2": "Wenn du sicherstellen möchtest, dass dein Kanal offen bleibt, solltest du ein Kanal-Leasing in Betracht ziehen.",
