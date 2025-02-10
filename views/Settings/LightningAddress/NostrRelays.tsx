@@ -203,6 +203,7 @@ export default class NostrRelays extends React.Component<
                                                         await updateSettings({
                                                             lightningAddressGlobal:
                                                                 {
+                                                                    ...settings.lightningAddressGlobal,
                                                                     nostrRelays:
                                                                         newNostrRelays
                                                                 }
