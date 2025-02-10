@@ -253,6 +253,7 @@ describe('ActivityFilterUtils', () => {
             received: true,
             unpaid: true,
             unconfirmed: true,
-            minimumAmount: 0
+            minimumAmount: 0,
+            memo:''
         } as Filter);
 });
