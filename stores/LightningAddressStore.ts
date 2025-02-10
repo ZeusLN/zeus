@@ -282,9 +282,11 @@ export default class LightningAddressStore {
                 throw createData.error;
             }
 
-            const { handle: responseHandle, created_at } = createData;
+            const { handle: responseHandle, domain, created_at } = createData;
 
             if (responseHandle) {
+                this.setLightningAddress(responseHandle, domain);
+            
                 await this.settingsStore.updateSettings({
                     lightningAddressGlobal: {
                         automaticallyAccept: true,

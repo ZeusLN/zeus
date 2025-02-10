@@ -47,10 +47,9 @@ import {
     expressGraphSync
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
-import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
-import MigrationUtils from '../../utils/MigrationUtils';
+import MigrationUtils, { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 
 import Storage from '../../storage';
 
