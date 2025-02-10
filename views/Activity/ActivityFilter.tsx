@@ -429,7 +429,7 @@ export default class ActivityFilter extends React.Component<
                                                 onChangeText={async (
                                                     text: string
                                                 ) => {
-                                                    const newMemo = text.trim();
+                                                    const newMemo = text;
                                                     const newFilters = {
                                                         ...filters
                                                     };
