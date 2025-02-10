@@ -1,18 +1,21 @@
 import * as React from 'react';
 import {
     View,
-    Text,
     TouchableOpacity,
     StyleSheet,
     Alert,
     Platform,
-    ScrollView
+    ScrollView,
+    Modal
 } from 'react-native';
 import RNFS from 'react-native-fs';
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 
 import Header from '../components/Header';
+import Button from '../components/Button';
+import TextInput from '../components/TextInput';
+import Text from '../components/Text';
 import LoadingIndicator from '../components/LoadingIndicator';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -24,6 +27,8 @@ import SettingsStore from '../stores/SettingsStore';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
+import DatePicker from 'react-native-date-picker';
+import { CheckBox } from 'react-native-elements';
 
 interface ActivityExportOptionsProps {
     navigation: any;
@@ -35,6 +40,12 @@ interface ActivityExportOptionsState {
     isCsvLoading: boolean;
     isActivityFetching: boolean;
     filteredActivity: any;
+    isModalVisible: boolean;
+    customFileName: string;
+    fromDate: any;
+    toDate: any;
+    exportType: any;
+    downloadCompleteData: boolean;
 }
 
 @inject('ActivityStore', 'SettingsStore')
@@ -48,7 +59,13 @@ export default class ActivityExportOptions extends React.Component<
         this.state = {
             isCsvLoading: false,
             isActivityFetching: true,
-            filteredActivity: []
+            filteredActivity: [],
+            isModalVisible: false,
+            customFileName: '',
+            fromDate: null,
+            toDate: null,
+            exportType: '',
+            downloadCompleteData: false
         };
     }
 
@@ -111,6 +128,21 @@ export default class ActivityExportOptions extends React.Component<
             console.error(err);
             return '';
         }
+    };
+
+    filterDataByDate = (data: any) => {
+        const { fromDate, toDate, downloadCompleteData } = this.state;
+        if (!fromDate && !toDate) return data;
+
+        if (downloadCompleteData) return data;
+
+        return data.filter((item: any) => {
+            const itemDate = new Date(item.getDate);
+            if (isNaN(itemDate.getTime())) return false;
+            if (fromDate && itemDate < fromDate) return false;
+            if (toDate && itemDate > toDate) return false;
+            return true;
+        });
     };
 
     downloadCsv = async (type: 'invoice' | 'payment' | 'transaction') => {
@@ -189,6 +221,8 @@ export default class ActivityExportOptions extends React.Component<
                     break;
             }
 
+            filteredData = this.filterDataByDate(filteredData);
+
             if (!filteredData || filteredData.length === 0) {
                 console.log('No valid data found for', type);
                 this.setState({ isCsvLoading: false });
@@ -215,7 +249,9 @@ export default class ActivityExportOptions extends React.Component<
 
             try {
                 const dateTime = this.getFormattedDateTime();
-                const baseFileName = `zeus_${dateTime}_${type}.csv`;
+                const baseFileName = this.state.customFileName
+                    ? `${this.state.customFileName}.csv`
+                    : `zeus_${dateTime}_${type}.csv`;
                 const filePath =
                     Platform.OS === 'android'
                         ? `${RNFS.DownloadDirectoryPath}/${baseFileName}`
@@ -223,7 +259,11 @@ export default class ActivityExportOptions extends React.Component<
 
                 console.log('Saving file to:', filePath);
 
+                this.setState({ isModalVisible: false });
+
                 await RNFS.writeFile(filePath, csvData, 'utf8');
+
+                this.closeAndClearInput();
 
                 Alert.alert(
                     localeString('general.success'),
@@ -241,8 +281,219 @@ export default class ActivityExportOptions extends React.Component<
         });
     };
 
+    closeAndClearInput = () => {
+        this.setState({
+            isModalVisible: false,
+            customFileName: '',
+            fromDate: new Date(),
+            toDate: new Date(),
+            downloadCompleteData: false
+        });
+    };
+
+    openModal = (type: 'invoice' | 'transaction' | 'payment') =>
+        this.setState({ isModalVisible: true, exportType: type });
+
+    renderModal = () => {
+        const {
+            isModalVisible,
+            isCsvLoading,
+            customFileName,
+            fromDate,
+            toDate,
+            downloadCompleteData
+        } = this.state;
+        return (
+            <Modal
+                visible={isModalVisible}
+                transparent={true}
+                animationType="slide"
+                onRequestClose={this.closeAndClearInput}
+            >
+                <View style={styles.modalOverlay}>
+                    <View
+                        style={{
+                            width: '80%',
+                            backgroundColor: themeColor('background'),
+                            padding: 20,
+                            borderRadius: 10,
+                            alignItems: 'center'
+                        }}
+                    >
+                        {isCsvLoading ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 18
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.activityExport.dateRange'
+                                    )}
+                                </Text>
+                                <View style={{ alignItems: 'center' }}>
+                                    <View
+                                        style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            marginBottom: 10
+                                        }}
+                                    >
+                                        <CheckBox
+                                            title={localeString(
+                                                'views.activityExport.downloadCompleteData'
+                                            )}
+                                            checked={
+                                                this.state.downloadCompleteData
+                                            }
+                                            onPress={() =>
+                                                this.setState({
+                                                    downloadCompleteData:
+                                                        !downloadCompleteData,
+                                                    fromDate:
+                                                        !downloadCompleteData
+                                                            ? null
+                                                            : fromDate,
+                                                    toDate: !downloadCompleteData
+                                                        ? null
+                                                        : toDate
+                                                })
+                                            }
+                                            containerStyle={{
+                                                backgroundColor: 'transparent',
+                                                borderWidth: 0
+                                            }}
+                                            textStyle={{
+                                                color: themeColor('text')
+                                            }}
+                                            checkedColor="green"
+                                        />
+                                    </View>
+                                    {!downloadCompleteData && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.activityExport.fromDate'
+                                                )}
+                                            </Text>
+                                            <DatePicker
+                                                mode="date"
+                                                date={fromDate || new Date()}
+                                                onDateChange={(date) => {
+                                                    this.setState({
+                                                        fromDate: date
+                                                    });
+                                                    if (
+                                                        toDate &&
+                                                        date > toDate
+                                                    ) {
+                                                        this.setState({
+                                                            toDate: date
+                                                        });
+                                                    }
+                                                }}
+                                                style={{
+                                                    height: 100,
+                                                    marginTop: 10,
+                                                    marginBottom: 20,
+                                                    alignSelf: 'center'
+                                                }}
+                                                maximumDate={new Date()}
+                                                textColor={themeColor('text')}
+                                            />
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    marginBottom: 5
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.activityExport.toDate'
+                                                )}
+                                            </Text>
+                                            <DatePicker
+                                                mode="date"
+                                                date={toDate || new Date()}
+                                                onDateChange={(date) => {
+                                                    if (
+                                                        fromDate &&
+                                                        date < fromDate
+                                                    ) {
+                                                        Alert.alert(
+                                                            'Invalid Date'
+                                                        );
+                                                    } else {
+                                                        this.setState({
+                                                            toDate: date
+                                                        });
+                                                    }
+                                                }}
+                                                style={{
+                                                    height: 100,
+                                                    marginTop: 10,
+                                                    marginBottom: 20,
+                                                    alignSelf: 'center'
+                                                }}
+                                                maximumDate={new Date()}
+                                                textColor={themeColor('text')}
+                                            />
+                                        </>
+                                    )}
+                                </View>
+
+                                <TextInput
+                                    placeholder={localeString(
+                                        'views.ActivityToCsv.textInputPlaceholder'
+                                    )}
+                                    value={customFileName}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            customFileName: text
+                                        })
+                                    }
+                                    style={{ marginHorizontal: 12 }}
+                                />
+                                <View style={styles.buttonContainer}>
+                                    <Button
+                                        title={localeString(
+                                            'views.ActivityToCsv.downloadButton'
+                                        )}
+                                        onPress={() =>
+                                            this.downloadCsv(
+                                                this.state.exportType
+                                            )
+                                        }
+                                        buttonStyle={{
+                                            marginBottom: 10
+                                        }}
+                                    />
+                                    <Button
+                                        title={localeString('general.close')}
+                                        onPress={this.closeAndClearInput}
+                                        secondary
+                                    />
+                                </View>
+                            </>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+
     render() {
-        const { isCsvLoading, isActivityFetching } = this.state;
+        const { isActivityFetching } = this.state;
 
         return (
             <ScrollView>
@@ -257,7 +508,7 @@ export default class ActivityExportOptions extends React.Component<
                     }}
                     navigation={this.props.navigation}
                 />
-                {isCsvLoading && <LoadingIndicator />}
+                {this.renderModal()}
 
                 <View
                     style={{
@@ -274,11 +525,10 @@ export default class ActivityExportOptions extends React.Component<
                                     ...styles.optionButton,
                                     backgroundColor: themeColor('secondary')
                                 }}
-                                onPress={() => this.downloadCsv('invoice')}
-                                disabled={isCsvLoading}
+                                onPress={() => this.openModal('invoice')}
                             >
                                 <Icon
-                                    name="file-text"
+                                    name="download"
                                     size={24}
                                     color={themeColor('text')}
                                 />
@@ -299,11 +549,10 @@ export default class ActivityExportOptions extends React.Component<
                                     ...styles.optionButton,
                                     backgroundColor: themeColor('secondary')
                                 }}
-                                onPress={() => this.downloadCsv('payment')}
-                                disabled={isCsvLoading}
+                                onPress={() => this.openModal('payment')}
                             >
                                 <Icon
-                                    name="credit-card"
+                                    name="download"
                                     size={24}
                                     color={themeColor('text')}
                                 />
@@ -324,11 +573,10 @@ export default class ActivityExportOptions extends React.Component<
                                     ...styles.optionButton,
                                     backgroundColor: themeColor('secondary')
                                 }}
-                                onPress={() => this.downloadCsv('transaction')}
-                                disabled={isCsvLoading}
+                                onPress={() => this.openModal('transaction')}
                             >
                                 <Icon
-                                    name="dollar-sign"
+                                    name="download"
                                     size={24}
                                     color={themeColor('text')}
                                 />
@@ -366,5 +614,15 @@ const styles = StyleSheet.create({
     optionText: {
         marginLeft: 15,
         fontSize: 16
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    buttonContainer: {
+        width: '100%',
+        marginTop: 4
     }
 });
