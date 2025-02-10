@@ -4,11 +4,9 @@ import {
     TouchableOpacity,
     StyleSheet,
     Alert,
-    Platform,
     ScrollView,
     Modal
 } from 'react-native';
-import RNFS from 'react-native-fs';
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 
@@ -20,6 +18,12 @@ import LoadingIndicator from '../components/LoadingIndicator';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import {
+    getFormattedDateTime,
+    convertActivityToCsv,
+    saveCsvFile,
+    CSV_KEYS
+} from '.././utils/ActivityCsvUtils';
 
 import ActivityStore from '../stores/ActivityStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -93,43 +97,6 @@ export default class ActivityExportOptions extends React.Component<
         }
     };
 
-    getFormattedDateTime = () => {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = (now.getMonth() + 1).toString().padStart(2, '0');
-        const day = now.getDate().toString().padStart(2, '0');
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const seconds = now.getSeconds().toString().padStart(2, '0');
-
-        return `${year}${month}${day}_${hours}${minutes}${seconds}`;
-    };
-
-    convertActivityToCsv = async (
-        data: Array<Invoice | Payment | Transaction>,
-        keysToInclude: Array<any>
-    ) => {
-        if (!data || data.length === 0) {
-            return '';
-        }
-
-        try {
-            const header = keysToInclude.map((field) => field.label).join(',');
-            const rows = data
-                ?.map((item: any) =>
-                    keysToInclude
-                        .map((field) => `"${item[field.value]}"` || '')
-                        .join(',')
-                )
-                .join('\n');
-
-            return `${header}\n${rows}`;
-        } catch (err) {
-            console.error(err);
-            return '';
-        }
-    };
-
     filterDataByDate = (data: any) => {
         const { fromDate, toDate, downloadCompleteData } = this.state;
         if (!fromDate && !toDate) return data;
@@ -161,66 +128,14 @@ export default class ActivityExportOptions extends React.Component<
                 return;
             }
 
-            let keysToInclude: any;
             let filteredData: any;
 
-            switch (type) {
-                case 'invoice':
-                    keysToInclude = [
-                        { label: 'Amount Paid (sat)', value: 'getAmount' },
-                        {
-                            label: 'Payment Request',
-                            value: 'getPaymentRequest'
-                        },
-                        { label: 'Payment Hash', value: 'getRHash' },
-                        { label: 'Memo', value: 'getMemo' },
-                        { label: 'Note', value: 'getNote' },
-                        { label: 'Creation Date', value: 'getCreationDate' },
-                        { label: 'Expiry', value: 'formattedTimeUntilExpiry' }
-                    ];
-                    filteredData = filteredActivity.filter(
-                        (item: any) => item instanceof Invoice
-                    );
-                    break;
-
-                case 'payment':
-                    keysToInclude = [
-                        { label: 'Destination', value: 'getDestination' },
-                        {
-                            label: 'Payment Request',
-                            value: 'getPaymentRequest'
-                        },
-                        { label: 'Payment Hash', value: 'paymentHash' },
-                        { label: 'Amount Paid (sat)', value: 'getAmount' },
-                        { label: 'Memo', value: 'getMemo' },
-                        { label: 'Note', value: 'getNote' },
-                        { label: 'Creation Date', value: 'getDate' }
-                    ];
-                    filteredData = filteredActivity.filter(
-                        (item: any) =>
-                            item instanceof Payment && item?.getDestination
-                    );
-                    break;
-
-                case 'transaction':
-                    keysToInclude = [
-                        { label: 'Transaction Hash', value: 'tx' },
-                        { label: 'Amount (sat)', value: 'getAmount' },
-                        { label: 'Total Fees (sat)', value: 'getFee' },
-                        { label: 'Note', value: 'getNote' },
-                        { label: 'Timestamp', value: 'getDate' }
-                    ];
-                    filteredData = filteredActivity.filter(
-                        (item: any) => item instanceof Transaction
-                    );
-                    break;
-
-                default:
-                    keysToInclude = [];
-                    filteredData = [];
-                    break;
-            }
-
+            filteredData = filteredActivity.filter((item: any) => {
+                if (type === 'invoice') return item instanceof Invoice;
+                if (type === 'payment') return item instanceof Payment;
+                if (type === 'transaction') return item instanceof Transaction;
+                return false;
+            });
             filteredData = this.filterDataByDate(filteredData);
 
             if (!filteredData || filteredData.length === 0) {
@@ -233,9 +148,9 @@ export default class ActivityExportOptions extends React.Component<
                 return;
             }
 
-            const csvData = await this.convertActivityToCsv(
+            const csvData = await convertActivityToCsv(
                 filteredData,
-                keysToInclude
+                CSV_KEYS[type]
             );
 
             if (!csvData) {
@@ -248,20 +163,14 @@ export default class ActivityExportOptions extends React.Component<
             }
 
             try {
-                const dateTime = this.getFormattedDateTime();
+                const dateTime = getFormattedDateTime();
                 const baseFileName = this.state.customFileName
                     ? `${this.state.customFileName}.csv`
                     : `zeus_${dateTime}_${type}.csv`;
-                const filePath =
-                    Platform.OS === 'android'
-                        ? `${RNFS.DownloadDirectoryPath}/${baseFileName}`
-                        : `${RNFS.DocumentDirectoryPath}/${baseFileName}`;
 
-                console.log('Saving file to:', filePath);
+                await saveCsvFile(baseFileName, csvData);
 
                 this.setState({ isModalVisible: false });
-
-                await RNFS.writeFile(filePath, csvData, 'utf8');
 
                 this.closeAndClearInput();
 
