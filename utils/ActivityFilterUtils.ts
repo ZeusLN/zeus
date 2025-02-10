@@ -136,7 +136,7 @@ class ActivityFilterUtils {
                 (activity) => activity.getDate.getTime() < endDate.getTime()
             );
         }
-        if ((filter.memo || '').trim() !== '') {
+        if (filter.memo.trim() !== '') {
             const memoFilter = filter.memo.trim().toLowerCase();
 
             filteredActivity = filteredActivity.filter((activity) => {
