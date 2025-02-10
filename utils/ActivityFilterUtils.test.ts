@@ -254,6 +254,6 @@ describe('ActivityFilterUtils', () => {
             unpaid: true,
             unconfirmed: true,
             minimumAmount: 0,
-            memo:''
+            memo: ''
         } as Filter);
 });
