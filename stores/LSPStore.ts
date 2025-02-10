@@ -157,7 +157,7 @@ export default class LSPStore {
             ? this.settingsStore.settings.lsps1RestTestnet
             : this.settingsStore.settings.lsps1RestMainnet;
 
-    private encodeMesage = (n: any) =>
+    private encodeMessage = (n: any) =>
         Buffer.from(JSON.stringify(n)).toString('hex');
 
     // Flow 2.0
@@ -579,7 +579,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {},
@@ -670,7 +670,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
@@ -746,7 +746,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer,
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
@@ -782,7 +782,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {},
@@ -812,7 +812,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
@@ -849,7 +849,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer,
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
