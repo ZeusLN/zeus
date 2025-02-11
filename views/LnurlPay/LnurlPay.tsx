@@ -18,6 +18,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import LnurlPayMetadata from './Metadata';
 
@@ -29,6 +30,7 @@ interface LnurlPayProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
+    UnitsStore: UnitsStore;
     route: Route<'LnurlPay', { lnurlParams: any; amount: any; satAmount: any }>;
 }
 
@@ -40,7 +42,7 @@ interface LnurlPayState {
     loading: boolean;
 }
 
-@inject('InvoicesStore', 'LnurlPayStore')
+@inject('InvoicesStore', 'LnurlPayStore', 'UnitsStore')
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -73,15 +75,17 @@ export default class LnurlPay extends React.Component<
     }
 
     stateFromProps(props: LnurlPayProps) {
-        const { route } = props;
+        const { route, UnitsStore } = props;
         const { lnurlParams: lnurl, amount, satAmount } = route.params ?? {};
 
+        const minSendableSats = Math.floor(lnurl.minSendable / 1000);
+
+        const { amount: unformattedAmount } =
+            UnitsStore.getUnformattedAmount(minSendableSats);
+
         return {
-            amount:
-                amount && amount != 0
-                    ? amount
-                    : Math.floor(lnurl.minSendable / 1000).toString(),
-            satAmount: satAmount ? satAmount : '',
+            amount: amount && amount != 0 ? amount : unformattedAmount,
+            satAmount: satAmount ? satAmount : minSendableSats,
             domain: lnurl.domain,
             comment: ''
         };
