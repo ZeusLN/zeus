@@ -1,43 +1,26 @@
-import Tor, { RequestMethod } from 'react-native-tor';
-const tor = Tor();
-const doTorRequest = async <T extends RequestMethod>(
+import TorMobile from '../tormobile';
+
+declare enum RequestMethod {
+    'GET' = 'GET',
+    'POST' = 'POST',
+    'DELETE' = 'DELETE'
+}
+
+const doTorRequest = async (
     url: string,
-    method: T,
-    data?: string,
-    headers?: any,
-    trustSSL = true
+    method: RequestMethod,
+    body?: string,
+    headers?: any
 ) => {
-    await tor.startIfNotStarted();
-    switch (method.toLowerCase()) {
-        case RequestMethod.GET:
-            const getResult = await tor.get(url, headers, trustSSL);
-            if (getResult.json) {
-                return getResult.json;
-            }
-            break;
-        case RequestMethod.POST:
-            const postResult = await tor.post(
-                url,
-                data || '',
-                headers,
-                trustSSL
-            );
-            if (postResult.json) {
-                return postResult.json;
-            }
-            break;
-        case RequestMethod.DELETE:
-            const deleteResult = await tor.delete(url, data, headers, trustSSL);
-            if (deleteResult.json) {
-                return deleteResult.json;
-            }
-            break;
-    }
+    await TorMobile.start();
+    const result = await TorMobile.sendRequest(
+        method.toUpperCase(),
+        url,
+        JSON.stringify(headers ?? {}),
+        body ?? ''
+    );
+
+    return JSON.parse(result).json;
 };
 
-const restartTor = async () => {
-    await tor.stopIfRunning();
-    await tor.startIfNotStarted();
-};
-
-export { doTorRequest, restartTor, RequestMethod };
+export { doTorRequest, RequestMethod };
