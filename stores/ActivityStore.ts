@@ -202,17 +202,17 @@ export default class ActivityStore {
 
     @action
     public setFilters = async (filters: Filter, locale?: string) => {
-        this.filters = filters;
+        this.filters = { ...DEFAULT_FILTERS, ...filters };
         this.filteredActivity = ActivityFilterUtils.filterActivities(
             this.activity,
-            filters
+            this.filters
         );
         this.filteredActivity.forEach((activity) => {
             if (activity instanceof Invoice) {
                 activity.determineFormattedRemainingTimeUntilExpiry(locale);
             }
         });
-        Storage.setItem(ACTIVITY_FILTERS_KEY, filters);
+        Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
 
     @action

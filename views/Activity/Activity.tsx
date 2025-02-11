@@ -14,6 +14,7 @@ import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import isEqual from 'lodash/isEqual';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -31,7 +32,7 @@ import {
 } from '../../utils/UnitsUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 
-import ActivityStore from '../../stores/ActivityStore';
+import ActivityStore, { DEFAULT_FILTERS } from '../../stores/ActivityStore';
 import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -449,7 +450,8 @@ export default class Activity extends React.PureComponent<
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
             this.state;
 
-        const { filteredActivity, getActivityAndFilter } = ActivityStore;
+        const { filteredActivity, getActivityAndFilter, filters } =
+            ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
@@ -536,7 +538,14 @@ export default class Activity extends React.PureComponent<
                 }
                 accessibilityLabel={localeString('views.ActivityFilter.title')}
             >
-                <Filter fill={themeColor('text')} size={35} />
+                <Filter
+                    fill={
+                        isEqual(filters, DEFAULT_FILTERS)
+                            ? themeColor('text')
+                            : themeColor('highlight')
+                    }
+                    size={35}
+                />
             </TouchableOpacity>
         );
 
