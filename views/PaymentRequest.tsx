@@ -415,7 +415,9 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { enableTor, implementation } = SettingsStore;
+        const { enableTor, implementation, settings } = SettingsStore;
+
+        const enableDonations = settings?.privacy?.enableDonations;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
@@ -1095,83 +1097,98 @@ export default class PaymentRequest extends React.Component<
                                             </>
                                         )}
 
-                                        <Row justify="center">
-                                            <Text
-                                                style={{
-                                                    ...styles.label,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.PaymentRequest.supportZeus'
-                                                )}
-                                            </Text>
-                                        </Row>
-                                        <Slider
-                                            style={{
-                                                width: '100%',
-                                                height: 40
-                                            }}
-                                            minimumValue={0}
-                                            maximumValue={100}
-                                            step={1}
-                                            value={donationPercentage}
-                                            onValueChange={(value: any) =>
-                                                this.setState({
-                                                    donationPercentage: value,
-                                                    donationAmount: Math.round(
-                                                        ((requestAmount || 0) *
-                                                            value) /
-                                                            100
-                                                    )
-                                                })
-                                            }
-                                            minimumTrackTintColor={themeColor(
-                                                'highlight'
-                                            )}
-                                            maximumTrackTintColor={themeColor(
-                                                'secondaryText'
-                                            )}
-                                        />
-                                        <Row justify="flex-end">
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {`${donationPercentage}% `}
-                                            </Text>
-                                        </Row>
-                                        <Row justify="flex-end">
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
+                                        {enableDonations && (
+                                            <>
+                                                <Row justify="center">
+                                                    <Text
+                                                        style={{
+                                                            ...styles.label,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.PaymentRequest.supportZeus'
+                                                        )}
+                                                    </Text>
+                                                </Row>
+                                                <Slider
+                                                    style={{
+                                                        width: '100%',
+                                                        height: 40
+                                                    }}
+                                                    minimumValue={0}
+                                                    maximumValue={100}
+                                                    step={1}
+                                                    value={donationPercentage}
+                                                    onValueChange={(
+                                                        value: any
+                                                    ) =>
+                                                        this.setState({
+                                                            donationPercentage:
+                                                                value,
+                                                            donationAmount:
+                                                                Math.round(
+                                                                    ((requestAmount ||
+                                                                        0) *
+                                                                        value) /
+                                                                        100
+                                                                )
+                                                        })
+                                                    }
+                                                    minimumTrackTintColor={themeColor(
                                                         'highlight'
-                                                    )
-                                                }}
-                                            >
-                                                {donationAmount +
-                                                    ` ${localeString(
-                                                        'general.sats'
-                                                    )}`}
-                                            </Text>
-                                        </Row>
-                                        <Row justify="center">
-                                            <Text
-                                                style={{
-                                                    ...styles.labelSecondary,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {`${requestAmount || 0} + ` +
-                                                    donationAmount +
-                                                    ` ${localeString(
-                                                        'general.sats'
-                                                    )} `}
-                                            </Text>
-                                        </Row>
+                                                    )}
+                                                    maximumTrackTintColor={themeColor(
+                                                        'secondaryText'
+                                                    )}
+                                                />
+                                                <Row justify="flex-end">
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {`${donationPercentage}% `}
+                                                    </Text>
+                                                </Row>
+                                                <Row justify="flex-end">
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'highlight'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {donationAmount +
+                                                            ` ${localeString(
+                                                                'general.sats'
+                                                            )}`}
+                                                    </Text>
+                                                </Row>
+                                                <Row justify="center">
+                                                    <Text
+                                                        style={{
+                                                            ...styles.labelSecondary,
+                                                            color: themeColor(
+                                                                'text'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {`${
+                                                            requestAmount || 0
+                                                        } + ` +
+                                                            donationAmount +
+                                                            ` ${localeString(
+                                                                'general.sats'
+                                                            )} `}
+                                                    </Text>
+                                                </Row>
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </View>

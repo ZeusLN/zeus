@@ -54,6 +54,7 @@ interface PrivacySettings {
     clipboard?: boolean;
     lurkerMode?: boolean;
     enableMempoolRates?: boolean;
+    enableDonations?: boolean;
 }
 
 interface DisplaySettings {
@@ -1118,7 +1119,8 @@ export default class SettingsStore {
             customBlockExplorer: '',
             clipboard: false,
             lurkerMode: false,
-            enableMempoolRates: true
+            enableMempoolRates: true,
+            enableDonations: false
         },
         display: {
             theme: DEFAULT_THEME,
