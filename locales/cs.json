@@ -1264,7 +1264,7 @@
     "views.Settings.Bolt12Address.error.failedToGetOffer": "Získání nabídky selhalo",
     "views.Settings.Bolt12Address.error.handleTaken": "Ovládání je převzato",
     "views.Settings.Bolt12Address.error.failedToCreate": "Vytváření adresy selhalo",
-    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Nostr Wallet Connect URL",
+    "views.Settings.WalletConfiguration.nostrWalletConnectUrl": "Připojovací URL k peněžence Nostr",
     "view.Settings.LSPServicesList.title": "Služby LSP",
     "view.Settings.LSPServicesList.flow2": "Kanály Just-in-time",
     "view.Settings.LSPServicesList.lsps1": "Vyžádat si kanály předem",
