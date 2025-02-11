@@ -2597,7 +2597,12 @@ export default class Receive extends React.Component<
                                                                     ),
                                                                 borderRadius: 12,
                                                                 borderWidth: 0,
-                                                                height: 30
+                                                                height: 30,
+                                                                marginBottom:
+                                                                    Platform.OS ===
+                                                                    'ios'
+                                                                        ? 16
+                                                                        : 0
                                                             }}
                                                             innerBorderStyle={{
                                                                 color: themeColor(
@@ -2645,7 +2650,12 @@ export default class Receive extends React.Component<
                                                         style={{
                                                             flexDirection:
                                                                 'row',
-                                                            marginTop: 20
+                                                            marginTop: 16,
+                                                            marginBottom:
+                                                                Platform.OS ===
+                                                                'ios'
+                                                                    ? 10
+                                                                    : 6
                                                         }}
                                                     >
                                                         <View
