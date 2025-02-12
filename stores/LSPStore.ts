@@ -1,4 +1,4 @@
-import { action, observable, reaction } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -96,9 +96,7 @@ export default class LSPStore {
     };
 
     @action
-    public resetFee = () => {
-        this.zeroConfFee = undefined;
-    };
+    public resetFee = () => (this.zeroConfFee = undefined);
 
     @action
     public resetLSPS1Data = () => {
@@ -117,7 +115,7 @@ export default class LSPStore {
         this.error_msg = '';
     };
 
-    isOlympus = () => {
+    public isOlympus = () => {
         const olympusREST = this.nodeInfoStore!.nodeInfo.isTestNet
             ? DEFAULT_LSPS1_REST_TESTNET
             : DEFAULT_LSPS1_REST_MAINNET;
@@ -139,39 +137,37 @@ export default class LSPStore {
         return false;
     };
 
-    getFlowHost = () =>
+    private getFlowHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lspTestnet
             : this.settingsStore.settings.lspMainnet;
 
-    getLSPSPubkey = () =>
+    public getLSPSPubkey = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1PubkeyTestnet
             : this.settingsStore.settings.lsps1PubkeyMainnet;
 
-    getLSPSHost = () =>
+    public getLSPSHost = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1HostTestnet
             : this.settingsStore.settings.lsps1HostMainnet;
 
-    getLSPS1Rest = () =>
+    public getLSPS1Rest = () =>
         this.nodeInfoStore!.nodeInfo.isTestNet
             ? this.settingsStore.settings.lsps1RestTestnet
             : this.settingsStore.settings.lsps1RestMainnet;
 
-    encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
+    private encodeMessage = (n: any) =>
+        Buffer.from(JSON.stringify(n)).toString('hex');
 
     // Flow 2.0
 
-    @action
     public getLSPInfo = () => {
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
                 `${this.getFlowHost()}/api/v1/info`,
-                {
-                    'Content-Type': 'application/json'
-                }
+                { 'Content-Type': 'application/json' }
             )
                 .then(async (response: any) => {
                     const status = response.info().status;
@@ -197,25 +193,31 @@ export default class LSPStore {
                             );
                         } catch (e) {}
                     } else {
-                        this.flow_error = true;
-                        this.flow_error_msg = errorToUserFriendly(data.message);
-                        // handle LSP geoblocking :(
-                        if (
-                            this.error_msg.includes(
-                                'unavailable in your country'
-                            )
-                        ) {
-                            this.showLspSettings = true;
-                        }
+                        runInAction(() => {
+                            this.flow_error = true;
+                            this.flow_error_msg = errorToUserFriendly(
+                                data.message
+                            );
+                            // handle LSP geoblocking :(
+                            if (
+                                this.error_msg.includes(
+                                    'unavailable in your country'
+                                )
+                            ) {
+                                this.showLspSettings = true;
+                            }
+                        });
                         reject();
                     }
                 })
                 .catch(() => {
-                    this.flow_error = true;
-                    this.flow_error_msg = localeString(
-                        'stores.LSPStore.connectionError'
-                    );
-                    this.showLspSettings = true;
+                    runInAction(() => {
+                        this.flow_error = true;
+                        this.flow_error_msg = localeString(
+                            'stores.LSPStore.connectionError'
+                        );
+                        this.showLspSettings = true;
+                    });
                     reject();
                 });
         });
@@ -234,9 +236,7 @@ export default class LSPStore {
                           'Content-Type': 'application/json',
                           'x-auth-token': settings.lspAccessKey
                       }
-                    : {
-                          'Content-Type': 'application/json'
-                      },
+                    : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     amount_msat,
                     pubkey: this.nodeInfoStore.nodeInfo.nodeId
@@ -246,16 +246,19 @@ export default class LSPStore {
                     const status = response.info().status;
                     const data = response.json();
                     if (status == 200) {
-                        this.zeroConfFee =
-                            data.fee_amount_msat !== undefined
-                                ? Number.parseInt(
-                                      (
-                                          Number(data.fee_amount_msat) / 1000
-                                      ).toString()
-                                  )
-                                : undefined;
-                        this.feeId = data.id;
-                        this.flow_error = false;
+                        runInAction(() => {
+                            this.zeroConfFee =
+                                data.fee_amount_msat !== undefined
+                                    ? Number.parseInt(
+                                          (
+                                              Number(data.fee_amount_msat) /
+                                              1000
+                                          ).toString()
+                                      )
+                                    : undefined;
+                            this.feeId = data.id;
+                            this.flow_error = false;
+                        });
                         resolve(this.zeroConfFee);
                     } else {
                         this.flow_error = true;
@@ -269,7 +272,7 @@ export default class LSPStore {
         });
     };
 
-    handleChannelAcceptorEvent = async (channelAcceptRequest: any) => {
+    private handleChannelAcceptorEvent = async (channelAcceptRequest: any) => {
         try {
             const requestPubkey = Base64Utils.bytesToHex(
                 channelAcceptRequest.node_pubkey
@@ -293,7 +296,6 @@ export default class LSPStore {
         }
     };
 
-    @action
     public initChannelAcceptor = async () => {
         if (this.channelAcceptor) return;
         if (this.settingsStore.implementation === 'embedded-lnd') {
@@ -343,9 +345,7 @@ export default class LSPStore {
                           'Content-Type': 'application/json',
                           'x-auth-token': settings.lspAccessKey
                       }
-                    : {
-                          'Content-Type': 'application/json'
-                      },
+                    : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     bolt11,
                     fee_id: this.feeId,
@@ -358,16 +358,18 @@ export default class LSPStore {
                     if (status == 200 || status == 201) {
                         resolve(data.jit_bolt11);
                     } else {
-                        this.flow_error = true;
-                        this.flow_error_msg = `${localeString(
-                            'stores.LSPStore.error'
-                        )}: ${data.message}`;
-                        if (
-                            data.message &&
-                            data.message.includes('access key')
-                        ) {
-                            this.showLspSettings = true;
-                        }
+                        runInAction(() => {
+                            this.flow_error = true;
+                            this.flow_error_msg = `${localeString(
+                                'stores.LSPStore.error'
+                            )}: ${data.message}`;
+                            if (
+                                data.message &&
+                                data.message.includes('access key')
+                            ) {
+                                this.showLspSettings = true;
+                            }
+                        });
                         reject();
                     }
                 })
@@ -401,8 +403,10 @@ export default class LSPStore {
                     resolve(response);
                 })
                 .catch((error: any) => {
-                    this.error = true;
-                    this.error_msg = errorToUserFriendly(error);
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = errorToUserFriendly(error);
+                    });
                     reject(error);
                 });
         });
@@ -478,10 +482,12 @@ export default class LSPStore {
         let timer = 7000;
         const timeoutId = setTimeout(() => {
             if (!this.resolvedCustomMessage) {
-                this.error = true;
-                this.error_msg = localeString('views.LSPS1.timeoutError');
-                this.loadingLSPS1 = false;
-                this.loadingLSPS7 = false;
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = localeString('views.LSPS1.timeoutError');
+                    this.loadingLSPS1 = false;
+                    this.loadingLSPS7 = false;
+                });
             }
         }, timer);
 
@@ -491,8 +497,10 @@ export default class LSPStore {
                 async (event: any) => {
                     try {
                         const decoded = index.decodeCustomMessage(event.data);
-                        this.handleCustomMessages(decoded);
-                        this.resolvedCustomMessage = true;
+                        runInAction(() => {
+                            this.handleCustomMessages(decoded);
+                            this.resolvedCustomMessage = true;
+                        });
                         clearTimeout(timeoutId);
                     } catch (error: any) {
                         console.error(
@@ -507,8 +515,10 @@ export default class LSPStore {
             BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
-                    this.handleCustomMessages(decoded);
-                    this.resolvedCustomMessage = true;
+                    runInAction(() => {
+                        this.handleCustomMessages(decoded);
+                        this.resolvedCustomMessage = true;
+                    });
                     clearTimeout(timeoutId);
                 },
                 (error: any) => {
@@ -522,7 +532,6 @@ export default class LSPStore {
 
     // LSPS1
 
-    @action
     public lsps1GetInfoREST = () => {
         this.loadingLSPS1 = true;
 
@@ -532,25 +541,29 @@ export default class LSPStore {
 
         return ReactNativeBlobUtil.fetch('GET', endpoint)
             .then((response) => {
-                if (response.info().status === 200) {
-                    const responseData = JSON.parse(response.data);
-                    this.getInfoData = responseData;
-                    try {
-                        const uri = responseData.uris[0];
-                        const pubkey = uri.split('@')[0];
-                        this.pubkey = pubkey;
-                    } catch (e) {}
-                    this.loadingLSPS1 = false;
-                } else {
+                runInAction(() => {
+                    if (response.info().status === 200) {
+                        const responseData = JSON.parse(response.data);
+                        this.getInfoData = responseData;
+                        try {
+                            const uri = responseData.uris[0];
+                            const pubkey = uri.split('@')[0];
+                            this.pubkey = pubkey;
+                        } catch (e) {}
+                        this.loadingLSPS1 = false;
+                    } else {
+                        this.error = true;
+                        this.error_msg = 'Error fetching get_info data';
+                        this.loadingLSPS1 = false;
+                    }
+                });
+            })
+            .catch(() => {
+                runInAction(() => {
                     this.error = true;
                     this.error_msg = 'Error fetching get_info data';
                     this.loadingLSPS1 = false;
-                }
-            })
-            .catch(() => {
-                this.error = true;
-                this.error_msg = 'Error fetching get_info data';
-                this.loadingLSPS1 = false;
+                });
             });
     };
 
@@ -566,7 +579,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {},
@@ -613,31 +626,35 @@ export default class LSPStore {
         return ReactNativeBlobUtil.fetch(
             'POST',
             endpoint,
-            {
-                'Content-Type': 'application/json'
-            },
+            { 'Content-Type': 'application/json' },
             data
         )
             .then((response) => {
                 const responseData = JSON.parse(response.data);
-                if (responseData.error) {
-                    this.error = true;
-                    this.error_msg = errorToUserFriendly(responseData.message);
-                    this.loadingLSPS1 = false;
-                } else {
-                    this.createOrderResponse = responseData;
-                    this.loadingLSPS1 = false;
-                    console.log('Response received:', responseData);
-                }
+                runInAction(() => {
+                    if (responseData.error) {
+                        this.error = true;
+                        this.error_msg = errorToUserFriendly(
+                            responseData.message
+                        );
+                        this.loadingLSPS1 = false;
+                    } else {
+                        this.createOrderResponse = responseData;
+                        this.loadingLSPS1 = false;
+                        console.log('Response received:', responseData);
+                    }
+                });
             })
             .catch((error) => {
                 console.error(
                     'Error sending (create_order) custom message:',
                     error
                 );
-                this.error = true;
-                this.error_msg = errorToUserFriendly(error);
-                this.loadingLSPS1 = false;
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = errorToUserFriendly(error);
+                    this.loadingLSPS1 = false;
+                });
             });
     };
 
@@ -653,7 +670,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
@@ -687,7 +704,6 @@ export default class LSPStore {
             });
     };
 
-    @action
     public lsps1GetOrderREST(id: string, RESTHost: string) {
         this.loadingLSPS1 = true;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
@@ -700,19 +716,23 @@ export default class LSPStore {
             .then((response) => {
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
-                if (responseData.error) {
-                    this.error = true;
-                    this.error_msg = responseData.message;
-                } else {
-                    this.getOrderResponse = responseData;
-                }
-                this.loadingLSPS1 = false;
+                runInAction(() => {
+                    if (responseData.error) {
+                        this.error = true;
+                        this.error_msg = responseData.message;
+                    } else {
+                        this.getOrderResponse = responseData;
+                    }
+                    this.loadingLSPS1 = false;
+                });
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
-                this.error = true;
-                this.error_msg = errorToUserFriendly(error);
-                this.loadingLSPS1 = false;
+                runInAction(() => {
+                    this.error = true;
+                    this.error_msg = errorToUserFriendly(error);
+                    this.loadingLSPS1 = false;
+                });
             });
     }
 
@@ -726,7 +746,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer,
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
@@ -762,7 +782,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {},
@@ -792,7 +812,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer: this.getLSPSPubkey(),
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
@@ -829,7 +849,7 @@ export default class LSPStore {
         this.sendCustomMessage({
             peer,
             type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMesage({
+            data: this.encodeMessage({
                 jsonrpc: JSON_RPC_VERSION,
                 method,
                 params: {
