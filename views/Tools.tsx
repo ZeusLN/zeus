@@ -287,44 +287,45 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
-
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            width: '90%',
-                            borderRadius: 10,
-                            alignSelf: 'center',
-                            marginVertical: 5
-                        }}
-                    >
-                        <TouchableOpacity
-                            style={styles.columnField}
-                            onPress={() =>
-                                navigation.navigate('ActivityExportOptions')
-                            }
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
                         >
-                            <View style={styles.icon}>
-                                <Icon
-                                    name="download"
-                                    type="feather"
-                                    color={themeColor('text')}
-                                    underlayColor="transparent"
-                                    size={18}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.columnText,
-                                    color: themeColor('text')
-                                }}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('ActivityExportOptions')
+                                }
                             >
-                                {localeString('views.activityExport.title')}
-                            </Text>
-                            <View style={styles.ForwardArrow}>
-                                <ForwardIcon stroke={forwardArrowColor} />
-                            </View>
-                        </TouchableOpacity>
-                    </View>
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="download"
+                                        type="feather"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.activityExport.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </ScrollView>
             </Screen>
         );
