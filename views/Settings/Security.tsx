@@ -81,7 +81,6 @@ export default class Security extends React.Component<
     };
 
     componentDidMount() {
-        this.checkSettings();
         this.props.navigation.addListener('focus', this.checkSettings);
     }
 
