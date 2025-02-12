@@ -75,4 +75,31 @@ export default class SwapStore {
         } catch {}
         this.loading = false;
     };
+
+    @action
+    public handleRefund = async (id: string, claimTxDetails: any) => {
+        try {
+            const { pubNonce, transactionHash } = claimTxDetails;
+
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${HOST}/swap/submarine/${id}/refund`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    index: 0,
+                    pubNonce: pubNonce.toString('hex'),
+                    transaction: transactionHash
+                })
+            );
+
+            const resJson = await response.json();
+            console.log('Response:', resJson);
+            return resJson;
+            // TODO : aggregate the partial sig and broadcast the tx
+        } catch (error) {
+            console.error('Initiation failed:', error);
+        }
+    };
 }
