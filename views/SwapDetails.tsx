@@ -49,6 +49,7 @@ interface SwapDetailsState {
     updates: string | null;
     error: string | { message?: string } | null;
     loading: boolean;
+    claimTxDetails: any;
 }
 
 @inject('NodeInfoStore', 'SwapStore')
@@ -64,7 +65,8 @@ export default class SwapDetails extends React.Component<
         this.state = {
             updates: null,
             error: null,
-            loading: false
+            loading: false,
+            claimTxDetails: {}
         };
     }
 
@@ -190,6 +192,8 @@ export default class SwapDetails extends React.Component<
                             createdResponse.id,
                             endpoint
                         );
+
+                        this.setState({ claimTxDetails });
                         console.log('Fetched claim details:', claimTxDetails);
 
                         const isValid = this.validatePreimage(
@@ -556,6 +560,8 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
+        const { handleRefund } = SwapStore!;
+
         const { updates, error } = this.state;
         const swapData = this.props.route.params?.swapData ?? '';
 
@@ -730,6 +736,19 @@ export default class SwapDetails extends React.Component<
                                 transactionType: isSubmarineSwap && 'On-chain'
                             });
                         }}
+                        secondary
+                    />
+                )}
+                {(updates === 'invoice.failedToPay' ||
+                    updates === 'transaction.lockupFailed') && (
+                    <Button
+                        title={localeString('views.SwapDetails.refund')}
+                        containerStyle={{
+                            paddingVertical: 10
+                        }}
+                        onPress={() =>
+                            handleRefund(swapData.id, this.state.claimTxDetails)
+                        }
                         secondary
                     />
                 )}
