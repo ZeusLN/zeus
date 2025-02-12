@@ -61,9 +61,7 @@ export default class Currency extends React.Component<
         prevState: Readonly<CurrencyState>,
         _snapshot?: any
     ): Promise<void> {
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const { settings } = this.props.SettingsStore;
         if (prevState.selectedCurrency !== settings.fiat) {
             this.setState({
                 selectedCurrency: settings.fiat

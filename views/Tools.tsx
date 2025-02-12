@@ -33,9 +33,7 @@ interface ToolsProps {
 @observer
 export default class Tools extends React.Component<ToolsProps, {}> {
     UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
-
-        SettingsStore.getSettings();
+        const { navigation } = this.props;
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
