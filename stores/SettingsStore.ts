@@ -168,6 +168,7 @@ export interface Settings {
     isBiometryEnabled: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
+    settingsVersion?: number;
     // Embedded node
     automaticDisasterRecoveryBackup: boolean;
     expressGraphSync: boolean;
@@ -1127,6 +1128,9 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
 export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 export default class SettingsStore {
+    private static migrationLock = false;
+    private static migrationsCheckedThisSession = false;
+
     @observable settings: Settings = {
         privacy: {
             defaultBlockExplorer: 'mempool.space',
@@ -1261,7 +1265,7 @@ export default class SettingsStore {
     @observable public connecting = true;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
-    @observable private isMigrating = false;
+    // @observable private isMigrating = false;
     @observable public migrationPromise: Promise<void> | null = null;
     private migrationResolve: (() => void) | null = null;
     // LNDHub
@@ -1433,8 +1437,34 @@ export default class SettingsStore {
             if (modernSettings) {
                 console.log('attempting to load modern settings');
                 this.settings = JSON.parse(modernSettings);
-            } else if (!this.isMigrating) {
-                this.isMigrating = true;
+
+                if (!SettingsStore.migrationsCheckedThisSession) {
+                    console.log('First migration check this session');
+                    if (SettingsStore.migrationLock) {
+                        console.log(
+                            'Waiting for in-progress migration to complete'
+                        );
+                        await this.migrationPromise;
+                        console.log(
+                            'Migration completed, proceeding with getSettings'
+                        );
+                    } else {
+                        SettingsStore.migrationLock = true;
+                        this.initMigrationPromise();
+
+                        console.log('calling runIncrementalMigrations');
+                        this.settings =
+                            await MigrationsUtils.runIncrementalSettingsMigrations(
+                                this.settings
+                            );
+
+                        if (this.migrationResolve) this.migrationResolve();
+                        SettingsStore.migrationLock = false;
+                    }
+                    SettingsStore.migrationsCheckedThisSession = true;
+                }
+            } else if (!SettingsStore.migrationLock) {
+                SettingsStore.migrationLock = true;
                 this.initMigrationPromise();
 
                 console.log('attempting to load legacy settings');
@@ -1454,12 +1484,18 @@ export default class SettingsStore {
                     }
 
                     await MigrationsUtils.storageMigrationV2(newSettings);
+
+                    console.log('calling runIncrementalMigrations');
+                    this.settings =
+                        await MigrationsUtils.runIncrementalSettingsMigrations(
+                            this.settings
+                        );
                 } else {
                     console.log('No legacy settings stored');
                 }
 
                 if (this.migrationResolve) this.migrationResolve();
-                this.isMigrating = false;
+                SettingsStore.migrationLock = false;
             }
 
             runInAction(() => {

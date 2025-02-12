@@ -74,7 +74,29 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
 import { v4 as uuidv4 } from 'uuid';
 
+type MigrationFunction = (settings: Settings) => Promise<Settings>;
+
 class MigrationsUtils {
+    private settingsMigrations: MigrationFunction[] = [
+        // Migration 1: Add UUIDs to nodes
+        async (settings: Settings) => {
+            console.log('Starting UUID addition for nodes');
+            if (settings.nodes?.length) {
+                settings.nodes = settings.nodes = settings.nodes.map(
+                    (node: any) => ({
+                        ...node,
+                        uuid: uuidv4()
+                    })
+                );
+                console.log('UUID addition complete');
+            } else {
+                console.log('no nodes exist, UUID addition skipped');
+            }
+
+            return settings;
+        }
+    ];
+
     public async legacySettingsMigrations(settings: string) {
         const newSettings = JSON.parse(settings) as Settings;
         if (!newSettings.fiatRatesSource) {
@@ -253,25 +275,6 @@ class MigrationsUtils {
 
             settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY8, 'true');
-        }
-
-        const MOD_KEY9 = 'add-node-uuids';
-        const mod9 = await EncryptedStorage.getItem(MOD_KEY9);
-        if (!mod9 && newSettings.nodes) {
-            console.log('Starting UUID addition for nodes');
-            newSettings.nodes = newSettings.nodes.map((node: any) => {
-                if (!node.uuid) {
-                    return {
-                        ...node,
-                        uuid: uuidv4()
-                    };
-                }
-                return node;
-            });
-
-            settingsStore.setSettings(JSON.stringify(newSettings));
-            await EncryptedStorage.setItem(MOD_KEY9, 'true');
-            console.log('UUID addition completed');
         }
 
         // migrate old POS squareEnabled setting to posEnabled
@@ -765,6 +768,40 @@ class MigrationsUtils {
         return results.every((result) => result === true);
     }
 
+    public async runIncrementalSettingsMigrations(
+        settings: Settings
+    ): Promise<Settings> {
+        const currentVersion = settings.settingsVersion || 0;
+        console.log(
+            'Starting incremental migrations from version:',
+            currentVersion
+        );
+
+        let migrationsPerformed = false;
+        for (let i = currentVersion; i < this.settingsMigrations.length; i++) {
+            migrationsPerformed = true;
+            console.log(
+                `Running migration ${i + 1} of ${
+                    this.settingsMigrations.length
+                }`
+            );
+            settings = await this.settingsMigrations[i](settings);
+            settings.settingsVersion = i + 1;
+            console.log(
+                `Migration ${i + 1} completed, saving settings with new version`
+            );
+
+            await Storage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        }
+
+        console.log(
+            migrationsPerformed
+                ? `Incremental migrations completed, final version: ${settings.settingsVersion}`
+                : 'No incremental migrations needed'
+        );
+        return settings;
+    }
+
     public migrateLightningAddressSettings = async (): Promise<boolean> => {
         console.log('migrateLightningAddressSettings() started');
         // We need to wait until other migrations are done
@@ -894,7 +931,7 @@ class MigrationsUtils {
             }
         } else {
             console.log(
-                'Migration skipped because because UUID is not in mod10Array or no legacy settings exist'
+                'Migration skipped because UUID is not in mod10Array or no legacy settings exist'
             );
         }
         return false;
