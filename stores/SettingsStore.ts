@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -1265,28 +1265,18 @@ export default class SettingsStore {
     // NWC
     @observable public nostrWalletConnectUrl: string;
 
-    @action
     public setInitialStart = (status: boolean) => {
         this.initialStart = status;
     };
 
-    @action
-    public changeLocale = (locale: string) => {
-        this.settings.locale = locale;
-    };
-
-    @action
     public fetchBTCPayConfig = (data: string) => {
         const configRoute = data.split('config=')[1];
         this.btcPayError = null;
 
         if (configRoute.includes('.onion')) {
             return doTorRequest(configRoute, RequestMethod.GET)
-                .then((response: any) => {
-                    return this.parseBTCPayConfig(response);
-                })
+                .then((response: any) => this.parseBTCPayConfig(response))
                 .catch((err: any) => {
-                    // handle error
                     this.btcPayError = `${localeString(
                         'stores.SettingsStore.btcPayFetchConfigError'
                     )}: ${err.toString()}`;
@@ -1305,7 +1295,6 @@ export default class SettingsStore {
                     }
                 })
                 .catch((err: any) => {
-                    // handle error
                     this.btcPayError = `${localeString(
                         'stores.SettingsStore.btcPayFetchConfigError'
                     )}: ${err.toString()}`;
@@ -1325,55 +1314,61 @@ export default class SettingsStore {
         if (this.enableTor) {
             return doTorRequest(olympiansRoute, RequestMethod.GET)
                 .then((response: any) => {
-                    this.olympians = response.olympians;
-                    this.gods = response.gods;
-                    this.mortals = response.mortals;
-                    this.loading = false;
+                    runInAction(() => {
+                        this.olympians = response.olympians;
+                        this.gods = response.gods;
+                        this.mortals = response.mortals;
+                        this.loading = false;
+                    });
                 })
                 .catch((err: any) => {
-                    // handle error
-                    this.olympians = [];
-                    this.gods = [];
-                    this.mortals = [];
-                    this.loading = false;
-                    this.sponsorsError = `${localeString(
-                        'stores.SettingsStore.olympianFetchError'
-                    )}: ${err.toString()}`;
+                    runInAction(() => {
+                        this.olympians = [];
+                        this.gods = [];
+                        this.mortals = [];
+                        this.loading = false;
+                        this.sponsorsError = `${localeString(
+                            'stores.SettingsStore.olympianFetchError'
+                        )}: ${err.toString()}`;
+                    });
                 });
         } else {
             return ReactNativeBlobUtil.fetch('get', olympiansRoute)
                 .then((response: any) => {
                     const status = response.info().status;
-                    if (status == 200) {
-                        const data = response.json();
-                        this.olympians = data.olympians;
-                        this.gods = data.gods;
-                        this.mortals = data.mortals;
-                        this.loading = false;
-                    } else {
+                    runInAction(() => {
+                        if (status == 200) {
+                            const data = response.json();
+                            this.olympians = data.olympians;
+                            this.gods = data.gods;
+                            this.mortals = data.mortals;
+                            this.loading = false;
+                        } else {
+                            this.olympians = [];
+                            this.gods = [];
+                            this.mortals = [];
+                            this.loading = false;
+                            this.sponsorsError = localeString(
+                                'stores.SettingsStore.olympianFetchError'
+                            );
+                        }
+                    });
+                })
+                .catch((err: any) => {
+                    runInAction(() => {
                         this.olympians = [];
                         this.gods = [];
                         this.mortals = [];
                         this.loading = false;
-                        this.sponsorsError = localeString(
+                        this.sponsorsError = `${localeString(
                             'stores.SettingsStore.olympianFetchError'
-                        );
-                    }
-                })
-                .catch((err: any) => {
-                    // handle error
-                    this.olympians = [];
-                    this.gods = [];
-                    this.mortals = [];
-                    this.loading = false;
-                    this.sponsorsError = `${localeString(
-                        'stores.SettingsStore.olympianFetchError'
-                    )}: ${err.toString()}`;
+                        )}: ${err.toString()}`;
+                    });
                 });
         }
     };
 
-    parseBTCPayConfig(data: any) {
+    private parseBTCPayConfig(data: any) {
         const configuration = data.configurations[0];
         const { adminMacaroon, macaroon, type, uri } = configuration;
 
@@ -1393,11 +1388,10 @@ export default class SettingsStore {
         }
     }
 
-    hasCredentials() {
+    public hasCredentials() {
         return this.macaroonHex || this.accessKey ? true : false;
     }
 
-    @action
     public async getSettings(silentUpdate: boolean = false) {
         if (!silentUpdate) this.loading = true;
         try {
@@ -1429,35 +1423,37 @@ export default class SettingsStore {
                 }
             }
 
-            const node: any =
-                this.settings?.nodes?.length &&
-                this.settings?.nodes[this.settings.selectedNode || 0];
-            if (node) {
-                this.host = node.host;
-                this.port = node.port;
-                this.url = node.url;
-                this.username = node.username;
-                this.password = node.password;
-                this.lndhubUrl = node.lndhubUrl;
-                this.macaroonHex = node.macaroonHex;
-                this.rune = node.rune;
-                this.accessKey = node.accessKey;
-                this.dismissCustodialWarning = node.dismissCustodialWarning;
-                this.implementation = node.implementation || 'lnd';
-                this.certVerification = node.certVerification || false;
-                this.enableTor = node.enableTor;
-                // LNC
-                this.pairingPhrase = node.pairingPhrase;
-                this.mailboxServer = node.mailboxServer;
-                this.customMailboxServer = node.customMailboxServer;
-                // Embeded lnd
-                this.seedPhrase = node.seedPhrase;
-                this.walletPassword = node.walletPassword;
-                this.adminMacaroon = node.adminMacaroon;
-                this.embeddedLndNetwork = node.embeddedLndNetwork;
-                // NWC
-                this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
-            }
+            runInAction(() => {
+                const node: any =
+                    this.settings?.nodes?.length &&
+                    this.settings?.nodes[this.settings.selectedNode || 0];
+                if (node) {
+                    this.host = node.host;
+                    this.port = node.port;
+                    this.url = node.url;
+                    this.username = node.username;
+                    this.password = node.password;
+                    this.lndhubUrl = node.lndhubUrl;
+                    this.macaroonHex = node.macaroonHex;
+                    this.rune = node.rune;
+                    this.accessKey = node.accessKey;
+                    this.dismissCustodialWarning = node.dismissCustodialWarning;
+                    this.implementation = node.implementation || 'lnd';
+                    this.certVerification = node.certVerification || false;
+                    this.enableTor = node.enableTor;
+                    // LNC
+                    this.pairingPhrase = node.pairingPhrase;
+                    this.mailboxServer = node.mailboxServer;
+                    this.customMailboxServer = node.customMailboxServer;
+                    // Embeded lnd
+                    this.seedPhrase = node.seedPhrase;
+                    this.walletPassword = node.walletPassword;
+                    this.adminMacaroon = node.adminMacaroon;
+                    this.embeddedLndNetwork = node.embeddedLndNetwork;
+                    // NWC
+                    this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
+                }
+            });
         } catch (error) {
             console.error('Could not load settings', error);
         } finally {
@@ -1467,7 +1463,6 @@ export default class SettingsStore {
         return this.settings;
     }
 
-    @action
     public async setSettings(settings: any) {
         this.loading = true;
         await Storage.setItem(STORAGE_KEY, settings);
@@ -1475,7 +1470,6 @@ export default class SettingsStore {
         return settings;
     }
 
-    @action
     public updateSettings = async (newSetting: any) => {
         const existingSettings = await this.getSettings();
         const newSettings = {
@@ -1508,25 +1502,30 @@ export default class SettingsStore {
         if (enableTor) {
             return doTorRequest(url, RequestMethod.POST)
                 .then((response: any) => {
-                    this.loading = false;
-                    if (response.error) {
-                        this.createAccountError =
-                            response.message ||
-                            localeString('stores.SettingsStore.lndhubError');
-                    } else {
-                        this.createAccountSuccess = localeString(
-                            'stores.SettingsStore.lndhubSuccess'
-                        );
-                    }
+                    runInAction(() => {
+                        this.loading = false;
+                        if (response.error) {
+                            this.createAccountError =
+                                response.message ||
+                                localeString(
+                                    'stores.SettingsStore.lndhubError'
+                                );
+                        } else {
+                            this.createAccountSuccess = localeString(
+                                'stores.SettingsStore.lndhubSuccess'
+                            );
+                        }
+                    });
                     return response;
                 })
                 .catch((err: any) => {
-                    // handle error
                     const errorString = err.error || err.toString();
-                    this.loading = false;
-                    this.createAccountError = `${localeString(
-                        'stores.SettingsStore.lndhubError'
-                    )}: ${errorString}`;
+                    runInAction(() => {
+                        this.loading = false;
+                        this.createAccountError = `${localeString(
+                            'stores.SettingsStore.lndhubError'
+                        )}: ${errorString}`;
+                    });
                 });
         } else {
             return ReactNativeBlobUtil.config({
@@ -1537,35 +1536,39 @@ export default class SettingsStore {
                     const status = response.info().status;
                     if (status == 200) {
                         const data = response.json();
-                        this.loading = false;
-                        if (data.error) {
-                            this.createAccountError =
-                                data.message ||
-                                localeString(
-                                    'stores.SettingsStore.lndhubError'
+                        runInAction(() => {
+                            this.loading = false;
+                            if (data.error) {
+                                this.createAccountError =
+                                    data.message ||
+                                    localeString(
+                                        'stores.SettingsStore.lndhubError'
+                                    );
+                            } else {
+                                this.createAccountSuccess = localeString(
+                                    'stores.SettingsStore.lndhubSuccess'
                                 );
-                        } else {
-                            this.createAccountSuccess = localeString(
-                                'stores.SettingsStore.lndhubSuccess'
-                            );
-                        }
+                            }
+                        });
 
                         return data;
                     } else {
-                        // handle error
-                        this.loading = false;
-                        this.createAccountError = localeString(
-                            'stores.SettingsStore.lndhubError'
-                        );
+                        runInAction(() => {
+                            this.loading = false;
+                            this.createAccountError = localeString(
+                                'stores.SettingsStore.lndhubError'
+                            );
+                        });
                     }
                 })
                 .catch((err: any) => {
-                    // handle error
                     const errorString = err.error || err.toString();
-                    this.loading = false;
-                    this.createAccountError = `${localeString(
-                        'stores.SettingsStore.lndhubError'
-                    )}: ${errorString}`;
+                    runInAction(() => {
+                        this.loading = false;
+                        this.createAccountError = `${localeString(
+                            'stores.SettingsStore.lndhubError'
+                        )}: ${errorString}`;
+                    });
                 });
         }
     };
@@ -1584,33 +1587,36 @@ export default class SettingsStore {
                 password: request.password
             })
                 .then((data: any) => {
-                    this.loading = false;
-                    this.accessToken = data.access_token;
-                    this.refreshToken = data.refresh_token;
+                    runInAction(() => {
+                        this.loading = false;
+                        this.accessToken = data.access_token;
+                        this.refreshToken = data.refresh_token;
+                    });
                     resolve(data);
                 })
                 .catch((error: any) => {
-                    this.loading = false;
-                    this.error = true;
-                    if (
-                        typeof error.message === 'string' &&
-                        error.message.includes('"bad auth"')
-                    ) {
-                        this.errorMsg = localeString(
-                            'stores.SettingsStore.lndhubLoginError'
-                        );
-                    } else {
-                        this.errorMsg = localeString(
-                            'stores.SettingsStore.lndhubConnectError'
-                        );
-                    }
+                    runInAction(() => {
+                        this.loading = false;
+                        this.error = true;
+                        if (
+                            typeof error.message === 'string' &&
+                            error.message.includes('"bad auth"')
+                        ) {
+                            this.errorMsg = localeString(
+                                'stores.SettingsStore.lndhubLoginError'
+                            );
+                        } else {
+                            this.errorMsg = localeString(
+                                'stores.SettingsStore.lndhubConnectError'
+                            );
+                        }
+                    });
                     resolve();
                 });
         });
     };
 
     // LNC
-    @action
     public connect = async () => {
         this.loading = true;
 
@@ -1618,8 +1624,10 @@ export default class SettingsStore {
 
         const error = await BackendUtils.connect();
         if (error) {
-            this.error = true;
-            this.errorMsg = error;
+            runInAction(() => {
+                this.error = true;
+                this.errorMsg = error;
+            });
             return error;
         }
 
@@ -1635,11 +1643,13 @@ export default class SettingsStore {
                     resolve();
                 } else if (counter > 20) {
                     clearInterval(interval);
-                    this.error = true;
-                    this.errorMsg = localeString(
-                        'stores.SettingsStore.lncConnectError'
-                    );
-                    this.loading = false;
+                    runInAction(() => {
+                        this.error = true;
+                        this.errorMsg = localeString(
+                            'stores.SettingsStore.lncConnectError'
+                        );
+                        this.loading = false;
+                    });
                     resolve(this.errorMsg);
                 }
             }, 500);
@@ -1689,10 +1699,7 @@ export default class SettingsStore {
         this.settings.isBiometryEnabled &&
         this.settings.supportedBiometryType !== undefined;
 
-    @action
-    public setLoginStatus = (status = false) => {
-        this.loggedIn = status;
-    };
+    public setLoginStatus = (status = false) => (this.loggedIn = status);
 
     @action
     public setConnectingStatus = (status = false) => {
@@ -1722,7 +1729,6 @@ export default class SettingsStore {
         }, 3000);
     };
 
-    @action
     public setPosStatus = (setting: string) => {
         this.posStatus = setting;
         return this.posStatus;

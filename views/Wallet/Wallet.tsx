@@ -57,6 +57,7 @@ import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
@@ -91,6 +92,7 @@ interface WalletProps {
     AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    TransactionsStore: TransactionsStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
@@ -116,6 +118,7 @@ interface WalletState {
     'AlertStore',
     'BalanceStore',
     'ChannelsStore',
+    'TransactionsStore',
     'NodeInfoStore',
     'SettingsStore',
     'UnitsStore',
@@ -300,6 +303,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
+            TransactionsStore,
             UTXOsStore,
             ContactStore,
             SettingsStore,
@@ -348,6 +352,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
+            TransactionsStore.reset();
             SyncStore.reset();
             LightningAddressStore.reset();
             LSPStore.reset();
@@ -491,7 +496,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 ChannelsStore.getChannels();
             } catch (connectionError) {
                 console.log('Node connection failed:', connectionError);
-                NodeInfoStore.getNodeInfoError();
+                NodeInfoStore.handleGetNodeInfoError();
                 setConnectingStatus(false);
                 return;
             }

@@ -1,4 +1,4 @@
-import { action, observable, when } from 'mobx';
+import { action, observable, when, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import BackendUtils from '../utils/BackendUtils';
@@ -33,15 +33,14 @@ export default class SyncStore {
         this.error = false;
     };
 
-    setExpressGraphSyncStatus = (syncing: boolean) => {
-        this.isInExpressGraphSync = syncing;
-    };
+    public setExpressGraphSyncStatus = (syncing: boolean) =>
+        (this.isInExpressGraphSync = syncing);
 
     public waitForExpressGraphSyncEnd = () => {
         return when(() => !this.isInExpressGraphSync);
     };
 
-    setSyncInfo = async () => {
+    private setSyncInfo = async () => {
         const nodeInfo = this.nodeInfo;
 
         if (this.currentBlockHeight !== nodeInfo?.block_height) {
@@ -64,22 +63,20 @@ export default class SyncStore {
         return;
     };
 
-    getNodeInfo = () => {
-        return BackendUtils.getMyNodeInfo().then((data: any) => {
-            const nodeInfo = new NodeInfo(data);
-            this.nodeInfo = nodeInfo;
-            return nodeInfo;
-        });
-    };
+    private getNodeInfo = () =>
+        BackendUtils.getMyNodeInfo().then(
+            (data: any) => (this.nodeInfo = new NodeInfo(data))
+        );
 
-    updateProgress = () => {
+    @action
+    private updateProgress = () => {
         this.currentProgress =
             (this.currentBlockHeight ?? 0) - (this.bestBlockHeight ?? 0);
         this.numBlocksUntilSynced =
             (this.bestBlockHeight ?? 0) - this.currentBlockHeight;
     };
 
-    getBestBlockHeight = async () => {
+    private getBestBlockHeight = async () => {
         await new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
@@ -145,7 +142,6 @@ export default class SyncStore {
         }
     };
 
-    @action
     public checkRecoveryStatus = () => {
         BackendUtils.getRecoveryInfo().then((data: any) => {
             if (data.recovery_mode && !data.recovery_finished) {
@@ -154,27 +150,27 @@ export default class SyncStore {
         });
     };
 
-    @action
-    public getRecoveryStatus = async () => {
+    private getRecoveryStatus = async () => {
         await BackendUtils.getRecoveryInfo().then((data: any) => {
-            if (data.recovery_mode) {
-                if (data.progress) {
-                    this.recoveryProgress = data.progress;
-                }
-                if (data.recovery_finished) {
+            runInAction(() => {
+                if (data.recovery_mode) {
+                    if (data.progress) {
+                        this.recoveryProgress = data.progress;
+                    }
+                    if (data.recovery_finished) {
+                        this.isRecovering = false;
+                        this.recoveryProgress = null;
+                    }
+                } else {
                     this.isRecovering = false;
                     this.recoveryProgress = null;
                 }
-            } else {
-                this.isRecovering = false;
-                this.recoveryProgress = null;
-            }
+            });
             return data;
         });
     };
 
-    @action
-    public startRecovering = async () => {
+    private startRecovering = async () => {
         this.isRecovering = true;
 
         while (this.isRecovering) {
