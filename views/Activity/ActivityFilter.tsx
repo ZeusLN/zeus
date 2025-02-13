@@ -65,7 +65,8 @@ export default class ActivityFilter extends React.Component<
             setStartDateFilter,
             setEndDateFilter,
             clearStartDateFilter,
-            clearEndDateFilter
+            clearEndDateFilter,
+            setMemoFilter
         } = ActivityStore;
         const {
             lightning,
@@ -81,7 +82,8 @@ export default class ActivityFilter extends React.Component<
             zeusPay,
             minimumAmount,
             startDate,
-            endDate
+            endDate,
+            memo
         } = filters;
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
@@ -253,6 +255,12 @@ export default class ActivityFilter extends React.Component<
                 label: localeString('views.ActivityFilter.endDate'),
                 type: 'EndDate',
                 condition: true
+            },
+            {
+                label: localeString('views.ActivityFilter.memo'),
+                value: memo,
+                type: 'TextInput',
+                condition: true
             }
         ];
 
@@ -351,6 +359,30 @@ export default class ActivityFilter extends React.Component<
                                                         : 0;
                                                     setAmountFilter(
                                                         newMinAmount
+                                                    );
+                                                }}
+                                                style={{
+                                                    marginBottom: 0,
+                                                    top: 0
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+                                    {item.type === 'TextInput' && (
+                                        <View style={{ flex: 1 }}>
+                                            <TextInput
+                                                placeholder="Enter Memo/Note"
+                                                value={item.value}
+                                                onChangeText={async (
+                                                    text: string
+                                                ) => {
+                                                    const newMemo = text.trim();
+                                                    const newFilters = {
+                                                        ...filters
+                                                    };
+                                                    newFilters.memo = newMemo;
+                                                    setMemoFilter(
+                                                        newFilters.memo
                                                     );
                                                 }}
                                                 style={{
