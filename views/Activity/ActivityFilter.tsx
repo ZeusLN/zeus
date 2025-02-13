@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import isEqual from 'lodash/isEqual';
@@ -303,12 +303,12 @@ export default class ActivityFilter extends React.Component<
                     }
                     navigation={navigation}
                 />
-                <FlatList
-                    data={FILTERS}
-                    renderItem={({ item }) => {
+                <ScrollView>
+                    {FILTERS.map((item, index) => {
                         if (!item.condition) return null;
+
                         return (
-                            <>
+                            <React.Fragment key={index}>
                                 <ListItem
                                     containerStyle={{
                                         borderBottomWidth: 0,
@@ -456,15 +456,13 @@ export default class ActivityFilter extends React.Component<
                                         </View>
                                     )}
                                 </ListItem>
-                            </>
+                                {index < FILTERS.length - 1 &&
+                                    this.renderSeparator()}
+                            </React.Fragment>
                         );
-                    }}
-                    keyExtractor={(item: any, index: any) =>
-                        `${item.model}-${index}`
-                    }
-                    ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
-                />
+                    })}
+                </ScrollView>
+
                 <DatePicker
                     onConfirm={(date) => {
                         if (setStartDate) {
