@@ -54,6 +54,7 @@ import java.util.EnumSet;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -69,6 +70,7 @@ import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 // TODO break this class up
 class LndMobile extends ReactContextBaseJavaModule {
   private final String TAG = "LndMobile";
+  public static Map<String, String> translationCache = new HashMap<>();
   Messenger messenger;
   private boolean lndMobileServiceBound = false;
   private Messenger lndMobileServiceMessenger; // The service
@@ -243,6 +245,21 @@ class LndMobile extends ReactContextBaseJavaModule {
   @Override
   public String getName() {
     return "LndMobile";
+  }
+
+  @ReactMethod
+  public void updateTranslationCache(String locale, ReadableMap translations) {
+    translationCache.clear();
+    ReadableMapKeySetIterator iterator = translations.keySetIterator();
+    while (iterator.hasNextKey()) {
+      String key = iterator.nextKey();
+      translationCache.put(key, translations.getString(key));
+    }
+
+    // Get service instance and rebuild notification
+    Intent intent = new Intent(getReactApplicationContext(), LndMobileService.class);
+    intent.setAction("app.zeusln.zeus.android.intent.action.UPDATE_NOTIFICATION");
+    getReactApplicationContext().startService(intent);
   }
 
   @ReactMethod

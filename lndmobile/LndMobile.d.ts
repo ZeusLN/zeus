@@ -47,6 +47,10 @@ export interface ILndMobile {
     unbindLndMobileService(): Promise<void>; // TODO(hsjoberg): function looks broken
     sendPongToLndMobileservice(): Promise<{ data: string }>;
     checkLndMobileServiceConnected(): Promise<boolean>;
+    updateTranslationCache(
+        locale: string,
+        translations: { [key: string]: string }
+    ): void;
 }
 
 export interface ILndMobileTools {
