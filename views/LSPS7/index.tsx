@@ -108,8 +108,6 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
         };
     }
 
-    encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
-
     async componentDidMount() {
         const { SettingsStore, navigation } = this.props;
         navigation.addListener('focus', () => {

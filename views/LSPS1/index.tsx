@@ -95,8 +95,6 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         };
     }
 
-    encodeMesage = (n: any) => Buffer.from(JSON.stringify(n)).toString('hex');
-
     async componentDidMount() {
         const { LSPStore, SettingsStore, navigation } = this.props;
         LSPStore.resetLSPS1Data();
