@@ -533,26 +533,24 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.handlePubkeySpecificLightningAddressSettings();
         }
 
-        if (
+        const pubkeySpecificLNAddressSettings =
             SettingsStore.settings.lightningAddressByPubkey?.[
                 NodeInfoStore.nodeInfo.identity_pubkey
-            ]?.enabled &&
+            ];
+        if (
+            pubkeySpecificLNAddressSettings?.enabled &&
             BackendUtils.supportsCustomPreimages() &&
             !NodeInfoStore.testnet
         ) {
             if (connecting) {
                 try {
                     await LightningAddressStore.status();
-                    if (
-                        SettingsStore.settings.lightningAddressGlobal
-                            .automaticallyAccept
-                    ) {
+                    if (pubkeySpecificLNAddressSettings.automaticallyAccept) {
                         LightningAddressStore.prepareToAutomaticallyAccept();
                     }
                     if (
                         // TODO add enum
-                        SettingsStore.settings.lightningAddressGlobal
-                            .notifications === 1
+                        pubkeySpecificLNAddressSettings.notifications === 1
                     ) {
                         LightningAddressStore.updatePushCredentials();
                     }
@@ -609,21 +607,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private handlePubkeySpecificLightningAddressSettings = async () => {
         const { LightningAddressStore, NodeInfoStore, SettingsStore } =
             this.props;
+        const { settings, updateSettings, getSettings } = SettingsStore;
         const currentPubkey = NodeInfoStore.nodeInfo.identity_pubkey;
 
-        if (!SettingsStore.settings.lightningAddressByPubkey?.[currentPubkey]) {
+        if (!settings.lightningAddressByPubkey?.[currentPubkey]) {
             const hasLightningAddress =
                 await LightningAddressStore.checkLightningAddressExists();
-            await SettingsStore.updateSettings({
+            await updateSettings({
                 lightningAddressByPubkey: {
-                    ...SettingsStore.settings.lightningAddressByPubkey,
-                    [currentPubkey]: {
-                        enabled: hasLightningAddress === true,
-                        nostrPrivateKey: ''
-                    }
+                    ...settings.lightningAddressByPubkey,
+                    [currentPubkey]: { enabled: hasLightningAddress === true }
                 }
             });
-            SettingsStore.getSettings();
+            getSettings();
         }
     };
 

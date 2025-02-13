@@ -184,8 +184,12 @@ export default class LightningAddress extends React.Component<
 
         const { fontScale } = Dimensions.get('window');
 
+        const pubkeySpecificLNAddressSettings =
+            SettingsStore.settings?.lightningAddressByPubkey?.[
+                NodeInfoStore.nodeInfo.identity_pubkey
+            ];
         const automaticallyAccept =
-            SettingsStore.settings?.lightningAddressGlobal?.automaticallyAccept;
+            pubkeySpecificLNAddressSettings?.automaticallyAccept;
         const isReady =
             SettingsStore.implementation !== 'embedded-lnd' ||
             !prepareToAutomaticallyAcceptStart ||

@@ -123,18 +123,15 @@ interface LegacyLightningAddressSettings {
     notifications: number;
 }
 
-interface GlobalLightningAddressSettings {
+interface NodeSpecificLightningAddressSettings {
+    enabled: boolean;
     automaticallyAccept: boolean;
     automaticallyAcceptAttestationLevel: number;
     routeHints: boolean;
     allowComments: boolean;
+    nostrPrivateKey: string;
     nostrRelays: Array<string>;
     notifications: number;
-}
-
-interface NodeSpecificLightningAddressSettings {
-    enabled: boolean;
-    nostrPrivateKey: string;
 }
 
 interface PubkeyLightningAddressMap {
@@ -204,7 +201,6 @@ export interface Settings {
     lsps1ShowPurchaseButton: boolean;
     // Lightning Address
     lightningAddress?: LegacyLightningAddressSettings;
-    lightningAddressGlobal: GlobalLightningAddressSettings;
     lightningAddressByPubkey: PubkeyLightningAddressMap;
     bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
@@ -1229,15 +1225,7 @@ export default class SettingsStore {
         lsps1Token: '',
         lsps1ShowPurchaseButton: true,
         // Lightning Address
-        lightningAddressGlobal: {
-            automaticallyAccept: true,
-            automaticallyAcceptAttestationLevel: 2,
-            routeHints: false,
-            allowComments: true,
-            nostrRelays: DEFAULT_NOSTR_RELAYS,
-            notifications: 0
-        },
-        // lightningAddressByPubkey settings will be added
+        // all lightningAddressByPubkey settings will be added
         // for each node's pubkey when connecting to that node.
         lightningAddressByPubkey: {},
         bolt12Address: {

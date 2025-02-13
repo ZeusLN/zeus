@@ -811,16 +811,13 @@ class MigrationsUtils {
             JSON.stringify(settingsStore.settings)
         ) as Settings;
 
-        let globalSettingsChanged = false;
-
-        const MOD_KEY10 = 'lightning-address-settings-split-2025';
+        const MOD_KEY10 = 'make-ln-address-settings-pubkey-specific-2025';
         const mod10String = await Storage.getItem(MOD_KEY10);
         let mod10Array = mod10String ? JSON.parse(mod10String) : [];
 
         if (!mod10String) {
-            // At first run we need to
-            // - add UUIDs from all nodes but lndhub and cln-rest to MOD_KEY10
-            //  - set up global settings from legacy settings
+            // At first run we need to add UUIDs from all node configs with
+            // 'supportsCustomPreimages = true' to MOD_KEY10
             const nodesToMigrate = newSettings.nodes
                 ?.filter(
                     (node: any) =>
@@ -833,37 +830,19 @@ class MigrationsUtils {
             await Storage.setItem(MOD_KEY10, nodesToMigrate);
             mod10Array = nodesToMigrate;
 
-            // --- Set up global settings from legacy settings
-            if (newSettings.lightningAddress) {
-                newSettings.lightningAddressGlobal = {
-                    automaticallyAccept:
-                        newSettings.lightningAddress.automaticallyAccept,
-                    automaticallyAcceptAttestationLevel:
-                        newSettings.lightningAddress
-                            .automaticallyAcceptAttestationLevel,
-                    routeHints: newSettings.lightningAddress.routeHints,
-                    allowComments: newSettings.lightningAddress.allowComments,
-                    nostrRelays: newSettings.lightningAddress.nostrRelays,
-                    notifications: newSettings.lightningAddress.notifications
-                };
-                globalSettingsChanged = true;
-                console.log(
-                    'Global settings created:',
-                    newSettings.lightningAddressGlobal
-                );
-
-                if (!nodesToMigrate?.length) {
+            if (!nodesToMigrate?.length) {
+                if (newSettings.lightningAddress) {
                     delete newSettings.lightningAddress;
                     await settingsStore.setSettings(newSettings);
-                    console.log(
-                        'No nodes to migrate, legacy settings deleted. Migration completed.'
-                    );
-                    return true;
                 }
+                console.log(
+                    'No nodes to migrate, legacy settings deleted. Migration completed.'
+                );
+                return true;
             }
         } else if ((mod10Array as string[]).length === 0) {
             console.log(
-                'Lightning Address migration skipped - all nodes migrated'
+                'Lightning Address migration skipped - all nodes migrated already'
             );
             return false;
         }
@@ -889,16 +868,38 @@ class MigrationsUtils {
             try {
                 const hasLightningAddress =
                     await lightningAddressStore.checkLightningAddressExists();
-                newSettings.lightningAddressByPubkey = {
-                    ...newSettings.lightningAddressByPubkey,
-                    [currentPubkey]: {
-                        enabled: hasLightningAddress === true,
-                        nostrPrivateKey:
-                            hasLightningAddress === true
-                                ? newSettings.lightningAddress.nostrPrivateKey
-                                : ''
-                    }
-                };
+                if (hasLightningAddress) {
+                    console.log('Lightning address exists');
+                    newSettings.lightningAddressByPubkey = {
+                        ...newSettings.lightningAddressByPubkey,
+                        [currentPubkey]: {
+                            enabled: true,
+                            automaticallyAccept:
+                                newSettings.lightningAddress
+                                    .automaticallyAccept,
+                            automaticallyAcceptAttestationLevel:
+                                newSettings.lightningAddress
+                                    .automaticallyAcceptAttestationLevel,
+                            routeHints: newSettings.lightningAddress.routeHints,
+                            allowComments:
+                                newSettings.lightningAddress.allowComments,
+                            nostrPrivateKey:
+                                newSettings.lightningAddress.nostrPrivateKey,
+                            nostrRelays:
+                                newSettings.lightningAddress.nostrRelays,
+                            notifications:
+                                newSettings.lightningAddress.notifications
+                        }
+                    };
+                } else {
+                    console.log('Lightning address does not exist');
+                    newSettings.lightningAddressByPubkey = {
+                        ...newSettings.lightningAddressByPubkey,
+                        [currentPubkey]: {
+                            enabled: false
+                        }
+                    };
+                }
                 console.log(
                     'Node-specific settings created:',
                     newSettings.lightningAddressByPubkey[currentPubkey]
@@ -920,14 +921,12 @@ class MigrationsUtils {
                 );
                 return true;
             } catch (error) {
-                // If checkLightningAddressExists() throws error, but ln address global settings
-                // were changed, we still need to call getSettings() in Wallet.tsx
-                console.log('Migration error details:', {
+                console.log('migrateLightningAddressSettings error, details:', {
                     error,
                     errorMessage: (error as Error).message,
                     errorStack: (error as Error).stack
                 });
-                return globalSettingsChanged;
+                return false;
             }
         } else {
             console.log(

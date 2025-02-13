@@ -328,7 +328,7 @@ describe('MigrationUtils', () => {
             lightningAddressStore.checkLightningAddressExists = jest.fn();
         });
 
-        it('creates global settings at first run and puts only those node UUIDs on todo list that need migration', async () => {
+        it('creates todo list during first run with UUIDs of only those nodes that need migration', async () => {
             settingsStore.settings = {
                 nodes: [
                     { implementation: 'embedded-lnd', uuid: 'uuid1' },
@@ -354,24 +354,12 @@ describe('MigrationUtils', () => {
 
             expect(result).toBe(true);
             expect(Storage.setItem).toHaveBeenCalledWith(
-                'lightning-address-settings-split-2025',
+                'make-ln-address-settings-pubkey-specific-2025',
                 ['uuid1', 'uuid2']
-            );
-            expect(settingsStore.setSettings).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    lightningAddressGlobal: {
-                        automaticallyAccept: true,
-                        automaticallyAcceptAttestationLevel: 2,
-                        routeHints: false,
-                        allowComments: true,
-                        nostrRelays: ['relay1', 'relay2'],
-                        notifications: 0
-                    }
-                })
             );
         });
 
-        it('creates global settings at first run and deletes legacy settings when there are only nodes that do not need migration', async () => {
+        it('deletes legacy settings at first run when there are only nodes that do not need migration', async () => {
             settingsStore.settings = {
                 nodes: [
                     { implementation: 'lndhub', uuid: 'uuid1' },
@@ -390,48 +378,76 @@ describe('MigrationUtils', () => {
 
             expect(result).toBe(true);
             expect(settingsStore.setSettings).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    lightningAddressGlobal: {
-                        automaticallyAccept: true,
-                        automaticallyAcceptAttestationLevel: undefined,
-                        routeHints: undefined,
-                        allowComments: undefined,
-                        nostrRelays: undefined,
-                        notifications: undefined
-                    }
-                })
-            );
-            expect(settingsStore.setSettings).toHaveBeenCalledWith(
                 expect.not.objectContaining({
                     lightningAddress: expect.anything()
                 })
             );
         });
 
-        it('creates global settings at first run and returns true when checkLightningAddressExists()', async () => {
+        it('sets enabled: false when lightning address does not exist for current node', async () => {
+            settingsStore.settings = {
+                lightningAddress: {
+                    automaticallyAccept: true
+                }
+            } as Settings;
             settingsStore.currentNodeUuid = 'uuid1';
+            nodeInfoStore.nodeInfo = { identity_pubkey: 'pubkey123' };
 
-            // simulate first run
-            (Storage.getItem as jest.Mock).mockResolvedValue(null);
+            (Storage.getItem as jest.Mock).mockResolvedValue(
+                JSON.stringify(['uuid1'])
+            );
             (
                 lightningAddressStore.checkLightningAddressExists as jest.Mock
-            ).mockRejectedValue(new Error('error'));
+            ).mockResolvedValue(false);
 
             const result =
                 await migrationUtils.migrateLightningAddressSettings();
 
+            expect(result).toBe(true);
             expect(settingsStore.setSettings).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    lightningAddressGlobal: expect.any(Object)
+                    lightningAddressByPubkey: {
+                        pubkey123: {
+                            enabled: false
+                        }
+                    }
                 })
             );
-            expect(result).toBe(true);
+        });
+
+        it('keeps remaining nodes in todo list when migration fails for current node', async () => {
+            settingsStore.settings = {
+                lightningAddress: {
+                    automaticallyAccept: true
+                }
+            } as Settings;
+            settingsStore.currentNodeUuid = 'uuid1';
+            nodeInfoStore.nodeInfo = { identity_pubkey: 'pubkey123' };
+
+            (Storage.getItem as jest.Mock).mockResolvedValue(
+                JSON.stringify(['uuid1', 'uuid2'])
+            );
+            (
+                lightningAddressStore.checkLightningAddressExists as jest.Mock
+            ).mockRejectedValue(new Error('Backend error'));
+
+            const result =
+                await migrationUtils.migrateLightningAddressSettings();
+
+            expect(result).toBe(false);
+            expect(Storage.setItem).not.toHaveBeenCalled();
         });
 
         it('creates lightningAddressByPubkey settings for current node, removes node from migration todo list and deletes legacy settings when it was the last node to migrate', async () => {
             settingsStore.settings = {
                 lightningAddress: {
-                    nostrPrivateKey: 'privateKey123'
+                    automaticallyAccept: true,
+                    automaticallyAcceptAttestationLevel: 2,
+                    routeHints: false,
+                    allowComments: true,
+                    nostrPrivateKey: 'privateKey123',
+                    nostrRelays: ['relay1', 'relay2'],
+                    notifications: 1
                 }
             } as Settings;
             settingsStore.currentNodeUuid = 'uuid1';
@@ -454,13 +470,19 @@ describe('MigrationUtils', () => {
                     lightningAddressByPubkey: {
                         pubkey123: {
                             enabled: true,
-                            nostrPrivateKey: 'privateKey123'
+                            automaticallyAccept: true,
+                            automaticallyAcceptAttestationLevel: 2,
+                            routeHints: false,
+                            allowComments: true,
+                            nostrPrivateKey: 'privateKey123',
+                            nostrRelays: ['relay1', 'relay2'],
+                            notifications: 1
                         }
                     }
                 })
             );
             expect(Storage.setItem).toHaveBeenCalledWith(
-                'lightning-address-settings-split-2025',
+                'make-ln-address-settings-pubkey-specific-2025',
                 []
             );
             expect(settingsStore.setSettings).toHaveBeenCalledWith(

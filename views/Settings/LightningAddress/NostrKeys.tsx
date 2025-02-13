@@ -357,10 +357,14 @@ export default class NostrKey extends React.Component<
                                                     { nostrPrivateKey }
                                                 );
                                             } else {
-                                                const relays =
+                                                const pubkeySpecificLNAddressSettings =
                                                     settings
-                                                        .lightningAddressGlobal
-                                                        .nostrRelays;
+                                                        .lightningAddressByPubkey[
+                                                        NodeInfoStore.nodeInfo
+                                                            .identity_pubkey
+                                                    ];
+                                                const relays =
+                                                    pubkeySpecificLNAddressSettings.nostrRelays;
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
                                                         hashjs

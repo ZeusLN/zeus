@@ -286,18 +286,16 @@ export default class LightningAddressStore {
 
             if (responseHandle) {
                 this.setLightningAddress(responseHandle, domain);
-            
+
                 await this.settingsStore.updateSettings({
-                    lightningAddressGlobal: {
-                        automaticallyAccept: true,
-                        allowComments: true,
-                        nostrRelays: relays,
-                        notifications: 1
-                    },
                     lightningAddressByPubkey: {
                         [this.nodeInfoStore.nodeInfo.identity_pubkey]: {
                             enabled: true,
-                            nostrPrivateKey
+                            nostrPrivateKey,
+                            automaticallyAccept: true,
+                            allowComments: true,
+                            nostrRelays: relays,
+                            notifications: 1
                         }
                     }
                 });
@@ -451,11 +449,12 @@ export default class LightningAddressStore {
                 this.minimumSats = minimumSats;
                 this.lightningAddressHandle = handle;
                 this.lightningAddressDomain = domain;
+                if (handle && domain) {
+                    this.lightningAddress = `${handle}@${domain}`;
+                }
             });
 
             if (handle && domain) {
-                this.lightningAddress = `${handle}@${domain}`;
-
                 // If backend could not be reached earlier, we set "enabled: true" now
                 if (
                     this.settingsStore.settings.lightningAddressByPubkey?.[
@@ -464,10 +463,10 @@ export default class LightningAddressStore {
                 ) {
                     await this.settingsStore.updateSettings({
                         lightningAddressByPubkey: {
-                            ...this.settingsStore.settings.lightningAddressByPubkey,
+                            ...this.settingsStore.settings
+                                .lightningAddressByPubkey,
                             [this.nodeInfoStore.nodeInfo.identity_pubkey]: {
-                                enabled: true,
-                                nostrPrivateKey: ''
+                                enabled: true
                             }
                         }
                     });
@@ -566,38 +565,39 @@ export default class LightningAddressStore {
         let status = 'warning';
 
         try {
+            const pubkey = this.nodeInfoStore.nodeInfo.identity_pubkey;
+            const nostrRelays =
+                this.settingsStore.settings.lightningAddressByPubkey[pubkey]
+                    .nostrRelays;
             const attestationEvents: any = {};
-
             const hashpk = getPublicKey(hash);
 
             await Promise.all(
-                this.settingsStore.settings.lightningAddressGlobal.nostrRelays.map(
-                    async (relayItem) => {
-                        const relay = relayInit(relayItem);
-                        relay.on('connect', () => {
-                            console.log(`connected to ${relay.url}`);
-                        });
-                        relay.on('error', () => {
-                            console.log(`failed to connect to ${relay.url}`);
-                        });
+                nostrRelays.map(async (relayItem) => {
+                    const relay = relayInit(relayItem);
+                    relay.on('connect', () => {
+                        console.log(`connected to ${relay.url}`);
+                    });
+                    relay.on('error', () => {
+                        console.log(`failed to connect to ${relay.url}`);
+                    });
 
-                        await relay.connect();
+                    await relay.connect();
 
-                        const events = await relay.list([
-                            {
-                                kinds: [55869],
-                                '#p': [hashpk]
-                            }
-                        ]);
+                    const events = await relay.list([
+                        {
+                            kinds: [55869],
+                            '#p': [hashpk]
+                        }
+                    ]);
 
-                        events.map((event: any) => {
-                            attestationEvents[event.id] = event;
-                        });
+                    events.map((event: any) => {
+                        attestationEvents[event.id] = event;
+                    });
 
-                        relay.close();
-                        return;
-                    }
-                )
+                    relay.close();
+                    return;
+                })
             );
 
             Object.keys(attestationEvents).map((key) => {
@@ -784,8 +784,9 @@ export default class LightningAddressStore {
                 memo: comment ? `ZEUS Pay: ${comment}` : 'ZEUS Pay',
                 preimage,
                 private:
-                    this.settingsStore?.settings?.lightningAddressGlobal
-                        ?.routeHints || false
+                    this.settingsStore?.settings?.lightningAddressByPubkey[
+                        this.nodeInfoStore.nodeInfo.identity_pubkey
+                    ]?.routeHints || false
             })
                 .then((result: any) => {
                     if (result.payment_request) {
@@ -840,11 +841,10 @@ export default class LightningAddressStore {
     @action
     public redeemAllOpenPayments = async () => {
         this.redeemingAll = true;
-        const attestationLevel = this.settingsStore?.settings
-            ?.lightningAddressGlobal?.automaticallyAcceptAttestationLevel
-            ? this.settingsStore.settings.lightningAddressGlobal
-                  .automaticallyAcceptAttestationLevel
-            : 2;
+        const attestationLevel =
+            this.settingsStore?.settings?.lightningAddressByPubkey[
+                this.nodeInfoStore.nodeInfo.identity_pubkey
+            ]?.automaticallyAcceptAttestationLevel ?? 2;
 
         // disabled
         if (attestationLevel === 0) {
@@ -915,12 +915,11 @@ export default class LightningAddressStore {
                     this.socket.on('paid', (data: any) => {
                         const { hash, amount_msat, comment } = data;
 
-                        const attestationLevel = this.settingsStore?.settings
-                            ?.lightningAddressGlobal
-                            ?.automaticallyAcceptAttestationLevel
-                            ? this.settingsStore.settings.lightningAddressGlobal
-                                  .automaticallyAcceptAttestationLevel
-                            : 2;
+                        const attestationLevel =
+                            this.settingsStore?.settings
+                                ?.lightningAddressByPubkey[
+                                this.nodeInfoStore.nodeInfo.identity_pubkey
+                            ]?.automaticallyAcceptAttestationLevel ?? 2;
 
                         if (attestationLevel === 0) {
                             this.lookupPreimageAndRedeem(
