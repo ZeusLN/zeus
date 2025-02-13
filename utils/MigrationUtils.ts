@@ -1,4 +1,8 @@
-import stores from '../stores/Stores';
+import {
+    settingsStore,
+    nodeInfoStore,
+    lightningAddressStore
+} from '../stores/storeInstances';
 import {
     Settings,
     DEFAULT_FIAT_RATES_SOURCE,
@@ -33,9 +37,7 @@ import {
     LAST_CHANNEL_BACKUP_TIME
 } from '../stores/ChannelBackupStore';
 import {
-    LEGACY_ADDRESS_ACTIVATED_STRING,
     LEGACY_HASHES_STORAGE_STRING,
-    ADDRESS_ACTIVATED_STRING,
     HASHES_STORAGE_STRING
 } from '../stores/LightningAddressStore';
 import {
@@ -70,8 +72,31 @@ export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
 import Storage from '../storage';
+import { v4 as uuidv4 } from 'uuid';
+
+type MigrationFunction = (settings: Settings) => Promise<Settings>;
 
 class MigrationsUtils {
+    private settingsMigrations: MigrationFunction[] = [
+        // Migration 1: Add UUIDs to nodes
+        async (settings: Settings) => {
+            console.log('Starting UUID addition for nodes');
+            if (settings.nodes?.length) {
+                settings.nodes = settings.nodes = settings.nodes.map(
+                    (node: any) => ({
+                        ...node,
+                        uuid: uuidv4()
+                    })
+                );
+                console.log('UUID addition complete');
+            } else {
+                console.log('no nodes exist, UUID addition skipped');
+            }
+
+            return settings;
+        }
+    ];
+
     public async legacySettingsMigrations(settings: string) {
         const newSettings = JSON.parse(settings) as Settings;
         if (!newSettings.fiatRatesSource) {
@@ -124,7 +149,7 @@ class MigrationsUtils {
         const mod = await EncryptedStorage.getItem(MOD_KEY);
         if (!mod) {
             newSettings.requestSimpleTaproot = true;
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY, 'true');
         }
 
@@ -137,7 +162,7 @@ class MigrationsUtils {
             if (newSettings?.lspTestnet === 'https://testnet-lsp.lnolymp.us') {
                 newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
             }
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY2, 'true');
         }
 
@@ -158,7 +183,7 @@ class MigrationsUtils {
                 newSettings.neutrinoPeersMainnet =
                     DEFAULT_NEUTRINO_PEERS_MAINNET;
             }
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY3, 'true');
         }
 
@@ -192,7 +217,7 @@ class MigrationsUtils {
                 newSettings.lsps1ShowPurchaseButton = true;
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY4, 'true');
         }
 
@@ -209,7 +234,7 @@ class MigrationsUtils {
                 }
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY5, 'true');
         }
 
@@ -221,7 +246,7 @@ class MigrationsUtils {
                 newSettings.customSpeedloader = '';
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY6, 'true');
         }
 
@@ -234,7 +259,7 @@ class MigrationsUtils {
                 newSettings.bimodalPathfinding = false;
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY7, 'true');
         }
 
@@ -248,7 +273,7 @@ class MigrationsUtils {
                 newSettings.lightningAddress.nostrRelays = DEFAULT_NOSTR_RELAYS;
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY8, 'true');
         }
 
@@ -365,42 +390,21 @@ class MigrationsUtils {
         // Lightning address migration
         const lightningAddressMigration = (async () => {
             try {
-                let activatedSuccess: any = true;
-                let hashesSuccess: any = true;
-
-                const activated = await EncryptedStorage.getItem(
-                    LEGACY_ADDRESS_ACTIVATED_STRING
-                );
-                if (activated) {
-                    console.log(
-                        'Attemping lightning address activated migration'
-                    );
-                    activatedSuccess = await Storage.setItem(
-                        ADDRESS_ACTIVATED_STRING,
-                        activated
-                    );
-                    console.log(
-                        'Lightning address activated migration status',
-                        activatedSuccess
-                    );
-                }
-
                 const hashes = await EncryptedStorage.getItem(
                     LEGACY_HASHES_STORAGE_STRING
                 );
                 if (hashes) {
                     console.log('Attemping lightning address hashes migration');
-                    hashesSuccess = await Storage.setItem(
+                    const writeSuccess = await Storage.setItem(
                         HASHES_STORAGE_STRING,
                         hashes
                     );
                     console.log(
                         'Lightning address hashes migration status',
-                        hashesSuccess
+                        writeSuccess
                     );
+                    return writeSuccess;
                 }
-
-                return activatedSuccess && hashesSuccess;
             } catch (error) {
                 console.error(
                     'Error loading lightning address data from encrypted storage',
@@ -763,6 +767,174 @@ class MigrationsUtils {
         console.log('storageMigrationV2 completed!', results);
         return results.every((result) => result === true);
     }
+
+    public async runIncrementalSettingsMigrations(
+        settings: Settings
+    ): Promise<Settings> {
+        const currentVersion = settings.settingsVersion || 0;
+        console.log(
+            'Starting incremental migrations from version:',
+            currentVersion
+        );
+
+        let migrationsPerformed = false;
+        for (let i = currentVersion; i < this.settingsMigrations.length; i++) {
+            migrationsPerformed = true;
+            console.log(
+                `Running migration ${i + 1} of ${
+                    this.settingsMigrations.length
+                }`
+            );
+            settings = await this.settingsMigrations[i](settings);
+            settings.settingsVersion = i + 1;
+            console.log(
+                `Migration ${i + 1} completed, saving settings with new version`
+            );
+
+            await Storage.setItem(STORAGE_KEY, JSON.stringify(settings));
+        }
+
+        console.log(
+            migrationsPerformed
+                ? `Incremental migrations completed, final version: ${settings.settingsVersion}`
+                : 'No incremental migrations needed'
+        );
+        return settings;
+    }
+
+    public migrateLightningAddressSettings = async (): Promise<boolean> => {
+        console.log('migrateLightningAddressSettings() started');
+        // We need to wait until other migrations are done
+        await settingsStore.migrationPromise;
+
+        const newSettings = JSON.parse(
+            JSON.stringify(settingsStore.settings)
+        ) as Settings;
+
+        const MOD_KEY10 = 'make-ln-address-settings-pubkey-specific-2025';
+        const mod10String = await Storage.getItem(MOD_KEY10);
+        let mod10Array = mod10String ? JSON.parse(mod10String) : [];
+
+        if (!mod10String) {
+            // At first run we need to add UUIDs from all node configs with
+            // 'supportsCustomPreimages = true' to MOD_KEY10
+            const nodesToMigrate = newSettings.nodes
+                ?.filter(
+                    (node: any) =>
+                        node.implementation === 'embedded-lnd' ||
+                        node.implementation === 'lnd' ||
+                        node.implementation === 'lightning-node-connect'
+                )
+                .map((node: any) => node.uuid);
+
+            await Storage.setItem(MOD_KEY10, nodesToMigrate);
+            mod10Array = nodesToMigrate;
+
+            if (!nodesToMigrate?.length) {
+                if (newSettings.lightningAddress) {
+                    delete newSettings.lightningAddress;
+                    await settingsStore.setSettings(newSettings);
+                }
+                console.log(
+                    'No nodes to migrate, legacy settings deleted. Migration completed.'
+                );
+                return true;
+            }
+        } else if ((mod10Array as string[]).length === 0) {
+            console.log(
+                'Lightning Address migration skipped - all nodes migrated already'
+            );
+            return false;
+        }
+
+        const currentNodeUuid = settingsStore.currentNodeUuid;
+        console.log('Current node uuid:', currentNodeUuid);
+
+        // Run migration if this node's UUID is still in mod10Array
+        if (
+            newSettings.lightningAddress &&
+            mod10Array.includes(currentNodeUuid)
+        ) {
+            // --- Set up node-specific settings ---
+            // First we check if Lightning Address exists for this node, so we can
+            // - set correct flag "enabled" per pubkey
+            // - use existing nostr priv key
+            const currentPubkey = nodeInfoStore.nodeInfo.identity_pubkey;
+            console.log(
+                'Starting Lightning Address migration for pubkey:',
+                currentPubkey
+            );
+
+            try {
+                const hasLightningAddress =
+                    await lightningAddressStore.checkLightningAddressExists();
+                if (hasLightningAddress) {
+                    console.log('Lightning address exists');
+                    newSettings.lightningAddressByPubkey = {
+                        ...newSettings.lightningAddressByPubkey,
+                        [currentPubkey]: {
+                            enabled: true,
+                            automaticallyAccept:
+                                newSettings.lightningAddress
+                                    .automaticallyAccept,
+                            automaticallyAcceptAttestationLevel:
+                                newSettings.lightningAddress
+                                    .automaticallyAcceptAttestationLevel,
+                            routeHints: newSettings.lightningAddress.routeHints,
+                            allowComments:
+                                newSettings.lightningAddress.allowComments,
+                            nostrPrivateKey:
+                                newSettings.lightningAddress.nostrPrivateKey,
+                            nostrRelays:
+                                newSettings.lightningAddress.nostrRelays,
+                            notifications:
+                                newSettings.lightningAddress.notifications
+                        }
+                    };
+                } else {
+                    console.log('Lightning address does not exist');
+                    newSettings.lightningAddressByPubkey = {
+                        ...newSettings.lightningAddressByPubkey,
+                        [currentPubkey]: {
+                            enabled: false
+                        }
+                    };
+                }
+                console.log(
+                    'Node-specific settings created:',
+                    newSettings.lightningAddressByPubkey[currentPubkey]
+                );
+
+                const remainingUuids = mod10Array.filter(
+                    (uuid: string) => uuid !== currentNodeUuid
+                );
+                if (remainingUuids.length === 0) {
+                    delete newSettings.lightningAddress;
+                    console.log('All nodes migrated, legacy settings deleted');
+                }
+                await Storage.setItem(MOD_KEY10, remainingUuids);
+
+                await settingsStore.setSettings(newSettings);
+                console.log(
+                    'Migration completed and marked as done for pubkey:',
+                    currentPubkey
+                );
+                return true;
+            } catch (error) {
+                console.log('migrateLightningAddressSettings error, details:', {
+                    error,
+                    errorMessage: (error as Error).message,
+                    errorStack: (error as Error).stack
+                });
+                return false;
+            }
+        } else {
+            console.log(
+                'Migration skipped because UUID is not in mod10Array or no legacy settings exist'
+            );
+        }
+        return false;
+    };
 }
 
 const migrationsUtils = new MigrationsUtils();

@@ -14,9 +14,11 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore, {
     NOTIFICATIONS_PREF_KEYS,
-    AUTOMATIC_ATTESTATION_KEYS
+    AUTOMATIC_ATTESTATION_KEYS,
+    DEFAULT_NOSTR_RELAYS
 } from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -25,6 +27,7 @@ interface LightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface LightningAddressSettingsState {
@@ -37,7 +40,7 @@ interface LightningAddressSettingsState {
     notifications: number;
 }
 
-@inject('SettingsStore', 'LightningAddressStore')
+@inject('SettingsStore', 'LightningAddressStore', 'NodeInfoStore')
 @observer
 export default class LightningAddressSettings extends React.Component<
     LightningAddressSettingsProps,
@@ -54,32 +57,39 @@ export default class LightningAddressSettings extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const pubkeySpecificLNAddressSettings =
+            SettingsStore.settings.lightningAddressByPubkey?.[
+                NodeInfoStore.nodeInfo.identity_pubkey
+            ];
 
         this.setState({
-            automaticallyAccept: settings.lightningAddress?.automaticallyAccept
-                ? true
-                : false,
-            automaticallyAcceptAttestationLevel: settings.lightningAddress
-                ?.automaticallyAcceptAttestationLevel
-                ? settings.lightningAddress.automaticallyAcceptAttestationLevel
-                : 2,
-            routeHints: settings.lightningAddress?.routeHints ? true : false,
-            allowComments: settings.lightningAddress?.allowComments
-                ? true
-                : false,
-            nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
-            nostrRelays: settings.lightningAddress?.nostrRelays || [],
-            notifications:
-                settings.lightningAddress?.notifications !== undefined
-                    ? settings.lightningAddress.notifications
-                    : 1
+            // Fallbacks are needed if migration failed due to backend
+            // being unreachable during checkLightningAddressExists()
+            automaticallyAccept:
+                pubkeySpecificLNAddressSettings?.automaticallyAccept ?? true,
+            automaticallyAcceptAttestationLevel:
+                pubkeySpecificLNAddressSettings?.automaticallyAcceptAttestationLevel ??
+                2,
+            routeHints: pubkeySpecificLNAddressSettings?.routeHints ?? false,
+            allowComments:
+                pubkeySpecificLNAddressSettings?.allowComments ?? true,
+            nostrPrivateKey:
+                pubkeySpecificLNAddressSettings?.nostrPrivateKey ?? '',
+            nostrRelays:
+                pubkeySpecificLNAddressSettings?.nostrRelays ??
+                DEFAULT_NOSTR_RELAYS,
+            notifications: pubkeySpecificLNAddressSettings?.notifications ?? 0
         });
     }
 
     render() {
-        const { navigation, SettingsStore, LightningAddressStore } = this.props;
+        const {
+            navigation,
+            SettingsStore,
+            LightningAddressStore,
+            NodeInfoStore
+        } = this.props;
         const {
             automaticallyAccept,
             automaticallyAcceptAttestationLevel,
@@ -90,6 +100,9 @@ export default class LightningAddressSettings extends React.Component<
         } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { loading, update, error_msg } = LightningAddressStore;
+        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
+        const pubkeySpecificLNAddressSettings =
+            settings.lightningAddressByPubkey[pubkey];
 
         return (
             <Screen>
@@ -148,10 +161,13 @@ export default class LightningAddressSettings extends React.Component<
                                                 !automaticallyAccept
                                         });
                                         await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                automaticallyAccept:
-                                                    !automaticallyAccept
+                                            lightningAddressByPubkey: {
+                                                ...settings.lightningAddressByPubkey,
+                                                [pubkey]: {
+                                                    ...pubkeySpecificLNAddressSettings,
+                                                    automaticallyAccept:
+                                                        !automaticallyAccept
+                                                }
                                             }
                                         });
                                     }}
@@ -172,10 +188,13 @@ export default class LightningAddressSettings extends React.Component<
                                             value
                                     });
                                     await updateSettings({
-                                        lightningAddress: {
-                                            ...settings.lightningAddress,
-                                            automaticallyAcceptAttestationLevel:
-                                                value
+                                        lightningAddressByPubkey: {
+                                            ...settings.lightningAddressByPubkey,
+                                            [pubkey]: {
+                                                ...pubkeySpecificLNAddressSettings,
+                                                automaticallyAcceptAttestationLevel:
+                                                    value
+                                            }
                                         }
                                     });
                                 }}
@@ -218,9 +237,12 @@ export default class LightningAddressSettings extends React.Component<
                                             routeHints: !routeHints
                                         });
                                         await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                routeHints: !routeHints
+                                            lightningAddressByPubkey: {
+                                                ...settings.lightningAddressByPubkey,
+                                                [pubkey]: {
+                                                    ...pubkeySpecificLNAddressSettings,
+                                                    routeHints: !routeHints
+                                                }
                                             }
                                         });
                                     }}
@@ -261,10 +283,13 @@ export default class LightningAddressSettings extends React.Component<
                                                         !allowComments
                                                 });
                                                 await updateSettings({
-                                                    lightningAddress: {
-                                                        ...settings.lightningAddress,
-                                                        allowComments:
-                                                            !allowComments
+                                                    lightningAddressByPubkey: {
+                                                        ...settings.lightningAddressByPubkey,
+                                                        [pubkey]: {
+                                                            ...pubkeySpecificLNAddressSettings,
+                                                            allowComments:
+                                                                !allowComments
+                                                        }
                                                     }
                                                 });
                                             });
@@ -288,9 +313,12 @@ export default class LightningAddressSettings extends React.Component<
                                                 notifications: value
                                             });
                                             await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
-                                                    notifications: value
+                                                lightningAddressByPubkey: {
+                                                    ...settings.lightningAddressByPubkey,
+                                                    [pubkey]: {
+                                                        ...pubkeySpecificLNAddressSettings,
+                                                        notifications: value
+                                                    }
                                                 }
                                             });
                                         });

@@ -8,7 +8,7 @@
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|dateformat)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|dateformat|uuid)/)"
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts"
@@ -142,6 +142,7 @@
     "tty-browserify": "0.0.0",
     "url": "0.10.3",
     "util": "0.10.4",
+    "uuid": "9.0.1",
     "vm-browserify": "0.0.4"
   },
   "devDependencies": {

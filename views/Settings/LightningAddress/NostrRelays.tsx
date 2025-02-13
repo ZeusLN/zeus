@@ -19,6 +19,7 @@ import TextInput from '../../../components/TextInput';
 
 import SettingsStore from '../../../stores/SettingsStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -29,6 +30,7 @@ interface NostrRelaysProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
+    NodeInfoStore: NodeInfoStore;
     route: Route<'NostrRelays', { setup: boolean; relays: string[] }>;
 }
 
@@ -38,7 +40,7 @@ interface NostrRelaysState {
     addRelay: string;
 }
 
-@inject('SettingsStore', 'LightningAddressStore')
+@inject('SettingsStore', 'LightningAddressStore', 'NodeInfoStore')
 @observer
 export default class NostrRelays extends React.Component<
     NostrRelaysProps,
@@ -57,28 +59,41 @@ export default class NostrRelays extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore, route } = this.props;
+        const { SettingsStore, NodeInfoStore, route } = this.props;
         const { settings, getSettings } = SettingsStore;
 
         const { setup, relays } = route.params ?? {};
 
         await getSettings();
 
+        const pubkeySpecificLNAddressSettings =
+            settings.lightningAddressByPubkey[
+                NodeInfoStore.nodeInfo.identity_pubkey
+            ];
+
         this.setState({
             setup,
             relays: relays
                 ? relays
-                : settings.lightningAddress.nostrRelays || []
+                : pubkeySpecificLNAddressSettings.nostrRelays || []
         });
     }
 
     render() {
-        const { navigation, SettingsStore, LightningAddressStore } = this.props;
+        const {
+            navigation,
+            SettingsStore,
+            LightningAddressStore,
+            NodeInfoStore
+        } = this.props;
         const { relays, addRelay, setup } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { lightningAddress } = settings;
         const { nostrPrivateKey } = lightningAddress;
         const { update, loading, error_msg } = LightningAddressStore;
+        const pubkey = NodeInfoStore.nodeInfo.identity_pubkey;
+        const pubkeySpecificLNAddressSettings =
+            settings.lightningAddressByPubkey[pubkey];
 
         return (
             <Screen>
@@ -201,11 +216,15 @@ export default class NostrRelays extends React.Component<
                                                             addRelay: ''
                                                         });
                                                         await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
-                                                                nostrRelays:
-                                                                    newNostrRelays
-                                                            }
+                                                            lightningAddressByPubkey:
+                                                                {
+                                                                    ...settings.lightningAddressByPubkey,
+                                                                    [pubkey]: {
+                                                                        ...pubkeySpecificLNAddressSettings,
+                                                                        nostrRelays:
+                                                                            newNostrRelays
+                                                                    }
+                                                                }
                                                         });
                                                     });
                                                 } catch (e) {}
@@ -286,10 +305,15 @@ export default class NostrRelays extends React.Component<
                                                                         );
                                                                         await updateSettings(
                                                                             {
-                                                                                lightningAddress:
+                                                                                lightningAddressByPubkey:
                                                                                     {
-                                                                                        ...settings.lightningAddress,
-                                                                                        relays: newNostrRelays
+                                                                                        ...settings.lightningAddressByPubkey,
+                                                                                        [pubkey]:
+                                                                                            {
+                                                                                                ...pubkeySpecificLNAddressSettings,
+                                                                                                nostrRelays:
+                                                                                                    newNostrRelays
+                                                                                            }
                                                                                     }
                                                                             }
                                                                         );

@@ -31,10 +31,14 @@ export default class PushNotificationManager extends React.Component<any, any> {
         Notifications.events().registerNotificationReceivedForeground(
             (notification, completion) => {
                 console.log('Notification Received - Foreground', notification);
+                const pubkeySpecificLNAddressSettings =
+                    stores.settingsStore.settings?.lightningAddressByPubkey?.[
+                        stores.nodeInfoStore.nodeInfo.identity_pubkey
+                    ];
+
                 // Don't display redeem notification if auto-redeem is on
                 if (
-                    stores.settingsStore.settings?.lightningAddress
-                        ?.automaticallyAccept &&
+                    pubkeySpecificLNAddressSettings?.automaticallyAccept &&
                     JSON.stringify(notification.payload).includes(
                         'Redeem within the next 24 hours'
                     )

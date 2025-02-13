@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import ReactNativeBlobUtil, { FetchBlobResponse } from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
 import BigNumber from 'bignumber.js';
@@ -30,11 +30,11 @@ const LNURL_HOST = 'https://zeuspay.com/api';
 const LNURL_SOCKET_HOST = 'https://zeuspay.com';
 const LNURL_SOCKET_PATH = '/stream';
 
-export const LEGACY_ADDRESS_ACTIVATED_STRING = 'olympus-lightning-address';
 export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 
-export const ADDRESS_ACTIVATED_STRING = 'zeuspay-lightning-address';
 export const HASHES_STORAGE_STRING = 'zeuspay-lightning-address-hashes';
+
+export type LightningAddressServiceStatus = true | false | 'unknown';
 
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
@@ -95,7 +95,6 @@ export default class LightningAddressStore {
     };
 
     private setLightningAddress = async (handle: string, domain: string) => {
-        await Storage.setItem(ADDRESS_ACTIVATED_STRING, true);
         runInAction(() => {
             this.lightningAddressActivated = true;
             this.lightningAddressHandle = handle;
@@ -134,7 +133,9 @@ export default class LightningAddressStore {
         const nostrSignatures: any = [];
         if (preimages) {
             const nostrPrivateKey =
-                this.settingsStore?.settings?.lightningAddress?.nostrPrivateKey;
+                this.settingsStore.settings.lightningAddressByPubkey?.[
+                    this.nodeInfoStore.nodeInfo.identity_pubkey
+                ]?.nostrPrivateKey;
             for (let i = 0; i < preimages.length; i++) {
                 const preimage = preimages[i];
                 const hash = sha256
@@ -242,7 +243,6 @@ export default class LightningAddressStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
             );
-
             const authData = authResponse.json();
             if (authResponse.info().status !== 200) throw authData.error;
 
@@ -286,19 +286,20 @@ export default class LightningAddressStore {
 
             if (responseHandle) {
                 this.setLightningAddress(responseHandle, domain);
-            }
 
-            await this.settingsStore.updateSettings({
-                lightningAddress: {
-                    enabled: true,
-                    automaticallyAccept: true,
-                    automaticallyRequestOlympusChannels: false, // deprecated
-                    allowComments: true,
-                    nostrPrivateKey,
-                    nostrRelays: relays,
-                    notifications: 1
-                }
-            });
+                await this.settingsStore.updateSettings({
+                    lightningAddressByPubkey: {
+                        [this.nodeInfoStore.nodeInfo.identity_pubkey]: {
+                            enabled: true,
+                            nostrPrivateKey,
+                            automaticallyAccept: true,
+                            allowComments: true,
+                            nostrRelays: relays,
+                            notifications: 1
+                        }
+                    }
+                });
+            }
 
             runInAction(() => {
                 // ensure push credentials are in place
@@ -451,16 +452,35 @@ export default class LightningAddressStore {
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;
                 }
-
-                if (this.lightningAddress && this.localHashes === 0) {
-                    this.generatePreimages(true);
-                } else if (
-                    this.lightningAddress &&
-                    new BigNumber(this.availableHashes).lt(50)
-                ) {
-                    this.generatePreimages();
-                }
             });
+
+            if (handle && domain) {
+                // If backend could not be reached earlier, we set "enabled: true" now
+                if (
+                    this.settingsStore.settings.lightningAddressByPubkey?.[
+                        this.nodeInfoStore.nodeInfo.identity_pubkey
+                    ].enabled === false
+                ) {
+                    await this.settingsStore.updateSettings({
+                        lightningAddressByPubkey: {
+                            ...this.settingsStore.settings
+                                .lightningAddressByPubkey,
+                            [this.nodeInfoStore.nodeInfo.identity_pubkey]: {
+                                enabled: true
+                            }
+                        }
+                    });
+                }
+            }
+
+            if (this.lightningAddress && this.localHashes === 0) {
+                this.generatePreimages(true);
+            } else if (
+                this.lightningAddress &&
+                new BigNumber(this.availableHashes).lt(50)
+            ) {
+                this.generatePreimages();
+            }
 
             return { results };
         } catch (error) {
@@ -545,38 +565,39 @@ export default class LightningAddressStore {
         let status = 'warning';
 
         try {
+            const pubkey = this.nodeInfoStore.nodeInfo.identity_pubkey;
+            const nostrRelays =
+                this.settingsStore.settings.lightningAddressByPubkey[pubkey]
+                    .nostrRelays;
             const attestationEvents: any = {};
-
             const hashpk = getPublicKey(hash);
 
             await Promise.all(
-                this.settingsStore.settings.lightningAddress.nostrRelays.map(
-                    async (relayItem) => {
-                        const relay = relayInit(relayItem);
-                        relay.on('connect', () => {
-                            console.log(`connected to ${relay.url}`);
-                        });
-                        relay.on('error', () => {
-                            console.log(`failed to connect to ${relay.url}`);
-                        });
+                nostrRelays.map(async (relayItem) => {
+                    const relay = relayInit(relayItem);
+                    relay.on('connect', () => {
+                        console.log(`connected to ${relay.url}`);
+                    });
+                    relay.on('error', () => {
+                        console.log(`failed to connect to ${relay.url}`);
+                    });
 
-                        await relay.connect();
+                    await relay.connect();
 
-                        const events = await relay.list([
-                            {
-                                kinds: [55869],
-                                '#p': [hashpk]
-                            }
-                        ]);
+                    const events = await relay.list([
+                        {
+                            kinds: [55869],
+                            '#p': [hashpk]
+                        }
+                    ]);
 
-                        events.map((event: any) => {
-                            attestationEvents[event.id] = event;
-                        });
+                    events.map((event: any) => {
+                        attestationEvents[event.id] = event;
+                    });
 
-                        relay.close();
-                        return;
-                    }
-                )
+                    relay.close();
+                    return;
+                })
             );
 
             Object.keys(attestationEvents).map((key) => {
@@ -763,8 +784,9 @@ export default class LightningAddressStore {
                 memo: comment ? `ZEUS Pay: ${comment}` : 'ZEUS Pay',
                 preimage,
                 private:
-                    this.settingsStore?.settings?.lightningAddress
-                        ?.routeHints || false
+                    this.settingsStore?.settings?.lightningAddressByPubkey[
+                        this.nodeInfoStore.nodeInfo.identity_pubkey
+                    ]?.routeHints || false
             })
                 .then((result: any) => {
                     if (result.payment_request) {
@@ -819,11 +841,10 @@ export default class LightningAddressStore {
     @action
     public redeemAllOpenPayments = async () => {
         this.redeemingAll = true;
-        const attestationLevel = this.settingsStore?.settings?.lightningAddress
-            ?.automaticallyAcceptAttestationLevel
-            ? this.settingsStore.settings.lightningAddress
-                  .automaticallyAcceptAttestationLevel
-            : 2;
+        const attestationLevel =
+            this.settingsStore?.settings?.lightningAddressByPubkey[
+                this.nodeInfoStore.nodeInfo.identity_pubkey
+            ]?.automaticallyAcceptAttestationLevel ?? 2;
 
         // disabled
         if (attestationLevel === 0) {
@@ -894,12 +915,11 @@ export default class LightningAddressStore {
                     this.socket.on('paid', (data: any) => {
                         const { hash, amount_msat, comment } = data;
 
-                        const attestationLevel = this.settingsStore?.settings
-                            ?.lightningAddress
-                            ?.automaticallyAcceptAttestationLevel
-                            ? this.settingsStore.settings.lightningAddress
-                                  .automaticallyAcceptAttestationLevel
-                            : 2;
+                        const attestationLevel =
+                            this.settingsStore?.settings
+                                ?.lightningAddressByPubkey[
+                                this.nodeInfoStore.nodeInfo.identity_pubkey
+                            ]?.automaticallyAcceptAttestationLevel ?? 2;
 
                         if (attestationLevel === 0) {
                             this.lookupPreimageAndRedeem(
@@ -952,6 +972,58 @@ export default class LightningAddressStore {
             await sleep(3000);
         }
     };
+
+    public checkLightningAddressExists =
+        async (): Promise<LightningAddressServiceStatus> => {
+            const timeout = (ms: number) =>
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Request timed out')), ms)
+                );
+
+            try {
+                const authResponse = (await Promise.race([
+                    ReactNativeBlobUtil.fetch(
+                        'POST',
+                        `${LNURL_HOST}/lnurl/auth`,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({
+                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                        })
+                    ),
+                    timeout(10000) // 10 seconds should be enough
+                ])) as FetchBlobResponse;
+
+                const authData = authResponse.json();
+                if (authResponse.info().status !== 200) return 'unknown';
+
+                const { verification } = authData;
+                const data = await BackendUtils.signMessage(verification);
+                const signature = data.zbase || data.signature;
+
+                const statusResponse = (await Promise.race([
+                    ReactNativeBlobUtil.fetch(
+                        'POST',
+                        `${LNURL_HOST}/lnurl/status`,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({
+                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                            message: verification,
+                            signature
+                        })
+                    ),
+                    timeout(10000) // 10 seconds should be enough
+                ])) as FetchBlobResponse;
+
+                const statusData = statusResponse.json();
+                if (statusResponse.info().status !== 200) return 'unknown';
+
+                const { handle, domain } = statusData;
+                return Boolean(handle && domain);
+            } catch (error) {
+                console.error('Lightning Address check failed:', error);
+                return 'unknown';
+            }
+        };
 
     @action
     public reset = () => {
