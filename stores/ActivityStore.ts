@@ -33,6 +33,7 @@ export interface Filter {
     minimumAmount: number;
     startDate?: Date;
     endDate?: Date;
+    memo: string;
 }
 
 export const DEFAULT_FILTERS = {
@@ -49,7 +50,8 @@ export const DEFAULT_FILTERS = {
     zeusPay: true,
     minimumAmount: 0,
     startDate: undefined,
-    endDate: undefined
+    endDate: undefined,
+    memo: ''
 };
 
 export default class ActivityStore {
@@ -95,7 +97,8 @@ export default class ActivityStore {
             zeusPay: true,
             minimumAmount: 0,
             startDate: undefined,
-            endDate: undefined
+            endDate: undefined,
+            memo: ''
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -130,7 +133,13 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
-    private getSortedActivity = () => {
+    @action
+    public setMemoFilter = (filter: any) => {
+        this.filters.memo = filter;
+        this.setFilters(this.filters);
+    };
+
+    getSortedActivity = () => {
         const activity: any[] = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
