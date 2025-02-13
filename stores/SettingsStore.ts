@@ -1441,6 +1441,7 @@ export default class SettingsStore {
                         this.initMigrationPromise();
 
                         console.log('calling runIncrementalMigrations');
+                        SettingsStore.migrationsCheckedThisSession = true;
                         this.settings =
                             await MigrationsUtils.runIncrementalSettingsMigrations(
                                 this.settings
@@ -1449,7 +1450,6 @@ export default class SettingsStore {
                         if (this.migrationResolve) this.migrationResolve();
                         SettingsStore.migrationLock = false;
                     }
-                    SettingsStore.migrationsCheckedThisSession = true;
                 }
             } else if (!SettingsStore.migrationLock) {
                 SettingsStore.migrationLock = true;
