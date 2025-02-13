@@ -1362,5 +1362,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Guthaben (aufsteigend)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Guthaben (absteigend)",
     "views.OnChainAddresses.createAddress": "Adresse erstellen",
-    "views.OnChainAddresses.changeAddresses": "Wechselgeld-Adresse"
+    "views.OnChainAddresses.changeAddresses": "Wechselgeld-Adresse",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }
