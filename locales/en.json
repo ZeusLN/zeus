@@ -1011,6 +1011,7 @@
     "views.ActivityFilter.lightningPayments": "Lightning payments",
     "views.ActivityFilter.onChainPayments": "On-chain payments",
     "views.ActivityFilter.minimumAmount": "Minimum Amount (sats)",
+    "views.ActivityFilter.memo": "Memo/Note",
     "views.ActivityFilter.inTransit": "In transit payments",
     "views.ActivityFilter.isFailed": "Failed payments",
     "views.ActivityFilter.standardInvoices": "Standard invoices",
@@ -1362,5 +1363,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Balance (ascending)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Balance (descending)",
     "views.OnChainAddresses.createAddress": "Create address",
-    "views.OnChainAddresses.changeAddresses": "Change addresses"
+    "views.OnChainAddresses.changeAddresses": "Change addresses",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }

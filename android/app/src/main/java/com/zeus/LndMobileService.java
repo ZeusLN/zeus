@@ -8,6 +8,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.IBinder;
 import android.os.Build;
@@ -34,6 +35,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.HashSet;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil;
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier;
 
@@ -486,57 +495,120 @@ public class LndMobileService extends Service {
     return false;
   }
 
+  private String getLocalizedString(String key) {
+    String translation = LndMobile.translationCache.get(key);
+    return translation != null ? translation : "MISSING STRING";
+  }
+
+  private String fetchLocalizedStringFromBundle(String locale, String key) throws IOException, JSONException {
+    String assetPath = "stored-locales/" + locale + ".json";
+    Log.d(TAG, "Attempting to load: " + assetPath);
+    AssetManager assetManager = getApplicationContext().getAssets();
+    String[] mainAssets = assetManager.list("");
+    for (String file : mainAssets) {
+        Log.d(TAG, "Root asset: " + file);
+        if (file.equals("assets")) {
+            String[] assetFiles = assetManager.list("assets");
+            for (String assetFile : assetFiles) {
+                Log.d(TAG, "Asset file: " + assetFile);
+            }
+        }
+    }
+    try (InputStream is = assetManager.open(assetPath);
+         BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+        StringBuilder result = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            result.append(line);
+        }
+        JSONObject json = new JSONObject(result.toString());
+
+        String[] keyParts = key.split("\\.");
+        JSONObject current = json;
+        for (int i = 0; i < keyParts.length - 1; i++) {
+            current = current.getJSONObject(keyParts[i]);
+        }
+        return current.getString(keyParts[keyParts.length - 1]);
+    }
+  }
+  
   @Override
   public int onStartCommand(Intent intent, int flags, int startid) {
     // Hyperlog.v(TAG, "onStartCommand()");
-    if (intent != null && intent.getAction() != null && intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP")) {
-      Log.i(TAG, "Received stopForeground Intent");
-      stopForeground(true);
-      stopSelf();
-      return START_NOT_STICKY;
-    } else {
-      boolean persistentServicesEnabled = getPersistentServicesEnabled(this);
-      // persistent services on, start service as foreground-svc
-      if (persistentServicesEnabled) {
-        Notification.Builder notificationBuilder = null;
-        Intent notificationIntent = new Intent (this, MainActivity.class);
-        PendingIntent pendingIntent =
-          PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-          NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "ZEUS", NotificationManager.IMPORTANCE_NONE);
-          chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+    if (intent != null && intent.getAction() != null) {
+      if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP")) {
+        Log.i(TAG, "Received stopForeground Intent");
+        stopForeground(true);
+        stopSelf();
+        return START_NOT_STICKY;
+      } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.GRACEFUL_STOP")) {
+        Handler handler = new Handler(msg -> {
+          if (msg.what == MSG_STOP_LND_RESULT) {
+            stopForeground(true);
+            stopSelf();
+            Process.killProcess(Process.myPid());
+            return true;
+          }
+          return false;
+        });
+        Messenger messenger = new Messenger(handler);
+        mClients.add(messenger);
+        stopLnd(messenger, -1);
+        return START_NOT_STICKY;
+      } else if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.UPDATE_NOTIFICATION")) {
+        if (notificationManager == null) {
           notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-          assert notificationManager != null;
-          notificationManager.createNotificationChannel(chan);
-
-          notificationBuilder = new Notification.Builder(this, BuildConfig.APPLICATION_ID);
-        } else {
-          notificationBuilder = new Notification.Builder(this);
+        }
+        notificationManager.notify(ONGOING_NOTIFICATION_ID, buildNotification());
+        return START_NOT_STICKY;
+      }
+    }
+    boolean persistentServicesEnabled = getPersistentServicesEnabled(this);
+    // persistent services on, start service as foreground-svc
+    if (persistentServicesEnabled) {
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        NotificationChannel chan = new NotificationChannel(BuildConfig.APPLICATION_ID, "ZEUS", NotificationManager.IMPORTANCE_NONE);
+        chan.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+        notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        assert notificationManager != null;
+        notificationManager.createNotificationChannel(chan);
       }
 
-        notificationBuilder
-          .setContentTitle("ZEUS")
-          .setContentText("LND is running in the background")
-          .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
-          .setContentIntent(pendingIntent)
-          .setOngoing(true);
+      Notification notification = buildNotification();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-          notificationBuilder.setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE);
-        }
-
-        Notification notification = notificationBuilder.build();
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-          startForeground(ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
-        } else {
-          startForeground(ONGOING_NOTIFICATION_ID, notification);
-        }
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        startForeground(ONGOING_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+      } else {
+        startForeground(ONGOING_NOTIFICATION_ID, notification);
       }
     }
 
     // else noop, instead of calling startService, start will be handled by binding
     return startid;
+  }
+
+  private Notification buildNotification() {
+    Intent notificationIntent = new Intent(this, MainActivity.class);
+      PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+      Intent stopIntent = new Intent(this, LndMobileService.class);
+      stopIntent.setAction("app.zeusln.zeus.android.intent.action.GRACEFUL_STOP");
+      PendingIntent stopPendingIntent = PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE);
+      Notification.Builder notificationBuilder;
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        notificationBuilder = new Notification.Builder(this, BuildConfig.APPLICATION_ID);
+      } else {
+        notificationBuilder = new Notification.Builder(this);
+      }
+      notificationBuilder
+        .setContentText(getLocalizedString("androidNotification.lndRunningBackground"))
+        .setSmallIcon(R.drawable.ic_stat_ic_notification_lnd)
+        .setContentIntent(pendingIntent)
+        .setOngoing(true)
+        .addAction(0, getLocalizedString("androidNotification.shutdown"), stopPendingIntent);
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        notificationBuilder.setForegroundServiceBehavior(FOREGROUND_SERVICE_IMMEDIATE);
+      }
+      return notificationBuilder.build();
   }
 
   @Override

@@ -9,7 +9,7 @@ import Screen from '../../components/Screen';
 
 import SettingsStore, { LOCALE_KEYS } from '../../stores/SettingsStore';
 
-import { localeString } from '../../utils/LocaleUtils';
+import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LanguageProps {
@@ -116,6 +116,7 @@ export default class Language extends React.Component<
                                     await updateSettings({
                                         locale: item.key
                                     }).then(() => {
+                                        bridgeJavaStrings(item.key);
                                         navigation.goBack();
                                     });
                                 }}
