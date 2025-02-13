@@ -8,8 +8,9 @@ import { Icon } from 'react-native-elements';
 
 import Button from './../components/Button';
 
-import { localeString } from './../utils/LocaleUtils';
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { sleep } from '../utils/SleepUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
 type QRCodeElement = React.ElementRef<typeof QRCode>;
 
@@ -36,6 +37,7 @@ export default class ShareButton extends React.Component<ShareButtonProps> {
         try {
             if (!qrRef?.current) return;
 
+            if (Platform.OS === 'ios') await sleep(500);
             const base64Data = await captureRef(qrRef.current, {
                 format: 'png',
                 quality: 1
