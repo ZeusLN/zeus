@@ -125,7 +125,7 @@ export default class SetPassphrase extends React.Component<
             passphrase: '',
             isBiometryEnabled: false
         });
-        navigation.popTo('Security', { refresh: true });
+        navigation.popTo('Security');
     };
 
     render() {
