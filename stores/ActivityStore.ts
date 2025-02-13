@@ -203,15 +203,15 @@ export default class ActivityStore {
         try {
             const filters = await Storage.getItem(ACTIVITY_FILTERS_KEY);
             if (filters) {
-                runInAction(() => {
-                    this.filters = JSON.parse(filters, (key, value) =>
-                        (key === 'startDate' || key === 'endDate') && value
-                            ? new Date(value)
-                            : value
-                    );
-                });
+                const parsedFilters = JSON.parse(filters, (key, value) =>
+                    (key === 'startDate' || key === 'endDate') && value
+                        ? new Date(value)
+                        : value
+                );
+                this.filters = { ...DEFAULT_FILTERS, ...parsedFilters };
             } else {
                 console.log('No activity filters stored');
+                this.filters = DEFAULT_FILTERS;
             }
         } catch (error) {
             console.log('Loading activity filters failed', error);
