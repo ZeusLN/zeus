@@ -1362,5 +1362,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Zůstatek (vzestupně)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Zůstatek (sestupně)",
     "views.OnChainAddresses.createAddress": "Vytvořit adresu",
-    "views.OnChainAddresses.changeAddresses": "Change adresy"
+    "views.OnChainAddresses.changeAddresses": "Change adresy",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }
