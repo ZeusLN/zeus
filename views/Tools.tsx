@@ -318,7 +318,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.activityExport.title')}
+                                    {localeString('views.ActivityExport.title')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
