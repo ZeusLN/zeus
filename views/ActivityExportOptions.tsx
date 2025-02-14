@@ -5,10 +5,13 @@ import {
     StyleSheet,
     Alert,
     ScrollView,
-    Modal
+    Modal,
+    Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
+
+import Info from '../assets/images/SVG/info.svg';
 
 import Header from '../components/Header';
 import Button from '../components/Button';
@@ -45,6 +48,7 @@ interface ActivityExportOptionsState {
     isActivityFetching: boolean;
     filteredActivity: any;
     isModalVisible: boolean;
+    showInfoModal: boolean;
     customFileName: string;
     fromDate: any;
     toDate: any;
@@ -65,6 +69,7 @@ export default class ActivityExportOptions extends React.Component<
             isActivityFetching: true,
             filteredActivity: [],
             isModalVisible: false,
+            showInfoModal: false,
             customFileName: '',
             fromDate: null,
             toDate: null,
@@ -401,6 +406,59 @@ export default class ActivityExportOptions extends React.Component<
         );
     };
 
+    renderInfoModal = () => {
+        const { showInfoModal } = this.state;
+        return (
+            <Modal
+                animationType="slide"
+                transparent
+                visible={showInfoModal}
+                onRequestClose={() => this.setState({ showInfoModal: false })}
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center'
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('text'),
+                                fontSize: 20,
+                                marginBottom: 20
+                            }}
+                        >
+                            {Platform.OS === 'android'
+                                ? localeString(
+                                      'views.activityExport.explainerAndroid'
+                                  )
+                                : localeString(
+                                      'views.activityExport.explaineriOS'
+                                  )}
+                        </Text>
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() =>
+                                this.setState({ showInfoModal: false })
+                            }
+                            secondary
+                        />
+                    </View>
+                </View>
+            </Modal>
+        );
+    };
+
     render() {
         const { isActivityFetching } = this.state;
 
@@ -415,9 +473,25 @@ export default class ActivityExportOptions extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        <TouchableOpacity
+                            style={{ marginRight: 6 }}
+                            onPress={() =>
+                                this.setState({ showInfoModal: true })
+                            }
+                        >
+                            <Info
+                                stroke={themeColor('text')}
+                                fill={themeColor('text')}
+                                width={24}
+                                height={24}
+                            />
+                        </TouchableOpacity>
+                    }
                     navigation={this.props.navigation}
                 />
                 {this.renderModal()}
+                {this.renderInfoModal()}
 
                 <View
                     style={{

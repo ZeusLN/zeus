@@ -1029,6 +1029,8 @@
     "views.activityExport.toDate": "To Date (End Date)",
     "views.activityExport.dateRange": "Select Date Range:",
     "views.activityExport.downloadCompleteData": "Download Complete Data",
+    "views.activityExport.explainerAndroid": "Downloaded CSV files can be found in Files > Downloads.",
+    "views.activityExport.explaineriOS": "Downloaded CSV files can be found in the Files app under the ZEUS folder.",
     "views.Routing.RoutingEvent.sourceChannel": "Source Channel",
     "views.Routing.RoutingEvent.destinationChannel": "Destination Channel",
     "views.Olympians.title": "Olympians",
