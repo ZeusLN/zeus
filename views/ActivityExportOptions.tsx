@@ -121,12 +121,11 @@ export default class ActivityExportOptions extends React.Component<
             let { filteredActivity } = this.state;
 
             if (!filteredActivity || filteredActivity.length === 0) {
-                console.log('No activity data found, fetching again...');
                 Alert.alert(
-                    localeString('general.warning'),
-                    localeString('views.ActivityToCsv.noData')
+                    localeString(
+                        'views.ActivityExport.noDataAvailableForSelection'
+                    )
                 );
-                await this.fetchAndFilterActivity();
                 this.setState({ isCsvLoading: false });
                 return;
             }
@@ -142,12 +141,10 @@ export default class ActivityExportOptions extends React.Component<
             filteredData = this.filterDataByDate(filteredData);
 
             if (!filteredData || filteredData.length === 0) {
-                console.log('No valid data found for', type);
-                this.setState({ isCsvLoading: false });
                 Alert.alert(
-                    localeString('general.error'),
-                    localeString('views.ActivityToCsv.noData')
+                    localeString('views.ActivityExport.noDataForSelectedDates')
                 );
+                this.setState({ isCsvLoading: false });
                 return;
             }
 
@@ -157,11 +154,10 @@ export default class ActivityExportOptions extends React.Component<
             );
 
             if (!csvData) {
-                this.setState({ isCsvLoading: false });
                 Alert.alert(
-                    localeString('general.error'),
-                    localeString('views.ActivityToCsv.noData')
+                    localeString('views.ActivityExport.noValidDataForDownload')
                 );
+                this.setState({ isCsvLoading: false });
                 return;
             }
 
@@ -253,7 +249,7 @@ export default class ActivityExportOptions extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.activityExport.dateRange'
+                                        'views.ActivityExport.dateRange'
                                     )}
                                 </Text>
                                 <View style={{ alignItems: 'center' }}>
@@ -266,7 +262,7 @@ export default class ActivityExportOptions extends React.Component<
                                     >
                                         <CheckBox
                                             title={localeString(
-                                                'views.activityExport.downloadCompleteData'
+                                                'views.ActivityExport.downloadCompleteData'
                                             )}
                                             checked={
                                                 this.state.downloadCompleteData
@@ -304,7 +300,7 @@ export default class ActivityExportOptions extends React.Component<
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.activityExport.fromDate'
+                                                    'views.ActivityExport.fromDate'
                                                 )}
                                             </Text>
                                             <DatePicker
@@ -342,7 +338,7 @@ export default class ActivityExportOptions extends React.Component<
                                                 }}
                                             >
                                                 {localeString(
-                                                    'views.activityExport.toDate'
+                                                    'views.ActivityExport.toDate'
                                                 )}
                                             </Text>
                                             <DatePicker
@@ -450,10 +446,10 @@ export default class ActivityExportOptions extends React.Component<
                         >
                             {Platform.OS === 'android'
                                 ? localeString(
-                                      'views.activityExport.explainerAndroid'
+                                      'views.ActivityExport.explainerAndroid'
                                   )
                                 : localeString(
-                                      'views.activityExport.explaineriOS'
+                                      'views.ActivityExport.explaineriOS'
                                   )}
                         </Text>
                         <Button
@@ -531,7 +527,7 @@ export default class ActivityExportOptions extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.activityExport.exportInvoices'
+                                        'views.ActivityExport.exportInvoices'
                                     )}
                                 </Text>
                             </TouchableOpacity>
@@ -555,7 +551,7 @@ export default class ActivityExportOptions extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.activityExport.exportPayments'
+                                        'views.ActivityExport.exportPayments'
                                     )}
                                 </Text>
                             </TouchableOpacity>
@@ -579,7 +575,7 @@ export default class ActivityExportOptions extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.activityExport.exportTransactions'
+                                        'views.ActivityExport.exportTransactions'
                                     )}
                                 </Text>
                             </TouchableOpacity>
