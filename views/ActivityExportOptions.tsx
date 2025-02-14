@@ -323,6 +323,7 @@ export default class ActivityExportOptions extends React.Component<
                                                 }}
                                                 maximumDate={new Date()}
                                                 textColor={themeColor('text')}
+                                                androidVariant="nativeAndroid"
                                             />
                                             <Text
                                                 style={{
@@ -361,6 +362,7 @@ export default class ActivityExportOptions extends React.Component<
                                                 }}
                                                 maximumDate={new Date()}
                                                 textColor={themeColor('text')}
+                                                androidVariant="nativeAndroid"
                                             />
                                         </>
                                     )}
