@@ -13,7 +13,7 @@ interface CopyButtonProps {
     noUppercase?: boolean;
     iconOnly?: boolean;
     iconSize?: number;
-    copyIconContainerStyle?: ViewStyle;
+    iconContainerStyle?: ViewStyle;
 }
 
 interface CopyButtonState {
@@ -63,7 +63,7 @@ export default class CopyButton extends React.Component<
             noUppercase,
             iconOnly,
             iconSize,
-            copyIconContainerStyle
+            iconContainerStyle
         } = this.props;
 
         const buttonTitle = copied
@@ -74,9 +74,9 @@ export default class CopyButton extends React.Component<
             return (
                 <TouchableOpacity
                     // "padding: 5" leads to a larger area where users can click on
-                    // "copyIconContainerStyle" allows contextual spacing (marginRight)
+                    // "iconContainerStyle" allows contextual spacing (marginRight)
                     // when used alongside ShareButton
-                    style={[{ padding: 5 }, copyIconContainerStyle]}
+                    style={[{ padding: 5 }, iconContainerStyle]}
                     onPress={() => this.copyToClipboard()}
                 >
                     <Icon
