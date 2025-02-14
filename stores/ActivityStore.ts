@@ -31,8 +31,10 @@ export interface Filter {
     unconfirmed: boolean;
     zeusPay: boolean;
     minimumAmount: number;
+    maximumAmount?: number;
     startDate?: Date;
     endDate?: Date;
+    memo: string;
 }
 
 export const DEFAULT_FILTERS = {
@@ -48,8 +50,10 @@ export const DEFAULT_FILTERS = {
     ampInvoices: true,
     zeusPay: true,
     minimumAmount: 0,
+    maximumAmount: undefined,
     startDate: undefined,
-    endDate: undefined
+    endDate: undefined,
+    memo: ''
 };
 
 export default class ActivityStore {
@@ -94,8 +98,10 @@ export default class ActivityStore {
             unconfirmed: true,
             zeusPay: true,
             minimumAmount: 0,
+            maximumAmount: undefined,
             startDate: undefined,
-            endDate: undefined
+            endDate: undefined,
+            memo: ''
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -103,6 +109,12 @@ export default class ActivityStore {
     @action
     public setAmountFilter = (filter: any) => {
         this.filters.minimumAmount = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setMaximumAmountFilter = (filter: any) => {
+        this.filters.maximumAmount = filter;
         this.setFilters(this.filters);
     };
 
@@ -130,7 +142,13 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
-    private getSortedActivity = () => {
+    @action
+    public setMemoFilter = (filter: any) => {
+        this.filters.memo = filter;
+        this.setFilters(this.filters);
+    };
+
+    getSortedActivity = () => {
         const activity: any[] = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
@@ -185,15 +203,15 @@ export default class ActivityStore {
         try {
             const filters = await Storage.getItem(ACTIVITY_FILTERS_KEY);
             if (filters) {
-                runInAction(() => {
-                    this.filters = JSON.parse(filters, (key, value) =>
-                        (key === 'startDate' || key === 'endDate') && value
-                            ? new Date(value)
-                            : value
-                    );
-                });
+                const parsedFilters = JSON.parse(filters, (key, value) =>
+                    (key === 'startDate' || key === 'endDate') && value
+                        ? new Date(value)
+                        : value
+                );
+                this.filters = { ...DEFAULT_FILTERS, ...parsedFilters };
             } else {
                 console.log('No activity filters stored');
+                this.filters = DEFAULT_FILTERS;
             }
         } catch (error) {
             console.log('Loading activity filters failed', error);

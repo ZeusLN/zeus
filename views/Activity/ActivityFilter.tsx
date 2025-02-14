@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import isEqual from 'lodash/isEqual';
@@ -62,10 +62,12 @@ export default class ActivityFilter extends React.Component<
             setFilters,
             filters,
             setAmountFilter,
+            setMaximumAmountFilter,
             setStartDateFilter,
             setEndDateFilter,
             clearStartDateFilter,
-            clearEndDateFilter
+            clearEndDateFilter,
+            setMemoFilter
         } = ActivityStore;
         const {
             lightning,
@@ -80,8 +82,10 @@ export default class ActivityFilter extends React.Component<
             ampInvoices,
             zeusPay,
             minimumAmount,
+            maximumAmount,
             startDate,
-            endDate
+            endDate,
+            memo
         } = filters;
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
@@ -245,6 +249,12 @@ export default class ActivityFilter extends React.Component<
                 condition: true
             },
             {
+                label: localeString('views.ActivityFilter.maximumAmount'),
+                value: maximumAmount,
+                type: 'Amount',
+                condition: true
+            },
+            {
                 label: localeString('views.ActivityFilter.startDate'),
                 type: 'StartDate',
                 condition: true
@@ -252,6 +262,12 @@ export default class ActivityFilter extends React.Component<
             {
                 label: localeString('views.ActivityFilter.endDate'),
                 type: 'EndDate',
+                condition: true
+            },
+            {
+                label: localeString('views.ActivityFilter.memo'),
+                value: memo,
+                type: 'TextInput',
                 condition: true
             }
         ];
@@ -287,12 +303,12 @@ export default class ActivityFilter extends React.Component<
                     }
                     navigation={navigation}
                 />
-                <FlatList
-                    data={FILTERS}
-                    renderItem={({ item }) => {
+                <ScrollView>
+                    {FILTERS.map((item, index) => {
                         if (!item.condition) return null;
+
                         return (
-                            <>
+                            <React.Fragment key={index}>
                                 <ListItem
                                     containerStyle={{
                                         borderBottomWidth: 0,
@@ -335,8 +351,18 @@ export default class ActivityFilter extends React.Component<
                                         <View style={{ flex: 1 }}>
                                             <TextInput
                                                 keyboardType="numeric"
-                                                placeholder="0"
+                                                placeholder={
+                                                    item.label ===
+                                                    localeString(
+                                                        'views.ActivityFilter.minimumAmount'
+                                                    )
+                                                        ? '0'
+                                                        : localeString(
+                                                              'views.ActivityFilter.maximumAmountPlaceHolder'
+                                                          )
+                                                }
                                                 value={
+                                                    item.value === undefined ||
                                                     item.value === 0
                                                         ? ''
                                                         : String(item.value)
@@ -344,13 +370,72 @@ export default class ActivityFilter extends React.Component<
                                                 onChangeText={(
                                                     text: string
                                                 ) => {
-                                                    const newMinAmount = !isNaN(
-                                                        Number(text)
-                                                    )
-                                                        ? Number(text)
-                                                        : 0;
-                                                    setAmountFilter(
-                                                        newMinAmount
+                                                    const newAmount =
+                                                        text.trim() === '' &&
+                                                        item.label ===
+                                                            localeString(
+                                                                'views.ActivityFilter.minimumAmount'
+                                                            )
+                                                            ? 0
+                                                            : text.trim() ===
+                                                                  '' &&
+                                                              item.label ===
+                                                                  localeString(
+                                                                      'views.ActivityFilter.maximumAmount'
+                                                                  )
+                                                            ? undefined
+                                                            : text.trim() !== ''
+                                                            ? !isNaN(
+                                                                  Number(text)
+                                                              )
+                                                                ? Number(text)
+                                                                : 0
+                                                            : 0;
+
+                                                    if (
+                                                        item.label ===
+                                                        localeString(
+                                                            'views.ActivityFilter.minimumAmount'
+                                                        )
+                                                    ) {
+                                                        setAmountFilter(
+                                                            newAmount
+                                                        );
+                                                    } else if (
+                                                        item.label ===
+                                                        localeString(
+                                                            'views.ActivityFilter.maximumAmount'
+                                                        )
+                                                    ) {
+                                                        setMaximumAmountFilter(
+                                                            newAmount
+                                                        );
+                                                    }
+                                                }}
+                                                style={{
+                                                    marginBottom: 0,
+                                                    top: 0
+                                                }}
+                                            />
+                                        </View>
+                                    )}
+                                    {item.type === 'TextInput' && (
+                                        <View style={{ flex: 1 }}>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.ActivityFilter.memoPlaceHolder'
+                                                )}
+                                                value={item.value}
+                                                onChangeText={async (
+                                                    text: string
+                                                ) => {
+                                                    const newMemo = text;
+                                                    const newFilters = {
+                                                        ...filters
+                                                    };
+                                                    newFilters.memo = newMemo;
+                                                    setMemoFilter(
+                                                        newFilters.memo
                                                     );
                                                 }}
                                                 style={{
@@ -371,15 +456,13 @@ export default class ActivityFilter extends React.Component<
                                         </View>
                                     )}
                                 </ListItem>
-                            </>
+                                {index < FILTERS.length - 1 &&
+                                    this.renderSeparator()}
+                            </React.Fragment>
                         );
-                    }}
-                    keyExtractor={(item: any, index: any) =>
-                        `${item.model}-${index}`
-                    }
-                    ItemSeparatorComponent={this.renderSeparator}
-                    onEndReachedThreshold={50}
-                />
+                    })}
+                </ScrollView>
+
                 <DatePicker
                     onConfirm={(date) => {
                         if (setStartDate) {
