@@ -11,8 +11,6 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 
-import Info from '../assets/images/SVG/info.svg';
-
 import Header from '../components/Header';
 import Button from '../components/Button';
 import TextInput from '../components/TextInput';
@@ -476,19 +474,18 @@ export default class ActivityExportOptions extends React.Component<
                         }
                     }}
                     rightComponent={
-                        <TouchableOpacity
-                            style={{ marginRight: 6 }}
-                            onPress={() =>
-                                this.setState({ showInfoModal: true })
-                            }
-                        >
-                            <Info
-                                stroke={themeColor('text')}
-                                fill={themeColor('text')}
-                                width={24}
-                                height={24}
-                            />
-                        </TouchableOpacity>
+                        isActivityFetching ? (
+                            <></>
+                        ) : (
+                            <TouchableOpacity
+                                style={{ marginRight: 4, marginTop: -4 }}
+                                onPress={() =>
+                                    this.setState({ showInfoModal: true })
+                                }
+                            >
+                                <Text style={{ fontSize: 24 }}>ⓘ</Text>
+                            </TouchableOpacity>
+                        )
                     }
                     navigation={this.props.navigation}
                 />
