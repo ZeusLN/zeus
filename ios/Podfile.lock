@@ -998,6 +998,27 @@ PODS:
   - react-native-udp (4.1.7):
     - CocoaAsyncSocket
     - React-Core
+  - react-native-view-shot (4.0.3):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Codegen
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - React-nativeconfig (0.74.2)
   - React-NativeModulesApple (0.74.2):
     - glog
@@ -1326,6 +1347,27 @@ PODS:
     - Yoga
   - RNSecureRandom (1.0.1):
     - React
+  - RNShare (12.0.3):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.01.01.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Codegen
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - RNSVG (15.3.0):
     - React-Core
   - RNVectorIcons (7.1.0):
@@ -1395,6 +1437,7 @@ DEPENDENCIES:
   - "react-native-slider (from `../node_modules/@react-native-community/slider`)"
   - react-native-tor (from `../node_modules/react-native-tor`)
   - react-native-udp (from `../node_modules/react-native-udp`)
+  - react-native-view-shot (from `../node_modules/react-native-view-shot`)
   - React-nativeconfig (from `../node_modules/react-native/ReactCommon`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-perflogger (from `../node_modules/react-native/ReactCommon/reactperflogger`)
@@ -1429,6 +1472,7 @@ DEPENDENCIES:
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSecureRandom (from `../node_modules/react-native-securerandom`)
+  - RNShare (from `../node_modules/react-native-share`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNVectorIcons (from `../node_modules/react-native-vector-icons`)
   - SwiftProtobuf (~> 1.0)
@@ -1545,6 +1589,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-tor"
   react-native-udp:
     :path: "../node_modules/react-native-udp"
+  react-native-view-shot:
+    :path: "../node_modules/react-native-view-shot"
   React-nativeconfig:
     :path: "../node_modules/react-native/ReactCommon"
   React-NativeModulesApple:
@@ -1613,6 +1659,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-screens"
   RNSecureRandom:
     :path: "../node_modules/react-native-securerandom"
+  RNShare:
+    :path: "../node_modules/react-native-share"
   RNSVG:
     :path: "../node_modules/react-native-svg"
   RNVectorIcons:
@@ -1677,6 +1725,7 @@ SPEC CHECKSUMS:
   react-native-slider: 2f40d233a8e04d2659116389a2c7a531ee2f651c
   react-native-tor: dc46832ab810a21fb8954afa20b5aeb740ef93f5
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
+  react-native-view-shot: d1a99d3a2b59689c7b6c0f88a249b2a7125bdd2f
   React-nativeconfig: 9f223cd321823afdecf59ed00861ab2d69ee0fc1
   React-NativeModulesApple: 1cd770ed7dc463e55d02a05f7fc3be46076d393e
   React-perflogger: 32ed45d9cee02cf6639acae34251590dccd30994
@@ -1711,6 +1760,7 @@ SPEC CHECKSUMS:
   RNReanimated: f1a8e928e0a5e8698c354c226d8d5f80629f8658
   RNScreens: a2d8a2555b4653d7a19706eb172f855657ac30d7
   RNSecureRandom: b64d263529492a6897e236a22a2c4249aa1b53dc
+  RNShare: 5d7762ded21e1fff97dda6d41e963e22dce2d025
   RNSVG: e77adf5edb2302f0f10dd03a09e92bb9420d914e
   RNVectorIcons: 7159ba77d44e14808dcc50fbc03eb5666b1034fc
   SocketRocket: abac6f5de4d4d62d24e11868d7a2f427e0ef940d

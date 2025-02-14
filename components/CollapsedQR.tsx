@@ -1,6 +1,7 @@
 import * as React from 'react';
 import {
     Dimensions,
+    Image,
     Platform,
     StyleSheet,
     Text,
@@ -9,13 +10,14 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 
-import HCESession, { NFCContentType, NFCTagType4 } from 'react-native-hce';
+import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
 
 import Amount from './Amount';
 import Button from './Button';
 import CopyButton from './CopyButton';
+import ShareButton from './ShareButton';
+import NFCButton from './NFCButton';
 import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
@@ -24,12 +26,40 @@ import Conversion from './Conversion';
 const defaultLogo = require('../assets/images/icon-black.png');
 const defaultLogoWhite = require('../assets/images/icon-white.png');
 
-let simulation: any;
+type QRCodeElement = React.ElementRef<typeof QRCode>;
+
+interface ExtendedQRCodeProps
+    extends QRCodeProps,
+        React.RefAttributes<QRCodeElement> {
+    onLoad?: () => void;
+    parent?: CollapsedQR;
+}
 
 interface ValueTextProps {
     value: string;
     truncateLongValue?: boolean;
 }
+
+// Custom QR code component that forwards refs and handles component readiness
+// Sets qrReady state on first valid component mount to prevent remounting cycles
+const ForwardedQRCode = React.forwardRef<QRCodeElement, ExtendedQRCodeProps>(
+    (props, ref) => (
+        <QRCode
+            {...props}
+            getRef={(c) => {
+                if (c && c.toDataURL && !(ref as any).current) {
+                    (ref as any).current = c;
+                    Image.getSize(
+                        Image.resolveAssetSource(defaultLogo).uri,
+                        () => {
+                            props.parent?.setState({ qrReady: true });
+                        }
+                    );
+                }
+            }}
+        />
+    )
+) as React.FC<ExtendedQRCodeProps>;
 
 function ValueText({ value, truncateLongValue }: ValueTextProps) {
     const [state, setState] = React.useState<{
@@ -64,6 +94,9 @@ interface CollapsedQRProps {
     collapseText?: string;
     copyText?: string;
     copyValue?: string;
+    iconContainerStyle?: any;
+    showShare?: boolean;
+    iconOnly?: boolean;
     hideText?: boolean;
     expanded?: boolean;
     textBottom?: boolean;
@@ -76,30 +109,22 @@ interface CollapsedQRProps {
 
 interface CollapsedQRState {
     collapsed: boolean;
-    nfcBroadcast: boolean;
     enlargeQR: boolean;
+    tempQRRef: React.RefObject<QRCodeElement> | null;
+    qrReady: boolean;
 }
 
 export default class CollapsedQR extends React.Component<
     CollapsedQRProps,
     CollapsedQRState
 > {
+    qrRef = React.createRef<QRCodeElement>();
+
     state = {
         collapsed: this.props.expanded ? false : true,
-        nfcBroadcast: false,
-        enlargeQR: false
-    };
-
-    componentWillUnmount() {
-        if (this.state.nfcBroadcast) {
-            this.stopSimulation();
-        }
-    }
-
-    UNSAFE_componentWillUpdate = () => {
-        if (this.state.nfcBroadcast) {
-            this.stopSimulation();
-        }
+        enlargeQR: false,
+        tempQRRef: null,
+        qrReady: false
     };
 
     toggleCollapse = () => {
@@ -108,39 +133,21 @@ export default class CollapsedQR extends React.Component<
         });
     };
 
-    toggleNfc = () => {
-        if (this.state.nfcBroadcast) {
-            this.stopSimulation();
-        } else {
-            this.startSimulation();
-        }
-
-        this.setState({
-            nfcBroadcast: !this.state.nfcBroadcast
-        });
-    };
-
-    startSimulation = async () => {
-        const tag = new NFCTagType4(NFCContentType.Text, this.props.value);
-        simulation = await new HCESession(tag).start();
-    };
-
-    stopSimulation = async () => {
-        await simulation.terminate();
-    };
-
     handleQRCodeTap = () => {
         this.setState({ enlargeQR: !this.state.enlargeQR });
     };
 
     render() {
-        const { collapsed, nfcBroadcast, enlargeQR } = this.state;
+        const { collapsed, enlargeQR, tempQRRef } = this.state;
         const {
             value,
             showText,
             copyText,
             copyValue,
             collapseText,
+            iconContainerStyle,
+            showShare,
+            iconOnly,
             hideText,
             expanded,
             textBottom,
@@ -151,8 +158,45 @@ export default class CollapsedQR extends React.Component<
 
         const { width, height } = Dimensions.get('window');
 
+        // Creates a temporary QR code for sharing and waits for component to be ready
+        // Returns a promise that resolves when QR is fully rendered and ready to be captured
+        const handleShare = () =>
+            new Promise<void>((resolve) => {
+                const tempRef = React.createRef<QRCodeElement>();
+                this.setState({ tempQRRef: tempRef, qrReady: false }, () => {
+                    const checkReady = () => {
+                        if (this.state.qrReady) {
+                            resolve();
+                        } else {
+                            requestAnimationFrame(checkReady);
+                        }
+                    };
+                    checkReady();
+                });
+            });
+
+        const supportsNFC =
+            Platform.OS === 'android' && this.props.nfcSupported;
+
         return (
             <React.Fragment>
+                {/* Temporary QR for sharing */}
+                {tempQRRef && (
+                    <View style={{ height: 0, width: 0, overflow: 'hidden' }}>
+                        <ForwardedQRCode
+                            ref={tempQRRef}
+                            value={value}
+                            size={800}
+                            logo={defaultLogo}
+                            backgroundColor={'white'}
+                            logoBackgroundColor={'white'}
+                            logoMargin={10}
+                            quietZone={40}
+                            parent={this}
+                        />
+                    </View>
+                )}
+
                 {satAmount != null && this.props.displayAmount && (
                     <View
                         style={{
@@ -277,26 +321,52 @@ export default class CollapsedQR extends React.Component<
                         onPress={() => this.toggleCollapse()}
                     />
                 )}
-                <CopyButton copyValue={copyValue || value} title={copyText} />
-                {Platform.OS === 'android' && this.props.nfcSupported && (
-                    <Button
-                        title={
-                            nfcBroadcast
-                                ? localeString('components.CollapsedQr.stopNfc')
-                                : localeString(
-                                      'components.CollapsedQr.startNfc'
-                                  )
-                        }
-                        containerStyle={{
-                            margin: 20
+                {showShare ? (
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'center'
                         }}
-                        icon={{
-                            name: 'nfc',
-                            size: 25
-                        }}
-                        onPress={() => this.toggleNfc()}
-                        tertiary
-                    />
+                    >
+                        <CopyButton
+                            iconContainerStyle={iconContainerStyle}
+                            copyValue={copyValue || value}
+                            title={copyText}
+                            iconOnly={iconOnly}
+                        />
+                        <ShareButton
+                            iconContainerStyle={
+                                supportsNFC ? iconContainerStyle : undefined
+                            }
+                            value={copyValue || value}
+                            qrRef={tempQRRef}
+                            iconOnly={iconOnly}
+                            onPress={handleShare}
+                            onShareComplete={() =>
+                                this.setState({ tempQRRef: null })
+                            }
+                        />
+                        {supportsNFC && (
+                            <NFCButton
+                                value={copyValue || value}
+                                iconOnly={iconOnly}
+                            />
+                        )}
+                    </View>
+                ) : (
+                    <>
+                        <CopyButton
+                            copyValue={copyValue || value}
+                            title={copyText}
+                            iconOnly={iconOnly}
+                        />
+                        {supportsNFC && (
+                            <NFCButton
+                                value={copyValue || value}
+                                iconOnly={iconOnly}
+                            />
+                        )}
+                    </>
                 )}
             </React.Fragment>
         );
