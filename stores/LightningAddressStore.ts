@@ -863,7 +863,6 @@ export default class LightningAddressStore {
     };
 
     private subscribeUpdates = () => {
-        if (this.socket) return;
         ReactNativeBlobUtil.fetch(
             'POST',
             `${LNURL_HOST}/lnurl/auth`,
@@ -937,6 +936,7 @@ export default class LightningAddressStore {
     };
 
     public prepareToAutomaticallyAccept = async () => {
+        this.readyToAutomaticallyAccept = false;
         this.prepareToAutomaticallyAcceptStart = true;
 
         while (!this.readyToAutomaticallyAccept) {
@@ -945,6 +945,7 @@ export default class LightningAddressStore {
             if (isReady) {
                 runInAction(() => {
                     this.readyToAutomaticallyAccept = true;
+                    if (this.socket && this.socket.connected) return;
                     this.redeemAllOpenPayments();
                     this.subscribeUpdates();
                 });
