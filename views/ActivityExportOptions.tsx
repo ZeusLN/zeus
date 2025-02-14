@@ -203,8 +203,18 @@ export default class ActivityExportOptions extends React.Component<
         });
     };
 
-    openModal = (type: 'invoice' | 'transaction' | 'payment') =>
-        this.setState({ isModalVisible: true, exportType: type });
+    openModal = (type: 'invoice' | 'transaction' | 'payment') => {
+        let earliestDate = new Date(
+            new Date().setMonth(new Date().getMonth() - 1)
+        ); // Default to 1 month ago
+
+        this.setState({
+            isModalVisible: true,
+            exportType: type,
+            fromDate: earliestDate,
+            toDate: new Date()
+        });
+    };
 
     renderModal = () => {
         const {
