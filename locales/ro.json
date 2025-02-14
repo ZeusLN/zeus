@@ -1362,5 +1362,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Balanţa (ascendent)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Balanţa (descendent)",
     "views.OnChainAddresses.createAddress": "Creați adresa",
-    "views.OnChainAddresses.changeAddresses": "Adrese de rest"
+    "views.OnChainAddresses.changeAddresses": "Adrese de rest",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }

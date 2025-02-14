@@ -1362,5 +1362,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Solde (ascendant)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Solde (descendant)",
     "views.OnChainAddresses.createAddress": "Créer une adresse",
-    "views.OnChainAddresses.changeAddresses": "Adresses de changement"
+    "views.OnChainAddresses.changeAddresses": "Adresses de changement",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }

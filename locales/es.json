@@ -1362,5 +1362,7 @@
     "views.OnChainAddresses.sortBy.balanceAscending": "Equilibrio (ascendente)",
     "views.OnChainAddresses.sortBy.balanceDescending": "Equilibrio (descendente)",
     "views.OnChainAddresses.createAddress": "Crear dirección",
-    "views.OnChainAddresses.changeAddresses": "Direcciónes de cambio"
+    "views.OnChainAddresses.changeAddresses": "Direcciónes de cambio",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }
