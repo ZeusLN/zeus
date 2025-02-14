@@ -2054,7 +2054,10 @@ export default class Receive extends React.Component<
                                                 <View
                                                     style={[
                                                         styles.button,
-                                                        { paddingTop: 0 }
+                                                        {
+                                                            marginTop: 15,
+                                                            paddingTop: 0
+                                                        }
                                                     ]}
                                                 >
                                                     <Button
