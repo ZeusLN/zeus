@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, TouchableOpacity } from 'react-native';
+import { Platform, TouchableOpacity, ViewStyle } from 'react-native';
 
 import QRCode from 'react-native-qrcode-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -23,6 +23,7 @@ interface ShareButtonProps {
     iconOnly?: boolean;
     onPress: () => Promise<void>;
     onShareComplete?: () => void;
+    iconContainerStyle?: ViewStyle;
 }
 
 export default class ShareButton extends React.Component<ShareButtonProps> {
@@ -56,13 +57,16 @@ export default class ShareButton extends React.Component<ShareButtonProps> {
     };
 
     render() {
-        const { title, icon, noUppercase, iconOnly } = this.props;
+        const { title, icon, noUppercase, iconOnly, iconContainerStyle } =
+            this.props;
 
         if (iconOnly) {
             return (
                 <TouchableOpacity
                     // "padding: 5" leads to a larger area where users can click on
-                    style={{ padding: 5 }}
+                    // "iconContainerStyle" allows contextual spacing (marginRight)
+                    // when used alongside ShareButton
+                    style={[{ padding: 5 }, iconContainerStyle]}
                     onPress={this.handlePress}
                 >
                     <Icon

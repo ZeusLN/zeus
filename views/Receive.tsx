@@ -1849,7 +1849,7 @@ export default class Receive extends React.Component<
                                                 <CollapsedQR
                                                     value={unifiedInvoice || ''}
                                                     iconOnly={true}
-                                                    copyIconContainerStyle={{
+                                                    iconContainerStyle={{
                                                         marginRight: 40
                                                     }}
                                                     showShare={true}
@@ -1881,7 +1881,7 @@ export default class Receive extends React.Component<
                                                         lnInvoiceCopyValue
                                                     }
                                                     iconOnly={true}
-                                                    copyIconContainerStyle={{
+                                                    iconContainerStyle={{
                                                         marginRight: 40
                                                     }}
                                                     showShare={true}
@@ -1913,7 +1913,7 @@ export default class Receive extends React.Component<
                                                         btcAddressCopyValue
                                                     }
                                                     iconOnly={true}
-                                                    copyIconContainerStyle={{
+                                                    iconContainerStyle={{
                                                         marginRight: 40
                                                     }}
                                                     showShare={true}
@@ -1994,7 +1994,7 @@ export default class Receive extends React.Component<
                                                 <CollapsedQR
                                                     value={`lightning:${lightningAddress}`}
                                                     iconOnly={true}
-                                                    copyIconContainerStyle={{
+                                                    iconContainerStyle={{
                                                         marginRight: 40
                                                     }}
                                                     showShare={true}
@@ -2029,7 +2029,7 @@ export default class Receive extends React.Component<
                                                         lnInvoiceCopyValue
                                                     }
                                                     iconOnly={true}
-                                                    copyIconContainerStyle={{
+                                                    iconContainerStyle={{
                                                         marginRight: 40
                                                     }}
                                                     showShare={true}
