@@ -1392,6 +1392,39 @@ export default class SettingsStore {
         return this.macaroonHex || this.accessKey ? true : false;
     }
 
+    @action
+    private updateNodeProperties(settings: Settings) {
+        const node: any =
+            settings?.nodes?.length &&
+            settings?.nodes[settings.selectedNode || 0];
+        if (node) {
+            this.host = node.host;
+            this.port = node.port;
+            this.url = node.url;
+            this.username = node.username;
+            this.password = node.password;
+            this.lndhubUrl = node.lndhubUrl;
+            this.macaroonHex = node.macaroonHex;
+            this.rune = node.rune;
+            this.accessKey = node.accessKey;
+            this.dismissCustodialWarning = node.dismissCustodialWarning;
+            this.implementation = node.implementation || 'lnd';
+            this.certVerification = node.certVerification || false;
+            this.enableTor = node.enableTor;
+            // LNC
+            this.pairingPhrase = node.pairingPhrase;
+            this.mailboxServer = node.mailboxServer;
+            this.customMailboxServer = node.customMailboxServer;
+            // Embedded lnd
+            this.seedPhrase = node.seedPhrase;
+            this.walletPassword = node.walletPassword;
+            this.adminMacaroon = node.adminMacaroon;
+            this.embeddedLndNetwork = node.embeddedLndNetwork;
+            // NWC
+            this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
+        }
+    }
+
     public async getSettings(silentUpdate: boolean = false) {
         if (!silentUpdate) this.loading = true;
         try {
@@ -1423,37 +1456,7 @@ export default class SettingsStore {
                 }
             }
 
-            runInAction(() => {
-                const node: any =
-                    this.settings?.nodes?.length &&
-                    this.settings?.nodes[this.settings.selectedNode || 0];
-                if (node) {
-                    this.host = node.host;
-                    this.port = node.port;
-                    this.url = node.url;
-                    this.username = node.username;
-                    this.password = node.password;
-                    this.lndhubUrl = node.lndhubUrl;
-                    this.macaroonHex = node.macaroonHex;
-                    this.rune = node.rune;
-                    this.accessKey = node.accessKey;
-                    this.dismissCustodialWarning = node.dismissCustodialWarning;
-                    this.implementation = node.implementation || 'lnd';
-                    this.certVerification = node.certVerification || false;
-                    this.enableTor = node.enableTor;
-                    // LNC
-                    this.pairingPhrase = node.pairingPhrase;
-                    this.mailboxServer = node.mailboxServer;
-                    this.customMailboxServer = node.customMailboxServer;
-                    // Embeded lnd
-                    this.seedPhrase = node.seedPhrase;
-                    this.walletPassword = node.walletPassword;
-                    this.adminMacaroon = node.adminMacaroon;
-                    this.embeddedLndNetwork = node.embeddedLndNetwork;
-                    // NWC
-                    this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
-                }
-            });
+            this.updateNodeProperties(this.settings);
         } catch (error) {
             console.error('Could not load settings', error);
         } finally {
@@ -1478,9 +1481,9 @@ export default class SettingsStore {
         };
 
         await this.setSettings(newSettings);
-        // ensure we get the enhanced settings set
-        const settings = await this.getSettings(true);
-        return settings;
+        // Update store's node properties from latest settings
+        this.updateNodeProperties(newSettings);
+        return newSettings;
     };
 
     // LNDHub
