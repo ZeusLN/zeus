@@ -387,7 +387,9 @@ export default class NostrKey extends React.Component<
                                         }}
                                         disabled={
                                             existingNostrPrivateKey ===
-                                                nostrPrivateKey || !nostrNpub
+                                                nostrPrivateKey ||
+                                            !nostrNpub ||
+                                            SettingsStore.settingsUpdateInProgress
                                         }
                                     />
                                 </View>

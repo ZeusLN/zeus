@@ -121,6 +121,7 @@ export default class Display extends React.Component<
                     <DropdownSetting
                         title={localeString('views.Settings.Theme.title')}
                         selectedValue={theme}
+                        disabled={SettingsStore.settingsUpdateInProgress}
                         onValueChange={async (value: string) => {
                             this.setState({
                                 theme: value
@@ -147,6 +148,7 @@ export default class Display extends React.Component<
                             'views.Settings.Display.defaultView'
                         )}
                         selectedValue={defaultView}
+                        disabled={SettingsStore.settingsUpdateInProgress}
                         onValueChange={async (value: string) => {
                             this.setState({
                                 defaultView: value
@@ -178,6 +180,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={displayNickname}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         displayNickname: !displayNickname
@@ -210,6 +215,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={bigKeypadButtons}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         bigKeypadButtons: !bigKeypadButtons
@@ -242,6 +250,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={showAllDecimalPlaces}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         showAllDecimalPlaces:
@@ -276,6 +287,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={removeDecimalSpaces}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         removeDecimalSpaces:
@@ -310,6 +324,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={showMillisatoshiAmounts}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         showMillisatoshiAmounts:
@@ -344,6 +361,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={selectNodeOnStartup}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         selectNodeOnStartup:
