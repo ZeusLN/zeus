@@ -556,7 +556,6 @@ export default class WalletConfiguration extends React.Component<
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
-                SettingsStore.triggerSettingsRefresh = true;
                 navigation.popTo('Wallet');
             } else {
                 navigation.goBack();
@@ -682,7 +681,7 @@ export default class WalletConfiguration extends React.Component<
         setConnectingStatus(true);
         setInitialStart(false);
 
-        navigation.popTo('Wallet', { triggerSettingsRefresh: true });
+        navigation.popTo('Wallet');
     };
 
     createNewWallet = async (network: string = 'Mainnet') => {

@@ -1490,6 +1490,8 @@ export default class SettingsStore {
         }
 
         await this.setSettings(newSettings);
+        this.triggerSettingsRefresh = true;
+
         // Update store's node properties from latest settings
         this.updateNodeProperties(newSettings);
         return newSettings;

@@ -240,8 +240,6 @@ const Intro: React.FC<IntroProps> = (props) => {
 
                                         updateSettings({ nodes }).then(() => {
                                             setConnectingStatus(true);
-                                            stores.settingsStore.triggerSettingsRefresh =
-                                                true;
                                             navigation.navigate('Wallet');
                                         });
                                     } else {
