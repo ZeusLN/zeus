@@ -9,6 +9,7 @@ export interface ILndMobile {
     initialize(): Promise<{ data: string }>;
     startLnd(
         args: string,
+        lndDir: string,
         isTorEnabled?: boolean,
         isTestnet?: boolean
     ): Promise<{ data: string }>;
@@ -54,7 +55,7 @@ export interface ILndMobile {
 }
 
 export interface ILndMobileTools {
-    writeConfig(data: string): Promise<string>;
+    writeConfig(lndDir: string, config: string): Promise<string>;
     killLnd(): Promise<boolean>;
     copyLndLog(network: string): Promise<boolean>;
     tailLog(numberOfLines: number, network: string): Promise<string>;
@@ -64,6 +65,7 @@ export interface ILndMobileTools {
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
     DEBUG_deleteSpeedloaderLastrunFile(): Promise<boolean>;
     DEBUG_deleteSpeedloaderDgraphDirectory(): Promise<null>;
+    deleteLndDirectory(lndDir: string): Promise<null>;
     DEBUG_deleteNeutrinoFiles(network: string): Promise<boolean>;
 
     // Android-specific
@@ -80,8 +82,10 @@ export interface ILndMobileTools {
     checkICloudEnabled(): Promise<boolean>;
     checkApplicationSupportExists(): Promise<boolean>;
     checkLndFolderExists(): Promise<boolean>;
-    createIOSApplicationSupportAndLndDirectories(): Promise<boolean>;
-    excludeLndICloudBackup(): Promise<boolean>;
+    createIOSApplicationSupportAndLndDirectories(
+        lndDir: string
+    ): Promise<boolean>;
+    excludeLndICloudBackup(lndDir: string): Promise<boolean>;
     TEMP_moveLndToApplicationSupport(): Promise<boolean>;
 
     // macOS-specific

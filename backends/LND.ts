@@ -125,7 +125,12 @@ export default class LND {
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
         const methodRoute = `${route}?method=${method}`;
-        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+        const url = this.getURL(
+            host || lndhubUrl || '',
+            port || '',
+            methodRoute,
+            true
+        );
 
         return new Promise(function (resolve, reject) {
             const ws: any = new WebSocket(url, null, {
@@ -216,7 +221,7 @@ export default class LND {
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
-        const url = this.getURL(host || lndhubUrl, port, route);
+        const url = this.getURL(host || lndhubUrl || '', port || '', route);
         return this.restReq(
             headers,
             url,
@@ -274,7 +279,12 @@ export default class LND {
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
         const methodRoute = `${route}?method=${method}`;
-        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+        const url = this.getURL(
+            host || lndhubUrl || '',
+            port || '',
+            methodRoute,
+            true
+        );
 
         const ws: any = new WebSocket(url, null, {
             headers
@@ -432,7 +442,12 @@ export default class LND {
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
         const methodRoute = '/v1/channels/stream?method=POST';
-        const url = this.getURL(host || lndhubUrl, port, methodRoute, true);
+        const url = this.getURL(
+            host || lndhubUrl || '',
+            port || '',
+            methodRoute,
+            true
+        );
 
         return new Promise(function (resolve, reject) {
             const ws: any = new WebSocket(url, null, {
@@ -631,8 +646,8 @@ export default class LND {
         const auth = macaroonHex || accessToken;
         const headers: any = this.getHeaders(auth, true);
         const url = this.getURL(
-            host || lndhubUrl,
-            port,
+            host || lndhubUrl || '',
+            port || '',
             '/v1/channels/acceptor?method=POST',
             true
         );

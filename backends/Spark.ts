@@ -19,7 +19,7 @@ export default class Spark {
             return calls.get(id);
         }
 
-        url = url.slice(-4) === '/rpc' ? url : url + '/rpc';
+        url = url?.slice(-4) === '/rpc' ? url : url + '/rpc';
 
         const headers: any = { 'X-Access': accessKey };
         if (range) {

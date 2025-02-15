@@ -393,9 +393,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                 seedType ===
                                                 'externalWalletSeed'
                                                     ? externalSeed
-                                                    : SettingsStore?.seedPhrase.join(
+                                                    : SettingsStore?.seedPhrase?.join(
                                                           ' '
-                                                      ),
+                                                      ) || '',
                                             apiUrl,
                                             customApiUrl,
                                             recoveryWindow,
@@ -408,9 +408,9 @@ export default class Sweepremoteclosed extends React.Component<
                                                     seedType ===
                                                         'externalWalletSeed'
                                                         ? externalSeed
-                                                        : SettingsStore?.seedPhrase.join(
+                                                        : SettingsStore?.seedPhrase?.join(
                                                               ' '
-                                                          ),
+                                                          ) || '',
                                                     apiUrl === 'custom'
                                                         ? customApiUrl
                                                         : apiUrl,

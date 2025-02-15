@@ -353,7 +353,7 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void startLnd(String args, Boolean isTorEnabled, Boolean isTestnet, Promise promise) {
+  public void startLnd(String args, String lndDir, Boolean isTorEnabled, Boolean isTestnet, Promise promise) {
     // TODO args is only used on iOS right now
     int req = new Random().nextInt();
     requests.put(req, promise);
@@ -363,7 +363,7 @@ class LndMobile extends ReactContextBaseJavaModule {
 
     Bundle bundle = new Bundle();
 
-    String params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath();
+    String params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath() + "/" + lndDir;
     if (isTorEnabled) {
       // int listenPort = ZeusTorUtils.getListenPort(isTestnet);
       // String controlSocket = "unix://" + getReactApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";

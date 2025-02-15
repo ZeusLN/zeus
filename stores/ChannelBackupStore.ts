@@ -65,7 +65,7 @@ export default class ChannelBackupStore {
 
         const encryptedBackup = CryptoJS.AES.encrypt(
             multiString,
-            this.settingsStore.seedPhrase.toString()
+            this.settingsStore?.seedPhrase?.toString() || ''
         ).toString();
 
         try {
@@ -163,7 +163,7 @@ export default class ChannelBackupStore {
         try {
             const decryptedBytes = CryptoJS.AES.decrypt(
                 backup,
-                this.settingsStore.seedPhrase.toString()
+                this.settingsStore?.seedPhrase?.toString() || ''
             );
             const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
 

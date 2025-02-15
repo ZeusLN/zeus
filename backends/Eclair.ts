@@ -22,7 +22,7 @@ export default class Eclair {
             return calls.get(id);
         }
 
-        url = url.slice(-1) === '/' ? url : url + '/';
+        url = url?.slice(-1) === '/' ? url : url + '/';
         const headers = {
             Authorization: 'Basic ' + Base64Utils.utf8ToBase64(':' + password),
             'Content-Type': 'application/x-www-form-urlencoded'

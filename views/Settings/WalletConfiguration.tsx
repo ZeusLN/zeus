@@ -10,10 +10,10 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import cloneDeep from 'lodash/cloneDeep';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -59,7 +59,9 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
     optimizeNeutrinoPeers,
-    createLndWallet
+    createLndWallet,
+    deleteLndWallet,
+    stopLnd
 } from '../../utils/LndMobileUtils';
 
 interface WalletConfigurationProps {
@@ -81,21 +83,21 @@ interface WalletConfigurationProps {
 
 interface WalletConfigurationState {
     node: Node | null;
-    nickname: string; //
-    host: string; // lnd, c-lightning-REST
-    port: string; // lnd, c-lightning-REST
-    macaroonHex: string; // lnd, c-lightning-REST
-    rune: string; // c-lightning-REST
-    url: string; // spark, eclair
-    accessKey: string; // spark
-    lndhubUrl: string; // lndhub
-    username: string | undefined; // lndhub
-    password: string | undefined; // lndhub, eclair
+    nickname?: string; //
+    host?: string; // lnd, c-lightning-REST
+    port?: string; // lnd, c-lightning-REST
+    macaroonHex?: string; // lnd, c-lightning-REST
+    rune?: string; // c-lightning-REST
+    url?: string; // spark, eclair
+    accessKey?: string; // spark
+    lndhubUrl?: string; // lndhub
+    username?: string | undefined; // lndhub
+    password?: string | undefined; // lndhub, eclair
     hidden: boolean;
-    existingAccount: boolean; // lndhub
+    existingAccount?: boolean; // lndhub
     dismissCustodialWarning: boolean;
     implementation: Implementations;
-    certVerification: boolean;
+    certVerification?: boolean;
     saved: boolean;
     active: boolean;
     index: number | null;
@@ -103,23 +105,24 @@ interface WalletConfigurationState {
     suggestImport: string;
     showLndHubModal: boolean;
     showCertModal: boolean;
-    enableTor: boolean;
+    enableTor?: boolean;
     interfaceKeys: Array<any>;
     photo?: string;
     // lnc
-    pairingPhrase: string;
-    mailboxServer: string;
-    customMailboxServer: string;
-    localKey: string;
-    remoteKey: string;
-    deletionAwaitingConfirmation: boolean;
+    pairingPhrase?: string;
+    mailboxServer?: string;
+    customMailboxServer?: string;
+    localKey?: string;
+    remoteKey?: string;
+    deletionAwaitingConfirmation?: boolean;
     // embeded lnd
-    seedPhrase: Array<string>;
-    walletPassword: string;
-    adminMacaroon: string;
-    embeddedLndNetwork: string;
-    recoveryCipherSeed: string;
-    channelBackupsBase64: string;
+    seedPhrase?: string[];
+    walletPassword?: string;
+    adminMacaroon?: string;
+    embeddedLndNetwork?: string;
+    lndDir?: string;
+    recoveryCipherSeed?: string;
+    channelBackupsBase64?: string;
     creatingWallet: boolean;
     errorCreatingWallet: boolean;
     // NWC
@@ -186,7 +189,8 @@ export default class WalletConfiguration extends React.Component<
         walletPassword: '',
         adminMacaroon: '',
         embeddedLndNetwork: 'mainnet',
-        interfaceKeys: [],
+        lndDir: '',
+        interfaceKeys: INTERFACE_KEYS,
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
         creatingWallet: false,
@@ -308,7 +312,7 @@ export default class WalletConfiguration extends React.Component<
 
         const { implementation, pairingPhrase } = this.state;
         if (implementation === 'lightning-node-connect') {
-            const key = `${LNC_STORAGE_KEY}:${hash(pairingPhrase)}`;
+            const key = `${LNC_STORAGE_KEY}:${hash(pairingPhrase || '')}`;
             const json: any = await Storage.getItem(key);
             const parsed = JSON.parse(json);
             if (parsed) {
@@ -320,32 +324,6 @@ export default class WalletConfiguration extends React.Component<
                 }
             }
         }
-
-        let interfaceKeys = cloneDeep(INTERFACE_KEYS);
-
-        // remove option to add a new embedded node if initialized already
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { adminMacaroon, newEntry } = this.state;
-        if (settings.nodes && newEntry) {
-            const result = settings?.nodes?.filter(
-                (node) => node.implementation === 'embedded-lnd'
-            );
-            if (result.length > 0) {
-                interfaceKeys = interfaceKeys.filter(
-                    (item) => item.value !== 'embedded-lnd'
-                );
-                if (!adminMacaroon && implementation === 'embedded-lnd') {
-                    this.setState({
-                        implementation: 'lnd'
-                    });
-                }
-            }
-        }
-
-        this.setState({
-            interfaceKeys
-        });
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -378,15 +356,16 @@ export default class WalletConfiguration extends React.Component<
                 macaroonHex,
                 rune,
                 url,
-                lndhubUrl,
-                existingAccount,
                 accessKey,
-                username,
-                password,
                 implementation,
                 certVerification,
                 enableTor,
                 photo,
+                // LNDHub
+                lndhubUrl,
+                existingAccount,
+                username,
+                password,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -396,9 +375,10 @@ export default class WalletConfiguration extends React.Component<
                 walletPassword,
                 adminMacaroon,
                 embeddedLndNetwork,
+                lndDir,
                 // NWC
                 nostrWalletConnectUrl
-            } = node as any;
+            } = node as Node;
 
             this.setState({
                 node,
@@ -409,11 +389,7 @@ export default class WalletConfiguration extends React.Component<
                 macaroonHex,
                 rune,
                 url,
-                lndhubUrl,
-                existingAccount,
                 accessKey,
-                username,
-                password,
                 implementation: implementation || 'lnd',
                 certVerification,
                 index,
@@ -422,17 +398,23 @@ export default class WalletConfiguration extends React.Component<
                 newEntry,
                 enableTor: tor || enableTor,
                 photo: newPhoto || photo || '',
+                // LNDHub,
+                lndhubUrl,
+                existingAccount,
+                username,
+                password,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
                 customMailboxServer,
                 // embedded LND
-                seedPhrase,
+                seedPhrase: seedPhrase || [],
                 walletPassword,
                 adminMacaroon,
                 embeddedLndNetwork,
+                lndDir,
                 // NWC
-                nostrWalletConnectUrl
+                nostrWalletConnectUrl: nostrWalletConnectUrl || ''
             });
         } else {
             this.setState({
@@ -470,8 +452,9 @@ export default class WalletConfiguration extends React.Component<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            photo,
-            nostrWalletConnectUrl
+            lndDir,
+            nostrWalletConnectUrl,
+            photo
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -505,8 +488,9 @@ export default class WalletConfiguration extends React.Component<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            photo,
-            nostrWalletConnectUrl
+            lndDir,
+            nostrWalletConnectUrl,
+            photo
         };
 
         let nodes: Node[];
@@ -620,10 +604,10 @@ export default class WalletConfiguration extends React.Component<
         });
     };
 
-    deleteNodeConfig = () => {
+    deleteNodeConfig = async () => {
         const { SettingsStore, navigation } = this.props;
         const { updateSettings, settings } = SettingsStore;
-        const { index } = this.state;
+        const { index, implementation, lndDir } = this.state;
         const { nodes } = settings;
 
         const newNodes: any = [];
@@ -631,6 +615,10 @@ export default class WalletConfiguration extends React.Component<
             if (index !== i) {
                 newNodes.push(nodes[i]);
             }
+        }
+
+        if (implementation === 'embedded-lnd') {
+            await deleteLndWallet(lndDir || '');
         }
 
         updateSettings({
@@ -691,15 +679,20 @@ export default class WalletConfiguration extends React.Component<
             creatingWallet: true
         });
 
+        await stopLnd();
+
         await optimizeNeutrinoPeers(network === 'Testnet');
 
-        const response = await createLndWallet(
-            recoveryCipherSeed,
-            undefined,
-            false,
-            network === 'Testnet',
+        const lndDir = uuidv4();
+
+        console.log('lndDir', lndDir);
+
+        const response = await createLndWallet({
+            lndDir,
+            seedMnemonic: recoveryCipherSeed,
+            isTestnet: network === 'Testnet',
             channelBackupsBase64
-        );
+        });
 
         const { wallet, seed, randomBase64 }: any = response;
 
@@ -709,6 +702,7 @@ export default class WalletConfiguration extends React.Component<
                 seedPhrase: seed.cipher_seed_mnemonic,
                 walletPassword: randomBase64,
                 embeddedLndNetwork: network,
+                lndDir,
                 creatingWallet: false
             });
 
@@ -833,7 +827,7 @@ export default class WalletConfiguration extends React.Component<
                     title={localeString(
                         'views.Settings.AddEditNode.mailboxServer'
                     )}
-                    selectedValue={mailboxServer}
+                    selectedValue={mailboxServer || ''}
                     onValueChange={(value: string) => {
                         this.setState({
                             mailboxServer: value,
@@ -984,7 +978,7 @@ export default class WalletConfiguration extends React.Component<
                                             )}
                                             onPress={() => {
                                                 createAccount(
-                                                    lndhubUrl,
+                                                    lndhubUrl || '',
                                                     certVerification
                                                 ).then((data: any) => {
                                                     if (
@@ -1200,16 +1194,20 @@ export default class WalletConfiguration extends React.Component<
 
                         {!adminMacaroon && implementation === 'embedded-lnd' && (
                             <View>
-                                <DropdownSetting
-                                    title={localeString('general.network')}
-                                    selectedValue={embeddedLndNetwork}
-                                    onValueChange={(value: string) => {
-                                        this.setState({
-                                            embeddedLndNetwork: value
-                                        });
-                                    }}
-                                    values={EMBEDDED_NODE_NETWORK_KEYS}
-                                />
+                                {!adminMacaroon && (
+                                    <DropdownSetting
+                                        title={localeString('general.network')}
+                                        selectedValue={
+                                            embeddedLndNetwork || 'mainnet'
+                                        }
+                                        onValueChange={(value: string) => {
+                                            this.setState({
+                                                embeddedLndNetwork: value
+                                            });
+                                        }}
+                                        values={EMBEDDED_NODE_NETWORK_KEYS}
+                                    />
+                                )}
                                 {false && (
                                     <>
                                         <Text
@@ -1508,7 +1506,7 @@ export default class WalletConfiguration extends React.Component<
                                         )}
                                     </Text>
                                     <Switch
-                                        value={existingAccount}
+                                        value={existingAccount || false}
                                         onValueChange={() =>
                                             this.setState({
                                                 existingAccount:
@@ -2132,9 +2130,10 @@ export default class WalletConfiguration extends React.Component<
                                         });
                                     }}
                                     onBlur={() => {
-                                        const normalizedPhrase = pairingPhrase
-                                            ?.trim()
-                                            .replace(/\s+/g, ' ');
+                                        const normalizedPhrase =
+                                            pairingPhrase
+                                                ?.trim()
+                                                .replace(/\s+/g, ' ') || '';
                                         this.setState({
                                             pairingPhrase: normalizedPhrase,
                                             pairingPhraseError:
@@ -2204,7 +2203,7 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                 </Text>
                                 <Switch
-                                    value={enableTor}
+                                    value={enableTor || false}
                                     onValueChange={() =>
                                         this.setState({
                                             enableTor: !enableTor,
@@ -2228,7 +2227,7 @@ export default class WalletConfiguration extends React.Component<
                                     )}
                                 </Text>
                                 <Switch
-                                    value={certVerification}
+                                    value={certVerification || false}
                                     onValueChange={() =>
                                         this.setState({
                                             certVerification: !certVerification,
@@ -2247,13 +2246,17 @@ export default class WalletConfiguration extends React.Component<
                                     'views.Settings.AddEditNode.createLndhub'
                                 )}
                                 onPress={() => {
-                                    if (CUSTODIAL_LNDHUBS.includes(lndhubUrl)) {
+                                    if (
+                                        CUSTODIAL_LNDHUBS.includes(
+                                            lndhubUrl || ''
+                                        )
+                                    ) {
                                         this.setState({
                                             showLndHubModal: true
                                         });
                                     } else {
                                         createAccount(
-                                            lndhubUrl,
+                                            lndhubUrl || '',
                                             certVerification,
                                             enableTor
                                         ).then((data: any) => {
@@ -2513,7 +2516,7 @@ export default class WalletConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation !== 'embedded-lnd' && saved && (
+                    {saved && (
                         <View style={styles.button}>
                             <Button
                                 title={
