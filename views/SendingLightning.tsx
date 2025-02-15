@@ -506,8 +506,6 @@ export default class SendingLightning extends React.Component<
                                         color: themeColor('background')
                                     }}
                                     onPress={() => {
-                                        this.props.SettingsStore.triggerSettingsRefresh =
-                                            true;
                                         navigation.popTo('Wallet');
                                     }}
                                     buttonStyle={{ height: 40 }}

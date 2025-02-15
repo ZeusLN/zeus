@@ -257,8 +257,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             }).then(() => {
                                                 setConnectingStatus(true);
                                                 setInitialStart(false);
-                                                SettingsStore.triggerSettingsRefresh =
-                                                    true;
                                                 navigation.popTo('Wallet');
                                             });
                                         }}

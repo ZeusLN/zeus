@@ -311,8 +311,6 @@ export default class IntroSplash extends React.Component<
                                             updateSettings({ nodes }).then(
                                                 () => {
                                                     setConnectingStatus(true);
-                                                    SettingsStore.triggerSettingsRefresh =
-                                                        true;
                                                     navigation.navigate(
                                                         'Wallet'
                                                     );

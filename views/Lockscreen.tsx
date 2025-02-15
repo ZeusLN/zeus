@@ -125,7 +125,7 @@ export default class Lockscreen extends React.Component<
         ) {
             // If POS is enabled and active, proceed without authentication
             SettingsStore.setLoginStatus(true);
-            this.proceed('Wallet', undefined);
+            this.proceed('Wallet');
             return;
         }
 
