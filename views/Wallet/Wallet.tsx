@@ -204,6 +204,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SettingsStore.posWasEnabled ||
             SettingsStore.triggerSettingsRefresh
         ) {
+            // Trigger getSettingsAndNavigate() in three scenarios:
+            // 1. On initial wallet load to ensure proper initialization
+            // 2. When exiting POS to handle potential lockscreen navigation
+            // 3. When any settings are updated to refresh the UI state
             this.getSettingsAndNavigate();
             SettingsStore.posWasEnabled = false;
             SettingsStore.triggerSettingsRefresh = false;
