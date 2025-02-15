@@ -968,4 +968,62 @@ export default class LightningAddressStore {
         this.lightningAddressHandle = '';
         this.lightningAddressDomain = '';
     };
+
+    @action
+    public deleteAddress = async () => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/auth`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                })
+            );
+
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
+
+            const { verification } = authData;
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            const deleteResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/delete`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature
+                })
+            );
+
+            const deleteData = deleteResponse.json();
+            if (deleteResponse.info().status !== 200) throw deleteData.error;
+
+            // Clear local storage and reset store state
+            await Storage.setItem(ADDRESS_ACTIVATED_STRING, false);
+            await Storage.setItem(HASHES_STORAGE_STRING, '');
+            this.reset();
+
+            runInAction(() => {
+                this.loading = false;
+            });
+
+            return true;
+        } catch (error) {
+            runInAction(() => {
+                this.error = true;
+                this.error_msg =
+                    error?.toString() || 'Failed to delete account';
+                this.loading = false;
+            });
+            throw error;
+        }
+    };
 }
