@@ -156,7 +156,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             bolt12,
             destination: destination || '',
             amount: amount || '',
-            satAmount: '',
+            satAmount: '0',
             fee: '',
             utxos: [],
             utxoBalance: 0,
