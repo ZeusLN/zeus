@@ -253,7 +253,7 @@ export async function expressGraphSync() {
 }
 
 export async function initializeLnd({
-    lndDir,
+    lndDir = 'lnd',
     isTestnet,
     rescan,
     compactDb
@@ -265,21 +265,34 @@ export async function initializeLnd({
 }) {
     const { initialize } = lndMobile.index;
 
+    console.log('##$@', { lndDir, isTestnet, rescan, compactDb });
     await writeLndConfig({ lndDir, isTestnet, rescan, compactDb });
     await initialize();
 }
 
 export async function stopLnd() {
     const { checkStatus, stopLnd } = lndMobile.index;
-    const status = await checkStatus();
-    if (
-        (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
-        ELndMobileStatusCodes.STATUS_PROCESS_STARTED
-    ) {
-        await stopLnd();
-        return await sleep(10000);
-    } else {
-        return;
+    try {
+        console.log('stopLND 1');
+        const status = await checkStatus();
+        console.log('stopLND 2', status);
+        if (
+            (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+            ELndMobileStatusCodes.STATUS_PROCESS_STARTED
+        ) {
+            console.log('stopLND 3');
+            await stopLnd();
+            await sleep(3000);
+            console.log('stopLND 3a');
+            return ;
+        } else {
+            console.log('stopLND 4');
+            await sleep(3000);
+            console.log('stopLND 4a');
+            return;
+        }
+    } catch (e) {
+        console.log('error stopping LND', e);
     }
 }
 
@@ -321,6 +334,7 @@ export async function startLnd({
                 log.i('Current lnd state', [state]);
                 if (state.state === lnrpc.WalletState.NON_EXISTING) {
                     log.d('Got lnrpc.WalletState.NON_EXISTING');
+                    res(true);
                 } else if (state.state === lnrpc.WalletState.LOCKED) {
                     log.d('Got lnrpc.WalletState.LOCKED');
                     log.d('Wallet locked, unlocking wallet');
@@ -556,14 +570,19 @@ export async function createLndWallet({
         await excludeLndICloudBackup(lndDir);
     }
 
+    console.log('createLndWallet 1');
     await writeLndConfig({ lndDir, isTestnet });
+    console.log('createLndWallet 2');
     await initialize();
+    console.log('createLndWallet 3');
 
     const status = await checkStatus();
+    console.log('createLndWallet 4');
     if (
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
+        console.log('createLndWallet 5');
         await startLnd({
             lndDir,
             walletPassword: '',
@@ -571,22 +590,42 @@ export async function createLndWallet({
             isTestnet: isTestnet || false
         });
     }
+    // try {
+    //     await startLnd({
+    //         lndDir,
+    //         walletPassword: '',
+    //         isTorEnabled: false,
+    //         isTestnet: isTestnet || false
+    //     });
+    // } catch (e) {
+    //     console.log('error starting LND', e);
+    // }
+
+    console.log('createLndWallet 6');
     await sleep(2000);
 
     let seed: any;
     if (!seedMnemonic) {
+        console.log('createLndWallet 6a');
         seed = await genSeed(undefined);
-        if (!seed) return;
+        if (!seed) {
+            console.log('6a2');
+            return;
+        }
     } else {
+        console.log('createLndWallet 6b');
         seed = {
             cipher_seed_mnemonic: seedMnemonic?.split(' ')
         };
     }
 
+    console.log('createLndWallet 7');
+
     const random = await generateSecureRandom(32);
     const randomBase64 = Base64Utils.bytesToBase64(random);
 
     const isRestore = walletPassphrase || seedMnemonic;
+    console.log('createLndWallet 8');
     const wallet: any = await initWallet(
         seed.cipher_seed_mnemonic,
         randomBase64,
@@ -594,5 +633,6 @@ export async function createLndWallet({
         channelBackupsBase64 ? channelBackupsBase64 : undefined,
         walletPassphrase ? walletPassphrase : undefined
     );
+    console.log('createLndWallet 9');
     return { wallet, seed, randomBase64 };
 }

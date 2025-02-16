@@ -25,10 +25,11 @@ import SettingsStore, {
     Node
 } from '../../stores/SettingsStore';
 
-import { getPhoto } from '../../utils/PhotoUtils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { stopLnd } from '../../utils/LndMobileUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
@@ -254,7 +255,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             await updateSettings({
                                                 nodes,
                                                 selectedNode: index
-                                            }).then(() => {
+                                            }).then(async () => {
+                                                if (currentImplementation === 'embedded-lnd') await stopLnd;
                                                 setConnectingStatus(true);
                                                 setInitialStart(false);
                                                 navigation.popTo('Wallet', {

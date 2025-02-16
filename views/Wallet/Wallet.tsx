@@ -383,13 +383,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
+                console.log('A');
                 AlertStore.checkNeutrinoPeers();
+
+                console.log('B');
 
                 await stopLnd();
 
                 console.log('lndDir', lndDir);
                 await initializeLnd({
-                    lndDir: lndDir || '',
+                    lndDir: lndDir || 'lnd',
                     isTestnet: embeddedLndNetwork === 'Testnet',
                     rescan,
                     compactDb
@@ -411,8 +414,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                 }
 
-                await startLnd({
+                console.log('!!!', {
                     lndDir: lndDir || '',
+                    walletPassword: walletPassword || '',
+                    isTorEnabled: embeddedTor,
+                    isTestnet: embeddedLndNetwork === 'Testnet'
+                });
+
+                await startLnd({
+                    lndDir: lndDir || 'lnd',
                     walletPassword: walletPassword || '',
                     isTorEnabled: embeddedTor,
                     isTestnet: embeddedLndNetwork === 'Testnet'
