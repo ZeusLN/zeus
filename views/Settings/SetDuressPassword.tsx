@@ -98,9 +98,7 @@ export default class SetDuressPassphrase extends React.Component<
 
         await updateSettings({ duressPassphrase }).then(() => {
             getSettings();
-            navigation.popTo('Settings', {
-                refresh: true
-            });
+            navigation.popTo('Settings');
         });
     };
 
@@ -109,9 +107,7 @@ export default class SetDuressPassphrase extends React.Component<
         const { updateSettings } = SettingsStore;
 
         await updateSettings({ duressPassphrase: '' }).then(() => {
-            navigation.popTo('Settings', {
-                refresh: true
-            });
+            navigation.popTo('Settings');
         });
     };
 

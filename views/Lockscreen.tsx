@@ -87,13 +87,17 @@ export default class Lockscreen extends React.Component<
     proceed = (targetScreen?: string, navigationParams?: any) => {
         const { SettingsStore, navigation } = this.props;
         if (targetScreen) {
-            navigation.popTo(targetScreen, navigationParams);
+            navigation.popTo(targetScreen, { ...navigationParams });
         } else if (
             SettingsStore.settings.selectNodeOnStartup &&
             SettingsStore.initialStart
         ) {
             navigation.popTo('Wallets');
         } else {
+            // Default login flow
+            // Resets navigation stack to previous screen
+            // to prevent back navigation to Lockscreen
+            SettingsStore.triggerSettingsRefresh = true;
             navigation.pop();
         }
     };
@@ -119,6 +123,7 @@ export default class Lockscreen extends React.Component<
             !deletePin &&
             !deleteDuressPin
         ) {
+            // If POS is enabled and active, proceed without authentication
             SettingsStore.setLoginStatus(true);
             this.proceed('Wallet');
             return;
@@ -253,7 +258,12 @@ export default class Lockscreen extends React.Component<
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
             } else {
-                setPosStatus('inactive');
+                if (
+                    (SettingsStore.settings?.pos?.posEnabled ||
+                        PosEnabled.Disabled) !== PosEnabled.Disabled
+                ) {
+                    setPosStatus('inactive');
+                }
                 this.resetAuthenticationAttempts();
                 const pendingNavigation = route.params?.pendingNavigation;
                 this.proceed(
