@@ -30,6 +30,7 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
+    mounted?: boolean;
 }
 
 @inject('SettingsStore')
@@ -45,7 +46,8 @@ export default class PaymentsSettings extends React.Component<
         timeoutSeconds: '60',
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
-        slideToPayThreshold: '10000'
+        slideToPayThreshold: '10000',
+        mounted: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -62,7 +64,8 @@ export default class PaymentsSettings extends React.Component<
             preferredMempoolRate:
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
-                settings?.payments?.slideToPayThreshold?.toString() || '10000'
+                settings?.payments?.slideToPayThreshold?.toString() || '10000',
+            mounted: true
         });
     }
 
@@ -283,7 +286,13 @@ export default class PaymentsSettings extends React.Component<
                                 slideToPayThreshold: amount
                             });
                             const amountNumber = Number(amount);
-                            if (!Number.isNaN(amountNumber)) {
+                            // ensure settings are loading and everything is mounted
+                            // before we attempt to update settings
+                            // solves ZEUS-2802
+                            if (
+                                this.state.mounted &&
+                                !Number.isNaN(amountNumber)
+                            ) {
                                 await updateSettings({
                                     payments: {
                                         ...settings.payments,
