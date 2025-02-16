@@ -556,7 +556,7 @@ export default class WalletConfiguration extends React.Component<
                     BackendUtils.disconnect();
                 }
                 setConnectingStatus(true);
-                navigation.popTo('Wallet', { refresh: true });
+                navigation.popTo('Wallet');
             } else {
                 navigation.goBack();
             }
@@ -640,7 +640,7 @@ export default class WalletConfiguration extends React.Component<
             if (newNodes.length === 0) {
                 navigation.navigate('IntroSplash');
             } else {
-                navigation.popTo('Wallets', { refresh: true });
+                navigation.popTo('Wallets');
             }
         });
     };
@@ -681,7 +681,7 @@ export default class WalletConfiguration extends React.Component<
         setConnectingStatus(true);
         setInitialStart(false);
 
-        navigation.popTo('Wallet', { refresh: true });
+        navigation.popTo('Wallet');
     };
 
     createNewWallet = async (network: string = 'Mainnet') => {
