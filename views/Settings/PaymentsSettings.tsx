@@ -296,7 +296,9 @@ export default class PaymentsSettings extends React.Component<
                         hideUnitChangeButton={true}
                     />
 
-                    {BackendUtils.isLNDBased() && (
+                    {(BackendUtils.isLNDBased() ||
+                        implementation === 'c-lightning-REST' ||
+                        implementation === 'cln-rest') && (
                         <>
                             <Text
                                 style={{

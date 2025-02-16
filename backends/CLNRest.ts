@@ -313,13 +313,15 @@ export default class CLNRest {
         this.postRequest('/v1/pay', {
             bolt11: data.payment_request,
             amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent
+            maxfeepercent: data.max_fee_percent,
+            retry_for: settingsStore.settings.payments.timeoutSeconds
         });
     sendKeysend = (data: any) => {
         return this.postRequest('/v1/keysend', {
             destination: data.pubkey,
             amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent
+            maxfeepercent: data.max_fee_percent,
+            retry_for: settingsStore.settings.payments.timeoutSeconds
         });
     };
     closeChannel = (urlParams?: Array<string>) => {
