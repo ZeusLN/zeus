@@ -297,7 +297,6 @@ export default class PaymentsSettings extends React.Component<
                     />
 
                     {(BackendUtils.isLNDBased() ||
-                        implementation === 'c-lightning-REST' ||
                         implementation === 'cln-rest') && (
                         <>
                             <Text
