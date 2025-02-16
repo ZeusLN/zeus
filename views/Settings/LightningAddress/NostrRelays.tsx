@@ -162,6 +162,9 @@ export default class NostrRelays extends React.Component<
                                             color: themeColor('text')
                                         }}
                                         iconOnly
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
                                         onPress={async () => {
                                             if (
                                                 !addRelay ||
@@ -245,6 +248,9 @@ export default class NostrRelays extends React.Component<
                                                         )
                                                     }}
                                                     iconOnly
+                                                    disabled={
+                                                        SettingsStore.settingsUpdateInProgress
+                                                    }
                                                     onPress={async () => {
                                                         const newNostrRelays =
                                                             this.remove(

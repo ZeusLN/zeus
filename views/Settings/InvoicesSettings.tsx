@@ -265,6 +265,9 @@ export default class InvoicesSettings extends React.Component<
                                     <DropdownSetting
                                         selectedValue={timePeriod}
                                         values={TIME_PERIOD_KEYS}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
                                         onValueChange={async (
                                             value: string
                                         ) => {
@@ -361,7 +364,10 @@ export default class InvoicesSettings extends React.Component<
                                             }
                                         });
                                     }}
-                                    disabled={blindedPaths}
+                                    disabled={
+                                        blindedPaths ||
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                 />
                             </View>
                         </View>
@@ -409,7 +415,10 @@ export default class InvoicesSettings extends React.Component<
                                             }
                                         });
                                     }}
-                                    disabled={blindedPaths}
+                                    disabled={
+                                        blindedPaths ||
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                 />
                             </View>
                         </View>
@@ -445,6 +454,9 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={blindedPaths}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             blindedPaths: !blindedPaths,
@@ -491,6 +503,9 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={showCustomPreimageField}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             showCustomPreimageField:
@@ -531,6 +546,9 @@ export default class InvoicesSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={displayAmountOnInvoice}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         displayAmountOnInvoice:
