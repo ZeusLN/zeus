@@ -160,7 +160,10 @@ export default class ChannelsSettings extends React.Component<
                                         }
                                     });
                                 }}
-                                disabled={simpleTaprootChannel}
+                                disabled={
+                                    simpleTaprootChannel ||
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                             />
                         </View>
                     </View>
@@ -184,6 +187,9 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={scidAlias}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             scidAlias: !scidAlias
@@ -219,6 +225,9 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={simpleTaprootChannel}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             simpleTaprootChannel:
@@ -268,6 +277,9 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={lsps1ShowPurchaseButton}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             lsps1ShowPurchaseButton:

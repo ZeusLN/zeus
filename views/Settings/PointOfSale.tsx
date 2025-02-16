@@ -191,6 +191,7 @@ export default class PointOfSale extends React.Component<
                                 });
                             }}
                             values={POS_ENABLED_KEYS}
+                            disabled={SettingsStore.settingsUpdateInProgress}
                         />
 
                         {posEnabled === PosEnabled.Square && (
@@ -273,6 +274,9 @@ export default class PointOfSale extends React.Component<
                                     >
                                         <Switch
                                             value={squareDevMode}
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress
+                                            }
                                             onValueChange={async () => {
                                                 this.setState({
                                                     squareDevMode:
@@ -336,6 +340,9 @@ export default class PointOfSale extends React.Component<
                                         });
                                     }}
                                     values={POS_CONF_PREF_KEYS}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                 />
                                 {posEnabled === PosEnabled.Standalone && (
                                     <DropdownSetting
@@ -357,6 +364,9 @@ export default class PointOfSale extends React.Component<
                                             });
                                         }}
                                         values={DEFAULT_VIEW_KEYS_POS}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
                                     />
                                 )}
 
@@ -386,6 +396,9 @@ export default class PointOfSale extends React.Component<
                                     >
                                         <Switch
                                             value={disableTips}
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress
+                                            }
                                             onValueChange={async () => {
                                                 this.setState({
                                                     disableTips: !disableTips
@@ -432,6 +445,9 @@ export default class PointOfSale extends React.Component<
                                         >
                                             <Switch
                                                 value={enablePrinter}
+                                                disabled={
+                                                    SettingsStore.settingsUpdateInProgress
+                                                }
                                                 onValueChange={async () => {
                                                     this.setState({
                                                         enablePrinter:
@@ -480,6 +496,9 @@ export default class PointOfSale extends React.Component<
                                     >
                                         <Switch
                                             value={showKeypad}
+                                            disabled={
+                                                SettingsStore.settingsUpdateInProgress
+                                            }
                                             onValueChange={async () => {
                                                 this.setState({
                                                     showKeypad: !showKeypad

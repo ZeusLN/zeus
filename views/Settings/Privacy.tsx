@@ -121,6 +121,7 @@ export default class Privacy extends React.Component<
                             });
                         }}
                         values={BLOCK_EXPLORER_KEYS}
+                        disabled={SettingsStore.settingsUpdateInProgress}
                     />
 
                     {defaultBlockExplorer === 'Custom' && (
@@ -178,6 +179,9 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={clipboard}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         clipboard: !clipboard
@@ -225,6 +229,9 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={lurkerMode}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         lurkerMode: !lurkerMode
@@ -261,6 +268,9 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         enableMempoolRates: !enableMempoolRates
