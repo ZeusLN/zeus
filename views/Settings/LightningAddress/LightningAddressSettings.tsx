@@ -1,16 +1,17 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, Alert } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
+import { StackNavigationProp } from '@react-navigation/stack';
 
-import Text from '../../../components/Text';
+import Button from '../../../components/Button';
 import DropdownSetting from '../../../components/DropdownSetting';
+import Header from '../../../components/Header';
 import Screen from '../../../components/Screen';
 import Switch from '../../../components/Switch';
-import Header from '../../../components/Header';
+import Text from '../../../components/Text';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../../components/LoadingIndicator';
-import { StackNavigationProp } from '@react-navigation/stack';
 
 import SettingsStore, {
     NOTIFICATIONS_PREF_KEYS,
@@ -77,6 +78,31 @@ export default class LightningAddressSettings extends React.Component<
                     : 1
         });
     }
+
+    confirmDelete = () => {
+        Alert.alert(
+            localeString('views.Settings.LightningAddress.deleteAddress'),
+            localeString(
+                'views.Settings.LightningAddress.deleteAddressConfirm'
+            ),
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('general.delete'),
+                    onPress: () => {
+                        const { LightningAddressStore } = this.props;
+                        LightningAddressStore.deleteAddress().then(() => {
+                            this.props.navigation.goBack();
+                        });
+                    },
+                    style: 'destructive'
+                }
+            ]
+        );
+    };
 
     render() {
         const { navigation, SettingsStore, LightningAddressStore } = this.props;
@@ -372,6 +398,15 @@ export default class LightningAddressSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
+                        <View style={{ marginTop: 40, marginBottom: 20 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.LightningAddress.deleteAddress'
+                                )}
+                                onPress={this.confirmDelete}
+                                warning
+                            />
+                        </View>
                     </ScrollView>
                 </View>
             </Screen>
