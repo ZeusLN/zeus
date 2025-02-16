@@ -1219,8 +1219,6 @@
     "views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel": "Attestation level for automatic acceptance",
     "views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successOnly": "Successful only",
     "views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successAndNotFound": "Successful and not found",
-    "views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannels": "Automatically request channels from OLYMPUS",
-    "views.Settings.LightningAddressSettings.automaticallyRequestOlympusChannelsExplainer1": "If enabled, OLYMPUS will automatically open up channels to you when it cannot find a route to you. This will ensure that you can continue to receive payments with ZEUS PAY.",
     "views.Settings.LightningAddressSettings.allowComments": "Allow comments",
     "views.Settings.LightningAddressSettings.notifications": "Notifications",
     "views.Settings.LightningAddressSettings.notifications.push": "Push",
