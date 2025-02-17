@@ -1396,7 +1396,7 @@ export default class SettingsStore {
     }
 
     @action
-    private updateNodeProperties(settings: Settings) {
+    private updateNodeProperties = (settings: Settings) => {
         const node: any =
             settings?.nodes?.length &&
             settings?.nodes[settings.selectedNode || 0];
@@ -1426,9 +1426,9 @@ export default class SettingsStore {
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }
-    }
+    };
 
-    public async getSettings(silentUpdate: boolean = false) {
+    public getSettings = async (silentUpdate: boolean = false) => {
         if (!silentUpdate) this.loading = true;
         try {
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
@@ -1467,7 +1467,7 @@ export default class SettingsStore {
         }
 
         return this.settings;
-    }
+    };
 
     public async setSettings(settings: any) {
         this.loading = true;
