@@ -54,6 +54,7 @@
     "bip39": "3.1.0",
     "bitcoinjs-lib": "6.1.5",
     "bolt11": "1.4.1",
+    "boltz-core": "^2.2.1",
     "browserify-zlib": "0.1.4",
     "bs58check": "2.1.2",
     "buffer": "5.6.0",

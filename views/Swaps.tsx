@@ -147,6 +147,8 @@ export default class SwapPane extends React.PureComponent<
 
                 const keys: any = ECPairFactory(ecc).makeRandom();
 
+                console.log('keyss->', keys);
+
                 const response = await ReactNativeBlobUtil.fetch(
                     'POST',
                     `${HOST}/swap/submarine`,
