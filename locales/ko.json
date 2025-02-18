@@ -556,7 +556,7 @@
     "views.Intro.carousel4.text": "기본적인 비트코인 지갑을 넘어 라이트닝 채널, 유동성 등을 관리하세요.",
     "views.Intro.errorCreatingWallet": "지갑 생성 오류. 앱을 재시작하거나, 재시도해 보세요.",
     "views.OpenChannel.openChannel": "채널 개설",
-    "views.OpenChannel.openChannels": "Open Channels",
+    "views.OpenChannel.openChannels": "채널 열기",
     "views.OpenChannel.connectPeer": "피어 노드와 연결하기",
     "views.OpenChannel.importText": "클립보드에서 다음 노드 URI를 감지했습니다.",
     "views.OpenChannel.importPrompt": "가져오시겠습니까?",
