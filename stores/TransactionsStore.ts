@@ -543,8 +543,11 @@ export default class TransactionsStore {
             data.max_fee_percent = max_fee_percent;
         }
 
-        // payment timeout for LND
-        if (BackendUtils.isLNDBased()) {
+        // payment timeout for LND and CLN
+        if (
+            BackendUtils.isLNDBased() ||
+            this.settingsStore.implementation === 'cln-rest'
+        ) {
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 
