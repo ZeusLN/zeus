@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/storeInstances';
 import {
     Settings,
     DEFAULT_FIAT_RATES_SOURCE,
@@ -124,7 +124,7 @@ class MigrationsUtils {
         const mod = await EncryptedStorage.getItem(MOD_KEY);
         if (!mod) {
             newSettings.requestSimpleTaproot = true;
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY, 'true');
         }
 
@@ -137,7 +137,7 @@ class MigrationsUtils {
             if (newSettings?.lspTestnet === 'https://testnet-lsp.lnolymp.us') {
                 newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
             }
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY2, 'true');
         }
 
@@ -158,7 +158,7 @@ class MigrationsUtils {
                 newSettings.neutrinoPeersMainnet =
                     DEFAULT_NEUTRINO_PEERS_MAINNET;
             }
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY3, 'true');
         }
 
@@ -192,7 +192,7 @@ class MigrationsUtils {
                 newSettings.lsps1ShowPurchaseButton = true;
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY4, 'true');
         }
 
@@ -209,7 +209,7 @@ class MigrationsUtils {
                 }
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY5, 'true');
         }
 
@@ -221,7 +221,7 @@ class MigrationsUtils {
                 newSettings.customSpeedloader = '';
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY6, 'true');
         }
 
@@ -234,7 +234,7 @@ class MigrationsUtils {
                 newSettings.bimodalPathfinding = false;
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY7, 'true');
         }
 
@@ -248,7 +248,7 @@ class MigrationsUtils {
                 newSettings.lightningAddress.nostrRelays = DEFAULT_NOSTR_RELAYS;
             }
 
-            stores.settingsStore.setSettings(JSON.stringify(newSettings));
+            settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY8, 'true');
         }
 
