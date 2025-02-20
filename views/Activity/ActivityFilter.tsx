@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import {
+    ScrollView,
+    Text,
+    View,
+    KeyboardAvoidingView,
+    Platform
+} from 'react-native';
 import { Button, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import isEqual from 'lodash/isEqual';
@@ -303,214 +309,228 @@ export default class ActivityFilter extends React.Component<
                     }
                     navigation={navigation}
                 />
-                <ScrollView>
-                    {FILTERS.map((item, index) => {
-                        if (!item.condition) return null;
+                <KeyboardAvoidingView
+                    style={{ flex: 1, backgroundColor: 'transparent' }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                >
+                    <ScrollView>
+                        {FILTERS.map((item, index) => {
+                            if (!item.condition) return null;
 
-                        return (
-                            <React.Fragment key={index}>
-                                <ListItem
-                                    containerStyle={{
-                                        borderBottomWidth: 0,
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <ListItem.Title
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Book'
+                            return (
+                                <React.Fragment key={index}>
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor: 'transparent'
                                         }}
                                     >
-                                        {item.label}
-                                    </ListItem.Title>
-                                    {item.type === 'Toggle' && (
-                                        <View
+                                        <ListItem.Title
                                             style={{
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                justifyContent: 'flex-end'
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
-                                            <Switch
-                                                value={item.value}
-                                                onValueChange={async () => {
-                                                    const newFilters: any =
-                                                        filters;
-                                                    const index = `${item.var}`;
-                                                    newFilters[index] =
-                                                        !filters[index];
-                                                    await setFilters(
-                                                        newFilters,
-                                                        locale
-                                                    );
+                                            {item.label}
+                                        </ListItem.Title>
+                                        {item.type === 'Toggle' && (
+                                            <View
+                                                style={{
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'flex-end'
                                                 }}
-                                            />
-                                        </View>
-                                    )}
-                                    {item.type === 'Amount' && (
-                                        <View style={{ flex: 1 }}>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder={
-                                                    item.label ===
-                                                    localeString(
-                                                        'views.ActivityFilter.minimumAmount'
-                                                    )
-                                                        ? '0'
-                                                        : localeString(
-                                                              'views.ActivityFilter.maximumAmountPlaceHolder'
-                                                          )
-                                                }
-                                                value={
-                                                    item.value === undefined ||
-                                                    item.value === 0
-                                                        ? ''
-                                                        : String(item.value)
-                                                }
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    const newAmount =
-                                                        text.trim() === '' &&
-                                                        item.label ===
-                                                            localeString(
-                                                                'views.ActivityFilter.minimumAmount'
-                                                            )
-                                                            ? 0
-                                                            : text.trim() ===
-                                                                  '' &&
-                                                              item.label ===
-                                                                  localeString(
-                                                                      'views.ActivityFilter.maximumAmount'
-                                                                  )
-                                                            ? undefined
-                                                            : text.trim() !== ''
-                                                            ? !isNaN(
-                                                                  Number(text)
-                                                              )
-                                                                ? Number(text)
-                                                                : 0
-                                                            : 0;
-
-                                                    if (
+                                            >
+                                                <Switch
+                                                    value={item.value}
+                                                    onValueChange={async () => {
+                                                        const newFilters: any =
+                                                            filters;
+                                                        const index = `${item.var}`;
+                                                        newFilters[index] =
+                                                            !filters[index];
+                                                        await setFilters(
+                                                            newFilters,
+                                                            locale
+                                                        );
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
+                                        {item.type === 'Amount' && (
+                                            <View style={{ flex: 1 }}>
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    placeholder={
                                                         item.label ===
                                                         localeString(
                                                             'views.ActivityFilter.minimumAmount'
                                                         )
-                                                    ) {
-                                                        setAmountFilter(
-                                                            newAmount
-                                                        );
-                                                    } else if (
-                                                        item.label ===
-                                                        localeString(
-                                                            'views.ActivityFilter.maximumAmount'
-                                                        )
-                                                    ) {
-                                                        setMaximumAmountFilter(
-                                                            newAmount
-                                                        );
+                                                            ? '0'
+                                                            : localeString(
+                                                                  'views.ActivityFilter.maximumAmountPlaceHolder'
+                                                              )
                                                     }
-                                                }}
-                                                style={{
-                                                    marginBottom: 0,
-                                                    top: 0
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-                                    {item.type === 'TextInput' && (
-                                        <View style={{ flex: 1 }}>
-                                            <TextInput
-                                                placeholder={localeString(
-                                                    'views.ActivityFilter.memoPlaceHolder'
-                                                )}
-                                                value={item.value}
-                                                onChangeText={async (
-                                                    text: string
-                                                ) => {
-                                                    const newMemo = text;
-                                                    const newFilters = {
-                                                        ...filters
-                                                    };
-                                                    newFilters.memo = newMemo;
-                                                    setMemoFilter(
-                                                        newFilters.memo
-                                                    );
-                                                }}
-                                                style={{
-                                                    marginBottom: 0,
-                                                    top: 0
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-                                    {item.type === 'StartDate' && (
-                                        <View style={{ flex: 1 }}>
-                                            <DateFilter type="startDate" />
-                                        </View>
-                                    )}
-                                    {item.type === 'EndDate' && (
-                                        <View style={{ flex: 1 }}>
-                                            <DateFilter type="endDate" />
-                                        </View>
-                                    )}
-                                </ListItem>
-                                {index < FILTERS.length - 1 &&
-                                    this.renderSeparator()}
-                            </React.Fragment>
-                        );
-                    })}
-                </ScrollView>
+                                                    value={
+                                                        item.value ===
+                                                            undefined ||
+                                                        item.value === 0
+                                                            ? ''
+                                                            : String(item.value)
+                                                    }
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        const newAmount =
+                                                            text.trim() ===
+                                                                '' &&
+                                                            item.label ===
+                                                                localeString(
+                                                                    'views.ActivityFilter.minimumAmount'
+                                                                )
+                                                                ? 0
+                                                                : text.trim() ===
+                                                                      '' &&
+                                                                  item.label ===
+                                                                      localeString(
+                                                                          'views.ActivityFilter.maximumAmount'
+                                                                      )
+                                                                ? undefined
+                                                                : text.trim() !==
+                                                                  ''
+                                                                ? !isNaN(
+                                                                      Number(
+                                                                          text
+                                                                      )
+                                                                  )
+                                                                    ? Number(
+                                                                          text
+                                                                      )
+                                                                    : 0
+                                                                : 0;
 
-                <DatePicker
-                    onConfirm={(date) => {
-                        if (setStartDate) {
+                                                        if (
+                                                            item.label ===
+                                                            localeString(
+                                                                'views.ActivityFilter.minimumAmount'
+                                                            )
+                                                        ) {
+                                                            setAmountFilter(
+                                                                newAmount
+                                                            );
+                                                        } else if (
+                                                            item.label ===
+                                                            localeString(
+                                                                'views.ActivityFilter.maximumAmount'
+                                                            )
+                                                        ) {
+                                                            setMaximumAmountFilter(
+                                                                newAmount
+                                                            );
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        marginBottom: 0,
+                                                        top: 0
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
+                                        {item.type === 'TextInput' && (
+                                            <View style={{ flex: 1 }}>
+                                                <TextInput
+                                                    placeholder={localeString(
+                                                        'views.ActivityFilter.memoPlaceHolder'
+                                                    )}
+                                                    value={item.value}
+                                                    onChangeText={async (
+                                                        text: string
+                                                    ) => {
+                                                        const newMemo = text;
+                                                        const newFilters = {
+                                                            ...filters
+                                                        };
+                                                        newFilters.memo =
+                                                            newMemo;
+                                                        setMemoFilter(
+                                                            newFilters.memo
+                                                        );
+                                                    }}
+                                                    style={{
+                                                        marginBottom: 0,
+                                                        top: 0
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
+                                        {item.type === 'StartDate' && (
+                                            <View style={{ flex: 1 }}>
+                                                <DateFilter type="startDate" />
+                                            </View>
+                                        )}
+                                        {item.type === 'EndDate' && (
+                                            <View style={{ flex: 1 }}>
+                                                <DateFilter type="endDate" />
+                                            </View>
+                                        )}
+                                    </ListItem>
+                                    {index < FILTERS.length - 1 &&
+                                        this.renderSeparator()}
+                                </React.Fragment>
+                            );
+                        })}
+                    </ScrollView>
+
+                    <DatePicker
+                        onConfirm={(date) => {
+                            if (setStartDate) {
+                                this.setState({
+                                    workingStartDate: date,
+                                    setStartDate: false
+                                });
+                                setStartDateFilter(date);
+                            } else {
+                                this.setState({
+                                    workingEndDate: date,
+                                    setEndDate: false
+                                });
+                                setEndDateFilter(date);
+                            }
+                        }}
+                        onCancel={() =>
                             this.setState({
-                                workingStartDate: date,
-                                setStartDate: false
-                            });
-                            setStartDateFilter(date);
-                        } else {
-                            this.setState({
-                                workingEndDate: date,
+                                setStartDate: false,
                                 setEndDate: false
-                            });
-                            setEndDateFilter(date);
+                            })
                         }
-                    }}
-                    onCancel={() =>
-                        this.setState({
-                            setStartDate: false,
-                            setEndDate: false
-                        })
-                    }
-                    date={setStartDate ? workingStartDate : workingEndDate}
-                    minimumDate={
-                        setStartDate
-                            ? undefined
-                            : startDate
-                            ? startDate
-                            : undefined
-                    }
-                    maximumDate={
-                        setStartDate
-                            ? endDate
+                        date={setStartDate ? workingStartDate : workingEndDate}
+                        minimumDate={
+                            setStartDate
+                                ? undefined
+                                : startDate
+                                ? startDate
+                                : undefined
+                        }
+                        maximumDate={
+                            setStartDate
                                 ? endDate
+                                    ? endDate
+                                    : new Date()
                                 : new Date()
-                            : new Date()
-                    }
-                    mode="date"
-                    style={{
-                        height: 100,
-                        marginTop: 10,
-                        marginBottom: 20,
-                        alignSelf: 'center'
-                    }}
-                    modal
-                    open={setStartDate || setEndDate}
-                    locale={locale}
-                />
+                        }
+                        mode="date"
+                        style={{
+                            height: 100,
+                            marginTop: 10,
+                            marginBottom: 20,
+                            alignSelf: 'center'
+                        }}
+                        modal
+                        open={setStartDate || setEndDate}
+                        locale={locale}
+                    />
+                </KeyboardAvoidingView>
             </Screen>
         );
     }
