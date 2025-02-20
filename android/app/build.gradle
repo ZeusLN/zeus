@@ -100,7 +100,7 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 99
+        versionCode 100
         versionName "0.10.0-alpha3"
         multiDexEnabled true
     }
