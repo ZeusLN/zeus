@@ -369,6 +369,7 @@ export default class ChannelView extends React.Component<
                 alias_scids.length === 1 &&
                 alias_scids[0].toString() === channelId
             );
+        const showPeerAliasScid = !!peer_scid_alias && peer_scid_alias != 0;
 
         const EditFees = () => (
             <TouchableOpacity
@@ -642,7 +643,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {(!!peer_scid_alias || showAliasScids) && (
+                    {(showPeerAliasScid || showAliasScids) && (
                         <TouchableOpacity
                             onPress={() => {
                                 this.setState({
@@ -695,7 +696,7 @@ export default class ChannelView extends React.Component<
                                     )}
                                 />
                             )}
-                            {!!peer_scid_alias && (
+                            {showPeerAliasScid && (
                                 <KeyValue
                                     keyValue={localeString(
                                         'views.Channel.peerAliasScid'
