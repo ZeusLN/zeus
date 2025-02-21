@@ -103,6 +103,14 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.maximumAmount !== undefined) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    Math.abs(Number(activity.getAmount)) <=
+                    (filter.maximumAmount ?? Infinity)
+            );
+        }
+
         if (filter.startDate) {
             const startDate = new Date(
                 filter.startDate.getFullYear(),
@@ -127,6 +135,24 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter(
                 (activity) => activity.getDate.getTime() < endDate.getTime()
             );
+        }
+        if (filter.memo !== '') {
+            const memoFilter = filter.memo.toLowerCase();
+
+            filteredActivity = filteredActivity.filter((activity) => {
+                let note = activity.getNote
+                    ? activity.getNote.toLowerCase()
+                    : '';
+                let memo = '';
+                if (activity instanceof Invoice) {
+                    memo = activity.memo ? activity.memo.toLowerCase() : '';
+                } else if (activity instanceof Payment) {
+                    memo = activity.getMemo
+                        ? activity.getMemo.toLowerCase()
+                        : '';
+                }
+                return note.includes(memoFilter) || memo.includes(memoFilter);
+            });
         }
 
         return filteredActivity;
