@@ -5,23 +5,23 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../components/Button';
-import Header from '../components/Header';
-import OnchainFeeInput from '../components/OnchainFeeInput';
-import LoadingIndicator from '../components/LoadingIndicator';
-import Screen from '../components/Screen';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
 import {
     SuccessMessage,
     ErrorMessage
-} from '../components/SuccessErrorMessage';
-import Switch from '../components/Switch';
-import Text from '../components/Text';
-import TextInput from '../components/TextInput';
+} from '../../components/SuccessErrorMessage';
+import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
-import FeeStore from '../stores/FeeStore';
+import FeeStore from '../../stores/FeeStore';
 
-import { themeColor } from '../utils/ThemeUtils';
-import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface BumpFeeProps {
     navigation: StackNavigationProp<any, any>;
