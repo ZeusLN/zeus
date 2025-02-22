@@ -11,26 +11,26 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import BalanceStore from '../stores/BalanceStore';
-import InvoicesStore from '../stores/InvoicesStore';
-import ModalStore from '../stores/ModalStore';
-import NodeInfoStore from '../stores/NodeInfoStore';
-import SettingsStore from '../stores/SettingsStore';
-import TransactionsStore from '../stores/TransactionsStore';
+import BalanceStore from '../../stores/BalanceStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import ModalStore from '../../stores/ModalStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SettingsStore from '../../stores/SettingsStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 
-import Amount from '../components/Amount';
-import Button from '../components/Button';
-import { WarningMessage } from '../components/SuccessErrorMessage';
-import Header from '../components/Header';
-import OnchainFeeInput from '../components/OnchainFeeInput';
-import Screen from '../components/Screen';
-import TextInput from '../components/TextInput';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
+import Header from '../../components/Header';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
+import Screen from '../../components/Screen';
+import TextInput from '../../components/TextInput';
 
-import AddressUtils from '../utils/AddressUtils';
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import AddressUtils from '../../utils/AddressUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import TransactionRequest from '../models/TransactionRequest';
+import TransactionRequest from '../../models/TransactionRequest';
 
 interface SweepProps {
     exitSetup: any;

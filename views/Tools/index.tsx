@@ -9,21 +9,21 @@ import {
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import AccountIcon from '../assets/images/SVG/Account.svg';
-import CurrencyIcon from '../assets/images/SVG/Bitcoin.svg';
-import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
-import SignIcon from '../assets/images/SVG/Pen.svg';
-import SpeedometerIcon from '../assets/images/SVG/Speedometer.svg';
-import SweepIcon from '../assets/images/SVG/Sweep.svg';
+import AccountIcon from '../../assets/images/SVG/Account.svg';
+import CurrencyIcon from '../../assets/images/SVG/Bitcoin.svg';
+import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
+import SignIcon from '../../assets/images/SVG/Pen.svg';
+import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
+import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 
-import Header from '../components/Header';
-import Screen from '../components/Screen';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 
-import BackendUtils from '../utils/BackendUtils';
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 import { Icon } from 'react-native-elements';
 
 interface ToolsProps {
@@ -280,6 +280,46 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('ActivityExport')
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="download"
+                                        type="feather"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.ActivityExport.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {BackendUtils.supportsDevTools() && (
                         <View
                             style={{
@@ -321,46 +361,6 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                             stroke={forwardArrowColor}
                                         />
                                     </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {selectedNode && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate('ActivityExportOptions')
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <Icon
-                                        name="download"
-                                        type="feather"
-                                        color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('views.ActivityExport.title')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>

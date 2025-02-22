@@ -11,37 +11,37 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 
-import Header from '../components/Header';
-import Button from '../components/Button';
-import TextInput from '../components/TextInput';
-import Text from '../components/Text';
-import LoadingIndicator from '../components/LoadingIndicator';
+import Header from '../../components/Header';
+import Button from '../../components/Button';
+import TextInput from '../../components/TextInput';
+import Text from '../../components/Text';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 import {
     getFormattedDateTime,
     convertActivityToCsv,
     saveCsvFile,
     CSV_KEYS
-} from '.././utils/ActivityCsvUtils';
+} from '../.././utils/ActivityCsvUtils';
 
-import ActivityStore from '../stores/ActivityStore';
-import SettingsStore from '../stores/SettingsStore';
+import ActivityStore from '../../stores/ActivityStore';
+import SettingsStore from '../../stores/SettingsStore';
 
-import Invoice from '../models/Invoice';
-import Payment from '../models/Payment';
-import Transaction from '../models/Transaction';
+import Invoice from '../../models/Invoice';
+import Payment from '../../models/Payment';
+import Transaction from '../../models/Transaction';
 import DatePicker from 'react-native-date-picker';
 import { CheckBox } from 'react-native-elements';
 
-interface ActivityExportOptionsProps {
+interface ActivityExportProps {
     navigation: any;
     ActivityStore: ActivityStore;
     SettingsStore: SettingsStore;
 }
 
-interface ActivityExportOptionsState {
+interface ActivityExportState {
     isCsvLoading: boolean;
     isActivityFetching: boolean;
     filteredActivity: any;
@@ -56,11 +56,11 @@ interface ActivityExportOptionsState {
 
 @inject('ActivityStore', 'SettingsStore')
 @observer
-export default class ActivityExportOptions extends React.Component<
-    ActivityExportOptionsProps,
-    ActivityExportOptionsState
+export default class ActivityExport extends React.Component<
+    ActivityExportProps,
+    ActivityExportState
 > {
-    constructor(props: ActivityExportOptionsProps) {
+    constructor(props: ActivityExportProps) {
         super(props);
         this.state = {
             isCsvLoading: false,
@@ -473,7 +473,7 @@ export default class ActivityExportOptions extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Activity Export Options',
+                        text: localeString('views.ActivityExport.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'

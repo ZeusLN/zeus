@@ -4,23 +4,23 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearProgress } from 'react-native-elements';
 
-import Button from '../../components/Button';
-import Header from '../../components/Header';
+import Button from '../../../components/Button';
+import Header from '../../../components/Header';
 import {
     SuccessMessage,
     ErrorMessage
-} from '../../components/SuccessErrorMessage';
-import KeyValue from '../../components/KeyValue';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import Screen from '../../components/Screen';
+} from '../../../components/SuccessErrorMessage';
+import KeyValue from '../../../components/KeyValue';
+import LoadingIndicator from '../../../components/LoadingIndicator';
+import Screen from '../../../components/Screen';
 
-import Base64Utils from '../../utils/Base64Utils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import Base64Utils from '../../../utils/Base64Utils';
+import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
 
-import UTXOsStore from '../../stores/UTXOsStore';
+import UTXOsStore from '../../../stores/UTXOsStore';
 
-import { walletrpc } from '../../proto/lightning';
+import { walletrpc } from '../../../proto/lightning';
 
 interface ImportingAccountProps {
     exitSetup: any;

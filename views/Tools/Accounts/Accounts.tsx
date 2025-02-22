@@ -4,23 +4,23 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../components/Button';
-import Header from '../../components/Header';
-import LayerBalances from '../../components/LayerBalances';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import Screen from '../../components/Screen';
-import { Row } from '../../components/layout/Row';
+import Button from '../../../components/Button';
+import Header from '../../../components/Header';
+import LayerBalances from '../../../components/LayerBalances';
+import LoadingIndicator from '../../../components/LoadingIndicator';
+import Screen from '../../../components/Screen';
+import { Row } from '../../../components/layout/Row';
 
-import BalanceStore from '../../stores/BalanceStore';
-import UnitsStore from '../../stores/UnitsStore';
-import UTXOsStore from '../../stores/UTXOsStore';
+import BalanceStore from '../../../stores/BalanceStore';
+import UnitsStore from '../../../stores/UnitsStore';
+import UTXOsStore from '../../../stores/UTXOsStore';
 
-import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import BackendUtils from '../../../utils/BackendUtils';
+import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
 
-import Add from '../../assets/images/SVG/Add.svg';
-import Filter from '../../assets/images/SVG/Filter On.svg';
+import Add from '../../../assets/images/SVG/Add.svg';
+import Filter from '../../../assets/images/SVG/Filter On.svg';
 
 interface AccountsProps {
     navigation: StackNavigationProp<any, any>;
