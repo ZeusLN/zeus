@@ -109,50 +109,6 @@ describe('ConnectionFormatUtils', () => {
         });
     });
 
-    describe('processCLightningRestConnectUrl', () => {
-        it('handles plainnet properly - w/o http forced', () => {
-            expect(
-                ConnectionFormatUtils.processCLightningRestConnectUrl(
-                    'c-lightning-rest://8.8.0.0:2056?&macaroon=0201b6&protocol=http'
-                )
-            ).toEqual({
-                host: 'https://8.8.0.0',
-                macaroonHex: '0201b6',
-                port: '2056',
-                enableTor: false,
-                implementation: 'c-lightning-REST'
-            });
-        });
-
-        it('handles plainnet properly - with http forced', () => {
-            expect(
-                ConnectionFormatUtils.processCLightningRestConnectUrl(
-                    'c-lightning-rest://http://8.8.0.0:2056?&macaroon=0201b6&protocol=http'
-                )
-            ).toEqual({
-                host: 'http://8.8.0.0',
-                macaroonHex: '0201b6',
-                port: '2056',
-                enableTor: false,
-                implementation: 'c-lightning-REST'
-            });
-        });
-
-        it('handles Tor properly', () => {
-            expect(
-                ConnectionFormatUtils.processCLightningRestConnectUrl(
-                    'c-lightning-rest://http://y7enfk2mdfawf.onion:2056?&macaroon=0201b6&protocol=http'
-                )
-            ).toEqual({
-                host: 'http://y7enfk2mdfawf.onion',
-                macaroonHex: '0201b6',
-                port: '2056',
-                enableTor: true,
-                implementation: 'c-lightning-REST'
-            });
-        });
-    });
-
     describe('processCLNRestConnectUrl', () => {
         it('handles plainnet properly - w/o http forced', () => {
             expect(
