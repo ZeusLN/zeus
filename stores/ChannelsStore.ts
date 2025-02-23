@@ -333,11 +333,7 @@ export default class ChannelsStore {
         await Promise.all(
             publicKeysOfToBeLoadedNodeInfos.map(
                 async (remotePubKey: string) => {
-                    if (
-                        this.settingsStore.implementation !==
-                            'c-lightning-REST' &&
-                        this.settingsStore.implementation !== 'cln-rest'
-                    ) {
+                    if (this.settingsStore.implementation !== 'cln-rest') {
                         const nodeInfo = await this.getNodeInfo(remotePubKey);
                         if (!nodeInfo) return;
                         this.nodes[remotePubKey] = nodeInfo;
@@ -519,13 +515,8 @@ export default class ChannelsStore {
         let urlParams: Array<any> = [];
         const implementation = this.settingsStore.implementation;
 
-        if (
-            implementation === 'c-lightning-REST' ||
-            implementation === 'cln-rest' ||
-            implementation === 'eclair' ||
-            implementation === 'spark'
-        ) {
-            // c-lightning, eclair
+        if (implementation === 'cln-rest') {
+            // Core Lightning
             urlParams = [channelId, forceClose];
         } else if (channelPoint) {
             // lnd

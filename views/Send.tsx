@@ -101,7 +101,6 @@ interface SendState {
     error_msg: string;
     utxos: Array<string>;
     utxoBalance: number;
-    confirmationTarget: string;
     maxParts: string;
     maxShardAmt: string;
     feeLimitSat: string;
@@ -159,7 +158,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             fee: '',
             utxos: [],
             utxoBalance: 0,
-            confirmationTarget: '60',
             error_msg: '',
             maxParts: '16',
             maxShardAmt: '',
@@ -418,15 +416,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     sendCoins = (satAmount: string | number) => {
         const { TransactionsStore, SettingsStore, navigation } = this.props;
         const { implementation } = SettingsStore;
-        const {
-            destination,
-            fee,
-            utxos,
-            confirmationTarget,
-            account,
-            additionalOutputs,
-            fundMax
-        } = this.state;
+        const { destination, fee, utxos, account, additionalOutputs, fundMax } =
+            this.state;
 
         let request: TransactionRequest;
         if (utxos && utxos.length > 0) {
@@ -434,7 +425,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                 addr: destination,
                 sat_per_vbyte: fee,
                 amount: satAmount.toString(),
-                target_conf: Number(confirmationTarget),
                 utxos,
                 spend_unconfirmed: true,
                 additional_outputs: additionalOutputs,
@@ -445,7 +435,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                 addr: destination,
                 sat_per_vbyte: fee,
                 amount: satAmount.toString(),
-                target_conf: Number(confirmationTarget),
                 spend_unconfirmed: true,
                 additional_outputs: additionalOutputs,
                 account
@@ -453,10 +442,7 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
 
         if (fundMax) {
-            if (
-                implementation === 'c-lightning-REST' ||
-                implementation === 'cln-rest'
-            ) {
+            if (implementation === 'cln-rest') {
                 request.amount = 'all';
             } else {
                 if (request.amount) delete request.amount;
@@ -664,7 +650,6 @@ export default class Send extends React.Component<SendProps, SendState> {
             amount,
             satAmount,
             fee,
-            confirmationTarget,
             utxoBalance,
             error_msg,
             maxParts,
@@ -1009,10 +994,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                         fundMax: newValue,
                                                         amount:
                                                             newValue &&
-                                                            (implementation ===
-                                                                'c-lightning-REST' ||
-                                                                implementation ===
-                                                                    'cln-rest')
+                                                            implementation ===
+                                                                'cln-rest'
                                                                 ? 'all'
                                                                 : ''
                                                     });
@@ -1273,35 +1256,34 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                 />
 
-                                {implementation !== 'c-lightning-REST' &&
-                                    implementation !== 'cln-rest' && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    marginTop: 10,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {`${localeString(
-                                                    'views.Send.message'
-                                                )} (${localeString(
-                                                    'general.optional'
-                                                )})`}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="default"
-                                                value={message}
-                                                onChangeText={(text: string) =>
-                                                    this.setState({
-                                                        message: text
-                                                    })
-                                                }
-                                            />
-                                        </>
-                                    )}
+                                {implementation !== 'cln-rest' && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                marginTop: 10,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.Send.message'
+                                            )} (${localeString(
+                                                'general.optional'
+                                            )})`}
+                                        </Text>
+                                        <TextInput
+                                            keyboardType="default"
+                                            value={message}
+                                            onChangeText={(text: string) =>
+                                                this.setState({
+                                                    message: text
+                                                })
+                                            }
+                                        />
+                                    </>
+                                )}
 
                                 <FeeLimit
                                     satAmount={satAmount}
@@ -1540,21 +1522,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </View>
                         </>
                     )}
-
-                    {transactionType === 'On-chain' &&
-                        implementation === 'eclair' && (
-                            <View style={styles.feeTableButton}>
-                                <TextInput
-                                    keyboardType="numeric"
-                                    value={confirmationTarget}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            confirmationTarget: text
-                                        })
-                                    }
-                                />
-                            </View>
-                        )}
                 </ScrollView>
             </Screen>
         );

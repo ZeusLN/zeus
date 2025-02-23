@@ -13,7 +13,6 @@ export interface OutPoint {
 }
 
 export default interface TransactionRequest {
-    target_conf?: number | null; // optional
     addr?: string;
     sat_per_byte?: string | null; // optional
     sat_per_vbyte?: string | null; // optional

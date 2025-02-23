@@ -54,7 +54,7 @@ export default class Invoice extends BaseModel {
     public htlcs: Array<HTLC>;
     public is_amp?: boolean;
     public is_blinded?: boolean;
-    // c-lightning, eclair
+    // Core Lightning
     public bolt11: string;
     public label: string;
     public description: string;
