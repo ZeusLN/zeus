@@ -7,10 +7,20 @@ import 'react-native-gesture-handler';
 
 // polyfills
 import 'react-native-get-random-values';
-import { TextDecoder } from 'text-encoding';
+import 'react-native-url-polyfill/auto';
+import 'message-port-polyfill';
+const TextEncodingPolyfill = require("text-encoding");
 import Long from 'long';
 import protobuf from 'protobufjs';
-global.TextDecoder = TextDecoder;
+
+const applyGlobalPolyfills = () => {
+  Object.assign(global, {
+    TextEncoder: TextEncodingPolyfill.TextEncoder,
+    TextDecoder: TextEncodingPolyfill.TextDecoder,
+  });
+};
+
+applyGlobalPolyfills();
 
 protobuf.util.Long = Long;
 protobuf.configure();

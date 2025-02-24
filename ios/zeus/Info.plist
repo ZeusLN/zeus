@@ -84,9 +84,9 @@
 	<key>NSMotionUsageDescription</key>
 	<string>Not Used</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Not Used</string>
+	<string>ZEUS would like permission to save QR codes to your photo library</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>ZEUS would like permission to use load QR codes from your photo library</string>
+	<string>ZEUS would like permission to load QR codes from your photo library</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Not Used</string>
 	<key>UIAppFonts</key>
@@ -109,7 +109,12 @@
 		<string>SimpleLineIcons.ttf</string>
 		<string>Zocial.ttf</string>
 		<string>Fontisto.ttf</string>
-		<string>ppneuemontreal-medium.otf</string>
+		<string>PPNeueMontreal-Bold.otf</string>
+		<string>PPNeueMontreal-Book.otf</string>
+		<string>PPNeueMontreal-Medium.otf</string>
+		<string>Lato-Bold.ttf</string>
+		<string>Lato-Regular.ttf</string>
+		<string>DroidSansMono.ttf</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

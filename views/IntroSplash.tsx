@@ -312,10 +312,7 @@ export default class IntroSplash extends React.Component<
                                                 () => {
                                                     setConnectingStatus(true);
                                                     navigation.navigate(
-                                                        'Wallet',
-                                                        {
-                                                            refresh: true
-                                                        }
+                                                        'Wallet'
                                                     );
                                                 }
                                             );

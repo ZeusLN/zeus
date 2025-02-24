@@ -242,6 +242,7 @@ const handleAnything = async (
                         implementation,
                         enableTor
                     },
+                    newEntry: true,
                     isValid: true
                 }
             ];
@@ -269,6 +270,7 @@ const handleAnything = async (
                         implementation,
                         enableTor
                     },
+                    newEntry: true,
                     isValid: true
                 }
             ];
@@ -280,6 +282,19 @@ const handleAnything = async (
                 { cancelable: false }
             );
         }
+    } else if (value.startsWith('nostr+walletconnect://')) {
+        if (isClipboardValue) return true;
+        return [
+            'WalletConfiguration',
+            {
+                node: {
+                    nostrWalletConnectUrl: value,
+                    implementation: 'nostr-wallet-connect'
+                },
+                newEntry: true,
+                isValid: true
+            }
+        ];
     } else if (
         value.includes('https://terminal.lightning.engineering#/connect/pair/')
     ) {
@@ -297,6 +312,7 @@ const handleAnything = async (
                         customMailboxServer,
                         implementation: 'lightning-node-connect'
                     },
+                    newEntry: true,
                     isValid: true
                 }
             ];
@@ -316,7 +332,8 @@ const handleAnything = async (
             {
                 node,
                 enableTor: node.host && node.host.includes('.onion'),
-                newEntry: true
+                newEntry: true,
+                isValid: true
             }
         ];
     } else if (AddressUtils.isValidLNDHubAddress(value)) {
@@ -350,7 +367,8 @@ const handleAnything = async (
             'WalletConfiguration',
             {
                 node,
-                newEntry: true
+                newEntry: true,
+                isValid: true
             }
         ];
     } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
@@ -497,6 +515,7 @@ const handleAnything = async (
                     {
                         node,
                         enableTor: node.host && node.host.includes('.onion'),
+                        newEntry: true,
                         isValid: true
                     }
                 ];

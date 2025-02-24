@@ -11,25 +11,25 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../components/Button';
-import DropdownSetting from '../../components/DropdownSetting';
-import Header from '../../components/Header';
-import Screen from '../../components/Screen';
-import Switch from '../../components/Switch';
-import TextInput from '../../components/TextInput';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import Button from '../../../components/Button';
+import DropdownSetting from '../../../components/DropdownSetting';
+import Header from '../../../components/Header';
+import Screen from '../../../components/Screen';
+import Switch from '../../../components/Switch';
+import TextInput from '../../../components/TextInput';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
-import UTXOsStore from '../../stores/UTXOsStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
+import UTXOsStore from '../../../stores/UTXOsStore';
+import NodeInfoStore from '../../../stores/NodeInfoStore';
+import SettingsStore from '../../../stores/SettingsStore';
 
-import Base64Utils from '../../utils/Base64Utils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import Base64Utils from '../../../utils/Base64Utils';
+import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
 
-import Scan from '../../assets/images/SVG/Scan.svg';
+import Scan from '../../../assets/images/SVG/Scan.svg';
 
-import { walletrpc } from '../../proto/lightning';
+import { walletrpc } from '../../../proto/lightning';
 
 const AddressTypes = [
     { key: 'Unknown', value: 'UNKNOWN' },

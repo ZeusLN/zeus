@@ -98,14 +98,13 @@ export default class InvoicesSettings extends React.Component<
             memo,
             expiry,
             timePeriod,
-            expirySeconds,
             routeHints,
             ampInvoice,
             blindedPaths,
             showCustomPreimageField,
             displayAmountOnInvoice
         } = this.state;
-        const { implementation, updateSettings }: any = SettingsStore;
+        const { implementation, settings, updateSettings }: any = SettingsStore;
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()
             ? [
@@ -196,15 +195,8 @@ export default class InvoicesSettings extends React.Component<
                             this.setState({ memo: text });
                             await updateSettings({
                                 invoices: {
-                                    addressType,
-                                    memo: text,
-                                    expiry,
-                                    timePeriod,
-                                    expirySeconds,
-                                    routeHints,
-                                    ampInvoice,
-                                    blindedPaths,
-                                    showCustomPreimageField
+                                    ...settings.invoices,
+                                    memo: text
                                 }
                             });
                         }}
@@ -256,15 +248,9 @@ export default class InvoicesSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             invoices: {
-                                                addressType,
-                                                memo,
+                                                ...settings.invoices,
                                                 expiry: text,
-                                                timePeriod,
-                                                expirySeconds,
-                                                routeHints,
-                                                ampInvoice,
-                                                blindedPaths,
-                                                showCustomPreimageField
+                                                expirySeconds
                                             }
                                         });
                                     }}
@@ -279,6 +265,9 @@ export default class InvoicesSettings extends React.Component<
                                     <DropdownSetting
                                         selectedValue={timePeriod}
                                         values={TIME_PERIOD_KEYS}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
                                         onValueChange={async (
                                             value: string
                                         ) => {
@@ -322,15 +311,9 @@ export default class InvoicesSettings extends React.Component<
 
                                             await updateSettings({
                                                 invoices: {
-                                                    addressType,
-                                                    memo,
-                                                    expiry,
+                                                    ...settings.invoices,
                                                     timePeriod: value,
-                                                    expirySeconds,
-                                                    routeHints,
-                                                    ampInvoice,
-                                                    blindedPaths,
-                                                    showCustomPreimageField
+                                                    expirySeconds
                                                 }
                                             });
                                         }}
@@ -376,19 +359,15 @@ export default class InvoicesSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             invoices: {
-                                                addressType,
-                                                memo,
-                                                expiry,
-                                                timePeriod,
-                                                expirySeconds,
-                                                routeHints: !routeHints,
-                                                ampInvoice,
-                                                blindedPaths,
-                                                showCustomPreimageField
+                                                ...settings.invoices,
+                                                routeHints: !routeHints
                                             }
                                         });
                                     }}
-                                    disabled={blindedPaths}
+                                    disabled={
+                                        blindedPaths ||
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                 />
                             </View>
                         </View>
@@ -431,18 +410,15 @@ export default class InvoicesSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             invoices: {
-                                                addressType,
-                                                memo,
-                                                expiry,
-                                                timePeriod,
-                                                expirySeconds,
-                                                routeHints,
-                                                ampInvoice: !ampInvoice,
-                                                showCustomPreimageField
+                                                ...settings.invoices,
+                                                ampInvoice: !ampInvoice
                                             }
                                         });
                                     }}
-                                    disabled={blindedPaths}
+                                    disabled={
+                                        blindedPaths ||
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                 />
                             </View>
                         </View>
@@ -478,6 +454,9 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={blindedPaths}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             blindedPaths: !blindedPaths,
@@ -487,15 +466,10 @@ export default class InvoicesSettings extends React.Component<
 
                                         await updateSettings({
                                             invoices: {
-                                                addressType,
-                                                memo,
-                                                expiry,
-                                                timePeriod,
-                                                expirySeconds,
-                                                routeHints: false,
-                                                ampInvoice: false,
+                                                ...settings.invoices,
                                                 blindedPaths: !blindedPaths,
-                                                showCustomPreimageField
+                                                routeHints: false,
+                                                ampInvoice: false
                                             }
                                         });
                                     }}
@@ -529,6 +503,9 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={showCustomPreimageField}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             showCustomPreimageField:
@@ -536,13 +513,7 @@ export default class InvoicesSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             invoices: {
-                                                addressType,
-                                                memo,
-                                                expiry,
-                                                timePeriod,
-                                                expirySeconds,
-                                                routeHints,
-                                                ampInvoice,
+                                                ...settings.invoices,
                                                 showCustomPreimageField:
                                                     !showCustomPreimageField
                                             }
@@ -575,6 +546,9 @@ export default class InvoicesSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={displayAmountOnInvoice}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         displayAmountOnInvoice:
@@ -582,14 +556,7 @@ export default class InvoicesSettings extends React.Component<
                                     });
                                     await updateSettings({
                                         invoices: {
-                                            addressType,
-                                            memo,
-                                            expiry,
-                                            timePeriod,
-                                            expirySeconds,
-                                            routeHints,
-                                            ampInvoice,
-                                            showCustomPreimageField,
+                                            ...settings.invoices,
                                             displayAmountOnInvoice:
                                                 !displayAmountOnInvoice
                                         }
@@ -637,14 +604,8 @@ export default class InvoicesSettings extends React.Component<
                                     this.setState({ addressType: d.value });
                                     await updateSettings({
                                         invoices: {
-                                            addressType: d.value,
-                                            memo,
-                                            expiry,
-                                            timePeriod,
-                                            expirySeconds,
-                                            routeHints,
-                                            ampInvoice,
-                                            showCustomPreimageField
+                                            ...settings.invoices,
+                                            addressType: d.value
                                         }
                                     });
                                     this.modalBoxRef.current?.close();

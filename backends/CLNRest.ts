@@ -215,9 +215,11 @@ export default class CLNRest {
         return this.postRequest('/v1/withdraw', request);
     };
     getMyNodeInfo = () => this.postRequest('/v1/getinfo');
-    getInvoices = () =>
+    getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
-            query: "SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT 150;"
+            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
+                data?.limit ? data.limit : 150
+            };`
         }).then((data: any) => {
             const invoiceList: any[] = [];
             data.rows.forEach((invoice: any) => {
@@ -311,13 +313,15 @@ export default class CLNRest {
         this.postRequest('/v1/pay', {
             bolt11: data.payment_request,
             amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent
+            maxfeepercent: data.max_fee_percent,
+            retry_for: data.timeout_seconds
         });
     sendKeysend = (data: any) => {
         return this.postRequest('/v1/keysend', {
             destination: data.pubkey,
             amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent
+            maxfeepercent: data.max_fee_percent,
+            retry_for: data.timeout_seconds
         });
     };
     closeChannel = (urlParams?: Array<string>) => {
@@ -413,7 +417,7 @@ export default class CLNRest {
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsChannelFundMax = () => true;
-    supportsLSPS1customMessage = () => false;
+    supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
@@ -428,4 +432,5 @@ export default class CLNRest {
     };
     isLNDBased = () => false;
     supportInboundFees = () => false;
+    supportsDevTools = () => true;
 }

@@ -1,5 +1,5 @@
 import url from 'url';
-import { action, observable, reaction } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert } from 'react-native';
@@ -73,7 +73,8 @@ export default class InvoicesStore {
         );
     }
 
-    reset = () => {
+    @action
+    public reset = () => {
         this.paymentRequest = '';
         this.onChainAddress = '';
         this.loading = false;
@@ -94,7 +95,8 @@ export default class InvoicesStore {
         this.watchedInvoicePaidAmt = null;
     };
 
-    resetInvoices = () => {
+    @action
+    private resetInvoices = () => {
         this.invoices = [];
         this.invoicesCount = 0;
         this.loading = false;
@@ -105,18 +107,17 @@ export default class InvoicesStore {
         this.loading = true;
         await BackendUtils.getInvoices()
             .then((data: any) => {
-                this.invoices = data.invoices;
-                this.invoices = this.invoices.map(
-                    (invoice) => new Invoice(invoice)
-                );
-                this.invoices = this.invoices.slice().reverse();
-                this.invoicesCount =
-                    data.last_index_offset || this.invoices.length;
-                this.loading = false;
+                runInAction(() => {
+                    this.invoices = data.invoices
+                        .map((invoice: any) => new Invoice(invoice))
+                        .slice()
+                        .reverse();
+                    this.invoicesCount =
+                        data.last_index_offset || this.invoices.length;
+                    this.loading = false;
+                });
             })
-            .catch(() => {
-                this.resetInvoices();
-            });
+            .catch(() => this.resetInvoices());
     };
 
     @action
@@ -173,19 +174,25 @@ export default class InvoicesStore {
                             : { unified: true }
                     )
                         .then((onChainAddress: string) => {
-                            this.onChainAddress = onChainAddress;
-                            this.payment_request = paymentRequest;
-                            this.loading = false;
-                            this.creatingInvoice = false;
+                            runInAction(() => {
+                                this.onChainAddress = onChainAddress;
+                                this.payment_request = paymentRequest;
+                                this.loading = false;
+                                this.creatingInvoice = false;
+                            });
                             return { rHash, onChainAddress };
                         })
                         .catch(() => {
-                            this.loading = false;
-                            this.creatingInvoice = false;
+                            runInAction(() => {
+                                this.loading = false;
+                                this.creatingInvoice = false;
+                            });
                         });
                 } else {
-                    this.payment_request = paymentRequest;
-                    this.creatingInvoice = false;
+                    runInAction(() => {
+                        this.payment_request = paymentRequest;
+                        this.creatingInvoice = false;
+                    });
                     return { rHash };
                 }
             }
@@ -193,7 +200,7 @@ export default class InvoicesStore {
     };
 
     @action
-    public createInvoice = async ({
+    private createInvoice = async ({
         memo,
         value,
         expiry = '3600',
@@ -249,13 +256,15 @@ export default class InvoicesStore {
                                 )
                             );
                         } catch (error: any) {
-                            this.creatingInvoiceError = true;
-                            this.creatingInvoice = false;
-                            this.error_msg =
-                                error.toString() ||
-                                localeString(
-                                    'stores.InvoicesStore.errorCreatingInvoice'
-                                );
+                            runInAction(() => {
+                                this.creatingInvoiceError = true;
+                                this.creatingInvoice = false;
+                                this.error_msg =
+                                    error.toString() ||
+                                    localeString(
+                                        'stores.InvoicesStore.errorCreatingInvoice'
+                                    );
+                            });
                             return;
                         }
                     }
@@ -324,7 +333,7 @@ export default class InvoicesStore {
             }
         }
 
-        if (this.lspStore.error) {
+        if (this.lspStore.flow_error) {
             this.creatingInvoice = false;
             return;
         }
@@ -332,27 +341,33 @@ export default class InvoicesStore {
         return BackendUtils.createInvoice(req)
             .then(async (data: any) => {
                 if (data.error) {
-                    this.creatingInvoiceError = true;
-                    if (!unified) this.creatingInvoice = false;
-                    const errString =
-                        data.message.toString() || data.error.toString();
-                    this.error_msg =
-                        errString === 'Bad arguments' &&
-                        this.settingsStore.implementation === 'lndhub' &&
-                        req.value === '0'
-                            ? localeString(
-                                  'stores.InvoicesStore.zeroAmountLndhub'
-                              )
-                            : errString ||
-                              localeString(
-                                  'stores.InvoicesStore.errorCreatingInvoice'
-                              );
+                    runInAction(() => {
+                        this.creatingInvoiceError = true;
+                        if (!unified) this.creatingInvoice = false;
+                        const errString =
+                            data.message.toString() || data.error.toString();
+                        this.error_msg =
+                            errString === 'Bad arguments' &&
+                            this.settingsStore.implementation === 'lndhub' &&
+                            req.value === '0'
+                                ? localeString(
+                                      'stores.InvoicesStore.zeroAmountLndhub'
+                                  )
+                                : errString ||
+                                  localeString(
+                                      'stores.InvoicesStore.errorCreatingInvoice'
+                                  );
+                    });
                 }
                 const invoice = new Invoice(data);
-                if (!unified) this.payment_request = invoice.getPaymentRequest;
-                this.payment_request_amt = value;
 
-                if (!unified) this.creatingInvoice = false;
+                runInAction(() => {
+                    if (!unified)
+                        this.payment_request = invoice.getPaymentRequest;
+                    this.payment_request_amt = value;
+
+                    if (!unified) this.creatingInvoice = false;
+                });
 
                 let jit_bolt11: string = '';
                 if (
@@ -417,12 +432,15 @@ export default class InvoicesStore {
                 };
             })
             .catch((error: any) => {
-                // handle error
-                this.creatingInvoiceError = true;
-                this.creatingInvoice = false;
-                this.error_msg =
-                    error.toString() ||
-                    localeString('stores.InvoicesStore.errorCreatingInvoice');
+                runInAction(() => {
+                    this.creatingInvoiceError = true;
+                    this.creatingInvoice = false;
+                    this.error_msg =
+                        error.toString() ||
+                        localeString(
+                            'stores.InvoicesStore.errorCreatingInvoice'
+                        );
+                });
             });
     };
 
@@ -448,16 +466,21 @@ export default class InvoicesStore {
             .then((data: any) => {
                 const address =
                     data.address || data.bech32 || (data[0] && data[0].address);
-                if (!params.unified) this.onChainAddress = address;
-                if (!params.unified) this.creatingInvoice = false;
+                runInAction(() => {
+                    if (!params.unified) this.onChainAddress = address;
+                    if (!params.unified) this.creatingInvoice = false;
+                });
                 return address;
             })
             .catch((error: any) => {
-                // handle error
-                this.error_msg =
-                    error.toString() ||
-                    localeString('stores.InvoicesStore.errorGeneratingAddress');
-                this.creatingInvoice = false;
+                runInAction(() => {
+                    this.error_msg =
+                        error.toString() ||
+                        localeString(
+                            'stores.InvoicesStore.errorGeneratingAddress'
+                        );
+                    this.creatingInvoice = false;
+                });
             });
     };
 
@@ -474,24 +497,27 @@ export default class InvoicesStore {
         return BackendUtils.getNewChangeAddress(params)
             .then((data: any) => {
                 const address = data.addr;
-                if (!params.unified) this.onChainAddress = address;
-                if (!params.unified) this.creatingInvoice = false;
+                runInAction(() => {
+                    if (!params.unified) this.onChainAddress = address;
+                    if (!params.unified) this.creatingInvoice = false;
+                });
                 return address;
             })
             .catch((error: any) => {
-                // handle error
-                this.error_msg =
-                    error.toString() ||
-                    localeString('stores.InvoicesStore.errorGeneratingAddress');
-                this.creatingInvoice = false;
+                runInAction(() => {
+                    this.error_msg =
+                        error.toString() ||
+                        localeString(
+                            'stores.InvoicesStore.errorGeneratingAddress'
+                        );
+                    this.creatingInvoice = false;
+                });
             });
     };
 
-    @action
     public clearAddress = () => (this.onChainAddress = null);
 
-    @action
-    public clearPaymentRequest = () => (this.payment_request = null);
+    private clearPaymentRequest = () => (this.payment_request = null);
 
     @action
     public clearPayReq = () => {
@@ -516,54 +542,58 @@ export default class InvoicesStore {
 
         return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
-                this.pay_req = new Invoice(data);
-                this.getPayReqError = null;
-                this.loading = false;
+                runInAction(() => {
+                    this.pay_req = new Invoice(data);
+                    this.getPayReqError = null;
+                    this.loading = false;
+                });
                 return;
             })
             .catch((error: Error) => {
-                // handle error
-                this.pay_req = null;
-                this.getPayReqError = errorToUserFriendly(error);
-                this.loading = false;
+                runInAction(() => {
+                    this.pay_req = null;
+                    this.getPayReqError = errorToUserFriendly(error);
+                    this.loading = false;
+                });
             });
     };
 
-    getRoutesError = () => {
+    @action
+    private getRoutesError = () => {
         this.loadingFeeEstimate = false;
         this.feeEstimate = null;
         this.successProbability = null;
     };
 
     @action
-    public getRoutes = (destination: string, amount: string | number) => {
+    private getRoutes = (destination: string, amount: string | number) => {
         this.loadingFeeEstimate = true;
         this.feeEstimate = null;
         this.successProbability = null;
 
         return BackendUtils.getRoutes([destination, amount])
             .then((data: any) => {
-                this.loadingFeeEstimate = false;
-                this.successProbability = data.success_prob
-                    ? data.success_prob * 100
-                    : 0;
+                runInAction(() => {
+                    this.loadingFeeEstimate = false;
+                    this.successProbability = data.success_prob
+                        ? data.success_prob * 100
+                        : 0;
 
-                const routes = data.routes;
-                if (routes) {
-                    routes.forEach((route: any) => {
-                        // expect lnd to pick the cheapest route
-                        if (this.feeEstimate) {
-                            if (route.total_fees < this.feeEstimate) {
-                                this.feeEstimate = route.total_fees;
+                    const routes = data.routes;
+                    if (routes) {
+                        routes.forEach((route: any) => {
+                            // expect lnd to pick the cheapest route
+                            if (this.feeEstimate) {
+                                if (route.total_fees < this.feeEstimate) {
+                                    this.feeEstimate = route.total_fees;
+                                }
+                            } else {
+                                this.feeEstimate = route.total_fees || 0;
                             }
-                        } else {
-                            this.feeEstimate = route.total_fees || 0;
-                        }
-                    });
-                }
+                        });
+                    }
+                });
             })
-            .catch(() => {
-                this.getRoutesError();
-            });
+            .catch(() => this.getRoutesError());
     };
 }

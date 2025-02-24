@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 import NetworkInfo from '../models/NetworkInfo';
 import NodeInfo from '../models/NodeInfo';
 import ChannelsStore from './ChannelsStore';
@@ -22,9 +22,19 @@ export default class NodeInfoStore {
     constructor(channelsStore: ChannelsStore, settingsStore: SettingsStore) {
         this.channelsStore = channelsStore;
         this.settingsStore = settingsStore;
+
+        reaction(
+            () => this.channelsStore.channels,
+            () => {
+                if (this.channelsStore.channels.length !== 0) {
+                    this.getNodeInfo();
+                }
+            }
+        );
     }
 
-    reset = () => {
+    @action
+    public reset = () => {
         this.error = false;
         this.loading = false;
         this.nodeInfo = {};
@@ -34,22 +44,17 @@ export default class NodeInfoStore {
     };
 
     @action
-    getNodeInfoError = () => {
+    public handleGetNodeInfoError = () => {
         this.error = true;
         this.loading = false;
         this.nodeInfo = {};
     };
 
     @action
-    getNetworkInfoError = () => {
+    private handleGetNetworkInfoError = () => {
         this.error = true;
         this.loading = false;
         this.networkInfo = {};
-    };
-
-    @action
-    setLoading = () => {
-        this.loading = true;
     };
 
     private currentRequest: any;
@@ -66,11 +71,13 @@ export default class NodeInfoStore {
                         return;
                     }
                     const nodeInfo = new NodeInfo(data);
-                    this.nodeInfo = nodeInfo;
-                    this.testnet = nodeInfo.isTestNet;
-                    this.regtest = nodeInfo.isRegTest;
-                    this.loading = false;
-                    this.error = false;
+                    runInAction(() => {
+                        this.nodeInfo = nodeInfo;
+                        this.testnet = nodeInfo.isTestNet;
+                        this.regtest = nodeInfo.isRegTest;
+                        this.loading = false;
+                        this.error = false;
+                    });
                     resolve(nodeInfo);
                 })
                 .catch((error: any) => {
@@ -78,9 +85,10 @@ export default class NodeInfoStore {
                         resolve('Old getNodeInfo call');
                         return;
                     }
-                    // handle error
-                    this.errorMsg = errorToUserFriendly(error.toString());
-                    this.getNodeInfoError();
+                    runInAction(() => {
+                        this.errorMsg = errorToUserFriendly(error.toString());
+                        this.handleGetNodeInfoError();
+                    });
                     reject(error);
                 });
         });
@@ -92,19 +100,21 @@ export default class NodeInfoStore {
         this.loading = true;
         return BackendUtils.getNetworkInfo()
             .then((data: any) => {
-                this.networkInfo = new NetworkInfo(data);
-                this.loading = false;
-                this.error = false;
+                runInAction(() => {
+                    this.networkInfo = new NetworkInfo(data);
+                    this.loading = false;
+                    this.error = false;
+                });
                 return this.networkInfo;
             })
             .catch((error: any) => {
-                // handle error
-                this.errorMsg = errorToUserFriendly(error.toString());
-                this.getNetworkInfoError();
+                runInAction(() => {
+                    this.errorMsg = errorToUserFriendly(error.toString());
+                    this.handleGetNetworkInfoError();
+                });
             });
     };
 
-    @action
     public isLightningReadyToSend = async () => {
         await this.channelsStore.getChannels();
         await this.getNodeInfo();
@@ -118,7 +128,6 @@ export default class NodeInfoStore {
         );
     };
 
-    @action
     public isLightningReadyToReceive = async () => {
         await this.channelsStore.getChannels();
         let syncedToChain = this.nodeInfo?.synced_to_chain;
@@ -135,7 +144,6 @@ export default class NodeInfoStore {
         );
     };
 
-    @action
     public flowLspNotConfigured = () => {
         const { implementation, certVerification } = this.settingsStore;
 

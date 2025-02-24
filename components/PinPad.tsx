@@ -356,13 +356,17 @@ export default function PinPad({
                                 decrementPinValueLength();
                                 deleteValue();
                             }}
+                            onLongPress={() => {
+                                clearPinValueLength();
+                                clearValue();
+                            }}
                             highlight={numberHighlight}
                             style={styles.key}
                         >
                             <DeleteKey
                                 fill={themeColor('text')}
-                                width={bigKeypadButtons ? '50' : '35'}
-                                height={bigKeypadButtons ? '50' : '35'}
+                                width={bigKeypadButtons ? '45' : '30'}
+                                height={bigKeypadButtons ? '45' : '30'}
                             />
                         </Touchable>
                     ) : (

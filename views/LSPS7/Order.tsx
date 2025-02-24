@@ -4,28 +4,43 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Screen from '../../../components/Screen';
-import Header from '../../../components/Header';
-import { WarningMessage } from '../../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { themeColor } from '../../../utils/ThemeUtils';
-import BackendUtils from '../../../utils/BackendUtils';
-import { localeString } from '../../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import Storage from '../../../storage';
+import LSPStore, { LSPS_ORDERS_KEY } from '../../stores/LSPStore';
+import SettingsStore from '../../stores/SettingsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import LSPS7OrderResponse from './OrderResponse';
 
-import LSPStore, { LSPS1_ORDERS_KEY } from '../../../stores/LSPStore';
-import SettingsStore from '../../../stores/SettingsStore';
-import InvoicesStore from '../../../stores/InvoicesStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
-import LSPS1OrderResponse from '../../../components/LSPS1OrderResponse';
+import { Payment } from '../../views/LSPS1/OrdersPane';
 
-import { Order } from './OrdersPane';
+import Storage from '../../storage';
+
+interface Order {
+    announce_channel: boolean;
+    channel?: string;
+    channel_expiry_blocks: number;
+    required_channel_confirmations: number;
+    funding_confirms_within_blocks: number;
+    created_at: string;
+    lsp_balance_sat: string;
+    client_balance_sat: string;
+    order_id: string;
+    order_state: string;
+    payment: Payment;
+    token: string;
+    result?: Order | any;
+}
 
 interface OrderProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'LSPS1Order', { orderId: string; orderShouldUpdate: boolean }>;
+    route: Route<'LSPS7Order', { orderId: string; orderShouldUpdate: boolean }>;
     LSPStore: LSPStore;
     SettingsStore: SettingsStore;
     InvoicesStore: InvoicesStore;
@@ -33,16 +48,21 @@ interface OrderProps {
 }
 
 interface OrdersState {
+    loading: boolean;
     order: any;
     fetchOldOrder: boolean;
 }
 
 @inject('LSPStore', 'SettingsStore', 'InvoicesStore', 'NodeInfoStore')
 @observer
-export default class Orders extends React.Component<OrderProps, OrdersState> {
+export default class LSPS7Order extends React.Component<
+    OrderProps,
+    OrdersState
+> {
     constructor(props: OrderProps) {
         super(props);
         this.state = {
+            loading: true,
             order: null,
             fetchOldOrder: false
         };
@@ -55,7 +75,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
         const orderShouldUpdate = route.params?.orderShouldUpdate;
 
         console.log('Looking for order in storage...');
-        Storage.getItem(LSPS1_ORDERS_KEY)
+        Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     const responseArray = JSON.parse(responseArrayString);
@@ -71,46 +91,49 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         temporaryOrder = parsedOrder;
                         console.log('Order found in storage->', temporaryOrder);
 
-                        BackendUtils.supportsLSPS1rest()
-                            ? LSPStore.getOrderREST(
-                                  id,
-                                  temporaryOrder?.endpoint
-                              )
-                            : LSPStore.getOrderCustomMessage(
-                                  id,
-                                  temporaryOrder?.peer
-                              );
+                        this.setState({
+                            loading: false,
+                            order: temporaryOrder?.order
+                        });
+
+                        LSPStore.lsps7GetOrderCustomMessage(
+                            id,
+                            temporaryOrder?.peer
+                        );
 
                         setTimeout(() => {
                             if (LSPStore.error && LSPStore.error_msg !== '') {
                                 this.setState({
-                                    order: temporaryOrder?.order,
                                     fetchOldOrder: true
                                 });
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS7 = false;
                                 console.log('Old Order state fetched!');
                             } else if (
-                                Object.keys(LSPStore.getOrderResponse)
+                                Object.keys(LSPStore.getExtensionOrderResponse)
                                     .length !== 0
                             ) {
-                                const getOrderData = LSPStore.getOrderResponse;
+                                const getExtensionOrderData =
+                                    LSPStore.getExtensionOrderResponse;
                                 this.setState({
-                                    order: getOrderData,
+                                    order: getExtensionOrderData,
                                     fetchOldOrder: false
                                 });
                                 console.log(
                                     'Latest Order state fetched!',
                                     this.state.order
                                 );
-                                LSPStore.loading = false;
+                                LSPStore.loadingLSPS7 = false;
                                 const result =
-                                    getOrderData?.result || getOrderData;
+                                    getExtensionOrderData?.result ||
+                                    getExtensionOrderData;
                                 if (
                                     (result?.order_state === 'COMPLETED' ||
                                         result?.order_state === 'FAILED') &&
                                     !orderShouldUpdate
                                 ) {
-                                    this.updateOrderInStorage(getOrderData);
+                                    this.updateOrderInStorage(
+                                        getExtensionOrderData
+                                    );
                                 }
                             }
                         }, 3000);
@@ -133,7 +156,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
 
     updateOrderInStorage(order: Order) {
         console.log('Updating order in encrypted storage...');
-        Storage.getItem(LSPS1_ORDERS_KEY)
+        Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (responseArrayString) {
                     let responseArray = JSON.parse(responseArrayString);
@@ -157,13 +180,12 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                         responseArray[index] = JSON.stringify(oldOrder);
 
                         // Save the updated order array back to encrypted storage
-                        Storage.setItem(LSPS1_ORDERS_KEY, responseArray).then(
-                            () => {
-                                console.log(
-                                    'Order updated in encrypted storage!'
-                                );
-                            }
-                        );
+                        Storage.setItem(
+                            LSPS_ORDERS_KEY,
+                            JSON.stringify(responseArray)
+                        ).then(() => {
+                            console.log('Order updated in encrypted storage!');
+                        });
                     } else {
                         console.log('Order not found in encrypted storage.');
                     }
@@ -183,7 +205,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
 
     render() {
         const { navigation, LSPStore } = this.props;
-        const { order, fetchOldOrder } = this.state;
+        const { loading, order, fetchOldOrder } = this.state;
         const result = order?.result || order;
 
         return (
@@ -191,21 +213,33 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Order',
+                        text: localeString('views.LSPS7.type'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            {LSPStore.loadingLSPS7 && (
+                                <LoadingIndicator size={30} />
+                            )}
+                        </View>
+                    }
                     onBack={() => {
-                        LSPStore.getOrderResponse = {};
+                        LSPStore.getExtensionOrderResponse = {};
                         LSPStore.error = false;
                         LSPStore.error_msg = '';
                         this.setState({ fetchOldOrder: false });
                     }}
                     navigation={navigation}
                 />
-                {LSPStore.loading ? (
+                {loading ? (
                     <LoadingIndicator />
                 ) : (
                     <ScrollView>
@@ -221,7 +255,7 @@ export default class Orders extends React.Component<OrderProps, OrdersState> {
                             </View>
                         )}
                         {order && Object.keys(order).length > 0 ? (
-                            <LSPS1OrderResponse
+                            <LSPS7OrderResponse
                                 orderResponse={result}
                                 orderView={true}
                                 navigation={navigation}

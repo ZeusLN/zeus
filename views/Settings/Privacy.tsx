@@ -85,7 +85,7 @@ export default class Privacy extends React.Component<
             lurkerMode,
             enableMempoolRates
         } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { settings, updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -115,15 +115,13 @@ export default class Privacy extends React.Component<
                             });
                             await updateSettings({
                                 privacy: {
-                                    defaultBlockExplorer: value,
-                                    customBlockExplorer,
-                                    clipboard,
-                                    lurkerMode,
-                                    enableMempoolRates
+                                    ...settings.privacy,
+                                    defaultBlockExplorer: value
                                 }
                             });
                         }}
                         values={BLOCK_EXPLORER_KEYS}
+                        disabled={SettingsStore.settingsUpdateInProgress}
                     />
 
                     {defaultBlockExplorer === 'Custom' && (
@@ -147,11 +145,8 @@ export default class Privacy extends React.Component<
 
                                     await updateSettings({
                                         privacy: {
-                                            defaultBlockExplorer,
-                                            customBlockExplorer: text,
-                                            clipboard,
-                                            lurkerMode,
-                                            enableMempoolRates
+                                            ...settings.privacy,
+                                            customBlockExplorer: text
                                         }
                                     });
                                 }}
@@ -184,17 +179,17 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={clipboard}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         clipboard: !clipboard
                                     });
                                     await updateSettings({
                                         privacy: {
-                                            defaultBlockExplorer,
-                                            customBlockExplorer,
-                                            clipboard: !clipboard,
-                                            lurkerMode,
-                                            enableMempoolRates
+                                            ...settings.privacy,
+                                            clipboard: !clipboard
                                         }
                                     });
                                 }}
@@ -234,17 +229,17 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={lurkerMode}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         lurkerMode: !lurkerMode
                                     });
                                     await updateSettings({
                                         privacy: {
-                                            defaultBlockExplorer,
-                                            customBlockExplorer,
-                                            clipboard,
-                                            lurkerMode: !lurkerMode,
-                                            enableMempoolRates
+                                            ...settings.privacy,
+                                            lurkerMode: !lurkerMode
                                         }
                                     });
                                 }}
@@ -273,16 +268,16 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         enableMempoolRates: !enableMempoolRates
                                     });
                                     await updateSettings({
                                         privacy: {
-                                            defaultBlockExplorer,
-                                            customBlockExplorer,
-                                            clipboard,
-                                            lurkerMode,
+                                            ...settings.privacy,
                                             enableMempoolRates:
                                                 !enableMempoolRates
                                         }

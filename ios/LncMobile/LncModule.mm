@@ -216,6 +216,32 @@ RCT_EXPORT_METHOD(initListener:(NSString *)nameSpace
     ];
 }
 
+// chantools
+
+RCT_EXPORT_METHOD(sweepRemoteClosed:(NSString *)seedPhrase
+                 apiURL:(NSString *)apiURL
+                 sweepAddr:(NSString *)sweepAddr
+                 recoveryWindow:(NSInteger)recoveryWindow
+                 feeRate:(NSInteger)feeRate
+                 sleepSeconds:(NSInteger)sleepSeconds
+                 publish:(BOOL)publish
+                 isTestnet:(BOOL)isTestnet
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    NSString *response = LndmobileSweepRemoteClosed(seedPhrase, apiURL, sweepAddr, recoveryWindow, feeRate, sleepSeconds, publish, isTestnet, &error);
+    if (error) {
+        // Create a string representation of the error
+        NSString *errorString = [NSString stringWithFormat:@"%@",
+                                 error.localizedDescription];
+
+        reject(@"sweepRemoteClosed_failure", errorString, error);
+    } else {
+        resolve(response);
+    }
+}
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

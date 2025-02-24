@@ -4,19 +4,19 @@ import { FlatList, View, Text } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../../components/Button';
-import Header from '../../../components/Header';
-import Screen from '../../../components/Screen';
-import Switch from '../../../components/Switch';
-import TextInput from '../../../components/TextInput';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import TextInput from '../../components/TextInput';
 
-import BackendUtils from '../../../utils/BackendUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
-import UrlUtils from '../../../utils/UrlUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import LSPStore from '../../../stores/LSPStore';
-import NodeInfoStore from '../../../stores/NodeInfoStore';
+import LSPStore from '../../stores/LSPStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, {
     DEFAULT_LSPS1_PUBKEY_MAINNET,
     DEFAULT_LSPS1_PUBKEY_TESTNET,
@@ -24,9 +24,9 @@ import SettingsStore, {
     DEFAULT_LSPS1_HOST_TESTNET,
     DEFAULT_LSPS1_REST_MAINNET,
     DEFAULT_LSPS1_REST_TESTNET
-} from '../../../stores/SettingsStore';
+} from '../../stores/SettingsStore';
 
-import Olympus from '../../../assets/images/SVG/Olympus.svg';
+import Olympus from '../../assets/images/SVG/Olympus.svg';
 
 interface LSPS1SettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -66,8 +66,8 @@ export default class LSPS1Settings extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            pubkey: LSPStore.getLSPS1Pubkey(),
-            host: LSPStore.getLSPS1Host(),
+            pubkey: LSPStore.getLSPSPubkey(),
+            host: LSPStore.getLSPSHost(),
             restHost: LSPStore.getLSPS1Rest(),
             lsps1ShowPurchaseButton:
                 settings?.lsps1ShowPurchaseButton !== null
@@ -124,7 +124,7 @@ export default class LSPS1Settings extends React.Component<
             nodeInfo.isTestNet && restHost === DEFAULT_LSPS1_REST_TESTNET;
 
         const isOlympusCustomMessage =
-            BackendUtils.supportsLSPS1customMessage() &&
+            BackendUtils.supportsLSPScustomMessage() &&
             (isOlympusMainnetCustom || isOlympusTestnetCustom);
         const isOlympusRest =
             BackendUtils.supportsLSPS1rest() &&
@@ -148,7 +148,7 @@ export default class LSPS1Settings extends React.Component<
                     navigation={navigation}
                 />
                 <View style={{ flex: 1, padding: 12 }}>
-                    {BackendUtils.supportsLSPS1customMessage() && (
+                    {BackendUtils.supportsLSPScustomMessage() && (
                         <>
                             <Text
                                 style={{

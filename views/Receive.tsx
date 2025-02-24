@@ -1013,36 +1013,33 @@ export default class Receive extends React.Component<
         if (implementation === 'lndhub') {
             if (rHash) {
                 this.lnInterval = setInterval(() => {
-                    // only fetch the last 10 invoices
-                    BackendUtils.getInvoices({ limit: 10 }).then(
-                        (response: any) => {
-                            const invoices = response.invoices;
-                            for (let i = 0; i < invoices.length; i++) {
-                                const result = new Invoice(invoices[i]);
-                                if (
-                                    result.getFormattedRhash === rHash &&
-                                    result.ispaid &&
-                                    Number(result.amt) >= Number(value) &&
-                                    Number(result.amt) !== 0
-                                ) {
-                                    setWatchedInvoicePaid(result.amt);
-                                    if (orderId)
-                                        PosStore.recordPayment({
-                                            orderId,
-                                            orderTotal,
-                                            orderTip,
-                                            exchangeRate,
-                                            rate,
-                                            type: 'ln',
-                                            tx: result.payment_request,
-                                            preimage: result.r_preimage
-                                        });
-                                    this.clearIntervals();
-                                    break;
-                                }
+                    BackendUtils.getInvoices().then((response: any) => {
+                        const invoices = response.invoices;
+                        for (let i = 0; i < invoices.length; i++) {
+                            const result = new Invoice(invoices[i]);
+                            if (
+                                result.getFormattedRhash === rHash &&
+                                result.ispaid &&
+                                Number(result.amt) >= Number(value) &&
+                                Number(result.amt) !== 0
+                            ) {
+                                setWatchedInvoicePaid(result.amt);
+                                if (orderId)
+                                    PosStore.recordPayment({
+                                        orderId,
+                                        orderTotal,
+                                        orderTip,
+                                        exchangeRate,
+                                        rate,
+                                        type: 'ln',
+                                        tx: result.payment_request,
+                                        preimage: result.r_preimage
+                                    });
+                                this.clearIntervals();
+                                break;
                             }
                         }
-                    );
+                    });
                 }, 5000);
             }
         }
@@ -1152,7 +1149,7 @@ export default class Receive extends React.Component<
         const { lightningAddress } = LightningAddressStore;
         const lightningAddressLoading = LightningAddressStore.loading;
 
-        const error_msg = LSPStore.error_msg || InvoicesStore.error_msg;
+        const error_msg = LSPStore.flow_error_msg || InvoicesStore.error_msg;
 
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
@@ -1851,9 +1848,11 @@ export default class Receive extends React.Component<
                                             haveUnifiedInvoice && (
                                                 <CollapsedQR
                                                     value={unifiedInvoice || ''}
-                                                    copyText={localeString(
-                                                        'views.Receive.copyInvoice'
-                                                    )}
+                                                    iconOnly={true}
+                                                    iconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -1881,9 +1880,11 @@ export default class Receive extends React.Component<
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
-                                                    copyText={localeString(
-                                                        'views.Receive.copyInvoice'
-                                                    )}
+                                                    iconOnly={true}
+                                                    iconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -1911,9 +1912,11 @@ export default class Receive extends React.Component<
                                                     copyValue={
                                                         btcAddressCopyValue
                                                     }
-                                                    copyText={localeString(
-                                                        'views.Receive.copyAddress'
-                                                    )}
+                                                    iconOnly={true}
+                                                    iconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -1990,9 +1993,11 @@ export default class Receive extends React.Component<
                                             lightningAddress && (
                                                 <CollapsedQR
                                                     value={`lightning:${lightningAddress}`}
-                                                    copyText={localeString(
-                                                        'views.Receive.copyAddress'
-                                                    )}
+                                                    iconOnly={true}
+                                                    iconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     hideText
@@ -2023,9 +2028,11 @@ export default class Receive extends React.Component<
                                                     copyValue={
                                                         lnInvoiceCopyValue
                                                     }
-                                                    copyText={localeString(
-                                                        'views.Receive.copyInvoice'
-                                                    )}
+                                                    iconOnly={true}
+                                                    iconContainerStyle={{
+                                                        marginRight: 40
+                                                    }}
+                                                    showShare={true}
                                                     expanded
                                                     textBottom
                                                     truncateLongValue
@@ -2047,7 +2054,10 @@ export default class Receive extends React.Component<
                                                 <View
                                                     style={[
                                                         styles.button,
-                                                        { paddingTop: 0 }
+                                                        {
+                                                            marginTop: 15,
+                                                            paddingTop: 0
+                                                        }
                                                     ]}
                                                 >
                                                     <Button
@@ -2307,197 +2317,63 @@ export default class Receive extends React.Component<
                                                 </TouchableOpacity>
                                             )}
 
-                                            {implementation !== 'lndhub' && (
-                                                <>
-                                                    <Text
-                                                        style={{
-                                                            ...styles.secondaryText,
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Receive.expiration'
-                                                        )}
-                                                    </Text>
-                                                    <Row
-                                                        style={{
-                                                            width: '100%'
-                                                        }}
-                                                    >
-                                                        <TextInput
-                                                            keyboardType="numeric"
-                                                            value={expiry}
+                                            {implementation !== 'lndhub' &&
+                                                implementation !==
+                                                    'nostr-wallet-connect' && (
+                                                    <>
+                                                        <Text
                                                             style={{
-                                                                width: '58%'
-                                                            }}
-                                                            onChangeText={(
-                                                                text: string
-                                                            ) => {
-                                                                let expirySeconds =
-                                                                    '3600';
-                                                                if (
-                                                                    timePeriod ===
-                                                                    'Seconds'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        text;
-                                                                } else if (
-                                                                    timePeriod ===
-                                                                    'Minutes'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            text
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60
-                                                                            )
-                                                                            .toString();
-                                                                } else if (
-                                                                    timePeriod ===
-                                                                    'Hours'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            text
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60 *
-                                                                                    60
-                                                                            )
-                                                                            .toString();
-                                                                } else if (
-                                                                    timePeriod ===
-                                                                    'Days'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            text
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60 *
-                                                                                    60 *
-                                                                                    24
-                                                                            )
-                                                                            .toString();
-                                                                } else if (
-                                                                    timePeriod ===
-                                                                    'Weeks'
-                                                                ) {
-                                                                    expirySeconds =
-                                                                        new BigNumber(
-                                                                            text
-                                                                        )
-                                                                            .multipliedBy(
-                                                                                60 *
-                                                                                    60 *
-                                                                                    24 *
-                                                                                    7
-                                                                            )
-                                                                            .toString();
-                                                                }
-
-                                                                if (
-                                                                    expirySeconds ==
-                                                                    '600'
-                                                                ) {
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: text,
-                                                                            expirySeconds,
-                                                                            expirationIndex: 0
-                                                                        }
-                                                                    );
-                                                                } else if (
-                                                                    expirySeconds ==
-                                                                    '3600'
-                                                                ) {
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: text,
-                                                                            expirySeconds,
-                                                                            expirationIndex: 1
-                                                                        }
-                                                                    );
-                                                                } else if (
-                                                                    expirySeconds ==
-                                                                    '86400'
-                                                                ) {
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: text,
-                                                                            expirySeconds,
-                                                                            expirationIndex: 2
-                                                                        }
-                                                                    );
-                                                                } else if (
-                                                                    expirySeconds ==
-                                                                    '604800'
-                                                                ) {
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: text,
-                                                                            expirySeconds,
-                                                                            expirationIndex: 3
-                                                                        }
-                                                                    );
-                                                                } else {
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: text,
-                                                                            expirySeconds,
-                                                                            expirationIndex: 5
-                                                                        }
-                                                                    );
-                                                                }
-                                                            }}
-                                                        />
-                                                        <View
-                                                            style={{
-                                                                flex: 1,
-                                                                // TODO
-                                                                top: -5
+                                                                ...styles.secondaryText,
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
                                                             }}
                                                         >
-                                                            <DropdownSetting
-                                                                selectedValue={
-                                                                    timePeriod
-                                                                }
-                                                                values={
-                                                                    TIME_PERIOD_KEYS
-                                                                }
-                                                                onValueChange={async (
-                                                                    value: string
+                                                            {localeString(
+                                                                'views.Receive.expiration'
+                                                            )}
+                                                        </Text>
+                                                        <Row
+                                                            style={{
+                                                                width: '100%'
+                                                            }}
+                                                        >
+                                                            <TextInput
+                                                                keyboardType="numeric"
+                                                                value={expiry}
+                                                                style={{
+                                                                    width: '58%'
+                                                                }}
+                                                                onChangeText={(
+                                                                    text: string
                                                                 ) => {
                                                                     let expirySeconds =
                                                                         '3600';
                                                                     if (
-                                                                        value ===
+                                                                        timePeriod ===
                                                                         'Seconds'
                                                                     ) {
                                                                         expirySeconds =
-                                                                            expiry;
+                                                                            text;
                                                                     } else if (
-                                                                        value ===
+                                                                        timePeriod ===
                                                                         'Minutes'
                                                                     ) {
                                                                         expirySeconds =
                                                                             new BigNumber(
-                                                                                expiry
+                                                                                text
                                                                             )
                                                                                 .multipliedBy(
                                                                                     60
                                                                                 )
                                                                                 .toString();
                                                                     } else if (
-                                                                        value ===
+                                                                        timePeriod ===
                                                                         'Hours'
                                                                     ) {
                                                                         expirySeconds =
                                                                             new BigNumber(
-                                                                                expiry
+                                                                                text
                                                                             )
                                                                                 .multipliedBy(
                                                                                     60 *
@@ -2505,12 +2381,12 @@ export default class Receive extends React.Component<
                                                                                 )
                                                                                 .toString();
                                                                     } else if (
-                                                                        value ===
+                                                                        timePeriod ===
                                                                         'Days'
                                                                     ) {
                                                                         expirySeconds =
                                                                             new BigNumber(
-                                                                                expiry
+                                                                                text
                                                                             )
                                                                                 .multipliedBy(
                                                                                     60 *
@@ -2519,12 +2395,12 @@ export default class Receive extends React.Component<
                                                                                 )
                                                                                 .toString();
                                                                     } else if (
-                                                                        value ===
+                                                                        timePeriod ===
                                                                         'Weeks'
                                                                     ) {
                                                                         expirySeconds =
                                                                             new BigNumber(
-                                                                                expiry
+                                                                                text
                                                                             )
                                                                                 .multipliedBy(
                                                                                     60 *
@@ -2535,79 +2411,220 @@ export default class Receive extends React.Component<
                                                                                 .toString();
                                                                     }
 
-                                                                    let expirationIndex;
                                                                     if (
-                                                                        expirySeconds ===
+                                                                        expirySeconds ==
                                                                         '600'
                                                                     ) {
-                                                                        expirationIndex = 0;
+                                                                        this.setState(
+                                                                            {
+                                                                                expiry: text,
+                                                                                expirySeconds,
+                                                                                expirationIndex: 0
+                                                                            }
+                                                                        );
                                                                     } else if (
-                                                                        expirySeconds ===
+                                                                        expirySeconds ==
                                                                         '3600'
                                                                     ) {
-                                                                        expirationIndex = 1;
+                                                                        this.setState(
+                                                                            {
+                                                                                expiry: text,
+                                                                                expirySeconds,
+                                                                                expirationIndex: 1
+                                                                            }
+                                                                        );
                                                                     } else if (
-                                                                        expirySeconds ===
+                                                                        expirySeconds ==
                                                                         '86400'
                                                                     ) {
-                                                                        expirationIndex = 2;
+                                                                        this.setState(
+                                                                            {
+                                                                                expiry: text,
+                                                                                expirySeconds,
+                                                                                expirationIndex: 2
+                                                                            }
+                                                                        );
                                                                     } else if (
-                                                                        expirySeconds ===
+                                                                        expirySeconds ==
                                                                         '604800'
                                                                     ) {
-                                                                        expirationIndex = 3;
+                                                                        this.setState(
+                                                                            {
+                                                                                expiry: text,
+                                                                                expirySeconds,
+                                                                                expirationIndex: 3
+                                                                            }
+                                                                        );
                                                                     } else {
-                                                                        expirationIndex = 4;
+                                                                        this.setState(
+                                                                            {
+                                                                                expiry: text,
+                                                                                expirySeconds,
+                                                                                expirationIndex: 5
+                                                                            }
+                                                                        );
                                                                     }
-
-                                                                    this.setState(
-                                                                        {
-                                                                            timePeriod:
-                                                                                value,
-                                                                            expirySeconds,
-                                                                            expirationIndex
-                                                                        }
-                                                                    );
                                                                 }}
                                                             />
-                                                        </View>
-                                                    </Row>
+                                                            <View
+                                                                style={{
+                                                                    flex: 1,
+                                                                    // TODO
+                                                                    top: -5
+                                                                }}
+                                                            >
+                                                                <DropdownSetting
+                                                                    selectedValue={
+                                                                        timePeriod
+                                                                    }
+                                                                    values={
+                                                                        TIME_PERIOD_KEYS
+                                                                    }
+                                                                    onValueChange={async (
+                                                                        value: string
+                                                                    ) => {
+                                                                        let expirySeconds =
+                                                                            '3600';
+                                                                        if (
+                                                                            value ===
+                                                                            'Seconds'
+                                                                        ) {
+                                                                            expirySeconds =
+                                                                                expiry;
+                                                                        } else if (
+                                                                            value ===
+                                                                            'Minutes'
+                                                                        ) {
+                                                                            expirySeconds =
+                                                                                new BigNumber(
+                                                                                    expiry
+                                                                                )
+                                                                                    .multipliedBy(
+                                                                                        60
+                                                                                    )
+                                                                                    .toString();
+                                                                        } else if (
+                                                                            value ===
+                                                                            'Hours'
+                                                                        ) {
+                                                                            expirySeconds =
+                                                                                new BigNumber(
+                                                                                    expiry
+                                                                                )
+                                                                                    .multipliedBy(
+                                                                                        60 *
+                                                                                            60
+                                                                                    )
+                                                                                    .toString();
+                                                                        } else if (
+                                                                            value ===
+                                                                            'Days'
+                                                                        ) {
+                                                                            expirySeconds =
+                                                                                new BigNumber(
+                                                                                    expiry
+                                                                                )
+                                                                                    .multipliedBy(
+                                                                                        60 *
+                                                                                            60 *
+                                                                                            24
+                                                                                    )
+                                                                                    .toString();
+                                                                        } else if (
+                                                                            value ===
+                                                                            'Weeks'
+                                                                        ) {
+                                                                            expirySeconds =
+                                                                                new BigNumber(
+                                                                                    expiry
+                                                                                )
+                                                                                    .multipliedBy(
+                                                                                        60 *
+                                                                                            60 *
+                                                                                            24 *
+                                                                                            7
+                                                                                    )
+                                                                                    .toString();
+                                                                        }
 
-                                                    <ButtonGroup
-                                                        onPress={
-                                                            this
-                                                                .updateExpirationIndex
-                                                        }
-                                                        selectedIndex={
-                                                            expirationIndex
-                                                        }
-                                                        buttons={
-                                                            expirationButtons
-                                                        }
-                                                        selectedButtonStyle={{
-                                                            backgroundColor:
-                                                                themeColor(
-                                                                    'highlight'
-                                                                ),
-                                                            borderRadius: 12
-                                                        }}
-                                                        containerStyle={{
-                                                            backgroundColor:
-                                                                themeColor(
+                                                                        let expirationIndex;
+                                                                        if (
+                                                                            expirySeconds ===
+                                                                            '600'
+                                                                        ) {
+                                                                            expirationIndex = 0;
+                                                                        } else if (
+                                                                            expirySeconds ===
+                                                                            '3600'
+                                                                        ) {
+                                                                            expirationIndex = 1;
+                                                                        } else if (
+                                                                            expirySeconds ===
+                                                                            '86400'
+                                                                        ) {
+                                                                            expirationIndex = 2;
+                                                                        } else if (
+                                                                            expirySeconds ===
+                                                                            '604800'
+                                                                        ) {
+                                                                            expirationIndex = 3;
+                                                                        } else {
+                                                                            expirationIndex = 4;
+                                                                        }
+
+                                                                        this.setState(
+                                                                            {
+                                                                                timePeriod:
+                                                                                    value,
+                                                                                expirySeconds,
+                                                                                expirationIndex
+                                                                            }
+                                                                        );
+                                                                    }}
+                                                                />
+                                                            </View>
+                                                        </Row>
+
+                                                        <ButtonGroup
+                                                            onPress={
+                                                                this
+                                                                    .updateExpirationIndex
+                                                            }
+                                                            selectedIndex={
+                                                                expirationIndex
+                                                            }
+                                                            buttons={
+                                                                expirationButtons
+                                                            }
+                                                            selectedButtonStyle={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'highlight'
+                                                                    ),
+                                                                borderRadius: 12
+                                                            }}
+                                                            containerStyle={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'secondary'
+                                                                    ),
+                                                                borderRadius: 12,
+                                                                borderWidth: 0,
+                                                                height: 30,
+                                                                marginBottom:
+                                                                    Platform.OS ===
+                                                                    'ios'
+                                                                        ? 16
+                                                                        : 0
+                                                            }}
+                                                            innerBorderStyle={{
+                                                                color: themeColor(
                                                                     'secondary'
-                                                                ),
-                                                            borderRadius: 12,
-                                                            borderWidth: 0,
-                                                            height: 30
-                                                        }}
-                                                        innerBorderStyle={{
-                                                            color: themeColor(
-                                                                'secondary'
-                                                            )
-                                                        }}
-                                                    />
-                                                </>
-                                            )}
+                                                                )
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
 
                                             {BackendUtils.supportsCustomPreimages() &&
                                                 showCustomPreimageField && (
@@ -2646,7 +2663,12 @@ export default class Receive extends React.Component<
                                                         style={{
                                                             flexDirection:
                                                                 'row',
-                                                            marginTop: 20
+                                                            marginTop: 16,
+                                                            marginBottom:
+                                                                Platform.OS ===
+                                                                'ios'
+                                                                    ? 10
+                                                                    : 6
                                                         }}
                                                     >
                                                         <View

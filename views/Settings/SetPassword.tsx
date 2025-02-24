@@ -50,6 +50,7 @@ export default class SetPassphrase extends React.Component<
     };
 
     private firstInput = React.createRef<any>();
+    private secondInput = React.createRef<any>();
 
     async componentDidMount() {
         const { SettingsStore } = this.props;
@@ -124,7 +125,7 @@ export default class SetPassphrase extends React.Component<
             passphrase: '',
             isBiometryEnabled: false
         });
-        navigation.popTo('Security', { refresh: true });
+        navigation.popTo('Security');
     };
 
     render() {
@@ -207,11 +208,15 @@ export default class SetPassphrase extends React.Component<
                                         : 8
                                     : 2
                         }}
+                        onSubmitEditing={() => {
+                            this.secondInput.current.focus();
+                        }}
                     />
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.confirmPassword')}
                     </Text>
                     <TextInput
+                        ref={this.secondInput}
                         placeholder={'********'}
                         placeholderTextColor="darkgray"
                         value={passphraseConfirm}
@@ -234,6 +239,9 @@ export default class SetPassphrase extends React.Component<
                                         ? 6
                                         : 8
                                     : 0
+                        }}
+                        onSubmitEditing={() => {
+                            this.saveSettings();
                         }}
                     />
                     <View style={{ paddingTop: 10, margin: 10 }}>

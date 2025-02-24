@@ -30,6 +30,7 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
+    mounted?: boolean;
 }
 
 @inject('SettingsStore')
@@ -45,7 +46,8 @@ export default class PaymentsSettings extends React.Component<
         timeoutSeconds: '60',
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
-        slideToPayThreshold: '10000'
+        slideToPayThreshold: '10000',
+        mounted: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -62,7 +64,8 @@ export default class PaymentsSettings extends React.Component<
             preferredMempoolRate:
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
-                settings?.payments?.slideToPayThreshold?.toString() || '10000'
+                settings?.payments?.slideToPayThreshold?.toString() || '10000',
+            mounted: true
         });
     }
 
@@ -79,7 +82,6 @@ export default class PaymentsSettings extends React.Component<
         const { navigation } = this.props;
         const {
             feeLimit,
-            feeLimitMethod,
             feePercentage,
             enableMempoolRates,
             timeoutSeconds,
@@ -139,12 +141,9 @@ export default class PaymentsSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             payments: {
+                                                ...settings.payments,
                                                 defaultFeeMethod: 'fixed',
-                                                defaultFeePercentage:
-                                                    feePercentage,
-                                                defaultFeeFixed: text,
-                                                timeoutSeconds,
-                                                preferredMempoolRate
+                                                defaultFeeFixed: text
                                             }
                                         });
                                     }}
@@ -178,11 +177,9 @@ export default class PaymentsSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             payments: {
+                                                ...settings.payments,
                                                 defaultFeeMethod: 'percent',
-                                                defaultFeePercentage: text,
-                                                defaultFeeFixed: feeLimit,
-                                                timeoutSeconds,
-                                                preferredMempoolRate
+                                                defaultFeePercentage: text
                                             }
                                         });
                                     }}
@@ -248,11 +245,9 @@ export default class PaymentsSettings extends React.Component<
                                         });
                                         await updateSettings({
                                             payments: {
+                                                ...settings.payments,
                                                 defaultFeeMethod: 'percent',
-                                                defaultFeePercentage: text,
-                                                defaultFeeFixed: feeLimit,
-                                                timeoutSeconds,
-                                                preferredMempoolRate
+                                                defaultFeePercentage: text
                                             }
                                         });
                                     }}
@@ -291,14 +286,16 @@ export default class PaymentsSettings extends React.Component<
                                 slideToPayThreshold: amount
                             });
                             const amountNumber = Number(amount);
-                            if (!Number.isNaN(amountNumber)) {
+                            // ensure settings are loading and everything is mounted
+                            // before we attempt to update settings
+                            // solves ZEUS-2802
+                            if (
+                                this.state.mounted &&
+                                !Number.isNaN(amountNumber)
+                            ) {
                                 await updateSettings({
                                     payments: {
-                                        defaultFeeMethod: feeLimitMethod,
-                                        defaultFeePercentage: feePercentage,
-                                        defaultFeeFixed: feeLimit,
-                                        timeoutSeconds,
-                                        preferredMempoolRate,
+                                        ...settings.payments,
                                         slideToPayThreshold: Number(amount)
                                     }
                                 });
@@ -308,7 +305,8 @@ export default class PaymentsSettings extends React.Component<
                         hideUnitChangeButton={true}
                     />
 
-                    {BackendUtils.isLNDBased() && (
+                    {(BackendUtils.isLNDBased() ||
+                        implementation === 'cln-rest') && (
                         <>
                             <Text
                                 style={{
@@ -331,11 +329,8 @@ export default class PaymentsSettings extends React.Component<
                                     });
                                     await updateSettings({
                                         payments: {
-                                            defaultFeeMethod: feeLimitMethod,
-                                            defaultFeePercentage: feePercentage,
-                                            defaultFeeFixed: feeLimit,
-                                            timeoutSeconds: text,
-                                            preferredMempoolRate
+                                            ...settings.payments,
+                                            timeoutSeconds: text
                                         }
                                     });
                                 }}
@@ -368,16 +363,7 @@ export default class PaymentsSettings extends React.Component<
                                     });
                                     await updateSettings({
                                         privacy: {
-                                            defaultBlockExplorer:
-                                                settings?.privacy
-                                                    ?.defaultBlockExplorer,
-                                            customBlockExplorer:
-                                                settings?.privacy
-                                                    ?.customBlockExplorer,
-                                            clipboard:
-                                                settings?.privacy?.clipboard,
-                                            lurkerMode:
-                                                settings?.privacy?.lurkerMode,
+                                            ...settings.privacy,
                                             enableMempoolRates:
                                                 !enableMempoolRates
                                         }
@@ -398,10 +384,7 @@ export default class PaymentsSettings extends React.Component<
                                 });
                                 await updateSettings({
                                     payments: {
-                                        defaultFeeMethod: feeLimitMethod,
-                                        defaultFeePercentage: feePercentage,
-                                        defaultFeeFixed: feeLimit,
-                                        timeoutSeconds,
+                                        ...settings.payments,
                                         preferredMempoolRate: value
                                     }
                                 });

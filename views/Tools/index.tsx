@@ -9,20 +9,22 @@ import {
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import AccountIcon from '../assets/images/SVG/Account.svg';
-import CurrencyIcon from '../assets/images/SVG/Bitcoin.svg';
-import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
-import SignIcon from '../assets/images/SVG/Pen.svg';
-import SpeedometerIcon from '../assets/images/SVG/Speedometer.svg';
+import AccountIcon from '../../assets/images/SVG/Account.svg';
+import CurrencyIcon from '../../assets/images/SVG/Bitcoin.svg';
+import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
+import SignIcon from '../../assets/images/SVG/Pen.svg';
+import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
+import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 
-import Header from '../components/Header';
-import Screen from '../components/Screen';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
 
-import BackendUtils from '../utils/BackendUtils';
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
+import { Icon } from 'react-native-elements';
 
 interface ToolsProps {
     navigation: StackNavigationProp<any, any>;
@@ -33,9 +35,7 @@ interface ToolsProps {
 @observer
 export default class Tools extends React.Component<ToolsProps, {}> {
     UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
-
-        SettingsStore.getSettings();
+        const { navigation } = this.props;
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
@@ -65,7 +65,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: 'Tools', // localeString('views.Settings.title'),
+                        text: localeString('views.Tools.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -240,6 +240,131 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </View>
                         </TouchableOpacity>
                     </View>
+
+                    {BackendUtils.supportsSweep() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Sweep')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <SweepIcon
+                                            fill={themeColor('text')}
+                                            width={18}
+                                            height={18}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Sweep.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate('ActivityExport')
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="download"
+                                        type="feather"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.ActivityExport.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {BackendUtils.supportsDevTools() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('DeveloperTools')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 14,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {'</>'}
+                                        </Text>
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Tools.developers')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </ScrollView>
             </Screen>
         );

@@ -1,4 +1,4 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 
 // LN
 import Payment from './../models/Payment';
@@ -31,8 +31,10 @@ export interface Filter {
     unconfirmed: boolean;
     zeusPay: boolean;
     minimumAmount: number;
+    maximumAmount?: number;
     startDate?: Date;
     endDate?: Date;
+    memo: string;
 }
 
 export const DEFAULT_FILTERS = {
@@ -48,12 +50,13 @@ export const DEFAULT_FILTERS = {
     ampInvoices: true,
     zeusPay: true,
     minimumAmount: 0,
+    maximumAmount: undefined,
     startDate: undefined,
-    endDate: undefined
+    endDate: undefined,
+    memo: ''
 };
 
 export default class ActivityStore {
-    @observable public loading = false;
     @observable public error = false;
     @observable public activity: Array<Invoice | Payment | Transaction> = [];
     @observable public filteredActivity: Array<
@@ -77,14 +80,12 @@ export default class ActivityStore {
         this.invoicesStore = invoicesStore;
     }
 
-    @action
     public resetFilters = async () => {
         this.filters = DEFAULT_FILTERS;
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
         this.setFilters(this.filters);
     };
 
-    @action
     public setFiltersPos = async () => {
         this.filters = {
             lightning: true,
@@ -97,8 +98,10 @@ export default class ActivityStore {
             unconfirmed: true,
             zeusPay: true,
             minimumAmount: 0,
+            maximumAmount: undefined,
             startDate: undefined,
-            endDate: undefined
+            endDate: undefined,
+            memo: ''
         };
         await Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
@@ -106,6 +109,12 @@ export default class ActivityStore {
     @action
     public setAmountFilter = (filter: any) => {
         this.filters.minimumAmount = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setMaximumAmountFilter = (filter: any) => {
+        this.filters.maximumAmount = filter;
         this.setFilters(this.filters);
     };
 
@@ -133,6 +142,12 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
+    @action
+    public setMemoFilter = (filter: any) => {
+        this.filters.memo = filter;
+        this.setFilters(this.filters);
+    };
+
     getSortedActivity = () => {
         const activity: any[] = [];
         const payments = this.paymentsStore.payments;
@@ -154,54 +169,52 @@ export default class ActivityStore {
         return sortedActivity;
     };
 
-    @action
-    public getActivity = async () => {
-        this.loading = true;
+    private getActivity = async () => {
         this.activity = [];
         await this.paymentsStore.getPayments();
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
 
-        this.activity = this.getSortedActivity();
-        this.filteredActivity = this.activity;
-
-        this.loading = false;
+        runInAction(() => {
+            this.activity = this.getSortedActivity();
+            this.filteredActivity = this.activity;
+        });
     };
 
-    @action
     public updateInvoices = async (locale: string | undefined) => {
         await this.invoicesStore.getInvoices();
-        this.activity = this.getSortedActivity();
-        await this.setFilters(this.filters, locale);
+        await runInAction(async () => {
+            this.activity = this.getSortedActivity();
+            await this.setFilters(this.filters, locale);
+        });
     };
 
-    @action
     public updateTransactions = async (locale: string | undefined) => {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
-        this.activity = this.getSortedActivity();
-        await this.setFilters(this.filters, locale);
+        await runInAction(async () => {
+            this.activity = this.getSortedActivity();
+            await this.setFilters(this.filters, locale);
+        });
     };
 
-    @action
     public async getFilters() {
-        this.loading = true;
         try {
             const filters = await Storage.getItem(ACTIVITY_FILTERS_KEY);
             if (filters) {
-                this.filters = JSON.parse(filters, (key, value) =>
+                const parsedFilters = JSON.parse(filters, (key, value) =>
                     (key === 'startDate' || key === 'endDate') && value
                         ? new Date(value)
                         : value
                 );
+                this.filters = { ...DEFAULT_FILTERS, ...parsedFilters };
             } else {
                 console.log('No activity filters stored');
+                this.filters = DEFAULT_FILTERS;
             }
         } catch (error) {
             console.log('Loading activity filters failed', error);
-        } finally {
-            this.loading = false;
         }
 
         return this.filters;
@@ -209,22 +222,19 @@ export default class ActivityStore {
 
     @action
     public setFilters = async (filters: Filter, locale?: string) => {
-        this.loading = true;
-        this.filters = filters;
+        this.filters = { ...DEFAULT_FILTERS, ...filters };
         this.filteredActivity = ActivityFilterUtils.filterActivities(
             this.activity,
-            filters
+            this.filters
         );
         this.filteredActivity.forEach((activity) => {
             if (activity instanceof Invoice) {
                 activity.determineFormattedRemainingTimeUntilExpiry(locale);
             }
         });
-        await Storage.setItem(ACTIVITY_FILTERS_KEY, filters);
-        this.loading = false;
+        Storage.setItem(ACTIVITY_FILTERS_KEY, this.filters);
     };
 
-    @action
     public getActivityAndFilter = async (
         locale: string | undefined,
         filters: Filter = this.filters

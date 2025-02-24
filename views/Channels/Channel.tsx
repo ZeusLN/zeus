@@ -9,10 +9,17 @@ import {
     Image
 } from 'react-native';
 
-import { Divider, Icon, ListItem } from 'react-native-elements';
+import {
+    Button as ElementButton,
+    Divider,
+    Icon,
+    ListItem
+} from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import LinearGradient from 'react-native-linear-gradient';
+import BigNumber from 'bignumber.js';
 
 import Channel from '../../models/Channel';
 import ClosedChannel from '../../models/ClosedChannel';
@@ -32,17 +39,21 @@ import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import ChannelsStore from '../../stores/ChannelsStore';
-import SettingsStore from '../../stores/SettingsStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 import ContactStore from '../../stores/ContactStore';
+import LSPStore from '../../stores/LSPStore';
+import ModalStore from '../../stores/ModalStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -52,9 +63,11 @@ import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
 interface ChannelProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore: ChannelsStore;
-    SettingsStore: SettingsStore;
-    NodeInfoStore: NodeInfoStore;
     ContactStore: ContactStore;
+    LSPStore: LSPStore;
+    ModalStore: ModalStore;
+    NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
     route: Route<'Channel', { channel: Channel | ClosedChannel }>;
 }
 
@@ -65,9 +78,23 @@ interface ChannelState {
     deliveryAddress: string;
     aliasToggle: boolean;
     channel: Channel;
+    renewalInfo: {
+        expiresInBlocks?: number;
+        expiresMonths?: number;
+        expiresDays?: number;
+        maxExtensionInBlocks?: number;
+        expirationBlock?: number;
+    };
 }
 
-@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'ContactStore')
+@inject(
+    'ChannelsStore',
+    'ContactStore',
+    'LSPStore',
+    'ModalStore',
+    'NodeInfoStore',
+    'SettingsStore'
+)
 @observer
 export default class ChannelView extends React.Component<
     ChannelProps,
@@ -76,8 +103,42 @@ export default class ChannelView extends React.Component<
     listener: any;
     constructor(props: ChannelProps) {
         super(props);
-        const { route, ChannelsStore } = props;
+        const { route, ChannelsStore, LSPStore, NodeInfoStore } = props;
         const channel = route.params?.channel;
+
+        const currentBlockHeight = NodeInfoStore.nodeInfo.currentBlockHeight;
+
+        const renewalInfo = LSPStore.getExtendableOrdersData?.filter(
+            (extendableChannel: any) => {
+                return (
+                    extendableChannel.short_channel_id ===
+                    channel.shortChannelId
+                );
+            }
+        )[0];
+
+        let expiresInBlocks;
+        if (currentBlockHeight && renewalInfo?.expiration_block) {
+            expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
+                .minus(currentBlockHeight)
+                .toNumber();
+        }
+
+        let expiresMonths, expiresDays;
+        if (expiresInBlocks) {
+            const { months, days } =
+                DateTimeUtils.blocksToMonthsAndDays(expiresInBlocks);
+            expiresMonths = months;
+            expiresDays = days;
+        }
+
+        let maxExtensionInBlocks;
+        if (renewalInfo?.max_channel_extension_expiry_blocks) {
+            maxExtensionInBlocks =
+                renewalInfo.max_channel_extension_expiry_blocks;
+        }
+
+        const expirationBlock = renewalInfo?.expiration_block;
 
         this.state = {
             confirmCloseChannel: false,
@@ -85,7 +146,14 @@ export default class ChannelView extends React.Component<
             forceCloseChannel: false,
             deliveryAddress: '',
             aliasToggle: false,
-            channel
+            channel,
+            renewalInfo: {
+                expiresInBlocks,
+                expiresDays,
+                expiresMonths,
+                maxExtensionInBlocks,
+                expirationBlock
+            }
         };
 
         if (BackendUtils.isLNDBased() && channel.channelId != null) {
@@ -214,15 +282,21 @@ export default class ChannelView extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, NodeInfoStore, ChannelsStore } =
-            this.props;
+        const {
+            navigation,
+            SettingsStore,
+            ModalStore,
+            NodeInfoStore,
+            ChannelsStore
+        } = this.props;
         const {
             channel,
             confirmCloseChannel,
             satPerByte,
             forceCloseChannel,
             deliveryAddress,
-            aliasToggle
+            aliasToggle,
+            renewalInfo
         } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
@@ -295,6 +369,7 @@ export default class ChannelView extends React.Component<
                 alias_scids.length === 1 &&
                 alias_scids[0].toString() === channelId
             );
+        const showPeerAliasScid = !!peer_scid_alias && peer_scid_alias != 0;
 
         const EditFees = () => (
             <TouchableOpacity
@@ -405,6 +480,156 @@ export default class ChannelView extends React.Component<
                             ? localeString('general.active')
                             : localeString('views.Channel.inactive')}
                     </Text>
+                    {!!renewalInfo.maxExtensionInBlocks && (
+                        <>
+                            <Row
+                                justify="space-between"
+                                style={{ marginTop: 10, marginBottom: 10 }}
+                            >
+                                {renewalInfo.expiresInBlocks ? (
+                                    <View style={{ width: '50%' }}>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {renewalInfo.expiresInBlocks > 0
+                                                ? localeString(
+                                                      'views.Channel.lease.expiresIn'
+                                                  )
+                                                : localeString(
+                                                      'views.Activity.expired'
+                                                  )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >{`${numberWithCommas(
+                                            renewalInfo.expiresInBlocks
+                                        )} ${localeString(
+                                            'general.blocks'
+                                        )}\n ~${
+                                            renewalInfo.expiresMonths
+                                                ? `${numberWithCommas(
+                                                      Math.abs(
+                                                          renewalInfo.expiresMonths
+                                                      )
+                                                  )} ${localeString(
+                                                      new BigNumber(
+                                                          Math.abs(
+                                                              renewalInfo.expiresMonths
+                                                          )
+                                                      ).gt(1)
+                                                          ? 'time.months'
+                                                          : 'time.month'
+                                                  ).toLowerCase()}`
+                                                : ''
+                                        }${
+                                            renewalInfo.expiresMonths &&
+                                            renewalInfo.expiresDays
+                                                ? ', '
+                                                : ''
+                                        }${
+                                            renewalInfo.expiresDays
+                                                ? `${numberWithCommas(
+                                                      Math.abs(
+                                                          renewalInfo.expiresDays
+                                                      )
+                                                  )} ${localeString(
+                                                      new BigNumber(
+                                                          Math.abs(
+                                                              renewalInfo.expiresDays
+                                                          )
+                                                      ).gt(1)
+                                                          ? 'time.days'
+                                                          : 'time.day'
+                                                  ).toLowerCase()}`
+                                                : ''
+                                        }`}</Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={{ width: '50%' }}
+                                        onPress={() => {
+                                            ModalStore.toggleInfoModal([
+                                                localeString(
+                                                    'views.Channel.lease.lspDiscretion.explainer1'
+                                                ),
+                                                localeString(
+                                                    'views.Channel.lease.lspDiscretion.explainer2'
+                                                )
+                                            ]);
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Channel.lease.outboundChannel'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {`${localeString(
+                                                'views.Channel.lease.lspDiscretion'
+                                            )} ⓘ`}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                <ElementButton
+                                    title={
+                                        renewalInfo.expiresInBlocks
+                                            ? localeString(
+                                                  'views.Channel.lease.extendLease'
+                                              )
+                                            : localeString(
+                                                  'views.Channel.lease.purchaseLease'
+                                              )
+                                    }
+                                    onPress={() => {
+                                        navigation.navigate('LSPS7', {
+                                            chanId: shortChannelId,
+                                            maxExtensionInBlocks:
+                                                renewalInfo.maxExtensionInBlocks,
+                                            expirationBlock:
+                                                renewalInfo.expirationBlock
+                                        });
+                                    }}
+                                    ViewComponent={LinearGradient}
+                                    linearGradientProps={{
+                                        colors: [
+                                            'rgb(180, 26, 20)',
+                                            'rgb(255, 169, 0)'
+                                        ],
+                                        start: { x: 0, y: 0.5 },
+                                        end: { x: 1, y: 0.5 }
+                                    }}
+                                    buttonStyle={{
+                                        borderRadius: 5
+                                    }}
+                                    titleStyle={{
+                                        ...styles.text,
+                                        fontSize: 15
+                                    }}
+                                />
+                            </Row>
+
+                            <Divider
+                                orientation="horizontal"
+                                style={{ margin: 20 }}
+                            />
+                        </>
+                    )}
                     {channelId && (
                         <KeyValue
                             keyValue={localeString('views.Channel.channelId')}
@@ -418,7 +643,7 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {(!!peer_scid_alias || showAliasScids) && (
+                    {(showPeerAliasScid || showAliasScids) && (
                         <TouchableOpacity
                             onPress={() => {
                                 this.setState({
@@ -471,7 +696,7 @@ export default class ChannelView extends React.Component<
                                     )}
                                 />
                             )}
-                            {!!peer_scid_alias && (
+                            {showPeerAliasScid && (
                                 <KeyValue
                                     keyValue={localeString(
                                         'views.Channel.peerAliasScid'

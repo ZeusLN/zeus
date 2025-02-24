@@ -63,6 +63,13 @@ export default class SetWalletPicture extends React.Component<
         // Map implementations to corresponding images
         const implementationImagesMap: { [key: string]: any[] } = {
             lndhub: [require('../../assets/images/Alby.jpg')],
+            'nostr-wallet-connect': [
+                require('../../assets/images/Alby.jpg'),
+                require('../../assets/images/AlbyHub.jpg'),
+                require('../../assets/images/Cashu.jpg'),
+                require('../../assets/images/Nostr.jpg'),
+                require('../../assets/images/NostrWalletConnect.jpg')
+            ],
             spark: [require('../../assets/images/CLN.jpg')],
             'c-lightning-REST': [
                 require('../../assets/images/CLN.jpg'),

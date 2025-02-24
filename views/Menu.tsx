@@ -69,9 +69,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
     };
 
     UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
-
-        SettingsStore.getSettings();
+        const { navigation } = this.props;
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);

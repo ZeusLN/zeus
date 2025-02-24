@@ -33,7 +33,6 @@ import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
-import Sweep from './views/Sweep';
 import OnChainAddresses from './views/OnChainAddresses';
 
 import SparkQRScanner from './views/SparkQRScanner';
@@ -58,7 +57,6 @@ import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
-import SignVerifyMessage from './views/Settings/SignVerifyMessage';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
 import SocialMedia from './views/Settings/SocialMedia';
@@ -120,16 +118,12 @@ import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
-import Accounts from './views/Accounts/Accounts';
-import ImportAccount from './views/Accounts/ImportAccount';
-import ImportingAccount from './views/Accounts/ImportingAccount';
-import BumpFee from './views/BumpFee';
 import QR from './views/QR';
 import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
 import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
-import CurrencyConverter from './views/Settings/CurrencyConverter';
+
 import PendingHTLCs from './views/PendingHTLCs';
 
 // POS
@@ -156,10 +150,17 @@ import RestoreChannelBackups from './views/Settings/EmbeddedNode/RestoreChannelB
 import LSPServicesList from './views/Settings/LSPServicesList';
 
 // LSPS1
-import LSPS1 from './views/Settings/LSPS1/index';
-import LSPS1Settings from './views/Settings/LSPS1/Settings';
-import OrdersPane from './views/Settings/LSPS1/OrdersPane';
-import Orders from './views/Settings/LSPS1/Order';
+import LSPS1 from './views/LSPS1/index';
+import LSPS1Settings from './views/LSPS1/Settings';
+import OrdersPane from './views/LSPS1/OrdersPane';
+import LSPS1Order from './views/LSPS1/Order';
+// LSPS7
+import LSPS7 from './views/LSPS7/index';
+import LSPS7Order from './views/LSPS7/Order';
+
+// Chantools
+import Chantools from './views/Settings/EmbeddedNode/Chantools';
+import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
 
 import RawTxHex from './views/RawTxHex';
 
@@ -169,7 +170,18 @@ import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
 
 import Menu from './views/Menu';
+
+// Tools
 import Tools from './views/Tools';
+import ActivityExport from './views/Tools/ActivityExport';
+import BumpFee from './views/Tools/BumpFee';
+import CurrencyConverter from './views/Tools/CurrencyConverter';
+import DeveloperTools from './views/Tools/DeveloperTools';
+import SignVerifyMessage from './views/Tools/SignVerifyMessage';
+import Sweep from './views/Tools/Sweep';
+import Accounts from './views/Tools/Accounts/Accounts';
+import ImportAccount from './views/Tools/Accounts/ImportAccount';
+import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -891,7 +903,15 @@ export default class App extends React.PureComponent {
                                                     />
                                                     <Stack.Screen
                                                         name="LSPS1Order" // @ts-ignore:next-line
-                                                        component={Orders}
+                                                        component={LSPS1Order}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LSPS7" // @ts-ignore:next-line
+                                                        component={LSPS7}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LSPS7Order" // @ts-ignore:next-line
+                                                        component={LSPS7Order}
                                                     />
                                                     <Stack.Screen
                                                         name="PendingHTLCs" // @ts-ignore:next-line
@@ -901,6 +921,28 @@ export default class App extends React.PureComponent {
                                                         name="OnChainAddresses" // @ts-ignore:next-line
                                                         component={
                                                             OnChainAddresses
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="DeveloperTools" // @ts-ignore:next-line
+                                                        component={
+                                                            DeveloperTools
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Chantools" // @ts-ignore:next-line
+                                                        component={Chantools}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Sweepremoteclosed" // @ts-ignore:next-line
+                                                        component={
+                                                            Sweepremoteclosed
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ActivityExport" // @ts-ignore:next-line
+                                                        component={
+                                                            ActivityExport
                                                         }
                                                     />
                                                 </Stack.Navigator>

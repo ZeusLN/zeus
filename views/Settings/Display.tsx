@@ -99,7 +99,7 @@ export default class Display extends React.Component<
             showMillisatoshiAmounts,
             selectNodeOnStartup
         } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { settings, updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -121,19 +121,15 @@ export default class Display extends React.Component<
                     <DropdownSetting
                         title={localeString('views.Settings.Theme.title')}
                         selectedValue={theme}
+                        disabled={SettingsStore.settingsUpdateInProgress}
                         onValueChange={async (value: string) => {
                             this.setState({
                                 theme: value
                             });
                             await updateSettings({
                                 display: {
-                                    theme: value,
-                                    displayNickname,
-                                    bigKeypadButtons,
-                                    defaultView,
-                                    showAllDecimalPlaces,
-                                    removeDecimalSpaces,
-                                    showMillisatoshiAmounts
+                                    ...settings.display,
+                                    theme: value
                                 }
                             });
                             SystemNavigationBar.setNavigationColor(
@@ -152,19 +148,15 @@ export default class Display extends React.Component<
                             'views.Settings.Display.defaultView'
                         )}
                         selectedValue={defaultView}
+                        disabled={SettingsStore.settingsUpdateInProgress}
                         onValueChange={async (value: string) => {
                             this.setState({
                                 defaultView: value
                             });
                             await updateSettings({
                                 display: {
-                                    defaultView: value,
-                                    displayNickname,
-                                    bigKeypadButtons,
-                                    theme,
-                                    showAllDecimalPlaces,
-                                    removeDecimalSpaces,
-                                    showMillisatoshiAmounts
+                                    ...settings.display,
+                                    defaultView: value
                                 }
                             });
                         }}
@@ -188,19 +180,17 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={displayNickname}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         displayNickname: !displayNickname
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            bigKeypadButtons,
-                                            displayNickname: !displayNickname,
-                                            showAllDecimalPlaces,
-                                            removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                            ...settings.display,
+                                            displayNickname: !displayNickname
                                         }
                                     });
                                 }}
@@ -225,19 +215,17 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={bigKeypadButtons}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         bigKeypadButtons: !bigKeypadButtons
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons: !bigKeypadButtons,
-                                            showAllDecimalPlaces,
-                                            removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                            ...settings.display,
+                                            bigKeypadButtons: !bigKeypadButtons
                                         }
                                     });
                                 }}
@@ -262,6 +250,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={showAllDecimalPlaces}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         showAllDecimalPlaces:
@@ -269,14 +260,9 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons,
+                                            ...settings.display,
                                             showAllDecimalPlaces:
-                                                !showAllDecimalPlaces,
-                                            removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                                !showAllDecimalPlaces
                                         }
                                     });
                                 }}
@@ -301,6 +287,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={removeDecimalSpaces}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         removeDecimalSpaces:
@@ -308,14 +297,9 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons,
-                                            showAllDecimalPlaces,
+                                            ...settings.display,
                                             removeDecimalSpaces:
-                                                !removeDecimalSpaces,
-                                            showMillisatoshiAmounts
+                                                !removeDecimalSpaces
                                         }
                                     });
                                 }}
@@ -340,6 +324,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={showMillisatoshiAmounts}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         showMillisatoshiAmounts:
@@ -347,12 +334,7 @@ export default class Display extends React.Component<
                                     });
                                     await updateSettings({
                                         display: {
-                                            defaultView,
-                                            theme,
-                                            displayNickname,
-                                            bigKeypadButtons,
-                                            showAllDecimalPlaces,
-                                            removeDecimalSpaces,
+                                            ...settings.display,
                                             showMillisatoshiAmounts:
                                                 !showMillisatoshiAmounts
                                         }
@@ -379,6 +361,9 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={selectNodeOnStartup}
+                                disabled={
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                                 onValueChange={async () => {
                                     this.setState({
                                         selectNodeOnStartup:

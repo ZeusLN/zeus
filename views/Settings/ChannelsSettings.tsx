@@ -85,7 +85,7 @@ export default class ChannelsSettings extends React.Component<
             simpleTaprootChannel,
             lsps1ShowPurchaseButton
         } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { settings, updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -126,10 +126,8 @@ export default class ChannelsSettings extends React.Component<
                             });
                             await updateSettings({
                                 channels: {
-                                    min_confs: newMinConfs,
-                                    privateChannel,
-                                    scidAlias,
-                                    simpleTaprootChannel
+                                    ...settings.channels,
+                                    min_confs: newMinConfs
                                 }
                             });
                         }}
@@ -157,14 +155,15 @@ export default class ChannelsSettings extends React.Component<
                                     });
                                     await updateSettings({
                                         channels: {
-                                            min_confs,
-                                            privateChannel: !privateChannel,
-                                            scidAlias,
-                                            simpleTaprootChannel
+                                            ...settings.channels,
+                                            privateChannel: !privateChannel
                                         }
                                     });
                                 }}
-                                disabled={simpleTaprootChannel}
+                                disabled={
+                                    simpleTaprootChannel ||
+                                    SettingsStore.settingsUpdateInProgress
+                                }
                             />
                         </View>
                     </View>
@@ -188,16 +187,17 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={scidAlias}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             scidAlias: !scidAlias
                                         });
                                         await updateSettings({
                                             channels: {
-                                                min_confs,
-                                                privateChannel,
-                                                scidAlias: !scidAlias,
-                                                simpleTaprootChannel
+                                                ...settings.channels,
+                                                scidAlias: !scidAlias
                                             }
                                         });
                                     }}
@@ -225,6 +225,9 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={simpleTaprootChannel}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             simpleTaprootChannel:
@@ -239,12 +242,11 @@ export default class ChannelsSettings extends React.Component<
 
                                         await updateSettings({
                                             channels: {
-                                                min_confs,
+                                                ...settings.channels,
                                                 privateChannel:
                                                     !simpleTaprootChannel
                                                         ? true
                                                         : privateChannel,
-                                                scidAlias,
                                                 simpleTaprootChannel:
                                                     !simpleTaprootChannel
                                             }
@@ -255,7 +257,7 @@ export default class ChannelsSettings extends React.Component<
                         </View>
                     )}
 
-                    {(BackendUtils.supportsLSPS1customMessage() ||
+                    {(BackendUtils.supportsLSPScustomMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
                         <View style={{ flexDirection: 'row', marginTop: 20 }}>
                             <View style={{ flex: 1 }}>
@@ -275,6 +277,9 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={lsps1ShowPurchaseButton}
+                                    disabled={
+                                        SettingsStore.settingsUpdateInProgress
+                                    }
                                     onValueChange={async () => {
                                         this.setState({
                                             lsps1ShowPurchaseButton:

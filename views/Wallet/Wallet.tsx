@@ -46,7 +46,7 @@ import {
     startLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
-import { localeString } from '../../utils/LocaleUtils';
+import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
@@ -57,6 +57,7 @@ import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
@@ -91,6 +92,7 @@ interface WalletProps {
     AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    TransactionsStore: TransactionsStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
@@ -116,6 +118,7 @@ interface WalletState {
     'AlertStore',
     'BalanceStore',
     'ChannelsStore',
+    'TransactionsStore',
     'NodeInfoStore',
     'SettingsStore',
     'UnitsStore',
@@ -193,7 +196,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             'hardwareBackPress',
             this.handleBackButton.bind(this)
         );
-        this.getSettingsAndNavigate();
+
+        const { SettingsStore } = this.props;
+
+        if (
+            this.state.initialLoad ||
+            SettingsStore.posWasEnabled ||
+            SettingsStore.triggerSettingsRefresh
+        ) {
+            // Trigger getSettingsAndNavigate() in three scenarios:
+            // 1. On initial wallet load to ensure proper initialization
+            // 2. When exiting POS to handle potential lockscreen navigation
+            // 3. When any settings are updated to refresh the UI state
+            this.getSettingsAndNavigate();
+            SettingsStore.posWasEnabled = false;
+            SettingsStore.triggerSettingsRefresh = false;
+        }
     };
 
     private handleBlur = () => this.backPressSubscription?.remove();
@@ -235,8 +253,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loginBackground
         ) {
             SettingsStore.setLoginStatus(false);
-        } else if (nextAppState === 'active' && SettingsStore.loginRequired()) {
-            this.props.navigation.navigate('Lockscreen');
+        } else if (nextAppState === 'active') {
+            if (SettingsStore.loginRequired()) {
+                this.props.navigation.navigate('Lockscreen');
+            } else {
+                this.getSettingsAndNavigate();
+            }
         }
     };
 
@@ -250,6 +272,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
+            const locale = settings.locale || 'en';
+            bridgeJavaStrings(locale);
+
             SystemNavigationBar.setNavigationColor(
                 themeColor('background'),
                 isLightTheme() ? 'dark' : 'light'
@@ -300,6 +325,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore,
             BalanceStore,
             ChannelsStore,
+            TransactionsStore,
             UTXOsStore,
             ContactStore,
             SettingsStore,
@@ -321,6 +347,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connecting,
             setConnectingStatus,
             connect,
+            connectNWC,
             posStatus,
             walletPassword,
             embeddedLndNetwork,
@@ -347,6 +374,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NodeInfoStore.reset();
             BalanceStore.reset();
             ChannelsStore.reset();
+            TransactionsStore.reset();
             SyncStore.reset();
             LightningAddressStore.reset();
             LSPStore.reset();
@@ -467,6 +495,19 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     return;
                 }
             }
+        } else if (implementation === 'nostr-wallet-connect') {
+            let error;
+            if (connecting) {
+                error = await connectNWC();
+            }
+            if (!error) {
+                try {
+                    await BalanceStore.getLightningBalance(true);
+                } catch (connectionError) {
+                    console.log('NWC connection failed:', connectionError);
+                    return;
+                }
+            }
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
@@ -477,7 +518,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 ChannelsStore.getChannels();
             } catch (connectionError) {
                 console.log('Node connection failed:', connectionError);
-                NodeInfoStore.getNodeInfoError();
+                NodeInfoStore.handleGetNodeInfoError();
                 setConnectingStatus(false);
                 return;
             }
@@ -524,6 +565,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     !this.props.NodeInfoStore.flowLspNotConfigured)
             ) {
                 await LSPStore.getLSPInfo();
+            }
+            if (BackendUtils.supportsLSPScustomMessage()) {
+                LSPStore.subscribeCustomMessages();
             }
             LSPStore.initChannelAcceptor();
         }
@@ -577,7 +621,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const showKeypad: boolean = settings?.pos?.showKeypad || false;
 
-        const dataAvailable = implementation === 'lndhub' || nodeInfo.version;
+        const dataAvailable =
+            implementation === 'lndhub' ||
+            implementation === 'nostr-wallet-connect' ||
+            nodeInfo.version;
 
         // Define the type for implementationDisplayValue
         interface ImplementationDisplayValue {
@@ -925,7 +972,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                     : localeString(
                                                           'views.Wallet.Wallet.startingNode'
                                                       ).replace('Zeus', 'ZEUS')
-                                                : implementation === 'lndhub'
+                                                : implementation === 'lndhub' ||
+                                                  implementation ===
+                                                      'nostr-wallet-connect'
                                                 ? localeString(
                                                       'views.Wallet.Wallet.loadingAccount'
                                                   ).replace('Zeus', 'ZEUS')

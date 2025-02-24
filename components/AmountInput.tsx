@@ -24,6 +24,7 @@ interface AmountInputProps {
     title?: string;
     hideConversion?: boolean;
     hideUnitChangeButton?: boolean;
+    forceUnit?: 'sats' | 'BTC' | 'fiat';
     FiatStore?: FiatStore;
     SettingsStore?: SettingsStore;
     UnitsStore?: UnitsStore;
@@ -33,12 +34,13 @@ interface AmountInputState {
     satAmount: string | number;
 }
 
-const getSatAmount = (amount: string | number) => {
+const getSatAmount = (amount: string | number, forceUnit?: string) => {
     const { fiatStore, settingsStore, unitsStore } = Stores;
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
     const { fiat } = settings;
     const { units } = unitsStore;
+    const effectiveUnits = forceUnit || units;
 
     // replace , with . for unit separator
     const value = amount ? amount.toString().replace(/,/g, ',') : '';
@@ -51,7 +53,7 @@ const getSatAmount = (amount: string | number) => {
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
     let satAmount: string | number = 0;
-    switch (units) {
+    switch (effectiveUnits) {
         case 'sats':
             satAmount = value;
             break;
@@ -89,7 +91,8 @@ export default class AmountInput extends React.Component<
 
         const { amount, onAmountChange } = props;
         let satAmount = '0';
-        if (amount) satAmount = getSatAmount(amount).toString();
+        if (amount)
+            satAmount = getSatAmount(amount, props.forceUnit).toString();
 
         onAmountChange(amount, satAmount);
         this.state = {
@@ -99,7 +102,7 @@ export default class AmountInput extends React.Component<
 
     componentDidMount() {
         const { amount, onAmountChange }: any = this.props;
-        const satAmount = getSatAmount(amount);
+        const satAmount = getSatAmount(amount, this.props.forceUnit);
         onAmountChange(amount, satAmount);
         this.setState({ satAmount });
     }
@@ -107,9 +110,19 @@ export default class AmountInput extends React.Component<
     UNSAFE_componentWillReceiveProps(
         nextProps: Readonly<AmountInputProps>
     ): void {
-        const { amount } = nextProps;
-        if (amount) {
-            const satAmount = getSatAmount(amount);
+        const { amount, forceUnit } = nextProps;
+        if (forceUnit === 'sats' && forceUnit !== this.props.forceUnit) {
+            const currentSatAmount = getSatAmount(
+                amount || '',
+                this.props.forceUnit
+            );
+            this.setState({ satAmount: currentSatAmount });
+            this.props.onAmountChange(
+                currentSatAmount.toString(),
+                currentSatAmount
+            );
+        } else {
+            const satAmount = getSatAmount(amount || '', forceUnit);
             this.setState({ satAmount });
         }
     }
@@ -117,7 +130,7 @@ export default class AmountInput extends React.Component<
     onChangeUnits = () => {
         const { amount, onAmountChange, UnitsStore }: any = this.props;
         UnitsStore.changeUnits();
-        const satAmount = getSatAmount(amount);
+        const satAmount = getSatAmount(amount, this.props.forceUnit);
         onAmountChange(amount, satAmount);
         this.setState({ satAmount });
     };
@@ -133,9 +146,11 @@ export default class AmountInput extends React.Component<
             hideUnitChangeButton,
             FiatStore,
             UnitsStore,
-            SettingsStore
+            SettingsStore,
+            forceUnit
         } = this.props;
         const { units }: any = UnitsStore;
+        const effectiveUnits = forceUnit || units;
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
@@ -160,24 +175,27 @@ export default class AmountInput extends React.Component<
                         onChangeText={(text: string) => {
                             // remove spaces and non-numeric chars
                             const formatted = text.replace(/[^\d.,-]/g, '');
-                            const satAmount = getSatAmount(formatted);
+                            const satAmount = getSatAmount(
+                                formatted,
+                                forceUnit
+                            );
                             onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
                         }}
                         locked={locked}
                         prefix={
-                            units !== 'sats' &&
-                            (units === 'BTC'
+                            effectiveUnits !== 'sats' &&
+                            (effectiveUnits === 'BTC'
                                 ? '₿'
                                 : !getSymbol().rtl
                                 ? getSymbol().symbol
                                 : null)
                         }
                         suffix={
-                            units === 'sats'
-                                ? units
+                            effectiveUnits === 'sats'
+                                ? effectiveUnits
                                 : getSymbol().rtl &&
-                                  units === 'fiat' &&
+                                  effectiveUnits === 'fiat' &&
                                   getSymbol().symbol
                         }
                         style={{
@@ -215,16 +233,16 @@ export default class AmountInput extends React.Component<
                                     color: themeColor('text')
                                 }}
                             >
-                                {getRate(units === 'sats')}
+                                {getRate(effectiveUnits === 'sats')}
                             </Text>
                         )}
-                        {fiatEnabled && units !== 'fiat' && (
+                        {fiatEnabled && effectiveUnits !== 'fiat' && (
                             <Amount sats={satAmount} fixedUnits="fiat" />
                         )}
-                        {units !== 'BTC' && (
+                        {effectiveUnits !== 'BTC' && (
                             <Amount sats={satAmount} fixedUnits="BTC" />
                         )}
-                        {units !== 'sats' && (
+                        {effectiveUnits !== 'sats' && (
                             <Amount sats={satAmount} fixedUnits="sats" />
                         )}
                     </View>

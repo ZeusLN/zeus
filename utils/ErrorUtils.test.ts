@@ -101,6 +101,17 @@ describe('ErrorUtils', () => {
             ).toEqual(
                 'Unable to connect to node. Please verify the host and port are correct and the service is running.'
             );
+            expect(
+                errorToUserFriendly(
+                    Object.assign(new Error(), {
+                        message:
+                            'Error: {"code":2,"message":"verification failed: signature mismatch after caveat verification","details":[]}',
+                        name: 'test'
+                    })
+                )
+            ).toEqual(
+                "Invalid macaroon. Please check that you've entered the correct macaroon for this node."
+            );
         });
 
         it('Returns normal error message for unhandled errorContext', () => {

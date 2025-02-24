@@ -124,14 +124,6 @@ export default class NostrKey extends React.Component<
         } = this.state;
         const { update, error_msg, loading } = LightningAddressStore;
         const { updateSettings, settings } = SettingsStore;
-        const { lightningAddress } = settings;
-        const {
-            enabled,
-            automaticallyAccept,
-            allowComments,
-            nostrRelays,
-            notifications
-        } = lightningAddress;
 
         const VisibilityButton = () => (
             <View>
@@ -385,14 +377,8 @@ export default class NostrKey extends React.Component<
                                                         });
                                                         await updateSettings({
                                                             lightningAddress: {
-                                                                enabled,
-                                                                automaticallyAccept,
-                                                                automaticallyRequestOlympusChannels:
-                                                                    false, // deprecated
-                                                                allowComments,
-                                                                nostrPrivateKey,
-                                                                nostrRelays,
-                                                                notifications
+                                                                ...settings.lightningAddress,
+                                                                nostrPrivateKey
                                                             }
                                                         });
                                                     });
@@ -401,7 +387,9 @@ export default class NostrKey extends React.Component<
                                         }}
                                         disabled={
                                             existingNostrPrivateKey ===
-                                                nostrPrivateKey || !nostrNpub
+                                                nostrPrivateKey ||
+                                            !nostrNpub ||
+                                            SettingsStore.settingsUpdateInProgress
                                         }
                                     />
                                 </View>

@@ -154,9 +154,20 @@ export default class LightningNodeConnect {
         await this.lnc.lnd.lightning
             .getNetworkInfo({})
             .then((data: lnrpc.NetworkInfo) => snakeize(data));
-    getInvoices = async () =>
+    getInvoices = async (
+        params: { limit?: number; reversed?: boolean } = {
+            limit: 500,
+            reversed: true
+        }
+    ) =>
         await this.lnc.lnd.lightning
-            .listInvoices({ reversed: true, num_max_invoices: 100 })
+            .listInvoices({
+                reversed:
+                    params?.reversed !== undefined ? params.reversed : true,
+                ...(params?.limit && {
+                    num_max_invoices: params.limit
+                })
+            })
             .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
     createInvoice = async (data: any) =>
         await this.lnc.lnd.lightning
@@ -173,17 +184,23 @@ export default class LightningNodeConnect {
                 route_hints: data.route_hints
             })
             .then((data: lnrpc.AddInvoiceResponse) => snakeize(data));
-    getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) =>
+    getPayments = async (
+        params: {
+            maxPayments?: number;
+            reversed?: boolean;
+        } = {
+            maxPayments: 500,
+            reversed: true
+        }
+    ) =>
         await this.lnc.lnd.lightning
             .listPayments({
                 include_incomplete: true,
                 ...(params?.maxPayments && {
                     max_payments: params.maxPayments
                 }),
-                ...(params?.reversed && { reversed: params.reversed })
+                reversed:
+                    params?.reversed !== undefined ? params.reversed : true
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
@@ -544,7 +561,7 @@ export default class LightningNodeConnect {
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;
-    supportsLSPS1customMessage = () => false;
+    supportsLSPScustomMessage = () => true;
     supportsLSPS1rest = () => true;
     supportsOffers = () => false;
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');

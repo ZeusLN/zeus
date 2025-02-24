@@ -40,9 +40,7 @@ interface SettingsProps {
 @observer
 export default class Settings extends React.Component<SettingsProps, {}> {
     UNSAFE_componentWillMount() {
-        const { SettingsStore, navigation } = this.props;
-
-        SettingsStore.getSettings();
+        const { navigation } = this.props;
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
@@ -101,7 +99,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 style={styles.columnField}
                                 onPress={() => {
                                     const supportsLSPS1 =
-                                        BackendUtils.supportsLSPS1customMessage() ||
+                                        BackendUtils.supportsLSPScustomMessage() ||
                                         BackendUtils.supportsLSPS1rest();
                                     if (
                                         BackendUtils.supportsFlowLSP() &&

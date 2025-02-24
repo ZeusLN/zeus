@@ -29,6 +29,9 @@ body:
       label: ZEUS version
       description: What version of ZEUS were you running when the bug occurred?
       options:
+        - v0.10.0
+        - v0.9.7
+        - v0.9.6
         - v0.9.5
         - v0.9.4
         - v0.9.3
@@ -46,6 +49,7 @@ body:
         - LND (REST)
         - LND (Lightning Node Connect)
         - Core Lightning (CLNRest)
+        - Nostr Wallet Connect
         - LndHub
         - DEPRECATED Core Lightning (c-lightning-REST)
         - DEPRECATED Core Lightning (Spark)

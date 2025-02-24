@@ -11,6 +11,7 @@ import Spark from '../backends/Spark';
 import Eclair from '../backends/Eclair';
 // Custodial
 import LndHub from '../backends/LndHub';
+import NostrWalletConnect from '../backends/NostrWalletConnect';
 
 class BackendUtils {
     lnd: LND;
@@ -21,6 +22,7 @@ class BackendUtils {
     spark: Spark;
     eclair: Eclair;
     lndHub: LndHub;
+    nostrWalletConnect: NostrWalletConnect;
     constructor() {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
@@ -30,6 +32,7 @@ class BackendUtils {
         this.spark = new Spark();
         this.eclair = new Eclair();
         this.lndHub = new LndHub();
+        this.nostrWalletConnect = new NostrWalletConnect();
     }
 
     getClass = () => {
@@ -51,6 +54,8 @@ class BackendUtils {
                 return this.eclair;
             case 'lndhub':
                 return this.lndHub;
+            case 'nostr-wallet-connect':
+                return this.nostrWalletConnect;
             default:
                 return this.lnd;
         }
@@ -138,12 +143,13 @@ class BackendUtils {
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
 
-    // cln
-    supportsLSPS1customMessage = () => this.call('supportsLSPS1customMessage');
-    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
-
     // lndhub
     login = (...args: any[]) => this.call('login', args);
+
+    // services
+    supportsFlowLSP = () => this.call('supportsFlowLSP');
+    supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
+    supportsLSPS1rest = () => this.call('supportsLSPS1rest');
 
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
@@ -166,7 +172,6 @@ class BackendUtils {
         this.call('supportsAddressTypeSelection');
     supportsTaproot = () => this.call('supportsTaproot');
     supportsBumpFee = () => this.call('supportsBumpFee');
-    supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsNetworkInfo = () => this.call('supportsNetworkInfo');
     supportsSimpleTaprootChannels = () =>
         this.call('supportsSimpleTaprootChannels');
@@ -183,6 +188,9 @@ class BackendUtils {
         this.call('supportsAddressesWithDerivationPaths');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
+    supportsDevTools = () => {
+        return this.isLNDBased() || this.call('supportsDevTools');
+    };
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
@@ -190,6 +198,9 @@ class BackendUtils {
     checkPerms = () => this.call('checkPerms');
     isConnected = (...args: any[]) => this.call('isConnected', args);
     disconnect = (...args: any[]) => this.call('disconnect', args);
+
+    // NWC
+    initNWC = (...args: any[]) => this.call('initNWC', args);
 
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }

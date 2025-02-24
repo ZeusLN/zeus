@@ -35,7 +35,6 @@ import TransactionsStore from '../stores/TransactionsStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import ContactStore from '../stores/ContactStore';
 
-import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
 import FeeLimit from '../components/FeeLimit';
@@ -60,7 +59,6 @@ import { themeColor } from '../utils/ThemeUtils';
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
-import Sweep from '../assets/images/SVG/Sweep.svg';
 
 import Contact from '../models/Contact';
 import TransactionRequest, {
@@ -157,7 +155,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             bolt12,
             destination: destination || '',
             amount: amount || '',
-            satAmount: '',
+            satAmount: '0',
             fee: '',
             utxos: [],
             utxoBalance: 0,
@@ -734,31 +732,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
-                            {BackendUtils.supportsSweep() &&
-                                isValid &&
-                                transactionType === 'On-chain' &&
-                                additionalOutputs.length === 0 && (
-                                    <View
-                                        style={{
-                                            marginRight: 20
-                                        }}
-                                    >
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                navigation.navigate('Sweep', {
-                                                    destination,
-                                                    isValid
-                                                })
-                                            }
-                                        >
-                                            <Sweep
-                                                fill={themeColor('text')}
-                                                width={30}
-                                                height={30}
-                                            />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
                             <View style={{ marginRight: 15 }}>
                                 <TouchableOpacity
                                     onPress={() => this.enableNfc()}
@@ -987,47 +960,28 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                {!fundMax && (
-                                    <AmountInput
-                                        amount={amount}
-                                        title={localeString(
-                                            'views.Send.amount'
-                                        )}
-                                        onAmountChange={(
-                                            amount: string,
-                                            satAmount: string | number
-                                        ) => {
-                                            this.setState({
-                                                amount,
-                                                satAmount
-                                            });
-                                        }}
-                                        hideConversion={amount === 'all'}
-                                    />
-                                )}
-
-                                <View style={{ paddingBottom: 15 }}>
-                                    {fundMax && (
-                                        <>
-                                            <Amount
-                                                sats={
-                                                    utxoBalance > 0
-                                                        ? utxoBalance
-                                                        : confirmedBlockchainBalance
-                                                }
-                                                fixedUnits="BTC"
-                                            />
-                                            <Amount
-                                                sats={
-                                                    utxoBalance > 0
-                                                        ? utxoBalance
-                                                        : confirmedBlockchainBalance
-                                                }
-                                                fixedUnits="sats"
-                                            />
-                                        </>
-                                    )}
-                                </View>
+                                <AmountInput
+                                    amount={
+                                        fundMax
+                                            ? utxoBalance > 0
+                                                ? utxoBalance.toString()
+                                                : confirmedBlockchainBalance.toString()
+                                            : amount
+                                    }
+                                    title={localeString('views.Send.amount')}
+                                    onAmountChange={(
+                                        amount: string,
+                                        satAmount: string | number
+                                    ) => {
+                                        this.setState({
+                                            amount,
+                                            satAmount
+                                        });
+                                    }}
+                                    hideConversion={amount === 'all'}
+                                    locked={fundMax}
+                                    forceUnit={fundMax ? 'sats' : undefined}
+                                />
 
                                 {BackendUtils.supportsOnchainSendMax() &&
                                     additionalOutputs.length === 0 &&
