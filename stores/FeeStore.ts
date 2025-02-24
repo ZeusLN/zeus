@@ -116,7 +116,7 @@ export default class FeeStore {
                     this.weekEarned = data.week_fee_sum || 0;
                     this.monthEarned = data.month_fee_sum || 0;
                     // Deprecated in LND
-                    // Used in c-lightning-REST
+                    // Used in Core Lightning
                     this.totalEarned = data.total_fee_sum || 0;
                     this.loadingFees = false;
                 });
@@ -157,7 +157,7 @@ export default class FeeStore {
         };
 
         if (channelId) {
-            // c-lightning, eclair
+            // Core Lightning
             data.channelId = channelId;
         }
         if (channelPoint) {

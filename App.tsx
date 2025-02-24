@@ -35,7 +35,6 @@ import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 import OnChainAddresses from './views/OnChainAddresses';
 
-import SparkQRScanner from './views/SparkQRScanner';
 import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
 import Lockscreen from './views/Lockscreen';
@@ -569,12 +568,6 @@ export default class App extends React.PureComponent {
                                                         name="NodeQRCodeScanner" // @ts-ignore:next-line
                                                         component={
                                                             NodeQRScanner
-                                                        }
-                                                    />
-                                                    <Stack.Screen
-                                                        name="SparkQRScanner" // @ts-ignore:next-line
-                                                        component={
-                                                            SparkQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
