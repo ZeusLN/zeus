@@ -51,9 +51,6 @@ body:
         - Core Lightning (CLNRest)
         - Nostr Wallet Connect
         - LndHub
-        - DEPRECATED Core Lightning (c-lightning-REST)
-        - DEPRECATED Core Lightning (Spark)
-        - DEPRECATED Eclair
         - Multiple (specified in comments)
     validations:
       required: true

@@ -291,9 +291,7 @@ export default class PaymentRequest extends React.Component<
         const { implementation } = SettingsStore;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
-        const isCLightning: boolean =
-            implementation === 'c-lightning-REST' ||
-            implementation === 'cln-rest';
+        const isCLightning: boolean = implementation === 'cln-rest';
 
         // Zaplocker
         const { isZaplocker } = LnurlPayStore;
@@ -407,9 +405,7 @@ export default class PaymentRequest extends React.Component<
         const { enableTor, implementation } = SettingsStore;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
-        const isCLightning: boolean =
-            implementation === 'c-lightning-REST' ||
-            implementation === 'cln-rest';
+        const isCLightning: boolean = implementation === 'cln-rest';
 
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;

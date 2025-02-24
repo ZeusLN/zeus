@@ -48,7 +48,6 @@ interface SweepState {
     destination: string;
     isValid: boolean;
     fee: string;
-    confirmationTarget: string;
 }
 
 @inject(
@@ -70,8 +69,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         this.state = {
             destination: destination || '',
             isValid: true,
-            fee: '2',
-            confirmationTarget: '60'
+            fee: '2'
         };
     }
 
@@ -109,25 +107,22 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
     sendCoins = () => {
         const { SettingsStore, TransactionsStore, navigation } = this.props;
-        const { destination, fee, confirmationTarget } = this.state;
+        const { destination, fee } = this.state;
         const { implementation } = SettingsStore;
 
         let request: TransactionRequest;
         request =
-            implementation === 'c-lightning-REST' ||
             implementation === 'cln-rest'
                 ? {
                       addr: destination,
                       sat_per_vbyte: fee,
                       amount: 'all',
-                      target_conf: Number(confirmationTarget),
                       spend_unconfirmed: true
                   }
                 : {
                       addr: destination,
                       sat_per_vbyte: fee,
                       send_all: true,
-                      target_conf: Number(confirmationTarget),
                       spend_unconfirmed: true
                   };
         TransactionsStore.sendCoins(request);

@@ -1,4 +1,4 @@
-Zeus is a mobile Bitcoin/Lightning app for LND, Core Lightning, and Eclair node operators
+ZEUS is a mobile Bitcoin/Lightning wallet
 
 Features:
 
@@ -7,7 +7,7 @@ Features:
 * No processing fees
 * No KYC
 * Fully open source (APGLv3)
-* Connect to LND, Core Lightning (Rest + Spark) or Eclair lightning node
+* Connect to LND or Core Lightning remote nodes
 * Manage multiple lightning nodes at once
 * Connect via LNDHub instances
 * Lightning accounts

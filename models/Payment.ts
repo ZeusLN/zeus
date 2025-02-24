@@ -213,7 +213,7 @@ export default class Payment extends BaseModel {
             return this.fee_sat || (Number(this.fee_msat) / 1000).toString();
         }
 
-        // c-lightning-REST
+        // Core Lightning
         if (this.amount_msat && this.amount_sent_msat) {
             const msatoshi_sent: any = Number(
                 this.amount_sent_msat.toString().replace('msat', '')

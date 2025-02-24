@@ -187,9 +187,7 @@ export default class FeeLimit extends React.Component<
         const { implementation } = SettingsStore;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
-        const isCLightning: boolean =
-            implementation === 'c-lightning-REST' ||
-            implementation === 'cln-rest';
+        const isCLightning: boolean = implementation === 'cln-rest';
 
         if (hide) return;
 
