@@ -1026,7 +1026,7 @@
     "views.ActivityToCsv.csvDownloadFailed": "Failed to download CSV file",
     "views.ActivityToCsv.textInputPlaceholder": "File name (optional)",
     "views.ActivityToCsv.downloadButton": "Download CSV",
-    "views.ActivityExport.title": "Export CSV Data",
+    "views.ActivityExport.title": "Export Activity to CSV",
     "views.ActivityExport.exportPayments": "Export Payments",
     "views.ActivityExport.exportInvoices": "Export Invoices",
     "views.ActivityExport.exportTransactions": "Export Transactions",

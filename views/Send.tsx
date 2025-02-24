@@ -59,7 +59,6 @@ import { themeColor } from '../utils/ThemeUtils';
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
-import Sweep from '../assets/images/SVG/Sweep.svg';
 
 import Contact from '../models/Contact';
 import TransactionRequest, {
@@ -733,31 +732,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
-                            {BackendUtils.supportsSweep() &&
-                                isValid &&
-                                transactionType === 'On-chain' &&
-                                additionalOutputs.length === 0 && (
-                                    <View
-                                        style={{
-                                            marginRight: 20
-                                        }}
-                                    >
-                                        <TouchableOpacity
-                                            onPress={() =>
-                                                navigation.navigate('Sweep', {
-                                                    destination,
-                                                    isValid
-                                                })
-                                            }
-                                        >
-                                            <Sweep
-                                                fill={themeColor('text')}
-                                                width={30}
-                                                height={30}
-                                            />
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
                             <View style={{ marginRight: 15 }}>
                                 <TouchableOpacity
                                     onPress={() => this.enableNfc()}
