@@ -5,37 +5,32 @@ import {
     StyleSheet,
     Text,
     View,
-    ScrollView,
-    TouchableOpacity
+    ScrollView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import BalanceStore from '../stores/BalanceStore';
-import InvoicesStore from '../stores/InvoicesStore';
-import ModalStore from '../stores/ModalStore';
-import NodeInfoStore from '../stores/NodeInfoStore';
-import SettingsStore from '../stores/SettingsStore';
-import TransactionsStore from '../stores/TransactionsStore';
+import BalanceStore from '../../stores/BalanceStore';
+import InvoicesStore from '../../stores/InvoicesStore';
+import ModalStore from '../../stores/ModalStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SettingsStore from '../../stores/SettingsStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 
-import Amount from '../components/Amount';
-import Button from '../components/Button';
-import {
-    WarningMessage,
-    ErrorMessage
-} from '../components/SuccessErrorMessage';
-import Header from '../components/Header';
-import OnchainFeeInput from '../components/OnchainFeeInput';
-import Screen from '../components/Screen';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
+import Header from '../../components/Header';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
+import Screen from '../../components/Screen';
+import TextInput from '../../components/TextInput';
 
-import BackendUtils from '../utils/BackendUtils';
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import AddressUtils from '../../utils/AddressUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import TransactionRequest from '../models/TransactionRequest';
-
-import Scan from '../assets/images/SVG/Scan.svg';
+import TransactionRequest from '../../models/TransactionRequest';
 
 interface SweepProps {
     exitSetup: any;
@@ -51,8 +46,8 @@ interface SweepProps {
 
 interface SweepState {
     destination: string;
+    isValid: boolean;
     fee: string;
-    error_msg: string;
     confirmationTarget: string;
 }
 
@@ -74,9 +69,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
 
         this.state = {
             destination: destination || '',
+            isValid: true,
             fee: '2',
-            confirmationTarget: '60',
-            error_msg: ''
+            confirmationTarget: '60'
         };
     }
 
@@ -145,11 +140,31 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
         });
     };
 
+    validateAddress = (destination: string) => {
+        const { NodeInfoStore } = this.props;
+        const { nodeInfo } = NodeInfoStore;
+        const { isTestNet, isRegTest } = nodeInfo;
+        const isValid = AddressUtils.isValidBitcoinAddress(
+            destination,
+            isTestNet || isRegTest
+        );
+        this.setState({
+            isValid,
+            destination
+        });
+    };
+
     render() {
         const { BalanceStore, navigation } = this.props;
-        const { destination, fee, error_msg } = this.state;
+        const { destination, isValid, fee } = this.state;
         const { confirmedBlockchainBalance, unconfirmedBlockchainBalance } =
             BalanceStore;
+
+        const noOnchainBalance =
+            confirmedBlockchainBalance === 0 &&
+            unconfirmedBlockchainBalance === 0;
+
+        const disabled = !destination || !isValid || noOnchainBalance;
 
         return (
             <Screen>
@@ -162,43 +177,21 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={
-                        <View style={{ flex: 1, flexDirection: 'row' }}>
-                            <View style={{ marginTop: 3 }}>
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'HandleAnythingQRScanner'
-                                        )
-                                    }
-                                >
-                                    <Scan
-                                        fill={themeColor('text')}
-                                        width={30}
-                                        height={30}
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    }
                     navigation={navigation}
                 />
                 <ScrollView
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {!!destination &&
-                        BackendUtils.supportsOnchainSends() &&
-                        confirmedBlockchainBalance === 0 &&
-                        unconfirmedBlockchainBalance === 0 && (
-                            <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                                <WarningMessage
-                                    message={localeString(
-                                        'views.Send.noOnchainBalance'
-                                    )}
-                                />
-                            </View>
-                        )}
+                    {!!destination && noOnchainBalance && (
+                        <View style={{ paddingTop: 10, paddingBottom: 10 }}>
+                            <WarningMessage
+                                message={localeString(
+                                    'views.Send.noOnchainBalance'
+                                )}
+                            />
+                        </View>
+                    )}
                     <Text
                         style={{
                             ...styles.text,
@@ -207,22 +200,14 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                     >
                         {localeString('views.Transaction.destAddress')}
                     </Text>
-                    <Text
-                        style={{
-                            color: themeColor('text'),
-                            paddingVertical: 10,
-                            paddingHorizontal: 15,
-                            marginBottom: 10
+                    <TextInput
+                        placeholder={'bc1...'}
+                        value={destination}
+                        error={!isValid}
+                        onChangeText={(text: string) => {
+                            this.validateAddress(text);
                         }}
-                    >
-                        {destination}
-                    </Text>
-
-                    {!!error_msg && !!destination && (
-                        <View style={{ paddingTop: 10, paddingBottom: 10 }}>
-                            <ErrorMessage message={error_msg} />
-                        </View>
-                    )}
+                    />
 
                     <React.Fragment>
                         <View style={{ paddingBottom: 15 }}>
@@ -296,11 +281,14 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                         <View style={styles.button}>
                             <Button
                                 title={localeString('views.Send.sendCoins')}
-                                icon={{
-                                    name: 'send',
-                                    size: 25
-                                }}
+                                icon={
+                                    !disabled && {
+                                        name: 'send',
+                                        size: 25
+                                    }
+                                }
                                 onPress={() => this.sendCoins()}
+                                disabled={disabled}
                             />
                         </View>
                     </React.Fragment>

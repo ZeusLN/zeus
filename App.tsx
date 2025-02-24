@@ -33,7 +33,6 @@ import Channel from './views/Channels/Channel';
 import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
-import Sweep from './views/Sweep';
 import OnChainAddresses from './views/OnChainAddresses';
 
 import SparkQRScanner from './views/SparkQRScanner';
@@ -114,20 +113,11 @@ import Routing from './views/Routing/Routing';
 import RoutingEvent from './views/Routing/RoutingEvent';
 import SetFees from './views/Routing/SetFees';
 
-// Tools
-import Accounts from './views/Accounts/Accounts';
-import BumpFee from './views/BumpFee';
-import SignVerifyMessage from './views/Settings/SignVerifyMessage';
-import CurrencyConverter from './views/Settings/CurrencyConverter';
-import DeveloperTools from './views/Tools/DeveloperTools';
-
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
 import CoinControl from './views/UTXOs/CoinControl';
 import Utxo from './views/UTXOs/UTXO';
-import ImportAccount from './views/Accounts/ImportAccount';
-import ImportingAccount from './views/Accounts/ImportingAccount';
 import QR from './views/QR';
 import AddNotes from './views/AddNotes';
 import Contacts from './views/Settings/Contacts';
@@ -135,7 +125,6 @@ import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 
 import PendingHTLCs from './views/PendingHTLCs';
-import ActivityExportOptions from './views/ActivityExportOptions';
 
 // POS
 import Order from './views/Order';
@@ -181,7 +170,18 @@ import PSBT from './views/PSBT';
 import TxHex from './views/TxHex';
 
 import Menu from './views/Menu';
+
+// Tools
 import Tools from './views/Tools';
+import ActivityExport from './views/Tools/ActivityExport';
+import BumpFee from './views/Tools/BumpFee';
+import CurrencyConverter from './views/Tools/CurrencyConverter';
+import DeveloperTools from './views/Tools/DeveloperTools';
+import SignVerifyMessage from './views/Tools/SignVerifyMessage';
+import Sweep from './views/Tools/Sweep';
+import Accounts from './views/Tools/Accounts/Accounts';
+import ImportAccount from './views/Tools/Accounts/ImportAccount';
+import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -940,9 +940,9 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ActivityExportOptions" // @ts-ignore:next-line
+                                                        name="ActivityExport" // @ts-ignore:next-line
                                                         component={
-                                                            ActivityExportOptions
+                                                            ActivityExport
                                                         }
                                                     />
                                                 </Stack.Navigator>
