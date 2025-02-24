@@ -458,7 +458,7 @@ export default class DisasterRecovery extends React.Component<
                                         borderRadius: 5
                                     }}
                                     titleStyle={{
-                                        color: themeColor('warning'),
+                                        color: themeColor('warning')
                                     }}
                                     secondary
                                 />
@@ -522,7 +522,7 @@ export default class DisasterRecovery extends React.Component<
                                         borderRadius: 5
                                     }}
                                     titleStyle={{
-                                        color: themeColor('warning'),
+                                        color: themeColor('warning')
                                     }}
                                     secondary
                                 />
