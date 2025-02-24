@@ -452,10 +452,13 @@ export default class DisasterRecovery extends React.Component<
                                         }
                                     }}
                                     containerStyle={{
-                                        borderColor: themeColor('delete')
+                                        backgroundColor: '#372C33',
+                                        borderColor: themeColor('warning'),
+                                        borderWidth: 1,
+                                        borderRadius: 5
                                     }}
                                     titleStyle={{
-                                        color: themeColor('delete')
+                                        color: themeColor('warning'),
                                     }}
                                     secondary
                                 />
@@ -513,10 +516,13 @@ export default class DisasterRecovery extends React.Component<
                                         );
                                     }}
                                     containerStyle={{
-                                        borderColor: themeColor('delete')
+                                        backgroundColor: '#372C33',
+                                        borderColor: themeColor('warning'),
+                                        borderWidth: 1,
+                                        borderRadius: 5
                                     }}
                                     titleStyle={{
-                                        color: themeColor('delete')
+                                        color: themeColor('warning'),
                                     }}
                                     secondary
                                 />
@@ -575,10 +581,13 @@ export default class DisasterRecovery extends React.Component<
                                         );
                                     }}
                                     containerStyle={{
-                                        borderColor: themeColor('delete')
+                                        backgroundColor: '#372C33',
+                                        borderColor: themeColor('warning'),
+                                        borderWidth: 1,
+                                        borderRadius: 5
                                     }}
                                     titleStyle={{
-                                        color: themeColor('delete')
+                                        color: themeColor('warning')
                                     }}
                                     secondary
                                 />
