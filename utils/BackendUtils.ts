@@ -4,11 +4,7 @@ import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';
 import EmbeddedLND from '../backends/EmbeddedLND';
 // Core Lightning
-import CLightningREST from '../backends/CLightningREST';
 import CLNRest from '../backends/CLNRest';
-import Spark from '../backends/Spark';
-// Eclair
-import Eclair from '../backends/Eclair';
 // Custodial
 import LndHub from '../backends/LndHub';
 import NostrWalletConnect from '../backends/NostrWalletConnect';
@@ -17,20 +13,14 @@ class BackendUtils {
     lnd: LND;
     lightningNodeConnect: LightningNodeConnect;
     embeddedLND: EmbeddedLND;
-    clightningREST: CLightningREST;
     clnRest: CLNRest;
-    spark: Spark;
-    eclair: Eclair;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
     constructor() {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
         this.embeddedLND = new EmbeddedLND();
-        this.clightningREST = new CLightningREST();
         this.clnRest = new CLNRest();
-        this.spark = new Spark();
-        this.eclair = new Eclair();
         this.lndHub = new LndHub();
         this.nostrWalletConnect = new NostrWalletConnect();
     }
@@ -44,14 +34,8 @@ class BackendUtils {
                 return this.lightningNodeConnect;
             case 'embedded-lnd':
                 return this.embeddedLND;
-            case 'c-lightning-REST':
-                return this.clightningREST;
             case 'cln-rest':
                 return this.clnRest;
-            case 'spark':
-                return this.spark;
-            case 'eclair':
-                return this.eclair;
             case 'lndhub':
                 return this.lndHub;
             case 'nostr-wallet-connect':

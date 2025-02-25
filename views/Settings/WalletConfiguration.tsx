@@ -82,15 +82,13 @@ interface WalletConfigurationProps {
 interface WalletConfigurationState {
     node: Node | null;
     nickname: string; //
-    host: string; // lnd, c-lightning-REST
-    port: string; // lnd, c-lightning-REST
-    macaroonHex: string; // lnd, c-lightning-REST
-    rune: string; // c-lightning-REST
-    url: string; // spark, eclair
-    accessKey: string; // spark
+    host: string; // lnd
+    port: string; // lnd
+    macaroonHex: string; // lnd
+    rune: string; // CLN-rest
     lndhubUrl: string; // lndhub
     username: string | undefined; // lndhub
-    password: string | undefined; // lndhub, eclair
+    password: string | undefined; // lndhub
     hidden: boolean;
     existingAccount: boolean; // lndhub
     dismissCustodialWarning: boolean;
@@ -165,14 +163,12 @@ export default class WalletConfiguration extends React.Component<
         enableTor: false,
         existingAccount: false,
         suggestImport: '',
-        url: '',
         lndhubUrl: '',
         showLndHubModal: false,
         showCertModal: false,
         username: '',
         password: '',
         hidden: true,
-        accessKey: '',
         photo: undefined,
         // lnc
         pairingPhrase: '',
@@ -377,10 +373,8 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
-                url,
                 lndhubUrl,
                 existingAccount,
-                accessKey,
                 username,
                 password,
                 implementation,
@@ -408,10 +402,8 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
-                url,
                 lndhubUrl,
                 existingAccount,
-                accessKey,
                 username,
                 password,
                 implementation: implementation || 'lnd',
@@ -451,13 +443,11 @@ export default class WalletConfiguration extends React.Component<
             dismissCustodialWarning,
             host,
             port,
-            url,
             enableTor,
             lndhubUrl,
             existingAccount,
             macaroonHex,
             rune,
-            accessKey,
             username,
             password,
             implementation,
@@ -487,12 +477,10 @@ export default class WalletConfiguration extends React.Component<
             dismissCustodialWarning,
             host,
             port,
-            url,
             lndhubUrl,
             existingAccount,
             macaroonHex,
             rune,
-            accessKey,
             username,
             password,
             implementation,
@@ -570,13 +558,11 @@ export default class WalletConfiguration extends React.Component<
             nickname,
             host,
             port,
-            url,
             enableTor,
             lndhubUrl,
             existingAccount,
             macaroonHex,
             rune,
-            accessKey,
             username,
             password,
             implementation,
@@ -593,12 +579,10 @@ export default class WalletConfiguration extends React.Component<
             nickname: `${nickname} copy`,
             host,
             port,
-            url,
             lndhubUrl,
             existingAccount,
             macaroonHex,
             rune,
-            accessKey,
             username,
             password,
             implementation,
@@ -730,16 +714,13 @@ export default class WalletConfiguration extends React.Component<
             nickname,
             host,
             port,
-            url,
             lndhubUrl,
             macaroonHex,
             rune,
-            accessKey,
             username,
             password,
             saved,
             active,
-            index,
             newEntry,
             implementation,
             certVerification,
@@ -819,8 +800,7 @@ export default class WalletConfiguration extends React.Component<
                         saved: false,
                         certVerification: value === 'lndhub' ? true : false,
                         host: '',
-                        lndhubUrl: '',
-                        url: ''
+                        lndhubUrl: ''
                     });
                 }}
                 values={interfaceKeys}
@@ -865,29 +845,20 @@ export default class WalletConfiguration extends React.Component<
                         style: { ...styles.text, color: themeColor('text') }
                     }}
                     rightComponent={
-                        implementation === 'eclair' ? undefined : (
-                            <Row>
-                                {loading && (
-                                    <View style={{ paddingRight: 15 }}>
-                                        <LoadingIndicator size={30} />
-                                    </View>
-                                )}
-                                <ScanBadge
-                                    onPress={() =>
-                                        implementation === 'spark'
-                                            ? navigation.navigate(
-                                                  'SparkQRScanner',
-                                                  {
-                                                      index
-                                                  }
-                                              )
-                                            : navigation.navigate(
-                                                  'HandleAnythingQRScanner'
-                                              )
-                                    }
-                                />
-                            </Row>
-                        )
+                        <Row>
+                            {loading && (
+                                <View style={{ paddingRight: 15 }}>
+                                    <LoadingIndicator size={30} />
+                                </View>
+                            )}
+                            <ScanBadge
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'HandleAnythingQRScanner'
+                                    )
+                                }
+                            />
+                        </Row>
                     }
                     navigation={navigation}
                 />
@@ -1267,115 +1238,6 @@ export default class WalletConfiguration extends React.Component<
                                 </View>
                             )}
 
-                        {(implementation === 'spark' ||
-                            implementation == 'eclair') && (
-                            <>
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.AddEditNode.serverAddress'
-                                    )}
-                                </Text>
-                                <TextInput
-                                    placeholder={'http://192.168.1.2:9737'}
-                                    value={url}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            url: text.trim(),
-                                            saved: false
-                                        })
-                                    }
-                                    locked={loading}
-                                    autoCorrect={false}
-                                    autoCapitalize="none"
-                                />
-
-                                {implementation === 'spark' && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.accessKey'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            placeholder={'...'}
-                                            value={accessKey}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    accessKey: text.trim(),
-                                                    saved: false
-                                                });
-                                            }}
-                                            locked={loading}
-                                            autoCorrect={false}
-                                            autoCapitalize="none"
-                                        />
-                                    </>
-                                )}
-                                {implementation === 'eclair' && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.AddEditNode.password'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            <TextInput
-                                                placeholder={'...'}
-                                                value={password}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        password: text.trim(),
-                                                        saved: false
-                                                    });
-                                                }}
-                                                locked={loading}
-                                                secureTextEntry={
-                                                    this.state.hidden
-                                                }
-                                                autoCorrect={false}
-                                                autoCapitalize="none"
-                                                style={{
-                                                    flex: 1,
-                                                    marginRight: 15
-                                                }}
-                                            />
-                                            <ShowHideToggle
-                                                onPress={() =>
-                                                    this.setState({
-                                                        hidden: !this.state
-                                                            .hidden
-                                                    })
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                )}
-                            </>
-                        )}
                         {implementation === 'nostr-wallet-connect' && (
                             <>
                                 <Text
@@ -1657,8 +1519,7 @@ export default class WalletConfiguration extends React.Component<
                             </>
                         )}
                         {(implementation === 'lnd' ||
-                            implementation === 'cln-rest' ||
-                            implementation === 'c-lightning-REST') && (
+                            implementation === 'cln-rest') && (
                             <>
                                 <Text
                                     style={{

@@ -620,10 +620,8 @@ export default class OpenChannel extends React.Component<
                                                         fundMax: newValue,
                                                         local_funding_amount:
                                                             newValue &&
-                                                            (implementation ===
-                                                                'c-lightning-REST' ||
-                                                                implementation ===
-                                                                    'cln-rest')
+                                                            implementation ===
+                                                                'cln-rest'
                                                                 ? 'all'
                                                                 : ''
                                                     });

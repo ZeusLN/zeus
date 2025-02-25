@@ -32,7 +32,7 @@ and
 - [x] Self-custodial
 - [x] No KYC
 - [x] Fully open source (AGPLv3)
-- [x] [Connect to LND, Core Lightning (REST + Sparko), or Eclair lightning node](https://docs.zeusln.app/category/remote-connections)
+- [x] [Connect to LND or Core Lightning remote node](https://docs.zeusln.app/category/remote-connections)
 - [x] Manage multiple lightning nodes at once
 - [x] Connect via LNDHub instances
 - [x] Lightning accounts
@@ -72,7 +72,7 @@ and
 
 ## Connecting ZEUS to your node
 
-You can connect ZEUS to a remote Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd), [eclair](https://github.com/ACINQ/eclair), or [Core Lightning](https://github.com/ElementsProject/lightning) using the [REST](https://github.com/Ride-The-Lightning/c-lightning-REST/) or [Sparko](https://github.com/fiatjaf/sparko) API.
+You can connect ZEUS to a remote Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [Core Lightning](https://github.com/ElementsProject/lightning).
 
 You must provide ZEUS with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.

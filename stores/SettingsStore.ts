@@ -272,13 +272,7 @@ export const INTERFACE_KEYS: {
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
     { key: 'Nostr Wallet Connect', value: 'nostr-wallet-connect' },
-    { key: 'LNDHub', value: 'lndhub' },
-    {
-        key: '[DEPRECATED] Core Lightning (c-lightning-REST)',
-        value: 'c-lightning-REST'
-    },
-    { key: '[DEPRECATED] Core Lightning (Sparko)', value: 'spark' },
-    { key: '[DEPRECATED] Eclair', value: 'eclair' }
+    { key: 'LNDHub', value: 'lndhub' }
 ];
 
 export type Implementations =
@@ -287,9 +281,6 @@ export type Implementations =
     | 'lightning-node-connect'
     | 'cln-rest'
     | 'lndhub'
-    | 'c-lightning-REST'
-    | 'spark'
-    | 'eclair'
     | 'nostr-wallet-connect';
 
 export const EMBEDDED_NODE_NETWORK_KEYS = [
@@ -1375,7 +1366,7 @@ export default class SettingsStore {
         const configuration = data.configurations[0];
         const { adminMacaroon, macaroon, type, uri } = configuration;
 
-        if (type !== 'lnd-rest' && type !== 'clightning-rest') {
+        if (type !== 'lnd-rest') {
             this.btcPayError = localeString(
                 'stores.SettingsStore.btcPayImplementationSupport'
             );
@@ -1383,8 +1374,7 @@ export default class SettingsStore {
             const config = {
                 host: uri,
                 macaroonHex: adminMacaroon || macaroon,
-                implementation:
-                    type === 'clightning-rest' ? 'c-lightning-REST' : 'lnd'
+                implementation: 'lnd'
             };
 
             return config;
