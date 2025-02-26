@@ -15,6 +15,7 @@ RCT_EXTERN_METHOD(
 
 RCT_EXTERN_METHOD(
   startLnd: (NSString *)args
+  lndDir: (NSString *)lndDir
   isTorEnabled: (BOOL)isTorEnabled
   isTestnet: (BOOL)isTestnet
   resolver: (RCTPromiseResolveBlock)resolve

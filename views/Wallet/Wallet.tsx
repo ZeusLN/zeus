@@ -44,6 +44,7 @@ import LinkingUtils from '../../utils/LinkingUtils';
 import {
     initializeLnd,
     startLnd,
+    stopLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
@@ -350,6 +351,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connectNWC,
             posStatus,
             walletPassword,
+            lndDir,
             embeddedLndNetwork,
             updateSettings
         } = SettingsStore;
@@ -401,11 +403,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (implementation === 'embedded-lnd') {
             if (connecting) {
                 AlertStore.checkNeutrinoPeers();
-                await initializeLnd(
-                    embeddedLndNetwork === 'Testnet',
+
+                await stopLnd();
+
+                console.log('lndDir', lndDir);
+                await initializeLnd({
+                    lndDir: lndDir || 'lnd',
+                    isTestnet: embeddedLndNetwork === 'Testnet',
                     rescan,
                     compactDb
-                );
+                });
 
                 // on initial load, do not run EGS
                 if (initialLoad) {
@@ -423,11 +430,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                 }
 
-                await startLnd(
-                    walletPassword,
-                    embeddedTor,
-                    embeddedLndNetwork === 'Testnet'
-                );
+                await startLnd({
+                    lndDir: lndDir || 'lnd',
+                    walletPassword: walletPassword || '',
+                    isTorEnabled: embeddedTor,
+                    isTestnet: embeddedLndNetwork === 'Testnet'
+                });
             }
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
