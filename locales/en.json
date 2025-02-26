@@ -1526,6 +1526,7 @@
     "views.SwapDetails.claimPublicKey": "Claim Public Key",
     "views.SwapDetails.swapTree": "Swap Tree",
     "views.SwapDetails.bip21": "BIP21",
+    "views.SwapDetails.refund": "Refund",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }
