@@ -94,8 +94,8 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  void writeConfig(String config, Promise promise) {
-    String filename = getReactApplicationContext().getFilesDir().toString() + "/lnd.conf";
+  void writeConfig(String config, String lndDir, Promise promise) {
+    String filename = getReactApplicationContext().getFilesDir().toString() + "/" + lndDir + "/lnd.conf";
 
     try {
       new File(filename).getParentFile().mkdirs();
@@ -425,6 +425,14 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   @ReactMethod
   public void DEBUG_deleteSpeedloaderDgraphDirectory(Promise promise) {
     String filename = getReactApplicationContext().getCacheDir().toString() + "/dgraph";
+    File file = new File(filename);
+    deleteRecursive(file);
+    promise.resolve(null);
+  }
+
+  @ReactMethod
+  public void deleteLndDirectory(String lndDir, Promise promise) {
+    String filename = getReactApplicationContext().getCacheDir().toString() + "/" + lndDir;
     File file = new File(filename);
     deleteRecursive(file);
     promise.resolve(null);
