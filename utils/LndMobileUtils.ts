@@ -15,6 +15,7 @@ import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
 
 import Base64Utils from './Base64Utils';
+import { sleep } from './SleepUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
@@ -304,7 +305,24 @@ export async function startLnd({
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+        try {
+            await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+        } catch (e) {
+            let started;
+            while (!started) {
+                try {
+                    console.log('error starting LND - retrying momentarily', e);
+                    await sleep(3000);
+                    await startLnd({
+                        args: '',
+                        lndDir,
+                        isTorEnabled,
+                        isTestnet
+                    });
+                    started = true;
+                } catch (e) {}
+            }
+        }
     }
 
     await new Promise(async (res) => {
