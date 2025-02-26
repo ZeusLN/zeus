@@ -118,7 +118,7 @@ export default class ExternalLinkModal extends React.Component<
                         </View>
                     </View>
                 </View>
-            </ModalBox >
+            </ModalBox>
         );
     }
 }
