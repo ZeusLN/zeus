@@ -11,6 +11,7 @@ import ModalStore from '../../stores/ModalStore';
 import { localeString } from '../../utils/LocaleUtils';
 
 import Leaving from '../../assets/images/SVG/Leaving.svg';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface ExternalLinkModalProps {
     ModalStore: ModalStore;
@@ -35,7 +36,7 @@ export default class ExternalLinkModal extends React.Component<
             <ModalBox
                 isOpen={showExternalLinkModal}
                 style={{
-                    backgroundColor: 'transparent',
+                    backgroundColor: themeColor('background'),
                     paddingLeft: 24,
                     paddingRight: 24,
                     height: 580
@@ -53,7 +54,7 @@ export default class ExternalLinkModal extends React.Component<
                 >
                     <View
                         style={{
-                            backgroundColor: 'white',
+                            backgroundColor: themeColor('background'),
                             borderRadius: 30,
                             padding: 35,
                             alignItems: 'center',
@@ -64,12 +65,12 @@ export default class ExternalLinkModal extends React.Component<
                             }
                         }}
                     >
-                        <Leaving />
+                        <Leaving color={themeColor('text')} />
                         <Text
                             style={{
                                 fontSize: 24,
                                 fontWeight: 'bold',
-                                color: 'black'
+                                color: themeColor('text')
                             }}
                         >
                             {localeString(
@@ -80,7 +81,8 @@ export default class ExternalLinkModal extends React.Component<
                             style={{
                                 marginTop: 20,
                                 marginBottom: 25,
-                                textAlign: 'center'
+                                textAlign: 'center',
+                                color: themeColor('text')
                             }}
                         >
                             {localeString(
