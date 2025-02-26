@@ -2,9 +2,6 @@ import { action, observable } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { themeColor } from '../utils/ThemeUtils';
-// import BigNumber from 'bignumber.js';
-
-// import SettingsStore from './SettingsStore';
 
 // wss://api.testnet.boltz.exchange/v2/ws
 export const HOST = 'https://api.testnet.boltz.exchange/v2';
@@ -74,5 +71,27 @@ export default class SwapStore {
             }
         } catch {}
         this.loading = false;
+    };
+
+    public getLockupTransaction = async (id: string) => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${HOST}/swap/submarine/${id}/transaction`
+            );
+
+            const status = response.info().status;
+            if (status == 200) {
+                const data = response.json();
+                return {
+                    id: data.id,
+                    hex: data.hex,
+                    timeoutBlockHeight: data.timeoutBlockHeight,
+                    timeoutEta: data.timeoutEta
+                };
+            }
+        } catch (error) {
+            console.error('Error in getLockupTransaction:', error);
+        }
     };
 }

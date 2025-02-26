@@ -144,8 +144,20 @@ export default class SwapPane extends React.PureComponent<
             const { SwapStore } = this.props;
             try {
                 console.log('Creating submarine swap...');
-
+                let refundPublicKey: any;
+                let refundPrivateKey: any;
                 const keys: any = ECPairFactory(ecc).makeRandom();
+
+                refundPrivateKey = Buffer.from(keys.privateKey).toString('hex');
+                refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
+                console.log(
+                    'keys private key:',
+                    Buffer.from(keys.privateKey).toString('hex')
+                );
+                console.log(
+                    'Keys public key:',
+                    Buffer.from(keys.publicKey).toString('hex')
+                );
 
                 const response = await ReactNativeBlobUtil.fetch(
                     'POST',
@@ -157,9 +169,7 @@ export default class SwapPane extends React.PureComponent<
                         invoice,
                         to: 'BTC',
                         from: 'BTC',
-                        refundPublicKey: Buffer.from(keys.publicKey).toString(
-                            'hex'
-                        )
+                        refundPublicKey
                     })
                 );
 
@@ -180,6 +190,11 @@ export default class SwapPane extends React.PureComponent<
 
                 // Add the swap type
                 responseData.type = 'Submarine';
+
+                responseData.refundPrivateKey = refundPrivateKey;
+                responseData.refundPublicKey = refundPublicKey;
+
+                responseData.receiveAmount = this.state.outputSats.toString();
 
                 await saveSwapToStorage(responseData, keys, invoice);
 

@@ -112,3 +112,45 @@ export const createReverseClaimTransaction = async ({
         throw e;
     }
 };
+
+/**
+ * @throws
+ */
+export const createRefundTransaction = async ({
+    endpoint,
+    swapId,
+    claimLeaf,
+    refundLeaf,
+    transactionHex,
+    privateKey,
+    feeRate,
+    destinationAddress,
+    isTestnet
+}: {
+    endpoint: string;
+    swapId: string;
+    claimLeaf: string;
+    refundLeaf: string;
+    transactionHex: string;
+    privateKey: string;
+    feeRate: number;
+    destinationAddress: string;
+    isTestnet?: boolean;
+}): Promise<string> => {
+    try {
+        const error: string = await LncModule.createRefundTransaction(
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            transactionHex,
+            privateKey,
+            feeRate,
+            destinationAddress,
+            isTestnet
+        );
+        return error;
+    } catch (e) {
+        throw e;
+    }
+};
