@@ -10,8 +10,11 @@ import { Route } from '@react-navigation/native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-const { createClaimTransaction, createReverseClaimTransaction } =
-    lndMobile.swaps;
+const {
+    createClaimTransaction,
+    createReverseClaimTransaction,
+    createRefundTransaction
+} = lndMobile.swaps;
 
 import Screen from '../components/Screen';
 import Header from '../components/Header';
@@ -25,7 +28,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
-import SwapStore from '../stores/SwapStore';
+import SwapStore, { HOST } from '../stores/SwapStore';
 
 import QR from '../assets/images/SVG/QR.svg';
 
@@ -70,6 +73,8 @@ export default class SwapDetails extends React.Component<
 
     componentDidMount() {
         const { swapData } = this.props.route.params;
+
+        console.log(swapData);
 
         if (!swapData) {
             console.error('No swap data provided.');
@@ -553,6 +558,34 @@ export default class SwapDetails extends React.Component<
         }
     };
 
+    createRefundTransaction = async (
+        swapData: any,
+        lockupTransaction: any,
+        fee: any,
+        endpoint: string,
+        destinationAddress: string
+    ): Promise<boolean> => {
+        try {
+            const refundTx = await createRefundTransaction({
+                endpoint,
+                swapId: swapData.id,
+                claimLeaf: swapData.swapTree.claimLeaf.output,
+                refundLeaf: swapData.swapTree.refundLeaf.output,
+                transactionHex: lockupTransaction.hex,
+                privateKey: swapData.refundPrivateKey,
+                feeRate: Number(fee),
+                destinationAddress,
+                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            });
+
+            console.log('Refund transaction created successfully:', refundTx);
+            return true;
+        } catch (error) {
+            console.error('Error creating refund transaction:', error);
+            return false;
+        }
+    };
+
     render() {
         const { navigation, SwapStore } = this.props;
 
@@ -729,6 +762,52 @@ export default class SwapDetails extends React.Component<
                                     : swapData?.invoice,
                                 transactionType: isSubmarineSwap && 'On-chain'
                             });
+                        }}
+                        secondary
+                    />
+                )}
+                {(updates === 'invoice.failedToPay' ||
+                    updates === 'transaction.lockupFailed') && (
+                    <Button
+                        title={localeString('views.SwapDetails.refund')}
+                        containerStyle={{
+                            paddingVertical: 10
+                        }}
+                        onPress={async () => {
+                            const { SwapStore } = this.props;
+                            let submitted = false;
+
+                            try {
+                                const lockupTransaction =
+                                    await SwapStore?.getLockupTransaction(
+                                        swapData.id
+                                    );
+
+                                // Create the refund transaction
+                                submitted = await this.createRefundTransaction(
+                                    swapData,
+                                    lockupTransaction,
+                                    2,
+                                    HOST,
+                                    'tb1q5yhqklg9me33rpc5vas88rcs8fr6guhkyksr6x'
+                                );
+
+                                if (submitted) {
+                                    console.log(
+                                        'Refund transaction created successfully.'
+                                    );
+                                } else {
+                                    console.error(
+                                        'Failed to create refund transaction.'
+                                    );
+                                }
+                            } catch (error) {
+                                console.error(
+                                    'Error in refund process:',
+                                    error
+                                );
+                            }
+                            console.log('Refund submission status:', submitted);
                         }}
                         secondary
                     />

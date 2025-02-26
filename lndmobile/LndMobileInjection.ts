@@ -553,6 +553,27 @@ export interface ILndMobileInjections {
             feeRate: number;
             isTestnet?: boolean;
         }) => Promise<string>;
+        createRefundTransaction: ({
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            transactionHex,
+            privateKey,
+            feeRate,
+            destinationAddress,
+            isTestnet
+        }: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            transactionHex: string;
+            privateKey: string;
+            feeRate: number;
+            destinationAddress: string;
+            isTestnet?: boolean;
+        }) => Promise<string>;
     };
 }
 
