@@ -1,3 +1,4 @@
+import { createRefundTransaction } from './swaps';
 export enum ELndMobileStatusCodes {
     STATUS_SERVICE_BOUND = 1,
     STATUS_PROCESS_STARTED = 2,
@@ -77,6 +78,18 @@ export interface ILndMobile {
         lockupAddress: string,
         destinationAddress: string,
         feeRate: number,
+        isTestnet?: boolean
+    ): Promise<string>;
+
+    createRefundTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        transactionHex: string,
+        privateKey: string,
+        feeRate: numberstring,
+        destinationAddress: string,
         isTestnet?: boolean
     ): Promise<string>;
 }
