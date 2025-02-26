@@ -65,7 +65,7 @@ export default class ExternalLinkModal extends React.Component<
                             }
                         }}
                     >
-                        <Leaving stroke={themeColor('text')} />
+                        <Leaving color={themeColor('text')} />
                         <Text
                             style={{
                                 fontSize: 24,
@@ -118,7 +118,7 @@ export default class ExternalLinkModal extends React.Component<
                         </View>
                     </View>
                 </View>
-            </ModalBox>
+            </ModalBox >
         );
     }
 }
