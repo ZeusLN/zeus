@@ -430,7 +430,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     });
                 } else {
                     if (expressGraphSyncEnabled) {
+                        console.log('EGS start');
+                        // TODO: Android
+                        // can't switch nodes otherwise EGS crashes
                         await expressGraphSync();
+                        console.log('EGS success!');
                         if (settings.resetExpressGraphSyncOnStartup) {
                             await updateSettings({
                                 resetExpressGraphSyncOnStartup: false
@@ -439,6 +443,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                 }
 
+                console.log('about to start!');
                 await startLnd({
                     lndDir: lndDir || 'lnd',
                     walletPassword: walletPassword || '',

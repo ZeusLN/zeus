@@ -232,12 +232,14 @@ export async function expressGraphSync() {
         }
 
         try {
+            console.log('about to start gossip');
             const gossipStatus = await gossipSync(
                 stores.settingsStore?.settings?.speedloader === 'Custom'
                     ? stores.settingsStore?.settings?.customSpeedloader
                     : stores.settingsStore?.settings?.speedloader ||
                           DEFAULT_SPEEDLOADER
             );
+            console.log('gossipStatus', gossipStatus);
 
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
@@ -264,21 +266,31 @@ export async function initializeLnd({
     compactDb?: boolean;
 }) {
     const { initialize } = lndMobile.index;
+    console.log('writing config');
     await writeLndConfig({ lndDir, isTestnet, rescan, compactDb });
+    console.log('initializing');
     await initialize();
+    console.log('intialize success!');
 }
 
 export async function stopLnd() {
     const { checkStatus, stopLnd } = lndMobile.index;
     try {
         const status = await checkStatus();
+        console.log('stop status', status);
         if (
             (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
             ELndMobileStatusCodes.STATUS_PROCESS_STARTED
         ) {
+            console.log('stopping LND');
             await stopLnd();
+            console.log('killing LND');
             await NativeModules.LndMobileTools.killLnd();
+            await sleep(3000);
+            console.log('SUCCESS!');
             return;
+        } else {
+            console.log('bad status');
         }
     } catch (e) {
         console.log('error stopping LND', e);
@@ -301,12 +313,15 @@ export async function startLnd({
     const { unlockWallet } = lndMobile.wallet;
 
     const status = await checkStatus();
+    console.log('start status', status);
     if (
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
         try {
+            console.log('starting LND...');
             await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+            console.log('start success!!!');
         } catch (e) {
             let started;
             while (!started) {
@@ -323,6 +338,8 @@ export async function startLnd({
                 } catch (e) {}
             }
         }
+    } else {
+        console.log('bad status');
     }
 
     await new Promise(async (res) => {
