@@ -98,7 +98,8 @@ import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjober
 import {
     // swaps
     createClaimTransaction,
-    createReverseClaimTransaction
+    createReverseClaimTransaction,
+    createRefundTransaction
 } from './swaps';
 
 import {
@@ -642,6 +643,7 @@ export default {
     },
     swaps: {
         createClaimTransaction,
-        createReverseClaimTransaction
+        createReverseClaimTransaction,
+        createRefundTransaction
     }
 } as ILndMobileInjections;
