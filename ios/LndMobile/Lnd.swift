@@ -180,9 +180,9 @@ open class Lnd {
     return flags
   }
 
-  func startLnd(_ args: String, isTorEnabled: Bool, isTestnet: Bool, lndStartedCallback: @escaping Callback) -> Void {
+  func startLnd(_ args: String, lndDir: String, isTorEnabled: Bool, isTestnet: Bool, lndStartedCallback: @escaping Callback) -> Void {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    let lndPath = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
+    let lndPath = applicationSupport.appendingPathComponent(lndDir, isDirectory: true)
 
     var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" " + args
     if (isTorEnabled) {

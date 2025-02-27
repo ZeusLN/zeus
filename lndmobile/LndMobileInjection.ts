@@ -112,24 +112,38 @@ import { OutPoint } from '../models/TransactionRequest';
 export interface ILndMobileInjections {
     index: {
         initialize: () => Promise<{ data: string } | number>;
-        writeConfig: (config: string) => Promise<string>;
+        writeConfig: ({
+            lndDir,
+            config
+        }: {
+            lndDir: string;
+            config: string;
+        }) => Promise<string>;
         subscribeState: () => Promise<string>;
         decodeState: (data: string) => lnrpc.SubscribeStateResponse;
         checkStatus: () => Promise<number>;
-        startLnd: (
-            args: string,
-            isTorEnabled?: boolean,
-            isTestnet?: boolean
-        ) => Promise<string>;
+        startLnd: ({
+            args,
+            lndDir,
+            isTorEnabled,
+            isTestnet
+        }: {
+            args: string;
+            lndDir: string;
+            isTorEnabled?: boolean;
+            isTestnet?: boolean;
+        }) => Promise<string>;
         stopLnd: () => Promise<string>;
         gossipSync: (serviceUrl: string) => Promise<{ data: string }>;
         cancelGossipSync: () => void;
         checkICloudEnabled: () => Promise<boolean>;
         checkApplicationSupportExists: () => Promise<boolean>;
         checkLndFolderExists: () => Promise<boolean>;
-        createIOSApplicationSupportAndLndDirectories: () => Promise<boolean>;
+        createIOSApplicationSupportAndLndDirectories: (
+            lndDir: string
+        ) => Promise<boolean>;
         TEMP_moveLndToApplicationSupport: () => Promise<boolean>;
-        excludeLndICloudBackup: () => Promise<boolean>;
+        excludeLndICloudBackup: (lndDir: string) => Promise<boolean>;
 
         addInvoice: ({
             amount,

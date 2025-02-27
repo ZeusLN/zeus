@@ -26,11 +26,11 @@ class LndMobileTools: RCTEventEmitter {
     return false
   }
 
-  @objc(writeConfig:resolver:rejecter:)
-  func writeConfig(config: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(writeConfig:lndDir:resolver:rejecter:)
+  func writeConfig(config: String, lndDir: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     do {
       let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-      let url = paths[0].appendingPathComponent("lnd", isDirectory: true).appendingPathComponent("lnd.conf", isDirectory: false)
+      let url = paths[0].appendingPathComponent(lndDir, isDirectory: true).appendingPathComponent("lnd.conf", isDirectory: false)
       NSLog(url.relativeString)
 
       try config.write(to: url, atomically: true, encoding: .utf8)
@@ -227,6 +227,22 @@ class LndMobileTools: RCTEventEmitter {
     resolve(nil)
   }
 
+  @objc(deleteLndDirectory:resolver:rejecter:)
+  func deleteLndDirectory(lndDir: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    let fileManager = FileManager.default
+    let applicationSupportUrl = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    let lndUrl = applicationSupportUrl.appendingPathComponent(lndDir)
+  
+    do {
+      try FileManager.default.removeItem(at: lndUrl)
+    } catch {
+      reject("error deleting lnd dir", error.localizedDescription, error)
+      return
+    }
+
+    resolve(true)
+  }
+
   @objc(DEBUG_deleteNeutrinoFiles:resolver:rejecter:)
   func DEBUG_deleteNeutrinoFiles(network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -265,11 +281,11 @@ class LndMobileTools: RCTEventEmitter {
     resolve(FileManager.default.fileExists(atPath: lndFolder.path))
   }
 
-  @objc(createIOSApplicationSupportAndLndDirectories:rejecter:)
-  func createIOSApplicationSupportAndLndDirectories(resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(createIOSApplicationSupportAndLndDirectories:resolver:rejecter:)
+  func createIOSApplicationSupportAndLndDirectories(lndDir: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     do {
       let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-      let lndFolder = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
+      let lndFolder = applicationSupport.appendingPathComponent(lndDir, isDirectory: true)
       // This will create the lnd folder as well as "Application Support"
       try FileManager.default.createDirectory(at: lndFolder, withIntermediateDirectories: true)
 
@@ -279,10 +295,10 @@ class LndMobileTools: RCTEventEmitter {
     }
   }
 
-  @objc(excludeLndICloudBackup:rejecter:)
-  func excludeLndICloudBackup(resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(excludeLndICloudBackup:resolver:rejecter:)
+  func excludeLndICloudBackup(lndDir: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-    var lndFolder = applicationSupport.appendingPathComponent("lnd", isDirectory: true)
+    var lndFolder = applicationSupport.appendingPathComponent(lndDir, isDirectory: true)
 
     do {
       if FileManager.default.fileExists(atPath: lndFolder.path) {
@@ -462,5 +478,19 @@ class LndMobileTools: RCTEventEmitter {
      }
     }
   #endif
+  }
+
+  @objc(killLnd:rejecter:)
+  func killLnd(resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    // On iOS, we can't directly kill other processes, but we can mark LND as stopped
+    // and let the system clean up the resources
+    if Lnd.shared.lndStarted {
+        Lnd.shared.lndStarted = false
+        // Clear any active streams
+        Lnd.shared.activeStreams.removeAll()
+        resolve(true)
+    } else {
+        resolve(false)
+    }
   }
 }

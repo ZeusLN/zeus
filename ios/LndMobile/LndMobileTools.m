@@ -5,6 +5,7 @@
 
 RCT_EXTERN_METHOD(
   writeConfig: (NSString *)config
+  lndDir: (NSString *)lndDir
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
@@ -59,6 +60,12 @@ RCT_EXTERN_METHOD(
 )
 
 RCT_EXTERN_METHOD(
+  deleteLndDirectory: (NSString)lndDir
+  resolver: (RCTPromiseResolveBlock)resolve
+  rejecter: (RCTPromiseRejectBlock)reject
+)
+
+RCT_EXTERN_METHOD(
   DEBUG_deleteNeutrinoFiles: (NSString)network
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
@@ -75,12 +82,14 @@ RCT_EXTERN_METHOD(
 )
 
 RCT_EXTERN_METHOD(
-  createIOSApplicationSupportAndLndDirectories: (RCTPromiseResolveBlock)resolve
+  createIOSApplicationSupportAndLndDirectories: (NSString)lndDir
+  resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
 
 RCT_EXTERN_METHOD(
-  excludeLndICloudBackup: (RCTPromiseResolveBlock)resolve
+  excludeLndICloudBackup: (NSString)lndDir
+  resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
 
@@ -110,6 +119,11 @@ RCT_EXTERN_METHOD(
 
 RCT_EXTERN_METHOD(
   macosOpenFileDialog: (RCTPromiseResolveBlock)resolve
+  rejecter: (RCTPromiseRejectBlock)reject
+)
+
+RCT_EXTERN_METHOD(
+  killLnd: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
 

@@ -40,6 +40,12 @@ export interface Node {
     customMailboxServer?: string;
     // NWC
     nostrWalletConnectUrl?: string;
+    // Embedded LND
+    seedPhrase?: string[];
+    walletPassword?: string;
+    adminMacaroon?: string;
+    embeddedLndNetwork?: string;
+    lndDir?: string;
 }
 
 interface PrivacySettings {
@@ -1255,6 +1261,7 @@ export default class SettingsStore {
     @observable public walletPassword: string;
     @observable public adminMacaroon: string;
     @observable public embeddedLndNetwork: string;
+    @observable public lndDir?: string;
     @observable public initialStart: boolean = true;
     // NWC
     @observable public nostrWalletConnectUrl: string;
@@ -1413,6 +1420,7 @@ export default class SettingsStore {
             this.walletPassword = node.walletPassword;
             this.adminMacaroon = node.adminMacaroon;
             this.embeddedLndNetwork = node.embeddedLndNetwork;
+            this.lndDir = node.lndDir || 'lnd';
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;
         }
