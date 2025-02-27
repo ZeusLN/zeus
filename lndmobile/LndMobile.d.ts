@@ -1,4 +1,3 @@
-import { createRefundTransaction } from './swaps';
 export enum ELndMobileStatusCodes {
     STATUS_SERVICE_BOUND = 1,
     STATUS_PROCESS_STARTED = 2,
