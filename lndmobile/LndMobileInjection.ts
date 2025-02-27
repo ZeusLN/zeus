@@ -100,7 +100,8 @@ import { sweepRemoteClosed } from './chantools';
 import {
     // swaps
     createClaimTransaction,
-    createReverseClaimTransaction
+    createReverseClaimTransaction,
+    createRefundTransaction
 } from './swaps';
 
 import {
@@ -687,6 +688,7 @@ export default {
     },
     swaps: {
         createClaimTransaction,
-        createReverseClaimTransaction
+        createReverseClaimTransaction,
+        createRefundTransaction
     }
 } as ILndMobileInjections;
