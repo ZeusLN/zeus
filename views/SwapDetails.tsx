@@ -566,7 +566,7 @@ export default class SwapDetails extends React.Component<
         destinationAddress: string
     ): Promise<boolean> => {
         try {
-            const refundTx = await createRefundTransaction({
+            await createRefundTransaction({
                 endpoint,
                 swapId: swapData.id,
                 claimLeaf: swapData.swapTree.claimLeaf.output,
@@ -578,7 +578,7 @@ export default class SwapDetails extends React.Component<
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
 
-            console.log('Refund transaction created successfully:', refundTx);
+            console.log('Refund transaction created successfully');
             return true;
         } catch (error) {
             console.error('Error creating refund transaction:', error);
@@ -778,28 +778,30 @@ export default class SwapDetails extends React.Component<
                             let submitted = false;
 
                             try {
-                                const lockupTransaction =
-                                    await SwapStore?.getLockupTransaction(
-                                        swapData.id
-                                    );
-
-                                // Create the refund transaction
-                                submitted = await this.createRefundTransaction(
-                                    swapData,
-                                    lockupTransaction,
-                                    2,
-                                    HOST,
-                                    'tb1q5yhqklg9me33rpc5vas88rcs8fr6guhkyksr6x'
-                                );
-
                                 if (submitted) {
                                     console.log(
-                                        'Refund transaction created successfully.'
+                                        'Refund Transaction already created and submitted successfully. Skipping.'
                                     );
                                 } else {
-                                    console.error(
-                                        'Failed to create refund transaction.'
+                                    const lockupTransaction =
+                                        await SwapStore?.getLockupTransaction(
+                                            swapData.id
+                                        );
+
+                                    console.log(
+                                        'Lockup transaction:',
+                                        lockupTransaction
                                     );
+
+                                    // Create the refund transaction
+                                    submitted =
+                                        await this.createRefundTransaction(
+                                            swapData,
+                                            lockupTransaction,
+                                            2,
+                                            HOST,
+                                            'tb1q5yhqklg9me33rpc5vas88rcs8fr6guhkyksr6x'
+                                        );
                                 }
                             } catch (error) {
                                 console.error(
