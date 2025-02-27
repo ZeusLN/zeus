@@ -51,8 +51,8 @@ export default class ChannelBackupStore {
     };
 
     private logBackupStatus = async (status: string) => {
-        await Storage.setItem('LAST_CHANNEL_BACKUP_STATUS', status);
-        await Storage.setItem('LAST_CHANNEL_BACKUP_TIME', `${new Date()}`);
+        await Storage.setItem(LAST_CHANNEL_BACKUP_STATUS, status);
+        await Storage.setItem(LAST_CHANNEL_BACKUP_TIME, `${new Date()}`);
     };
 
     public backupChannels = async () => {
