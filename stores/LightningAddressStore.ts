@@ -821,7 +821,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public redeemAllOpenPayments = async () => {
+    public redeemAllOpenPayments = async (localNotification?: boolean) => {
         this.redeemingAll = true;
         const attestationLevel = this.settingsStore?.settings?.lightningAddress
             ?.automaticallyAcceptAttestationLevel
@@ -836,7 +836,8 @@ export default class LightningAddressStore {
                     item.hash,
                     item.amount_msat,
                     item.comment,
-                    true
+                    true,
+                    localNotification
                 );
                 return;
             }
@@ -852,7 +853,8 @@ export default class LightningAddressStore {
                             item.hash,
                             item.amount_msat,
                             item.comment,
-                            true
+                            true,
+                            localNotification
                         );
                     })
                     .catch((e) => {
@@ -954,7 +956,7 @@ export default class LightningAddressStore {
                 runInAction(() => {
                     this.readyToAutomaticallyAccept = true;
                     if (this.socket && this.socket.connected) return;
-                    this.redeemAllOpenPayments();
+                    this.redeemAllOpenPayments(true);
                     this.subscribeUpdates();
                 });
             }
