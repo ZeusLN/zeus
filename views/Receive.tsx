@@ -39,7 +39,10 @@ import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
+import DropdownSetting from '../components/DropdownSetting';
 import Header from '../components/Header';
+import HopPicker from '../components/HopPicker';
+import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
 import PaidIndicator from '../components/PaidIndicator';
 import ModalBox from '../components/ModalBox';
@@ -82,13 +85,13 @@ import {
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
 
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import UnifiedSvg from '../assets/images/SVG/DynamicSVG/UnifiedSvg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
-import DropdownSetting from '../components/DropdownSetting';
-import HopPicker from '../components/HopPicker';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -140,6 +143,7 @@ interface ReceiveState {
     account: string;
     blindedPaths: boolean;
     nfcSupported: boolean;
+    advancedSettingsToggle: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -194,6 +198,7 @@ export default class Receive extends React.Component<
             account: 'default',
             blindedPaths: false,
             nfcSupported: false,
+            advancedSettingsToggle: false,
             // POS
             orderId: '',
             orderTip: '',
@@ -1123,7 +1128,8 @@ export default class Receive extends React.Component<
             selectedRouteHintChannels,
             blindedPaths,
             hideRightHeaderComponent,
-            nfcSupported
+            nfcSupported,
+            advancedSettingsToggle
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1492,6 +1498,13 @@ export default class Receive extends React.Component<
         };
 
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
+
+        const showAdvancedSettingsToggle =
+            (BackendUtils.supportsCustomPreimages() &&
+                showCustomPreimageField) ||
+            (BackendUtils.isLNDBased() && !lspIsActive) ||
+            (BackendUtils.supportsAMP() && !lspIsActive) ||
+            (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive);
 
         return (
             <Screen>
@@ -2626,328 +2639,394 @@ export default class Receive extends React.Component<
                                                     </>
                                                 )}
 
-                                            {BackendUtils.supportsCustomPreimages() &&
-                                                showCustomPreimageField && (
-                                                    <>
-                                                        <Text
-                                                            style={{
-                                                                ...styles.secondaryText,
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'views.Receive.customPreimage'
-                                                            )}
-                                                        </Text>
-                                                        <TextInput
-                                                            value={
-                                                                customPreimage
-                                                            }
-                                                            onChangeText={(
-                                                                text: string
-                                                            ) =>
-                                                                this.setState({
-                                                                    customPreimage:
-                                                                        text
-                                                                })
-                                                            }
-                                                        />
-                                                    </>
-                                                )}
-
-                                            {BackendUtils.isLNDBased() &&
-                                                !lspIsActive && (
+                                            {showAdvancedSettingsToggle && (
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        this.setState({
+                                                            advancedSettingsToggle:
+                                                                !advancedSettingsToggle
+                                                        });
+                                                    }}
+                                                >
                                                     <View
                                                         style={{
-                                                            flexDirection:
-                                                                'row',
-                                                            marginTop: 16,
-                                                            marginBottom:
-                                                                Platform.OS ===
-                                                                'ios'
-                                                                    ? 10
-                                                                    : 6
+                                                            marginBottom: 10
                                                         }}
                                                     >
-                                                        <View
-                                                            style={{ flex: 1 }}
-                                                        >
-                                                            <Text
+                                                        <Row justify="space-between">
+                                                            <View
                                                                 style={{
-                                                                    ...styles.secondaryText,
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
+                                                                    width: '95%'
                                                                 }}
-                                                                infoModalText={[
-                                                                    localeString(
-                                                                        'views.Receive.routeHintSwitchExplainer1'
-                                                                    ),
-                                                                    localeString(
-                                                                        'views.Receive.routeHintSwitchExplainer2'
-                                                                    ),
-                                                                    localeString(
-                                                                        'views.Receive.routeHintSwitchExplainer3'
-                                                                    )
-                                                                ]}
                                                             >
-                                                                {localeString(
-                                                                    'views.Receive.routeHints'
-                                                                )}
-                                                            </Text>
-                                                        </View>
-                                                        <View
-                                                            style={{
-                                                                alignSelf:
-                                                                    'center',
-                                                                marginLeft: 5
-                                                            }}
-                                                        >
-                                                            <Switch
-                                                                value={
-                                                                    routeHints
-                                                                }
-                                                                onValueChange={() =>
-                                                                    this.setState(
-                                                                        {
-                                                                            routeHints:
-                                                                                !routeHints
-                                                                        }
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    blindedPaths
-                                                                }
-                                                            />
-                                                        </View>
-                                                    </View>
-                                                )}
-
-                                            {BackendUtils.isLNDBased() &&
-                                                !lspIsActive &&
-                                                routeHints && (
-                                                    <Row>
-                                                        <Text
-                                                            style={{
-                                                                ...styles.secondaryText,
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                )
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'general.mode'
+                                                                <KeyValue
+                                                                    keyValue={localeString(
+                                                                        'general.advancedSettings'
+                                                                    )}
+                                                                />
+                                                            </View>
+                                                            {advancedSettingsToggle ? (
+                                                                <CaretDown
+                                                                    fill={themeColor(
+                                                                        'text'
+                                                                    )}
+                                                                    width="20"
+                                                                    height="20"
+                                                                />
+                                                            ) : (
+                                                                <CaretRight
+                                                                    fill={themeColor(
+                                                                        'text'
+                                                                    )}
+                                                                    width="20"
+                                                                    height="20"
+                                                                />
                                                             )}
-                                                        </Text>
-                                                        <ButtonGroup
-                                                            onPress={
-                                                                setRouteHintMode
-                                                            }
-                                                            selectedIndex={
-                                                                routeHintMode
-                                                            }
-                                                            buttons={
-                                                                routeHintModeButtons
-                                                            }
-                                                            selectedButtonStyle={{
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'highlight'
-                                                                    ),
-                                                                borderRadius: 12
-                                                            }}
-                                                            containerStyle={{
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'secondary'
-                                                                    ),
-                                                                borderRadius: 12,
-                                                                borderWidth: 0,
-                                                                height: 30,
-                                                                flex: 1
-                                                            }}
-                                                            innerBorderStyle={{
-                                                                color: themeColor(
-                                                                    'secondary'
-                                                                )
-                                                            }}
-                                                        />
-                                                    </Row>
-                                                )}
+                                                        </Row>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )}
 
-                                            {BackendUtils.isLNDBased() &&
-                                                routeHints && (
-                                                    <HopPicker
-                                                        ref={(ref) =>
-                                                            (this.hopPickerRef =
-                                                                ref)
-                                                        }
-                                                        onValueChange={(
-                                                            channels
-                                                        ) => {
-                                                            this.setState({
-                                                                selectedRouteHintChannels:
-                                                                    channels
-                                                            });
-                                                        }}
-                                                        onCancel={() => {
-                                                            if (
-                                                                !selectedRouteHintChannels?.length
-                                                            ) {
-                                                                setRouteHintMode(
-                                                                    RouteHintMode.Automatic
-                                                                );
-                                                            }
-                                                        }}
-                                                        title={localeString(
-                                                            'views.Receive.customRouteHints'
+                                            {advancedSettingsToggle && (
+                                                <>
+                                                    {BackendUtils.supportsCustomPreimages() &&
+                                                        showCustomPreimageField && (
+                                                            <>
+                                                                <Text
+                                                                    style={{
+                                                                        ...styles.secondaryText,
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        'views.Receive.customPreimage'
+                                                                    )}
+                                                                </Text>
+                                                                <TextInput
+                                                                    value={
+                                                                        customPreimage
+                                                                    }
+                                                                    onChangeText={(
+                                                                        text: string
+                                                                    ) =>
+                                                                        this.setState(
+                                                                            {
+                                                                                customPreimage:
+                                                                                    text
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                />
+                                                            </>
                                                         )}
-                                                        ChannelsStore={
-                                                            this.props
-                                                                .ChannelsStore
-                                                        }
-                                                        UnitsStore={UnitsStore}
-                                                        containerStyle={{
-                                                            display:
-                                                                routeHintMode ===
-                                                                RouteHintMode.Automatic
-                                                                    ? 'none'
-                                                                    : 'flex'
-                                                        }}
-                                                        clearOnTap={false}
-                                                        selectionMode={
-                                                            'multiple'
-                                                        }
-                                                        selectedChannels={
-                                                            selectedRouteHintChannels
-                                                        }
-                                                    />
-                                                )}
 
-                                            {BackendUtils.supportsAMP() &&
-                                                !lspIsActive && (
-                                                    <View
-                                                        style={{
-                                                            flexDirection:
-                                                                'row',
-                                                            marginTop: 20
-                                                        }}
-                                                    >
-                                                        <View
-                                                            style={{ flex: 1 }}
-                                                        >
-                                                            <Text
+                                                    {BackendUtils.isLNDBased() &&
+                                                        !lspIsActive && (
+                                                            <View
                                                                 style={{
-                                                                    ...styles.secondaryText,
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
+                                                                    flexDirection:
+                                                                        'row',
+                                                                    marginTop: 16,
+                                                                    marginBottom:
+                                                                        Platform.OS ===
+                                                                        'ios'
+                                                                            ? 10
+                                                                            : 6
                                                                 }}
-                                                                infoModalText={[
-                                                                    localeString(
-                                                                        'views.Receive.ampSwitchExplainer1'
-                                                                    ),
-                                                                    localeString(
-                                                                        'views.Receive.ampSwitchExplainer2'
-                                                                    )
-                                                                ]}
-                                                                infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                             >
-                                                                {localeString(
-                                                                    'views.Receive.ampInvoice'
-                                                                )}
-                                                            </Text>
-                                                        </View>
-                                                        <View
-                                                            style={{
-                                                                alignSelf:
-                                                                    'center',
-                                                                marginLeft: 5
-                                                            }}
-                                                        >
-                                                            <Switch
-                                                                value={
-                                                                    ampInvoice
+                                                                <View
+                                                                    style={{
+                                                                        flex: 1
+                                                                    }}
+                                                                >
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.secondaryText,
+                                                                            color: themeColor(
+                                                                                'secondaryText'
+                                                                            )
+                                                                        }}
+                                                                        infoModalText={[
+                                                                            localeString(
+                                                                                'views.Receive.routeHintSwitchExplainer1'
+                                                                            ),
+                                                                            localeString(
+                                                                                'views.Receive.routeHintSwitchExplainer2'
+                                                                            ),
+                                                                            localeString(
+                                                                                'views.Receive.routeHintSwitchExplainer3'
+                                                                            )
+                                                                        ]}
+                                                                    >
+                                                                        {localeString(
+                                                                            'views.Receive.routeHints'
+                                                                        )}
+                                                                    </Text>
+                                                                </View>
+                                                                <View
+                                                                    style={{
+                                                                        alignSelf:
+                                                                            'center',
+                                                                        marginLeft: 5
+                                                                    }}
+                                                                >
+                                                                    <Switch
+                                                                        value={
+                                                                            routeHints
+                                                                        }
+                                                                        onValueChange={() =>
+                                                                            this.setState(
+                                                                                {
+                                                                                    routeHints:
+                                                                                        !routeHints
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            blindedPaths
+                                                                        }
+                                                                    />
+                                                                </View>
+                                                            </View>
+                                                        )}
+
+                                                    {BackendUtils.isLNDBased() &&
+                                                        !lspIsActive &&
+                                                        routeHints && (
+                                                            <Row>
+                                                                <Text
+                                                                    style={{
+                                                                        ...styles.secondaryText,
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {localeString(
+                                                                        'general.mode'
+                                                                    )}
+                                                                </Text>
+                                                                <ButtonGroup
+                                                                    onPress={
+                                                                        setRouteHintMode
+                                                                    }
+                                                                    selectedIndex={
+                                                                        routeHintMode
+                                                                    }
+                                                                    buttons={
+                                                                        routeHintModeButtons
+                                                                    }
+                                                                    selectedButtonStyle={{
+                                                                        backgroundColor:
+                                                                            themeColor(
+                                                                                'highlight'
+                                                                            ),
+                                                                        borderRadius: 12
+                                                                    }}
+                                                                    containerStyle={{
+                                                                        backgroundColor:
+                                                                            themeColor(
+                                                                                'secondary'
+                                                                            ),
+                                                                        borderRadius: 12,
+                                                                        borderWidth: 0,
+                                                                        height: 30,
+                                                                        flex: 1
+                                                                    }}
+                                                                    innerBorderStyle={{
+                                                                        color: themeColor(
+                                                                            'secondary'
+                                                                        )
+                                                                    }}
+                                                                />
+                                                            </Row>
+                                                        )}
+
+                                                    {BackendUtils.isLNDBased() &&
+                                                        routeHints && (
+                                                            <HopPicker
+                                                                ref={(ref) =>
+                                                                    (this.hopPickerRef =
+                                                                        ref)
                                                                 }
-                                                                onValueChange={() =>
+                                                                onValueChange={(
+                                                                    channels
+                                                                ) => {
                                                                     this.setState(
                                                                         {
-                                                                            ampInvoice:
-                                                                                !ampInvoice
+                                                                            selectedRouteHintChannels:
+                                                                                channels
                                                                         }
-                                                                    )
-                                                                }
-                                                                disabled={
-                                                                    blindedPaths
-                                                                }
-                                                            />
-                                                        </View>
-                                                    </View>
-                                                )}
-
-                                            {BackendUtils.supportsBolt11BlindedRoutes() &&
-                                                !lspIsActive && (
-                                                    <View
-                                                        style={{
-                                                            flexDirection:
-                                                                'row',
-                                                            marginTop: 20
-                                                        }}
-                                                    >
-                                                        <View
-                                                            style={{ flex: 1 }}
-                                                        >
-                                                            <Text
-                                                                style={{
-                                                                    ...styles.secondaryText,
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
+                                                                    );
                                                                 }}
-                                                                infoModalText={[
-                                                                    localeString(
-                                                                        'views.Receive.blindedPathsExplainer1'
-                                                                    ),
-                                                                    localeString(
-                                                                        'views.Receive.blindedPathsExplainer2'
-                                                                    )
-                                                                ]}
-                                                                infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
-                                                            >
-                                                                {localeString(
-                                                                    'views.Receive.blindedPaths'
+                                                                onCancel={() => {
+                                                                    if (
+                                                                        !selectedRouteHintChannels?.length
+                                                                    ) {
+                                                                        setRouteHintMode(
+                                                                            RouteHintMode.Automatic
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                title={localeString(
+                                                                    'views.Receive.customRouteHints'
                                                                 )}
-                                                            </Text>
-                                                        </View>
-                                                        <View
-                                                            style={{
-                                                                alignSelf:
-                                                                    'center',
-                                                                marginLeft: 5
-                                                            }}
-                                                        >
-                                                            <Switch
-                                                                value={
-                                                                    blindedPaths
+                                                                ChannelsStore={
+                                                                    this.props
+                                                                        .ChannelsStore
                                                                 }
-                                                                onValueChange={() =>
-                                                                    this.setState(
-                                                                        {
-                                                                            blindedPaths:
-                                                                                !blindedPaths,
-                                                                            ampInvoice:
-                                                                                false,
-                                                                            routeHints:
-                                                                                false
-                                                                        }
-                                                                    )
+                                                                UnitsStore={
+                                                                    UnitsStore
+                                                                }
+                                                                containerStyle={{
+                                                                    display:
+                                                                        routeHintMode ===
+                                                                        RouteHintMode.Automatic
+                                                                            ? 'none'
+                                                                            : 'flex'
+                                                                }}
+                                                                clearOnTap={
+                                                                    false
+                                                                }
+                                                                selectionMode={
+                                                                    'multiple'
+                                                                }
+                                                                selectedChannels={
+                                                                    selectedRouteHintChannels
                                                                 }
                                                             />
-                                                        </View>
-                                                    </View>
-                                                )}
+                                                        )}
+
+                                                    {BackendUtils.supportsAMP() &&
+                                                        !lspIsActive && (
+                                                            <View
+                                                                style={{
+                                                                    flexDirection:
+                                                                        'row',
+                                                                    marginTop: 20
+                                                                }}
+                                                            >
+                                                                <View
+                                                                    style={{
+                                                                        flex: 1
+                                                                    }}
+                                                                >
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.secondaryText,
+                                                                            color: themeColor(
+                                                                                'secondaryText'
+                                                                            )
+                                                                        }}
+                                                                        infoModalText={[
+                                                                            localeString(
+                                                                                'views.Receive.ampSwitchExplainer1'
+                                                                            ),
+                                                                            localeString(
+                                                                                'views.Receive.ampSwitchExplainer2'
+                                                                            )
+                                                                        ]}
+                                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
+                                                                    >
+                                                                        {localeString(
+                                                                            'views.Receive.ampInvoice'
+                                                                        )}
+                                                                    </Text>
+                                                                </View>
+                                                                <View
+                                                                    style={{
+                                                                        alignSelf:
+                                                                            'center',
+                                                                        marginLeft: 5
+                                                                    }}
+                                                                >
+                                                                    <Switch
+                                                                        value={
+                                                                            ampInvoice
+                                                                        }
+                                                                        onValueChange={() =>
+                                                                            this.setState(
+                                                                                {
+                                                                                    ampInvoice:
+                                                                                        !ampInvoice
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            blindedPaths
+                                                                        }
+                                                                    />
+                                                                </View>
+                                                            </View>
+                                                        )}
+
+                                                    {BackendUtils.supportsBolt11BlindedRoutes() &&
+                                                        !lspIsActive && (
+                                                            <View
+                                                                style={{
+                                                                    flexDirection:
+                                                                        'row',
+                                                                    marginTop: 20
+                                                                }}
+                                                            >
+                                                                <View
+                                                                    style={{
+                                                                        flex: 1
+                                                                    }}
+                                                                >
+                                                                    <Text
+                                                                        style={{
+                                                                            ...styles.secondaryText,
+                                                                            color: themeColor(
+                                                                                'secondaryText'
+                                                                            )
+                                                                        }}
+                                                                        infoModalText={[
+                                                                            localeString(
+                                                                                'views.Receive.blindedPathsExplainer1'
+                                                                            ),
+                                                                            localeString(
+                                                                                'views.Receive.blindedPathsExplainer2'
+                                                                            )
+                                                                        ]}
+                                                                        infoModalLink="https://lightningprivacy.com/en/blinded-trampoline"
+                                                                    >
+                                                                        {localeString(
+                                                                            'views.Receive.blindedPaths'
+                                                                        )}
+                                                                    </Text>
+                                                                </View>
+                                                                <View
+                                                                    style={{
+                                                                        alignSelf:
+                                                                            'center',
+                                                                        marginLeft: 5
+                                                                    }}
+                                                                >
+                                                                    <Switch
+                                                                        value={
+                                                                            blindedPaths
+                                                                        }
+                                                                        onValueChange={() =>
+                                                                            this.setState(
+                                                                                {
+                                                                                    blindedPaths:
+                                                                                        !blindedPaths,
+                                                                                    ampInvoice:
+                                                                                        false,
+                                                                                    routeHints:
+                                                                                        false
+                                                                                }
+                                                                            )
+                                                                        }
+                                                                    />
+                                                                </View>
+                                                            </View>
+                                                        )}
+                                                </>
+                                            )}
 
                                             <View style={styles.button}>
                                                 <Button
