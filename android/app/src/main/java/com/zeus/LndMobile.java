@@ -367,7 +367,13 @@ class LndMobile extends ReactContextBaseJavaModule {
 
     Bundle bundle = new Bundle();
 
-    String params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath() + "/" + lndDir;
+    String params;
+    if (lndDir.equals("lnd")) {
+      params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath();
+    } else {
+      params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath() + "/" + lndDir;
+    }
+
     if (isTorEnabled) {
       // int listenPort = ZeusTorUtils.getListenPort(isTestnet);
       // String controlSocket = "unix://" + getReactApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
