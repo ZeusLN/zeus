@@ -724,7 +724,8 @@ export default class LightningAddressStore {
         hash: string,
         amount_msat: number,
         comment?: string,
-        skipStatus?: boolean
+        skipStatus?: boolean,
+        localNotification?: boolean
     ) => {
         return await this.getPreimageMap().then(async (map) => {
             const preimage = map[hash];
@@ -773,7 +774,7 @@ export default class LightningAddressStore {
                             result.payment_request,
                             preimageNotFound
                         ).then((success) => {
-                            if (success?.success === true)
+                            if (success?.success === true && localNotification)
                                 fireLocalNotification();
                             if (!skipStatus) this.status(true);
                             return;
@@ -792,7 +793,10 @@ export default class LightningAddressStore {
                                     result.payment_request,
                                     preimageNotFound
                                 ).then((success) => {
-                                    if (success?.success === true)
+                                    if (
+                                        success?.success === true &&
+                                        localNotification
+                                    )
                                         fireLocalNotification();
                                     if (!skipStatus) this.status(true);
                                     return;
@@ -806,7 +810,7 @@ export default class LightningAddressStore {
                             undefined,
                             preimageNotFound
                         ).then((success) => {
-                            if (success?.success === true)
+                            if (success?.success === true && localNotification)
                                 fireLocalNotification();
                             if (!skipStatus) this.status(true);
                             return;
@@ -904,7 +908,9 @@ export default class LightningAddressStore {
                             this.lookupPreimageAndRedeem(
                                 hash,
                                 amount_msat,
-                                comment
+                                comment,
+                                false,
+                                true
                             );
                         } else {
                             this.lookupAttestations(hash, amount_msat)
@@ -919,7 +925,9 @@ export default class LightningAddressStore {
                                     this.lookupPreimageAndRedeem(
                                         hash,
                                         amount_msat,
-                                        comment
+                                        comment,
+                                        false,
+                                        true
                                     );
                                 })
                                 .catch((e) =>
