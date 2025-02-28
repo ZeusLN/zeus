@@ -6,10 +6,12 @@ import {
     View,
     Image,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
+import cloneDeep from 'lodash/cloneDeep';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -186,7 +188,7 @@ export default class WalletConfiguration extends React.Component<
         adminMacaroon: '',
         embeddedLndNetwork: 'mainnet',
         lndDir: '',
-        interfaceKeys: INTERFACE_KEYS,
+        interfaceKeys: [],
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
         creatingWallet: false,
@@ -320,6 +322,34 @@ export default class WalletConfiguration extends React.Component<
                 }
             }
         }
+
+        let interfaceKeys = cloneDeep(INTERFACE_KEYS);
+
+        // remove option to add a new embedded node if initialized already
+        if (Platform.OS === 'android') {
+            const { SettingsStore } = this.props;
+            const { settings } = SettingsStore;
+            const { adminMacaroon, newEntry } = this.state;
+            if (settings.nodes && newEntry) {
+                const result = settings?.nodes?.filter(
+                    (node) => node.implementation === 'embedded-lnd'
+                );
+                if (result.length > 0) {
+                    interfaceKeys = interfaceKeys.filter(
+                        (item) => item.value !== 'embedded-lnd'
+                    );
+                    if (!adminMacaroon && implementation === 'embedded-lnd') {
+                        this.setState({
+                            implementation: 'lnd'
+                        });
+                    }
+                }
+            }
+        }
+
+        this.setState({
+            interfaceKeys
+        });
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -2370,32 +2400,37 @@ export default class WalletConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {saved && (
-                        <View style={styles.button}>
-                            <Button
-                                title={
-                                    deletionAwaitingConfirmation
-                                        ? localeString(
-                                              'views.Settings.AddEditNode.tapToConfirm'
-                                          )
-                                        : localeString(
-                                              'views.Settings.WalletConfiguration.deleteWallet'
-                                          )
-                                }
-                                onPress={() => {
-                                    if (!deletionAwaitingConfirmation) {
-                                        this.setState({
-                                            deletionAwaitingConfirmation: true
-                                        });
-                                    } else {
-                                        this.deleteNodeConfig();
+                    {saved &&
+                        !(
+                            implementation === 'embedded-lnd' &&
+                            Platform.OS === 'android'
+                        ) && (
+                            <View style={styles.button}>
+                                <Button
+                                    title={
+                                        deletionAwaitingConfirmation
+                                            ? localeString(
+                                                  'views.Settings.AddEditNode.tapToConfirm'
+                                              )
+                                            : localeString(
+                                                  'views.Settings.WalletConfiguration.deleteWallet'
+                                              )
                                     }
-                                }}
-                                warning
-                                disabled={loading}
-                            />
-                        </View>
-                    )}
+                                    onPress={() => {
+                                        if (!deletionAwaitingConfirmation) {
+                                            this.setState({
+                                                deletionAwaitingConfirmation:
+                                                    true
+                                            });
+                                        } else {
+                                            this.deleteNodeConfig();
+                                        }
+                                    }}
+                                    warning
+                                    disabled={loading}
+                                />
+                            </View>
+                        )}
 
                     {implementation === 'embedded-lnd' && !newEntry && (
                         <>

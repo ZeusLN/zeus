@@ -320,7 +320,7 @@ export async function startLnd({
                         isTestnet
                     });
                     started = true;
-                } catch (e) {}
+                } catch (e2) {}
             }
         }
     }
