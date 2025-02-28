@@ -23,6 +23,7 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { sleep } from '../utils/SleepUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { checkAndRequestNotificationPermissions } from '../utils/NotificationUtils';
 
 import Storage from '../storage';
 
@@ -288,6 +289,9 @@ export default class LightningAddressStore {
                 this.setLightningAddress(responseHandle, domain);
             }
 
+            const permissionGranted =
+                await checkAndRequestNotificationPermissions();
+
             await this.settingsStore.updateSettings({
                 lightningAddress: {
                     enabled: true,
@@ -296,7 +300,7 @@ export default class LightningAddressStore {
                     allowComments: true,
                     nostrPrivateKey,
                     nostrRelays: relays,
-                    notifications: 1
+                    notifications: permissionGranted ? 1 : 0
                 }
             });
 
