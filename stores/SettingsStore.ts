@@ -1462,6 +1462,7 @@ export default class SettingsStore {
     public async setSettings(settings: any) {
         this.loading = true;
         await Storage.setItem(STORAGE_KEY, settings);
+        this.settings = settings;
         this.loading = false;
         return settings;
     }
