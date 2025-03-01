@@ -738,7 +738,9 @@ export default class LightningAddressStore {
 
             const fireLocalNotification = () => {
                 const title = 'ZEUS Pay payment received!';
-                const body = `Payment of ${value_commas} sats automatically accepted`;
+                const body = `Payment of ${value_commas} ${
+                    value_commas === '1' ? 'sat' : 'sats'
+                } automatically accepted`;
                 if (Platform.OS === 'android') {
                     // @ts-ignore:next-line
                     Notifications.postLocalNotification({
