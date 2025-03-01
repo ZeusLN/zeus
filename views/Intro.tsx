@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Dimensions, Image, Text, View, SafeAreaView } from 'react-native';
-
 import Animated, {
     Extrapolate,
     SharedValue,
@@ -10,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Carousel from 'react-native-reanimated-carousel';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import stores from '../stores/Stores';
 
@@ -217,9 +217,11 @@ const Intro: React.FC<IntroProps> = (props) => {
                                     setCreatingWallet(true);
                                     setChoosingPeers(false);
 
-                                    const response = await createLndWallet(
-                                        undefined
-                                    );
+                                    const lndDir = uuidv4();
+
+                                    const response = await createLndWallet({
+                                        lndDir
+                                    });
                                     const { wallet, seed, randomBase64 }: any =
                                         response;
                                     if (wallet && wallet.admin_macaroon) {
@@ -234,7 +236,8 @@ const Intro: React.FC<IntroProps> = (props) => {
                                                 implementation: 'embedded-lnd',
                                                 nickname: localeString(
                                                     'general.defaultNodeNickname'
-                                                )
+                                                ),
+                                                lndDir
                                             }
                                         ];
 

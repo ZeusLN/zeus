@@ -5,7 +5,8 @@ import {
     TouchableOpacity,
     Image,
     StyleSheet,
-    FlatListProps
+    FlatListProps,
+    Platform
 } from 'react-native';
 
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -25,10 +26,11 @@ import SettingsStore, {
     Node
 } from '../../stores/SettingsStore';
 
-import { getPhoto } from '../../utils/PhotoUtils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { getPhoto } from '../../utils/PhotoUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
@@ -118,7 +120,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             updateSettings,
             setConnectingStatus,
             setInitialStart,
-            implementation
+            implementation,
+            embeddedLndStarted
         }: any = SettingsStore;
 
         const implementationDisplayValue: { [key: string]: string } = {};
@@ -255,9 +258,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 nodes,
                                                 selectedNode: index
                                             }).then(() => {
-                                                setConnectingStatus(true);
-                                                setInitialStart(false);
-                                                navigation.popTo('Wallet');
+                                                if (
+                                                    item.implementation ===
+                                                        'embedded-lnd' &&
+                                                    Platform.OS === 'android' &&
+                                                    embeddedLndStarted
+                                                ) {
+                                                    restartNeeded(true);
+                                                } else {
+                                                    setConnectingStatus(true);
+                                                    setInitialStart(false);
+                                                    navigation.popTo('Wallet');
+                                                }
                                             });
                                         }}
                                     >
