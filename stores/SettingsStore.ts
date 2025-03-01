@@ -1263,6 +1263,7 @@ export default class SettingsStore {
     @observable public embeddedLndNetwork: string;
     @observable public lndDir?: string;
     @observable public initialStart: boolean = true;
+    @observable public embeddedLndStarted: boolean = false;
     // NWC
     @observable public nostrWalletConnectUrl: string;
 

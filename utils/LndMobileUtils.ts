@@ -300,6 +300,8 @@ export async function startLnd({
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
+    stores.settingsStore.embeddedLndStarted = true;
+
     const status = await checkStatus();
     if (
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
