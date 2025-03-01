@@ -2416,17 +2416,6 @@ export default class WalletConfiguration extends React.Component<
                                 }}
                             >
                                 {localeString(
-                                    'views.Settings.NodeConfiguration.embeddedDelete'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    textAlign: 'center',
-                                    marginTop: 20
-                                }}
-                            >
-                                {localeString(
                                     'views.Settings.NodeConfiguration.embeddedDelete2'
                                 )}
                             </Text>
