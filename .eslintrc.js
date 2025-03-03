@@ -42,12 +42,6 @@ module.exports = {
     'no-unused-vars': 0,
     'object-shorthand': ['error', 'always'],
     'prefer-spread': 'off',
-    'prettier/prettier': [
-      'error',
-      {
-        endOfLine: 'auto',
-      },
-    ],
     // TODO re-evaluate
     'dot-notation': 'off',
     'eqeqeq': 'off',
