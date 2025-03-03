@@ -1029,7 +1029,7 @@
     "views.ActivityExport.toDate": "Enddatum",
     "views.ActivityExport.dateRange": "Zeitraum auswählen:",
     "views.ActivityExport.downloadCompleteData": "Gesamte Daten herunterladen",
-    "views.ActivityExport.explainerAndroid": "Heruntergeladene CSV-Dateien befinden sich in Dateien > Downloads.",
+    "views.ActivityExport.explainerAndroid": "Heruntergeladene CSV-Dateien befinden sich in Dateien > Download.",
     "views.ActivityExport.explaineriOS": "Heruntergeladene CSV-Dateien können in der Dateien-App im ZEUS-Ordner gefunden werden",
     "views.ActivityExport.noDataAvailableForSelection": "Für den ausgewählten Typ sind keine Verlaufs-Daten verfügbar.",
     "views.ActivityExport.noDataForSelectedDates": "Keine Einträge im ausgewählten Zeitraum gefunden. Bitte wähle ein anderes Datum.",
