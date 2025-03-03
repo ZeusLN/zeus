@@ -20,7 +20,9 @@ const restartNeeded = (force?: boolean) => {
         }
         buttons.push({
             style: 'default',
-            text: localeString('general.yes'),
+            text: force
+                ? localeString('views.Wallet.restart')
+                : localeString('general.yes'),
             onPress: async () => {
                 try {
                     // await NativeModules.ZeusTor.stopTor();
