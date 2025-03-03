@@ -597,7 +597,7 @@ export default class WalletConfiguration extends React.Component<
 
     deleteNodeConfig = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
         const { index, implementation, lndDir } = this.state;
         const { nodes } = settings;
 
@@ -618,7 +618,8 @@ export default class WalletConfiguration extends React.Component<
         }).then(() => {
             if (
                 implementation === 'embedded-lnd' &&
-                Platform.OS === 'android'
+                Platform.OS === 'android' &&
+                embeddedLndStarted
             ) {
                 restartNeeded(true);
             } else {
@@ -652,13 +653,25 @@ export default class WalletConfiguration extends React.Component<
 
     setWalletConfigurationAsActive = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings, setConnectingStatus, setInitialStart } =
-            SettingsStore;
-        const { index } = this.state;
+        const {
+            updateSettings,
+            setConnectingStatus,
+            setInitialStart,
+            embeddedLndStarted
+        } = SettingsStore;
+        const { index, implementation } = this.state;
 
         await updateSettings({
             selectedNode: index
         });
+
+        if (
+            implementation === 'embedded-lnd' &&
+            Platform.OS === 'android' &&
+            embeddedLndStarted
+        ) {
+            restartNeeded(true);
+        }
 
         this.setState({
             active: true
