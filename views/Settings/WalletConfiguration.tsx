@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     Modal,
     StyleSheet,
     Text,
@@ -45,6 +46,8 @@ import TextInput from '../../components/TextInput';
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import BalanceStore from '../../stores/BalanceStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
@@ -68,6 +71,8 @@ import { restartNeeded } from '../../utils/RestartUtils';
 
 interface WalletConfigurationProps {
     navigation: StackNavigationProp<any, any>;
+    BalanceStore: BalanceStore;
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     route: Route<
         'WalletConfiguration',
@@ -145,7 +150,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('SettingsStore')
+@inject('BalanceStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -709,7 +714,8 @@ export default class WalletConfiguration extends React.Component<
     render() {
         const SERVER_ADDRESS_CHARS = "a-zA-Z0-9-._~!$&'()*+,;=";
 
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, BalanceStore, ChannelsStore, SettingsStore } =
+            this.props;
         const {
             node,
             nickname,
@@ -2397,7 +2403,96 @@ export default class WalletConfiguration extends React.Component<
                                             deletionAwaitingConfirmation: true
                                         });
                                     } else {
-                                        this.deleteNodeConfig();
+                                        if (
+                                            implementation === 'embedded-lnd' &&
+                                            !active
+                                        ) {
+                                            Alert.alert(
+                                                localeString('general.error'),
+                                                localeString(
+                                                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+                                                ),
+                                                [
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.WalletConfiguration.setWalletActive'
+                                                        ),
+                                                        onPress: () =>
+                                                            this.setWalletConfigurationAsActive(),
+                                                        isPreferred: true
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0
+                                                    }
+                                                ],
+                                                { cancelable: false }
+                                            );
+                                        } else if (
+                                            implementation === 'embedded-lnd' &&
+                                            (ChannelsStore.channels.length >
+                                                0 ||
+                                                ChannelsStore.pendingChannels
+                                                    .length > 0)
+                                        ) {
+                                            Alert.alert(
+                                                localeString('general.warning'),
+                                                localeString(
+                                                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                                                ),
+                                                [
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.WalletConfiguration.deleteWallet'
+                                                        ),
+                                                        onPress: () =>
+                                                            this.deleteNodeConfig()
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0,
+                                                        isPreferred: true
+                                                    }
+                                                ],
+                                                { cancelable: false }
+                                            );
+                                        } else if (
+                                            implementation === 'embedded-lnd' &&
+                                            (BalanceStore.confirmedBlockchainBalance !==
+                                                0 ||
+                                                BalanceStore.unconfirmedBlockchainBalance !==
+                                                    0)
+                                        ) {
+                                            Alert.alert(
+                                                localeString('general.warning'),
+                                                localeString(
+                                                    'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+                                                ),
+                                                [
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.WalletConfiguration.deleteWallet'
+                                                        ),
+                                                        onPress: () =>
+                                                            this.deleteNodeConfig()
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0,
+                                                        isPreferred: true
+                                                    }
+                                                ],
+                                                { cancelable: false }
+                                            );
+                                        } else {
+                                            this.deleteNodeConfig();
+                                        }
                                     }
                                 }}
                                 warning
