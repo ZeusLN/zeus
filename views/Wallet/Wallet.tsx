@@ -598,7 +598,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             )
         ) {
             this.setState({
-                initialLoad: false
+                initialLoad: false,
+                fetchLock: false
             });
             LinkingUtils.handleInitialUrl(this.props.navigation);
         }
