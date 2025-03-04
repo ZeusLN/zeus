@@ -605,7 +605,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } = this.props;
         const { isSyncing, isInExpressGraphSync } = SyncStore;
         const { nodeInfo } = NodeInfoStore;
-        const error = NodeInfoStore.error || SettingsStore.error;
+        const error =
+            NodeInfoStore.error || SettingsStore.error || BalanceStore.error;
         const {
             implementation,
             settings,
