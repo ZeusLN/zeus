@@ -163,6 +163,7 @@ export default class Invoice extends BaseModel {
         return (
             this.status === 'paid' ||
             this.state === 'settled' ||
+            !!this.settled_at ||
             this.settled ||
             this.ispaid ||
             false
