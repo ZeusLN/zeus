@@ -2112,7 +2112,11 @@ export default class Receive extends React.Component<
                                                         }}
                                                     >
                                                         <View
-                                                            style={{ flex: 1 }}
+                                                            style={{
+                                                                flex: 1,
+                                                                justifyContent:
+                                                                    'center'
+                                                            }}
                                                         >
                                                             <Text
                                                                 style={{
@@ -2728,17 +2732,20 @@ export default class Receive extends React.Component<
                                                                 style={{
                                                                     flexDirection:
                                                                         'row',
-                                                                    marginTop: 16,
                                                                     marginBottom:
-                                                                        Platform.OS ===
-                                                                        'ios'
+                                                                        !routeHints
+                                                                            ? 0
+                                                                            : Platform.OS ===
+                                                                              'ios'
                                                                             ? 10
                                                                             : 6
                                                                 }}
                                                             >
                                                                 <View
                                                                     style={{
-                                                                        flex: 1
+                                                                        flex: 1,
+                                                                        justifyContent:
+                                                                            'center'
                                                                     }}
                                                                 >
                                                                     <Text
@@ -2910,7 +2917,9 @@ export default class Receive extends React.Component<
                                                             >
                                                                 <View
                                                                     style={{
-                                                                        flex: 1
+                                                                        flex: 1,
+                                                                        justifyContent:
+                                                                            'center'
                                                                     }}
                                                                 >
                                                                     <Text
@@ -2973,7 +2982,9 @@ export default class Receive extends React.Component<
                                                             >
                                                                 <View
                                                                     style={{
-                                                                        flex: 1
+                                                                        flex: 1,
+                                                                        justifyContent:
+                                                                            'center'
                                                                     }}
                                                                 >
                                                                     <Text
