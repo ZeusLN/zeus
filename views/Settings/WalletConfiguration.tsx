@@ -1,19 +1,21 @@
 import * as React from 'react';
 import {
+    Alert,
     Modal,
     StyleSheet,
     Text,
     View,
     Image,
     ScrollView,
-    TouchableOpacity
+    TouchableOpacity,
+    Platform
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import cloneDeep from 'lodash/cloneDeep';
 import differenceBy from 'lodash/differenceBy';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
@@ -44,6 +46,8 @@ import TextInput from '../../components/TextInput';
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import BalanceStore from '../../stores/BalanceStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore, {
     INTERFACE_KEYS,
     LNC_MAILBOX_KEYS,
@@ -59,11 +63,16 @@ import AddIcon from '../../assets/images/SVG/Add.svg';
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
     optimizeNeutrinoPeers,
-    createLndWallet
+    createLndWallet,
+    deleteLndWallet,
+    stopLnd
 } from '../../utils/LndMobileUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
 
 interface WalletConfigurationProps {
     navigation: StackNavigationProp<any, any>;
+    BalanceStore: BalanceStore;
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
     route: Route<
         'WalletConfiguration',
@@ -107,17 +116,18 @@ interface WalletConfigurationState {
     // lnc
     pairingPhrase: string;
     mailboxServer: string;
-    customMailboxServer: string;
-    localKey: string;
-    remoteKey: string;
-    deletionAwaitingConfirmation: boolean;
+    customMailboxServer?: string;
+    localKey?: string;
+    remoteKey?: string;
+    deletionAwaitingConfirmation?: boolean;
     // embeded lnd
-    seedPhrase: Array<string>;
-    walletPassword: string;
-    adminMacaroon: string;
-    embeddedLndNetwork: string;
-    recoveryCipherSeed: string;
-    channelBackupsBase64: string;
+    seedPhrase?: string[];
+    walletPassword?: string;
+    adminMacaroon?: string;
+    embeddedLndNetwork?: string;
+    lndDir?: string;
+    recoveryCipherSeed?: string;
+    channelBackupsBase64?: string;
     creatingWallet: boolean;
     errorCreatingWallet: boolean;
     // NWC
@@ -140,7 +150,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('SettingsStore')
+@inject('BalanceStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -182,7 +192,8 @@ export default class WalletConfiguration extends React.Component<
         walletPassword: '',
         adminMacaroon: '',
         embeddedLndNetwork: 'mainnet',
-        interfaceKeys: [],
+        lndDir: '',
+        interfaceKeys: INTERFACE_KEYS,
         recoveryCipherSeed: '',
         channelBackupsBase64: '',
         creatingWallet: false,
@@ -316,32 +327,6 @@ export default class WalletConfiguration extends React.Component<
                 }
             }
         }
-
-        let interfaceKeys = cloneDeep(INTERFACE_KEYS);
-
-        // remove option to add a new embedded node if initialized already
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
-        const { adminMacaroon, newEntry } = this.state;
-        if (settings.nodes && newEntry) {
-            const result = settings?.nodes?.filter(
-                (node) => node.implementation === 'embedded-lnd'
-            );
-            if (result.length > 0) {
-                interfaceKeys = interfaceKeys.filter(
-                    (item) => item.value !== 'embedded-lnd'
-                );
-                if (!adminMacaroon && implementation === 'embedded-lnd') {
-                    this.setState({
-                        implementation: 'lnd'
-                    });
-                }
-            }
-        }
-
-        this.setState({
-            interfaceKeys
-        });
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
@@ -373,14 +358,15 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
-                lndhubUrl,
-                existingAccount,
-                username,
-                password,
                 implementation,
                 certVerification,
                 enableTor,
                 photo,
+                // LNDHub
+                lndhubUrl,
+                existingAccount,
+                username,
+                password,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -390,6 +376,7 @@ export default class WalletConfiguration extends React.Component<
                 walletPassword,
                 adminMacaroon,
                 embeddedLndNetwork,
+                lndDir,
                 // NWC
                 nostrWalletConnectUrl
             } = node as any;
@@ -402,10 +389,6 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
-                lndhubUrl,
-                existingAccount,
-                username,
-                password,
                 implementation: implementation || 'lnd',
                 certVerification,
                 index,
@@ -414,6 +397,11 @@ export default class WalletConfiguration extends React.Component<
                 newEntry,
                 enableTor: tor || enableTor,
                 photo: newPhoto || photo || '',
+                // LNDHub,
+                lndhubUrl,
+                existingAccount,
+                username,
+                password,
                 // LNC
                 pairingPhrase,
                 mailboxServer,
@@ -423,6 +411,7 @@ export default class WalletConfiguration extends React.Component<
                 walletPassword,
                 adminMacaroon,
                 embeddedLndNetwork,
+                lndDir,
                 // NWC
                 nostrWalletConnectUrl
             });
@@ -460,8 +449,9 @@ export default class WalletConfiguration extends React.Component<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            photo,
-            nostrWalletConnectUrl
+            lndDir,
+            nostrWalletConnectUrl,
+            photo
         } = this.state;
         const { setConnectingStatus, updateSettings, settings } = SettingsStore;
 
@@ -493,8 +483,9 @@ export default class WalletConfiguration extends React.Component<
             walletPassword,
             adminMacaroon,
             embeddedLndNetwork,
-            photo,
-            nostrWalletConnectUrl
+            lndDir,
+            nostrWalletConnectUrl,
+            photo
         };
 
         let nodes: Node[];
@@ -604,10 +595,10 @@ export default class WalletConfiguration extends React.Component<
         });
     };
 
-    deleteNodeConfig = () => {
+    deleteNodeConfig = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings, settings } = SettingsStore;
-        const { index } = this.state;
+        const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
+        const { index, implementation, lndDir } = this.state;
         const { nodes } = settings;
 
         const newNodes: any = [];
@@ -617,14 +608,26 @@ export default class WalletConfiguration extends React.Component<
             }
         }
 
+        if (implementation === 'embedded-lnd') {
+            await deleteLndWallet(lndDir || 'lnd');
+        }
+
         updateSettings({
             nodes: newNodes,
             selectedNode: this.getNewSelectedNodeIndex(index, settings)
         }).then(() => {
-            if (newNodes.length === 0) {
-                navigation.navigate('IntroSplash');
+            if (
+                implementation === 'embedded-lnd' &&
+                Platform.OS === 'android' &&
+                embeddedLndStarted
+            ) {
+                restartNeeded(true);
             } else {
-                navigation.popTo('Wallets');
+                if (newNodes.length === 0) {
+                    navigation.navigate('IntroSplash');
+                } else {
+                    navigation.popTo('Wallets');
+                }
             }
         });
     };
@@ -650,13 +653,25 @@ export default class WalletConfiguration extends React.Component<
 
     setWalletConfigurationAsActive = async () => {
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings, setConnectingStatus, setInitialStart } =
-            SettingsStore;
-        const { index } = this.state;
+        const {
+            updateSettings,
+            setConnectingStatus,
+            setInitialStart,
+            embeddedLndStarted
+        } = SettingsStore;
+        const { index, implementation } = this.state;
 
         await updateSettings({
             selectedNode: index
         });
+
+        if (
+            implementation === 'embedded-lnd' &&
+            Platform.OS === 'android' &&
+            embeddedLndStarted
+        ) {
+            restartNeeded(true);
+        }
 
         this.setState({
             active: true
@@ -675,15 +690,18 @@ export default class WalletConfiguration extends React.Component<
             creatingWallet: true
         });
 
+        await stopLnd();
+
         await optimizeNeutrinoPeers(network === 'Testnet');
 
-        const response = await createLndWallet(
-            recoveryCipherSeed,
-            undefined,
-            false,
-            network === 'Testnet',
+        const lndDir = uuidv4();
+
+        const response = await createLndWallet({
+            lndDir,
+            seedMnemonic: recoveryCipherSeed,
+            isTestnet: network === 'Testnet',
             channelBackupsBase64
-        );
+        });
 
         const { wallet, seed, randomBase64 }: any = response;
 
@@ -693,6 +711,7 @@ export default class WalletConfiguration extends React.Component<
                 seedPhrase: seed.cipher_seed_mnemonic,
                 walletPassword: randomBase64,
                 embeddedLndNetwork: network,
+                lndDir,
                 creatingWallet: false
             });
 
@@ -708,7 +727,8 @@ export default class WalletConfiguration extends React.Component<
     render() {
         const SERVER_ADDRESS_CHARS = "a-zA-Z0-9-._~!$&'()*+,;=";
 
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, BalanceStore, ChannelsStore, SettingsStore } =
+            this.props;
         const {
             node,
             nickname,
@@ -1171,16 +1191,20 @@ export default class WalletConfiguration extends React.Component<
 
                         {!adminMacaroon && implementation === 'embedded-lnd' && (
                             <View>
-                                <DropdownSetting
-                                    title={localeString('general.network')}
-                                    selectedValue={embeddedLndNetwork}
-                                    onValueChange={(value: string) => {
-                                        this.setState({
-                                            embeddedLndNetwork: value
-                                        });
-                                    }}
-                                    values={EMBEDDED_NODE_NETWORK_KEYS}
-                                />
+                                {!adminMacaroon && (
+                                    <DropdownSetting
+                                        title={localeString('general.network')}
+                                        selectedValue={
+                                            embeddedLndNetwork || 'mainnet'
+                                        }
+                                        onValueChange={(value: string) => {
+                                            this.setState({
+                                                embeddedLndNetwork: value
+                                            });
+                                        }}
+                                        values={EMBEDDED_NODE_NETWORK_KEYS}
+                                    />
+                                )}
                                 {false && (
                                     <>
                                         <Text
@@ -2374,7 +2398,7 @@ export default class WalletConfiguration extends React.Component<
                         </View>
                     )}
 
-                    {implementation !== 'embedded-lnd' && saved && (
+                    {saved && (
                         <View style={styles.button}>
                             <Button
                                 title={
@@ -2392,7 +2416,96 @@ export default class WalletConfiguration extends React.Component<
                                             deletionAwaitingConfirmation: true
                                         });
                                     } else {
-                                        this.deleteNodeConfig();
+                                        if (
+                                            implementation === 'embedded-lnd' &&
+                                            !active
+                                        ) {
+                                            Alert.alert(
+                                                localeString('general.error'),
+                                                localeString(
+                                                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+                                                ),
+                                                [
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.WalletConfiguration.setWalletActive'
+                                                        ),
+                                                        onPress: () =>
+                                                            this.setWalletConfigurationAsActive(),
+                                                        isPreferred: true
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0
+                                                    }
+                                                ],
+                                                { cancelable: false }
+                                            );
+                                        } else if (
+                                            implementation === 'embedded-lnd' &&
+                                            (ChannelsStore.channels.length >
+                                                0 ||
+                                                ChannelsStore.pendingChannels
+                                                    .length > 0)
+                                        ) {
+                                            Alert.alert(
+                                                localeString('general.warning'),
+                                                localeString(
+                                                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                                                ),
+                                                [
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.WalletConfiguration.deleteWallet'
+                                                        ),
+                                                        onPress: () =>
+                                                            this.deleteNodeConfig()
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0,
+                                                        isPreferred: true
+                                                    }
+                                                ],
+                                                { cancelable: false }
+                                            );
+                                        } else if (
+                                            implementation === 'embedded-lnd' &&
+                                            (BalanceStore.confirmedBlockchainBalance !==
+                                                0 ||
+                                                BalanceStore.unconfirmedBlockchainBalance !==
+                                                    0)
+                                        ) {
+                                            Alert.alert(
+                                                localeString('general.warning'),
+                                                localeString(
+                                                    'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+                                                ),
+                                                [
+                                                    {
+                                                        text: localeString(
+                                                            'views.Settings.WalletConfiguration.deleteWallet'
+                                                        ),
+                                                        onPress: () =>
+                                                            this.deleteNodeConfig()
+                                                    },
+                                                    {
+                                                        text: localeString(
+                                                            'general.cancel'
+                                                        ),
+                                                        onPress: () => void 0,
+                                                        isPreferred: true
+                                                    }
+                                                ],
+                                                { cancelable: false }
+                                            );
+                                        } else {
+                                            this.deleteNodeConfig();
+                                        }
                                     }
                                 }}
                                 warning
@@ -2403,17 +2516,6 @@ export default class WalletConfiguration extends React.Component<
 
                     {implementation === 'embedded-lnd' && !newEntry && (
                         <>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    textAlign: 'center',
-                                    marginTop: 20
-                                }}
-                            >
-                                {localeString(
-                                    'views.Settings.NodeConfiguration.embeddedDelete'
-                                )}
-                            </Text>
                             <Text
                                 style={{
                                     color: themeColor('text'),

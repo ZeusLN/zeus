@@ -345,15 +345,19 @@ class LndMobile extends ReactContextBaseJavaModule {
     Message message = Message.obtain(null, LndMobileService.MSG_CHECKSTATUS, req, 0);
     message.replyTo = messenger;
 
-    try {
-      lndMobileServiceMessenger.send(message);
-    } catch (RemoteException e) {
-      promise.reject(TAG, "Could not Send MSG_CHECKSTATUS to LndMobileService", e);
+    if (lndMobileServiceMessenger != null) {
+      try {
+        lndMobileServiceMessenger.send(message);
+      } catch (RemoteException e) {
+        promise.reject(TAG, "Could not Send MSG_CHECKSTATUS to LndMobileService", e);
+      }
+    } else {
+      promise.reject(TAG, "lndMobileServiceMessenger unitialized");
     }
   }
 
   @ReactMethod
-  public void startLnd(String args, Boolean isTorEnabled, Boolean isTestnet, Promise promise) {
+  public void startLnd(String args, String lndDir, Boolean isTorEnabled, Boolean isTestnet, Promise promise) {
     // TODO args is only used on iOS right now
     int req = new Random().nextInt();
     requests.put(req, promise);
@@ -363,7 +367,13 @@ class LndMobile extends ReactContextBaseJavaModule {
 
     Bundle bundle = new Bundle();
 
-    String params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath();
+    String params;
+    if (lndDir.equals("lnd")) {
+      params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath();
+    } else {
+      params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath() + "/" + lndDir;
+    }
+
     if (isTorEnabled) {
       // int listenPort = ZeusTorUtils.getListenPort(isTestnet);
       // String controlSocket = "unix://" + getReactApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
