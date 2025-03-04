@@ -14,8 +14,8 @@ import Ping from 'react-native-ping';
 import Log from '../lndmobile/log';
 const log = Log('utils/LndMobileUtils.ts');
 
-import { sleep } from './SleepUtils';
 import Base64Utils from './Base64Utils';
+import { sleep } from './SleepUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import {
@@ -85,11 +85,17 @@ export function checkLndStreamErrorResponse(
     return null;
 }
 
-const writeLndConfig = async (
-    isTestnet?: boolean,
-    rescan?: boolean,
-    compactDb?: boolean
-) => {
+const writeLndConfig = async ({
+    lndDir = 'lnd',
+    isTestnet,
+    rescan,
+    compactDb
+}: {
+    lndDir: string;
+    isTestnet?: boolean;
+    rescan?: boolean;
+    compactDb?: boolean;
+}) => {
     const { writeConfig } = lndMobile.index;
 
     const peerMode = stores.settingsStore?.settings?.dontAllowOtherPeers
@@ -187,12 +193,20 @@ const writeLndConfig = async (
             : 'apriori'
     }`;
 
-        console.log('config', config);
-
-        await writeConfig(config);
+        await writeConfig({ lndDir, config });
         return;
     });
 };
+
+export async function deleteLndWallet(lndDir: string) {
+    log.d('Attempting to delete Embedded LND wallet');
+    try {
+        await stopLnd();
+        await NativeModules.LndMobileTools.deleteLndDirectory(lndDir);
+    } catch (error) {
+        log.e('Embedded LND wallet deletion failed', [error]);
+    }
+}
 
 export async function expressGraphSync() {
     return await new Promise(async (resolve) => {
@@ -238,37 +252,79 @@ export async function expressGraphSync() {
     });
 }
 
-export async function initializeLnd(
-    isTestnet?: boolean,
-    rescan?: boolean,
-    compactDb?: boolean
-) {
+export async function initializeLnd({
+    lndDir = 'lnd',
+    isTestnet,
+    rescan,
+    compactDb
+}: {
+    lndDir: string;
+    isTestnet?: boolean;
+    rescan?: boolean;
+    compactDb?: boolean;
+}) {
     const { initialize } = lndMobile.index;
-
-    await writeLndConfig(isTestnet, rescan, compactDb);
+    await writeLndConfig({ lndDir, isTestnet, rescan, compactDb });
     await initialize();
 }
 
 export async function stopLnd() {
-    const { stopLnd } = lndMobile.index;
-    return await stopLnd();
+    const { checkStatus, stopLnd } = lndMobile.index;
+    try {
+        const status = await checkStatus();
+        if (
+            (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) ===
+            ELndMobileStatusCodes.STATUS_PROCESS_STARTED
+        ) {
+            await stopLnd();
+            await NativeModules.LndMobileTools.killLnd();
+            return;
+        }
+    } catch (e) {
+        console.log('error stopping LND', e);
+    }
 }
 
-export async function startLnd(
-    walletPassword: string,
-    isTorEnabled: boolean = false,
-    isTestnet: boolean = false
-) {
+export async function startLnd({
+    lndDir = 'lnd',
+    walletPassword,
+    isTorEnabled = false,
+    isTestnet = false
+}: {
+    lndDir: string;
+    walletPassword: string;
+    isTorEnabled: boolean;
+    isTestnet: boolean;
+}) {
     const { checkStatus, startLnd, decodeState, subscribeState } =
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
+
+    stores.settingsStore.embeddedLndStarted = true;
 
     const status = await checkStatus();
     if (
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd('', isTorEnabled, isTestnet);
+        try {
+            await startLnd({ args: '', lndDir, isTorEnabled, isTestnet });
+        } catch (e) {
+            let started;
+            while (!started) {
+                try {
+                    console.log('error starting LND - retrying momentarily', e);
+                    await sleep(3000);
+                    await startLnd({
+                        args: '',
+                        lndDir,
+                        isTorEnabled,
+                        isTestnet
+                    });
+                    started = true;
+                } catch (e2) {}
+            }
+        }
     }
 
     await new Promise(async (res) => {
@@ -283,9 +339,10 @@ export async function startLnd(
                 }
 
                 const state = decodeState(e.data ?? '');
-                log.i('Current lnd state', [state]);
+                console.log('Current lnd state', state);
                 if (state.state === lnrpc.WalletState.NON_EXISTING) {
                     log.d('Got lnrpc.WalletState.NON_EXISTING');
+                    res(true);
                 } else if (state.state === lnrpc.WalletState.LOCKED) {
                     log.d('Got lnrpc.WalletState.LOCKED');
                     log.d('Wallet locked, unlocking wallet');
@@ -296,14 +353,16 @@ export async function startLnd(
                     log.d('Got lnrpc.WalletState.RPC_ACTIVE');
                     stores.syncStore.startSyncing();
                     res(true);
+                    LndMobileEventEmitter.removeAllListeners('SubscribeState');
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
                     log.d('Got lnrpc.WalletState.SERVER_ACTIVE');
                     res(true);
+                    LndMobileEventEmitter.removeAllListeners('SubscribeState');
                 } else {
                     log.d('Got unknown lnrpc.WalletState', [state.state]);
                 }
             } catch (error: any) {
-                console.log('err', error.message);
+                console.log('SubscribeState err', error.message);
             }
         });
         await subscribeState();
@@ -493,16 +552,21 @@ export async function optimizeNeutrinoPeers(
     return;
 }
 
-export async function createLndWallet(
-    seedMnemonic?: string,
-    walletPassphrase?: string,
-    isTorEnabled?: boolean,
-    isTestnet?: boolean,
-    channelBackupsBase64?: string
-) {
+export async function createLndWallet({
+    lndDir,
+    seedMnemonic,
+    walletPassphrase,
+    isTestnet,
+    channelBackupsBase64
+}: {
+    lndDir: string;
+    seedMnemonic?: string;
+    walletPassphrase?: string;
+    isTestnet?: boolean;
+    channelBackupsBase64?: string;
+}) {
     const {
         initialize,
-        startLnd,
         createIOSApplicationSupportAndLndDirectories,
         excludeLndICloudBackup,
         checkStatus
@@ -510,26 +574,36 @@ export async function createLndWallet(
     const { genSeed, initWallet } = lndMobile.wallet;
 
     if (Platform.OS === 'ios') {
-        await createIOSApplicationSupportAndLndDirectories();
-        await excludeLndICloudBackup();
+        await createIOSApplicationSupportAndLndDirectories(lndDir);
+        await excludeLndICloudBackup(lndDir);
     }
 
-    await writeLndConfig(isTestnet);
+    await writeLndConfig({ lndDir, isTestnet });
     await initialize();
 
-    const status = await checkStatus();
+    let status = await checkStatus();
     if (
         (status & ELndMobileStatusCodes.STATUS_PROCESS_STARTED) !==
         ELndMobileStatusCodes.STATUS_PROCESS_STARTED
     ) {
-        await startLnd('', isTorEnabled, isTestnet);
+        await startLnd({
+            lndDir,
+            walletPassword: '',
+            isTorEnabled: false,
+            isTestnet: isTestnet || false
+        });
     }
-    await sleep(2000);
 
     let seed: any;
     if (!seedMnemonic) {
-        seed = await genSeed(undefined);
-        if (!seed) return;
+        try {
+            seed = await genSeed(undefined);
+        } catch (e) {
+            console.log('error generating seed', e);
+        }
+        if (!seed) {
+            return;
+        }
     } else {
         seed = {
             cipher_seed_mnemonic: seedMnemonic?.split(' ')

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import Globe from '../assets/images/SVG/Globe.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
@@ -271,11 +272,13 @@ export default class IntroSplash extends React.Component<
                                             creatingWallet: true
                                         });
 
+                                        const lndDir = uuidv4();
+
                                         let response;
                                         try {
-                                            response = await createLndWallet(
-                                                undefined
-                                            );
+                                            response = await createLndWallet({
+                                                lndDir
+                                            });
                                         } catch (e) {
                                             this.setState({
                                                 error: true,
@@ -304,7 +307,8 @@ export default class IntroSplash extends React.Component<
                                                         'embedded-lnd',
                                                     nickname: localeString(
                                                         'general.defaultNodeNickname'
-                                                    )
+                                                    ),
+                                                    lndDir
                                                 }
                                             ];
 

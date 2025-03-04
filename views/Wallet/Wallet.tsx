@@ -44,6 +44,7 @@ import LinkingUtils from '../../utils/LinkingUtils';
 import {
     initializeLnd,
     startLnd,
+    stopLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
@@ -112,6 +113,7 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
+    navLock: boolean;
 }
 
 @inject(
@@ -146,7 +148,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         super(props);
         this.state = {
             unlocked: false,
-            initialLoad: true
+            initialLoad: true,
+            navLock: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -268,7 +271,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
+        const { navLock } = this.state;
         const { posStatus, setPosStatus, initialStart } = SettingsStore;
+
+        // ensure we don't run this twice in parallel
+        if (navLock) return;
+        this.setState({
+            navLock: true
+        });
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
@@ -350,6 +360,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             connectNWC,
             posStatus,
             walletPassword,
+            lndDir,
             embeddedLndNetwork,
             updateSettings
         } = SettingsStore;
@@ -401,11 +412,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (implementation === 'embedded-lnd') {
             if (connecting) {
                 AlertStore.checkNeutrinoPeers();
-                await initializeLnd(
-                    embeddedLndNetwork === 'Testnet',
+
+                await stopLnd();
+
+                console.log('lndDir', lndDir);
+                await initializeLnd({
+                    lndDir: lndDir || 'lnd',
+                    isTestnet: embeddedLndNetwork === 'Testnet',
                     rescan,
                     compactDb
-                );
+                });
 
                 // on initial load, do not run EGS
                 if (initialLoad) {
@@ -423,11 +439,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                 }
 
-                await startLnd(
-                    walletPassword,
-                    embeddedTor,
-                    embeddedLndNetwork === 'Testnet'
-                );
+                await startLnd({
+                    lndDir: lndDir || 'lnd',
+                    walletPassword: walletPassword || '',
+                    isTorEnabled: embeddedTor,
+                    isTestnet: embeddedLndNetwork === 'Testnet'
+                });
             }
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
@@ -585,6 +602,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             });
             LinkingUtils.handleInitialUrl(this.props.navigation);
         }
+
+        this.setState({
+            navLock: false
+        });
     }
 
     handleOpenURL = (event: any) => {
