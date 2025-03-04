@@ -123,6 +123,7 @@ export const createRefundTransaction = async ({
     refundLeaf,
     transactionHex,
     privateKey,
+    servicePubKey,
     feeRate,
     destinationAddress,
     isTestnet
@@ -133,6 +134,7 @@ export const createRefundTransaction = async ({
     refundLeaf: string;
     transactionHex: string;
     privateKey: string;
+    servicePubKey: string;
     feeRate: number;
     destinationAddress: string;
     isTestnet?: boolean;
@@ -145,6 +147,7 @@ export const createRefundTransaction = async ({
             refundLeaf,
             transactionHex,
             privateKey,
+            servicePubKey,
             feeRate,
             destinationAddress,
             isTestnet
