@@ -520,6 +520,7 @@ export interface ILndMobileInjections {
             refundLeaf,
             transactionHex,
             privateKey,
+            servicePubKey,
             feeRate,
             destinationAddress,
             isTestnet
@@ -530,6 +531,7 @@ export interface ILndMobileInjections {
             refundLeaf: string;
             transactionHex: string;
             privateKey: string;
+            servicePubKey: string;
             feeRate: number;
             destinationAddress: string;
             isTestnet?: boolean;
