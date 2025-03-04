@@ -49,6 +49,11 @@ export default function NodeIdenticon({
         hash.sha1(
             selectedNode && selectedNode.implementation === 'lndhub'
                 ? `${title}-${selectedNode.username}`
+                : selectedNode &&
+                  selectedNode.implementation === 'nostr-wallet-connect'
+                ? `${title}-${selectedNode.nostrWalletConnectUrl}`
+                : selectedNode && selectedNode.implementation === 'embedded-lnd'
+                ? `${title}-${selectedNode.lndDir || 'lnd'}`
                 : title
         ),
         // @ts-ignore:next-line
