@@ -134,6 +134,7 @@ import PendingHTLCs from './views/PendingHTLCs';
 import Swaps from './views/Swaps';
 import SwapDetails from './views/SwapDetails';
 import SwapsPane from './views/SwapsPane';
+import RefundSwap from './views/RefundSwap';
 
 // POS
 import Order from './views/Order';
@@ -913,6 +914,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="SwapsPane" // @ts-ignore:next-line
                                                         component={SwapsPane}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RefundSwap" // @ts-ignore:next-line
+                                                        component={RefundSwap}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
