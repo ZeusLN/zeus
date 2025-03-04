@@ -87,6 +87,7 @@ export interface ILndMobile {
         refundLeaf: string,
         transactionHex: string,
         privateKey: string,
+        servicePubKey: string,
         feeRate: numberstring,
         destinationAddress: string,
         isTestnet?: boolean
