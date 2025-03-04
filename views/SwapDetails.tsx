@@ -573,6 +573,7 @@ export default class SwapDetails extends React.Component<
                 refundLeaf: swapData.swapTree.refundLeaf.output,
                 transactionHex: lockupTransaction.hex,
                 privateKey: swapData.refundPrivateKey,
+                servicePubKey: swapData.claimPublicKey,
                 feeRate: Number(fee),
                 destinationAddress,
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
