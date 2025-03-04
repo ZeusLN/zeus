@@ -770,48 +770,13 @@ export default class SwapDetails extends React.Component<
                 {(updates === 'invoice.failedToPay' ||
                     updates === 'transaction.lockupFailed') && (
                     <Button
-                        title={localeString('views.SwapDetails.refund')}
+                        title={localeString('views.Swaps.refundSwap')}
                         containerStyle={{
                             paddingVertical: 10
                         }}
-                        onPress={async () => {
-                            const { SwapStore } = this.props;
-                            let submitted = false;
-
-                            try {
-                                if (submitted) {
-                                    console.log(
-                                        'Refund Transaction already created and submitted successfully. Skipping.'
-                                    );
-                                } else {
-                                    const lockupTransaction =
-                                        await SwapStore?.getLockupTransaction(
-                                            swapData.id
-                                        );
-
-                                    console.log(
-                                        'Lockup transaction:',
-                                        lockupTransaction
-                                    );
-
-                                    // Create the refund transaction
-                                    submitted =
-                                        await this.createRefundTransaction(
-                                            swapData,
-                                            lockupTransaction,
-                                            2,
-                                            HOST,
-                                            'tb1q5yhqklg9me33rpc5vas88rcs8fr6guhkyksr6x'
-                                        );
-                                }
-                            } catch (error) {
-                                console.error(
-                                    'Error in refund process:',
-                                    error
-                                );
-                            }
-                            console.log('Refund submission status:', submitted);
-                        }}
+                        onPress={() =>
+                            navigation.navigate('RefundSwap', { swapData })
+                        }
                         secondary
                     />
                 )}
