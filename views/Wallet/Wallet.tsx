@@ -113,7 +113,7 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
-    navLock: boolean;
+    fetchLock: boolean;
 }
 
 @inject(
@@ -149,7 +149,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         this.state = {
             unlocked: false,
             initialLoad: true,
-            navLock: false
+            fetchLock: false
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -271,14 +271,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async getSettingsAndNavigate() {
         const { SettingsStore, navigation } = this.props;
-        const { navLock } = this.state;
         const { posStatus, setPosStatus, initialStart } = SettingsStore;
-
-        // ensure we don't run this twice in parallel
-        if (navLock) return;
-        this.setState({
-            navLock: true
-        });
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
@@ -348,6 +341,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LnurlPayStore,
             NotesStore
         } = this.props;
+        const { fetchLock } = this.state;
         const {
             settings,
             implementation,
@@ -377,6 +371,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } = settings;
         const expressGraphSyncEnabled =
             settings.expressGraphSync && embeddedLndNetwork === 'Mainnet';
+
+        // ensure we don't run this twice in parallel
+        if (fetchLock) return;
+        this.setState({
+            fetchLock: true
+        });
 
         let start;
         if (connecting) {
@@ -604,7 +604,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         this.setState({
-            navLock: false
+            fetchLock: false
         });
     }
 
