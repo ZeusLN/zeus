@@ -162,7 +162,8 @@ export default class BalancePane extends React.PureComponent<
         );
 
         let balancePane;
-        const error = NodeInfoStore.error || SettingsStore.error;
+        const error =
+            NodeInfoStore.error || SettingsStore.error || BalanceStore.error;
 
         if (!error) {
             balancePane = (
