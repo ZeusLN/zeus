@@ -24,6 +24,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
+import { Row } from '../components/layout/Row';
 import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import BalanceStore from '../stores/BalanceStore';
@@ -41,8 +42,6 @@ import BackendUtils from '../utils/BackendUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
-
-import { Row } from '../components/layout/Row';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -373,6 +372,9 @@ export default class PaymentRequest extends React.Component<
 
         const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
 
+        // variables cannot be destructured traditionally here
+        // due to how we clear the pay_req from the store upon
+        // navigating back
         const requestAmount =
             pay_req && pay_req.getRequestAmount
                 ? pay_req.getRequestAmount
@@ -380,9 +382,10 @@ export default class PaymentRequest extends React.Component<
         const expiry = pay_req && pay_req.expiry;
         const cltv_expiry = pay_req && pay_req.cltv_expiry;
         const destination = pay_req && pay_req.destination;
-        const description = pay_req && pay_req.description;
         const payment_hash = pay_req && pay_req.payment_hash;
         const timestamp = pay_req && pay_req.timestamp;
+        const getMemo = pay_req && pay_req.getMemo;
+        const getNameDescReceiver = pay_req && pay_req.getNameDescReceiver;
 
         let lockAtomicMultiPathPayment = false;
         if (
@@ -683,12 +686,21 @@ export default class PaymentRequest extends React.Component<
                                     </>
                                 )}
 
-                                {!!description && (
+                                {getNameDescReceiver && (
                                     <KeyValue
                                         keyValue={localeString(
-                                            'views.PaymentRequest.description'
+                                            'views.Invoice.payingTo'
                                         )}
-                                        value={description}
+                                        value={getNameDescReceiver}
+                                    />
+                                )}
+
+                                {getMemo && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.Invoice.memo'
+                                        )}
+                                        value={getMemo}
                                     />
                                 )}
 

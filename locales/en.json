@@ -481,6 +481,8 @@
     "views.Invoice.title": "Invoice",
     "views.Invoice.paid": "Paid",
     "views.Invoice.unpaid": "Unpaid",
+    "views.Invoice.payingTo": "Paying to",
+    "views.Invoice.receiverName": "Receiver name",
     "views.Invoice.memo": "Memo",
     "views.Invoice.receipt": "Receipt",
     "views.Invoice.settleDate": "Settle Date",
