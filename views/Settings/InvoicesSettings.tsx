@@ -30,6 +30,7 @@ interface InvoicesSettingsProps {
 interface InvoicesSettingsState {
     addressType: string;
     memo: string;
+    receiverName: string;
     expiry: string;
     timePeriod: string;
     expirySeconds: string;
@@ -49,6 +50,7 @@ export default class InvoicesSettings extends React.Component<
     state = {
         addressType: '0',
         memo: '',
+        receiverName: '',
         expiry: '3600',
         timePeriod: 'Seconds',
         expirySeconds: '3600',
@@ -67,6 +69,7 @@ export default class InvoicesSettings extends React.Component<
         this.setState({
             addressType: settings?.invoices?.addressType || '0',
             memo: settings?.invoices?.memo || '',
+            receiverName: settings?.invoices?.receiverName || '',
             expiry: settings?.invoices?.expiry || '3600',
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: settings?.invoices?.expirySeconds || '3600',
@@ -96,6 +99,7 @@ export default class InvoicesSettings extends React.Component<
         const {
             addressType,
             memo,
+            receiverName,
             expiry,
             timePeriod,
             routeHints,
@@ -178,29 +182,61 @@ export default class InvoicesSettings extends React.Component<
                         marginTop: 5
                     }}
                 >
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.Receive.memo')}
-                    </Text>
-                    <TextInput
-                        placeholder={localeString(
-                            'views.Receive.memoPlaceholder'
-                        )}
-                        value={memo}
-                        onChangeText={async (text: string) => {
-                            this.setState({ memo: text });
-                            await updateSettings({
-                                invoices: {
-                                    ...settings.invoices,
-                                    memo: text
-                                }
-                            });
-                        }}
-                    />
+                    <>
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                            infoModalText={localeString(
+                                'views.Settings.Invoices.memoExplainer'
+                            )}
+                        >
+                            {localeString('views.Receive.memo')}
+                        </Text>
+                        <TextInput
+                            placeholder={localeString(
+                                'views.Receive.memoPlaceholder'
+                            )}
+                            value={memo}
+                            onChangeText={async (text: string) => {
+                                this.setState({ memo: text });
+                                await updateSettings({
+                                    invoices: {
+                                        ...settings.invoices,
+                                        memo: text
+                                    }
+                                });
+                            }}
+                        />
+                    </>
+
+                    <>
+                        <Text
+                            style={{
+                                ...styles.secondaryText,
+                                color: themeColor('secondaryText')
+                            }}
+                            infoModalText={localeString(
+                                'views.Settings.Invoices.receiverNameExplainer'
+                            )}
+                        >
+                            {localeString('views.Invoice.receiverName')}
+                        </Text>
+                        <TextInput
+                            placeholder="Satoshi"
+                            value={receiverName}
+                            onChangeText={async (text: string) => {
+                                this.setState({ receiverName: text });
+                                await updateSettings({
+                                    invoices: {
+                                        ...settings.invoices,
+                                        receiverName: text
+                                    }
+                                });
+                            }}
+                        />
+                    </>
 
                     {implementation !== 'lndhub' && (
                         <>
