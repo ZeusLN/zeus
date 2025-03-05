@@ -123,7 +123,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     />
                 )}
 
-                {nodeInfo.currentBlockHeight && (
+                {nodeInfo.currentBlockHeight !== undefined && (
                     <KeyValue
                         keyValue={localeString('views.NodeInfo.blockHeight')}
                         value={numberWithCommas(nodeInfo.currentBlockHeight)}
