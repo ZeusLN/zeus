@@ -1,7 +1,7 @@
 # ZEUS
 <p align="center"><img src="https://github-production-user-asset-6210df.s3.amazonaws.com/1878621/282360800-579c1156-1fc6-45b6-86f2-7b3424502160.png"></p>
 
-![ZEUS screenshots](https://github.com/user-attachments/assets/648e3b16-e12b-4d30-a42a-268245989fb1)
+![ZEUS screenshots](https://github.com/user-attachments/assets/337e6549-26e2-4319-9fc1-0937a81bb15d)
 
 ZEUS is a mobile Bitcoin/Lightning wallet and remote node manager for LND and Core Lightning. ⚡️
 
