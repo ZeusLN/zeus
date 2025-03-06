@@ -1,7 +1,12 @@
-import { action, observable } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { ECPairFactory } from 'ecpair';
+import ecc from '@bitcoinerlab/secp256k1';
+import { randomBytes } from 'crypto';
+import { crypto, initEccLib } from 'bitcoinjs-lib';
 
 import { themeColor } from '../utils/ThemeUtils';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 // wss://api.testnet.boltz.exchange/v2/ws
 export const HOST = 'https://api.testnet.boltz.exchange/v2';
@@ -10,6 +15,9 @@ export default class SwapStore {
     @observable public subInfo = {};
     @observable public reverseInfo = {};
     @observable public loading = true;
+    @observable public apiError = '';
+    @observable public swapInfo = {};
+    @observable public reverseSwapInfo = {};
 
     @action
     public statusColor = (status: string) => {
@@ -92,6 +100,244 @@ export default class SwapStore {
             }
         } catch (error) {
             console.error('Error in getLockupTransaction:', error);
+        }
+    };
+
+    @action
+    public createSubmarineSwap = async (invoice: any, navigation: any) => {
+        try {
+            runInAction(() => {
+                this.apiError = '';
+                this.loading = true;
+            });
+
+            console.log('Creating submarine swap...');
+            let refundPublicKey: any;
+            let refundPrivateKey: any;
+            const keys: any = ECPairFactory(ecc).makeRandom();
+
+            refundPrivateKey = Buffer.from(keys.privateKey).toString('hex');
+            refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
+            console.log(
+                'keys private key:',
+                Buffer.from(keys.privateKey).toString('hex')
+            );
+            console.log(
+                'Keys public key:',
+                Buffer.from(keys.publicKey).toString('hex')
+            );
+
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${HOST}/swap/submarine`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    invoice,
+                    to: 'BTC',
+                    from: 'BTC',
+                    refundPublicKey
+                })
+            );
+
+            const responseData = JSON.parse(response.data); // Parse the response
+            console.log('Parsed Response Data:', responseData);
+
+            // Check for errors in the response
+            if (responseData?.error) {
+                runInAction(() => {
+                    this.apiError = responseData.error;
+                    this.loading = false;
+                });
+                console.error('Error in API response:', responseData.error);
+                return;
+            }
+
+            // Add the creation date to the response
+            const createdAt = new Date().toISOString();
+            responseData.createdAt = createdAt;
+
+            // Add the swap type
+            responseData.type = 'Submarine';
+            responseData.refundPrivateKey = refundPrivateKey;
+            responseData.refundPublicKey = refundPublicKey;
+
+            await this.saveSwapToStorage(responseData, keys, invoice);
+
+            runInAction(() => {
+                this.swapInfo = responseData;
+                this.loading = false;
+            });
+
+            console.log('Navigating to SwapDetails...');
+            navigation.navigate('SwapDetails', {
+                swapData: responseData,
+                keys,
+                endpoint: HOST,
+                invoice
+            });
+        } catch (error: any) {
+            runInAction(() => {
+                this.apiError = error.message || 'An unknown error occurred';
+                this.loading = false;
+            });
+            console.error('Error creating Submarine Swap:', error);
+        }
+    };
+
+    private saveSwapToStorage = async (
+        newSwap: any,
+        keys: any,
+        invoice: any
+    ) => {
+        try {
+            // Retrieve existing swaps
+            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            // Adding the new properties to the swap
+            const enrichedSwap = {
+                ...newSwap,
+                keys,
+                invoice
+            };
+
+            // Add the enriched swap to the beginning of array
+            swaps.unshift(enrichedSwap);
+
+            // Save the updated swaps array back to Encrypted Storage
+            await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
+            console.log('Swap saved successfully to Encrypted Storage.');
+        } catch (error: any) {
+            console.error('Error saving swap to storage:', error);
+            throw error;
+        }
+    };
+
+    @action
+    public createReverseSwap = async (
+        destinationAddress: string,
+        invoiceAmount: any,
+        fee: string,
+        navigation: any
+    ) => {
+        try {
+            runInAction(() => {
+                this.apiError = '';
+                this.loading = true;
+            });
+
+            initEccLib(ecc);
+            console.log('Creating reverse swap...');
+
+            const preimage = randomBytes(32);
+            const keys: any = ECPairFactory(ecc).makeRandom();
+
+            // Creating a reverse swap
+            const data = JSON.stringify({
+                invoiceAmount,
+                to: 'BTC',
+                from: 'BTC',
+                claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
+                preimageHash: crypto.sha256(preimage).toString('hex')
+            });
+
+            console.log('Data before sending to API:', data);
+
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${HOST}/swap/reverse`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                data
+            );
+
+            const responseData = JSON.parse(response.data); // Parse the response
+            console.log('Created reverse swap:', responseData);
+
+            // Handle API errors
+            if (responseData?.error) {
+                runInAction(() => {
+                    this.apiError = responseData.error;
+                    this.loading = false;
+                });
+                console.error('Error in API response:', responseData.error);
+                return;
+            }
+
+            // Add the creation date
+            const createdAt = new Date().toISOString();
+            responseData.createdAt = createdAt;
+
+            // Add the swap type
+            responseData.type = 'Reverse';
+            responseData.preimage = preimage;
+
+            // Step 3: Save to storage
+            await this.saveReverseSwaps(
+                responseData,
+                keys,
+                destinationAddress,
+                preimage
+            );
+
+            runInAction(() => {
+                this.reverseSwapInfo = responseData;
+                this.loading = false;
+            });
+
+            console.log('Navigating to SwapDetails...');
+            navigation.navigate('SwapDetails', {
+                swapData: responseData,
+                keys,
+                endpoint: HOST,
+                invoice: destinationAddress,
+                fee
+            });
+        } catch (error: any) {
+            runInAction(() => {
+                this.apiError = error.message || 'An unknown error occurred';
+                this.loading = false;
+            });
+            console.error('Error creating reverse swap:', error);
+        }
+    };
+
+    private saveReverseSwaps = async (
+        newSwap: any,
+        keys: any,
+        destinationAddress: string,
+        preimage: any
+    ) => {
+        try {
+            // Retrieve existing swaps
+            const storedSwaps = await EncryptedStorage.getItem('reverse-swaps');
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            // Adding the new properties to the swap
+            const enrichedSwap = {
+                ...newSwap,
+                keys,
+                destinationAddress,
+                preimage
+            };
+
+            // Add the enriched swap to the beginning of array
+            swaps.unshift(enrichedSwap);
+
+            // Save the updated swaps array back to Encrypted Storage
+            await EncryptedStorage.setItem(
+                'reverse-swaps',
+                JSON.stringify(swaps)
+            );
+            console.log(
+                'Reverse swap saved successfully to Encrypted Storage.'
+            );
+        } catch (error: any) {
+            console.error('Error saving reverse swap to storage:', error);
+            throw error;
         }
     };
 }
