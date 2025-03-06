@@ -10,11 +10,8 @@ import { Route } from '@react-navigation/native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
-const {
-    createClaimTransaction,
-    createReverseClaimTransaction,
-    createRefundTransaction
-} = lndMobile.swaps;
+const { createClaimTransaction, createReverseClaimTransaction } =
+    lndMobile.swaps;
 
 import Screen from '../components/Screen';
 import Header from '../components/Header';
@@ -28,7 +25,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
-import SwapStore, { HOST } from '../stores/SwapStore';
+import SwapStore from '../stores/SwapStore';
 
 import QR from '../assets/images/SVG/QR.svg';
 
@@ -554,35 +551,6 @@ export default class SwapDetails extends React.Component<
             }
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
-            return false;
-        }
-    };
-
-    createRefundTransaction = async (
-        swapData: any,
-        lockupTransaction: any,
-        fee: any,
-        endpoint: string,
-        destinationAddress: string
-    ): Promise<boolean> => {
-        try {
-            await createRefundTransaction({
-                endpoint,
-                swapId: swapData.id,
-                claimLeaf: swapData.swapTree.claimLeaf.output,
-                refundLeaf: swapData.swapTree.refundLeaf.output,
-                transactionHex: lockupTransaction.hex,
-                privateKey: swapData.refundPrivateKey,
-                servicePubKey: swapData.claimPublicKey,
-                feeRate: Number(fee),
-                destinationAddress,
-                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
-            });
-
-            console.log('Refund transaction created successfully');
-            return true;
-        } catch (error) {
-            console.error('Error creating refund transaction:', error);
             return false;
         }
     };
