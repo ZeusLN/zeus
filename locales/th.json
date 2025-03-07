@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "รูปแบบ SCID",
     "views.Channel.aliasScids": "รูปแบบ SCIDs",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Close height",
     "views.Channel.closeType": "ประเภทการปิด",
     "views.Channel.openInitiator": "ผู้เริ่มการเปิด",
