@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCIDs",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Close height",
     "views.Channel.closeType": "Close type",
     "views.Channel.openInitiator": "Open initiator",
