@@ -368,7 +368,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     label: localeString(
                                         'views.Settings.LSP.flow2'
                                     ),
-                                    url: 'https://docs.zeusln.app/lsp/api'
+                                    url: 'https://docs.zeusln.app/lsp/services/flow#api'
                                 }
                             ]}
                             renderItem={({ item }) => (
