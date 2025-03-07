@@ -112,7 +112,11 @@ export default class ChannelView extends React.Component<
             (extendableChannel: any) => {
                 return (
                     extendableChannel.short_channel_id ===
-                    channel.shortChannelId
+                        channel.shortChannelId ||
+                    extendableChannel.short_channel_id ===
+                        channel.peerScidAlias ||
+                    extendableChannel.short_channel_id ===
+                        channel.zeroConfConfirmedScid
                 );
             }
         )[0];
@@ -325,8 +329,9 @@ export default class ChannelView extends React.Component<
             channelId,
             shortChannelId,
             initiator,
-            alias_scids,
-            peer_scid_alias,
+            aliasScids,
+            peerScidAlias,
+            zeroConfConfirmedScid,
             local_chan_reserve_sat,
             remote_chan_reserve_sat,
             displayName,
@@ -363,13 +368,11 @@ export default class ChannelView extends React.Component<
         const peerDisplay = PrivacyUtils.sensitiveValue(displayName, 8);
 
         const showAliasScids =
-            !!alias_scids &&
-            alias_scids.length > 0 &&
-            !(
-                alias_scids.length === 1 &&
-                alias_scids[0].toString() === channelId
-            );
-        const showPeerAliasScid = !!peer_scid_alias && peer_scid_alias != 0;
+            !!aliasScids &&
+            aliasScids.length > 0 &&
+            !(aliasScids.length === 1 && aliasScids[0] === shortChannelId);
+        const showPeerAliasScid = !!peerScidAlias;
+        const showZeroConfConfirmedScid = !!zeroConfConfirmedScid;
 
         const EditFees = () => (
             <TouchableOpacity
@@ -643,7 +646,9 @@ export default class ChannelView extends React.Component<
                         />
                     )}
 
-                    {(showPeerAliasScid || showAliasScids) && (
+                    {(showPeerAliasScid ||
+                        showAliasScids ||
+                        showZeroConfConfirmedScid) && (
                         <TouchableOpacity
                             onPress={() => {
                                 this.setState({
@@ -683,7 +688,7 @@ export default class ChannelView extends React.Component<
                             {showAliasScids && (
                                 <KeyValue
                                     keyValue={
-                                        alias_scids.length > 1
+                                        aliasScids.length > 1
                                             ? localeString(
                                                   'views.Channel.aliasScids'
                                               )
@@ -692,7 +697,7 @@ export default class ChannelView extends React.Component<
                                               )
                                     }
                                     value={PrivacyUtils.sensitiveValue(
-                                        alias_scids.join(', ')
+                                        aliasScids.join(', ')
                                     )}
                                 />
                             )}
@@ -702,7 +707,17 @@ export default class ChannelView extends React.Component<
                                         'views.Channel.peerAliasScid'
                                     )}
                                     value={PrivacyUtils.sensitiveValue(
-                                        peer_scid_alias
+                                        peerScidAlias
+                                    )}
+                                />
+                            )}
+                            {showZeroConfConfirmedScid && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Channel.zeroConfConfirmedScid'
+                                    )}
+                                    value={PrivacyUtils.sensitiveValue(
+                                        zeroConfConfirmedScid
                                     )}
                                 />
                             )}
