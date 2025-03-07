@@ -134,7 +134,11 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                 (extendableChannel: any) => {
                     return (
                         extendableChannel.short_channel_id ===
-                        item.shortChannelId
+                            item.shortChannelId ||
+                        extendableChannel.short_channel_id ===
+                            item.peerScidAlias ||
+                        extendableChannel.short_channel_id ===
+                            item.zeroConfConfirmedScid
                     );
                 }
             )[0];

@@ -43,6 +43,7 @@ export default class Channel extends BaseModel {
     private: boolean;
     initiator?: boolean;
     peer_scid_alias?: number;
+    zero_conf_confirmed_scid?: number;
     alias_scids?: Array<number>; // array uint64
     local_chan_reserve_sat?: string;
     remote_chan_reserve_sat?: string;
@@ -193,6 +194,33 @@ export default class Channel extends BaseModel {
             : this.channelId
             ? chanFormat({ number: this.channelId }).channel
             : undefined;
+    }
+
+    @computed
+    public get aliasScids(): Array<string> {
+        const scids: Array<string> = [];
+        this.alias_scids?.forEach((scid) => {
+            try {
+                const formatted = chanFormat({ number: scid }).channel;
+                if (formatted !== '0x0x0') scids.push(formatted);
+            } catch (e) {}
+        });
+        return scids;
+    }
+
+    @computed
+    public get peerScidAlias(): string | undefined {
+        const scid = this.peer_scid_alias
+            ? chanFormat({ number: this.peer_scid_alias }).channel
+            : undefined;
+        return scid !== '0x0x0' ? scid : undefined;
+    }
+
+    @computed get zeroConfConfirmedScid(): string | undefined {
+        const scid = this.zero_conf_confirmed_scid
+            ? chanFormat({ number: this.zero_conf_confirmed_scid }).channel
+            : undefined;
+        return scid !== '0x0x0' ? scid : undefined;
     }
 
     @computed
