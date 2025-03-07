@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "별칭 SCID",
     "views.Channel.aliasScids": "별칭 SCID",
     "views.Channel.peerAliasScid": "피어 별칭 SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "높이 닫기",
     "views.Channel.closeType": "유형 닫기",
     "views.Channel.openInitiator": "개시자 열기",
