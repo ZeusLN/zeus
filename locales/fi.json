@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCID:t",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Sulkujärjestys",
     "views.Channel.closeType": "Sulkutyyppi",
     "views.Channel.openInitiator": "Avaa käynnistäjä",
