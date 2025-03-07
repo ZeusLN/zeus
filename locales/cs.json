@@ -437,7 +437,7 @@
     "views.Channel.aliasScid": "SCID Alias",
     "views.Channel.aliasScids": "Aliasy SCID",
     "views.Channel.peerAliasScid": "SCID Alias peeru",
-    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf potvrzené SCID",
     "views.Channel.closeHeight": "Výška zavření",
     "views.Channel.closeType": "Typ zavření",
     "views.Channel.openInitiator": "Iniciátor otevření",
