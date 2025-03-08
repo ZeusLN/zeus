@@ -109,7 +109,8 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     }
 
     async componentDidMount() {
-        const { SettingsStore, navigation } = this.props;
+        const { LSPStore, SettingsStore, navigation } = this.props;
+        LSPStore.clearLSPS7Order();
         navigation.addListener('focus', () => {
             this.setState({
                 token: SettingsStore.settings?.lsps1Token || ''
