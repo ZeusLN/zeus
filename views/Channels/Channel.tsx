@@ -79,6 +79,7 @@ interface ChannelState {
     aliasToggle: boolean;
     channel: Channel;
     renewalInfo: {
+        scid?: string;
         expiresInBlocks?: number;
         expiresMonths?: number;
         expiresDays?: number;
@@ -121,6 +122,11 @@ export default class ChannelView extends React.Component<
             }
         )[0];
 
+        let scid;
+        if (renewalInfo?.short_channel_id) {
+            scid = renewalInfo.short_channel_id;
+        }
+
         let expiresInBlocks;
         if (currentBlockHeight && renewalInfo?.expiration_block) {
             expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
@@ -152,6 +158,7 @@ export default class ChannelView extends React.Component<
             aliasToggle: false,
             channel,
             renewalInfo: {
+                scid,
                 expiresInBlocks,
                 expiresDays,
                 expiresMonths,
@@ -601,7 +608,7 @@ export default class ChannelView extends React.Component<
                                     }
                                     onPress={() => {
                                         navigation.navigate('LSPS7', {
-                                            chanId: shortChannelId,
+                                            chanId: renewalInfo.scid,
                                             maxExtensionInBlocks:
                                                 renewalInfo.maxExtensionInBlocks,
                                             expirationBlock:
