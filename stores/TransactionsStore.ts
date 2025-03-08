@@ -600,9 +600,9 @@ export default class TransactionsStore {
             (status &&
                 status !== 'complete' &&
                 status !== 'SUCCEEDED' &&
-                status !== 'IN_FLIGHT' &&
-                result.payment_error !== '') ||
-            status === 'FAILED'
+                status !== 'IN_FLIGHT') ||
+            (status && status === 'FAILED') ||
+            (result.payment_error && result.payment_error !== '')
         ) {
             this.error = true;
             this.payment_error =
