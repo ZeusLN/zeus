@@ -59,11 +59,11 @@ export default class ZeusText extends React.Component<TextProps, {}> {
             return (
                 <TouchableOpacity
                     onPress={() =>
-                        toggleInfoModal(
-                            infoModalText,
-                            infoModalLink,
-                            infoModalAdditionalButtons
-                        )
+                        toggleInfoModal({
+                            text: infoModalText,
+                            link: infoModalLink,
+                            buttons: infoModalAdditionalButtons
+                        })
                     }
                 >
                     <CoreText />
