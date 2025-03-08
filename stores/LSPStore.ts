@@ -115,6 +115,11 @@ export default class LSPStore {
         this.error_msg = '';
     };
 
+    @action
+    public clearLSPS7Order = () => {
+        this.createExtensionOrderResponse = {};
+    };
+
     public isOlympus = () => {
         const olympusREST = this.nodeInfoStore!.nodeInfo.isTestNet
             ? DEFAULT_LSPS1_REST_TESTNET
