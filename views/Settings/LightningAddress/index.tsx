@@ -64,6 +64,7 @@ interface LightningAddressState {
     nostrPublicKey: string;
     nostrNpub: string;
     nostrRelays: Array<string>;
+    hasZeusLspChannel: boolean;
 }
 
 @inject(
@@ -85,7 +86,8 @@ export default class LightningAddress extends React.Component<
         nostrPrivateKey: '',
         nostrPublicKey: '',
         nostrNpub: '',
-        nostrRelays: DEFAULT_NOSTR_RELAYS
+        nostrRelays: DEFAULT_NOSTR_RELAYS,
+        hasZeusLspChannel: false
     };
 
     generateNostrKeys = () => {
@@ -101,7 +103,8 @@ export default class LightningAddress extends React.Component<
     };
 
     async componentDidMount() {
-        const { LightningAddressStore, navigation, route } = this.props;
+        const { ChannelsStore, LightningAddressStore, navigation, route } =
+            this.props;
         const { status } = LightningAddressStore;
 
         const skipStatus = route.params?.skipStatus;
@@ -113,6 +116,16 @@ export default class LightningAddress extends React.Component<
         });
 
         if (!skipStatus) status();
+
+        ChannelsStore.enrichedChannels?.every((channel) => {
+            if (channel.remotePubkey === DEFAULT_LSPS1_PUBKEY_MAINNET) {
+                this.setState({
+                    hasZeusLspChannel: true
+                });
+                return false;
+            }
+            return true;
+        });
 
         // triggers when loaded from navigation or back action
         navigation.addListener('focus', this.handleFocus);
@@ -151,7 +164,6 @@ export default class LightningAddress extends React.Component<
             navigation,
             LightningAddressStore,
             NodeInfoStore,
-            ChannelsStore,
             SettingsStore,
             UnitsStore
         } = this.props;
@@ -160,7 +172,8 @@ export default class LightningAddress extends React.Component<
             nostrPrivateKey,
             nostrPublicKey,
             nostrNpub,
-            nostrRelays
+            nostrRelays,
+            hasZeusLspChannel
         } = this.state;
         const {
             create,
@@ -191,14 +204,6 @@ export default class LightningAddress extends React.Component<
             !prepareToAutomaticallyAcceptStart ||
             !automaticallyAccept ||
             readyToAutomaticallyAccept;
-
-        let hasZeusLspChannel = false;
-        ChannelsStore.channels?.every((channel) => {
-            if (channel.remotePubkey === DEFAULT_LSPS1_PUBKEY_MAINNET) {
-                hasZeusLspChannel = true;
-                return;
-            }
-        });
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
         const supportsLSPS1 =
