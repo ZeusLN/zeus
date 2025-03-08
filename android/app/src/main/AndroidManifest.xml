@@ -20,6 +20,10 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https"/>
         </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND_MULTIPLE" />
+            <data android:mimeType="*/*" />
+        </intent>
     </queries>
 
     <application
