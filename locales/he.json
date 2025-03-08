@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "כינוי SCID",
     "views.Channel.aliasScids": "כינויי SCID",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "גובה סגירה",
     "views.Channel.closeType": "סוג סגירה",
     "views.Channel.openInitiator": "יוזמ/ת פתיחה",

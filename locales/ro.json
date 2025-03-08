@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias-uri SCID",
     "views.Channel.peerAliasScid": "Peer Alias ​​SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Poziție la inchidere",
     "views.Channel.closeType": "Tip la inchidere",
     "views.Channel.openInitiator": "Inițiator la deschidere",

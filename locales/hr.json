@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCID-ovi",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Visina zatvaranja",
     "views.Channel.closeType": "Vrsta zatvaranja",
     "views.Channel.openInitiator": "Inicijator otvaranja",

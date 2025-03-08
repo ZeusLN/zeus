@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Alias SCID",
     "views.Channel.aliasScids": "Alias SCIDs",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Κλείσιμο Block Height",
     "views.Channel.closeType": "Κλείσιμο τύπου",
     "views.Channel.openInitiator": "Άνοιγμα εκκινητή",

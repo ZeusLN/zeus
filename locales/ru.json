@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Псевдоним SCID",
     "views.Channel.aliasScids": "Псевдонимы SCID",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Высота закрытия",
     "views.Channel.closeType": "Тип закрытия",
     "views.Channel.openInitiator": "Инициатор открытия",

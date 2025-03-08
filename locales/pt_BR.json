@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "Pseudônimo SCID",
     "views.Channel.aliasScids": "Pseudônimos SCID",
     "views.Channel.peerAliasScid": "Alias ​​de par SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Altura próxima",
     "views.Channel.closeType": "Tipo próximo",
     "views.Channel.openInitiator": "Iniciador aberto",
