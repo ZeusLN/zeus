@@ -437,6 +437,7 @@
     "views.Channel.aliasScid": "SCID Takma adı",
     "views.Channel.aliasScids": "SCID Takma adları",
     "views.Channel.peerAliasScid": "Peer Alias SCID",
+    "views.Channel.zeroConfConfirmedScid": "0-conf Confirmed SCID",
     "views.Channel.closeHeight": "Kapanış yüksekliği",
     "views.Channel.closeType": "Kapanış tipi",
     "views.Channel.openInitiator": "Başlatıcı Aç",
