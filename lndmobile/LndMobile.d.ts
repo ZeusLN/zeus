@@ -58,8 +58,12 @@ export interface ILndMobileTools {
     writeConfig(lndDir: string, config: string): Promise<string>;
     killLnd(): Promise<boolean>;
     copyLndLog(network: string): Promise<boolean>;
-    tailLog(numberOfLines: number, network: string): Promise<string>;
-    observeLndLogFile(network: string): Promise<boolean>;
+    tailLog(
+        numberOfLines: number,
+        lndDir: string,
+        network: string
+    ): Promise<string>;
+    observeLndLogFile(lndDir: string, network: string): Promise<boolean>;
     saveChannelsBackup(base64Backups: string): Promise<string>;
     saveChannelBackupFile(network: string): Promise<boolean>;
     DEBUG_getWalletPasswordFromKeychain(): Promise<string>;
