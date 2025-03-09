@@ -48,23 +48,7 @@ class MainActivity : ReactActivity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == INTENT_COPYLNDLOG && resultCode == RESULT_OK) {
-            val destUri = data!!.data
-            val sourceLocation = File("$filesDir/logs/bitcoin/mainnet/lnd.log")
-            try {
-                val `in`: InputStream = FileInputStream(sourceLocation)
-                val out = contentResolver.openOutputStream(destUri!!)
-                val buf = ByteArray(1024)
-                var len: Int
-                while (`in`.read(buf).also { len = it } > 0) {
-                    out!!.write(buf, 0, len)
-                }
-                `in`.close()
-                out!!.close()
-            } catch (e: IOException) {
-                Toast.makeText(this, "Error " + e.message, Toast.LENGTH_LONG).show()
-            }
-        } else if (requestCode == INTENT_EXPORTCHANBACKUP && resultCode == RESULT_OK) {
+        if (requestCode == INTENT_EXPORTCHANBACKUP && resultCode == RESULT_OK) {
             val destUri = data!!.data
             try {
                 val `in` = ByteArrayInputStream(tmpChanBackup)
@@ -122,10 +106,8 @@ class MainActivity : ReactActivity() {
     companion object {
         var TAG = "MainActivity"
         var started = false
-        var INTENT_COPYLNDLOG = 100
         var INTENT_EXPORTCHANBACKUP = 101
         var INTENT_EXPORTCHANBACKUPFILE = 102
-        var INTENT_COPYLNDLOGTESTNET = 200
         var INTENT_EXPORTCHANBACKUPFILETESTNET = 202
         var tmpChanBackup: ByteArray = ByteArray(0)
         var currentActivity: WeakReference<MainActivity>? = null

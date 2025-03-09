@@ -114,12 +114,6 @@ RCT_EXTERN_METHOD(
 )
 
 RCT_EXTERN_METHOD(
-  copyLndLog: (NSString)network 
-  resolver: (RCTPromiseResolveBlock)resolve
-  rejecter: (RCTPromiseRejectBlock)reject
-)
-
-RCT_EXTERN_METHOD(
   macosOpenFileDialog: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )

@@ -133,20 +133,6 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void copyLndLog(String network, Promise promise) {
-    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-    intent.addCategory(Intent.CATEGORY_OPENABLE);
-    intent.setType("text/plain");
-    intent.putExtra(Intent.EXTRA_TITLE, "lnd.log");
-    if (network == "testnet") {
-      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_COPYLNDLOGTESTNET());
-    } else {
-      getReactApplicationContext().getCurrentActivity().startActivityForResult(intent, MainActivity.Companion.getINTENT_COPYLNDLOG());
-    }
-    promise.resolve(true);
-  }
-
-  @ReactMethod
   public void tailLog(Integer numberOfLines, String lndDir, String network, Promise promise) {
     File file;
     if (lndDir.equals("lnd")) {

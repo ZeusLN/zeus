@@ -57,7 +57,6 @@ export interface ILndMobile {
 export interface ILndMobileTools {
     writeConfig(lndDir: string, config: string): Promise<string>;
     killLnd(): Promise<boolean>;
-    copyLndLog(network: string): Promise<boolean>;
     tailLog(
         numberOfLines: number,
         lndDir: string,
