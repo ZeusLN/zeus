@@ -166,5 +166,15 @@ describe('ErrorUtils', () => {
                 )
             ).toEqual('Channel expiry blocks too high in create order request');
         });
+
+        it('Handles invalid server response error messages', () => {
+            expect(
+                errorToUserFriendly(
+                    new Error(
+                        'ReactNativeBlobUtil failed to encode response data to BASE64 string.'
+                    )
+                )
+            ).toEqual('Received invalid response data from the server');
+        });
     });
 });
