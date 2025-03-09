@@ -147,13 +147,25 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void tailLog(Integer numberOfLines, String network, Promise promise) {
-    File file = new File(
-      getReactApplicationContext().getFilesDir().toString() +
-      "/logs/bitcoin/" +
-      network +
-      "/lnd.log"
-    );
+  public void tailLog(Integer numberOfLines, String lndDir, String network, Promise promise) {
+    File file;
+    if (lndDir.equals("lnd")) {
+        file = new File(
+          getReactApplicationContext().getFilesDir().toString() +
+          "/logs/bitcoin/" +
+          network +
+          "/lnd.log"
+        );
+    } else {
+        file = new File(
+          getReactApplicationContext().getFilesDir().toString() +
+          "/" +
+          lndDir +
+          "/logs/bitcoin/" +
+          network +
+          "/lnd.log"
+        );
+    }
 
     java.io.RandomAccessFile fileHandler = null;
     try {
@@ -202,7 +214,7 @@ class LndMobileTools extends ReactContextBaseJavaModule {
   private FileObserver logObserver;
 
   @ReactMethod
-  public void observeLndLogFile(String network, Promise p) {
+  public void observeLndLogFile(String lndDir, String network, Promise p) {
     if (logObserver != null) {
       p.resolve(true);
       return;
@@ -210,7 +222,13 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
     File appDir = getReactApplicationContext().getFilesDir();
 
-    final String logDir = appDir + "/logs/bitcoin/" + network;
+    String logDir;
+    if (lndDir.equals("lnd")) {
+      logDir = appDir + "/logs/bitcoin/" + network;
+    } else {
+      logDir = appDir + "/" + lndDir + "/logs/bitcoin/" + network;
+    }
+
     final String logFile = logDir + "/lnd.log";
 
     FileInputStream stream = null;
