@@ -132,6 +132,7 @@ interface ReceiveState {
     expirationIndex: number;
     addressType: string;
     memo: string;
+    receiverName: string;
     value: string;
     satAmount: string | number;
     expiry: string;
@@ -187,6 +188,7 @@ export default class Receive extends React.Component<
             expirationIndex: 1,
             addressType: '0',
             memo: '',
+            receiverName: '',
             value: '',
             satAmount: '',
             expiry: '3600',
@@ -260,6 +262,7 @@ export default class Receive extends React.Component<
             addressType: settings?.invoices?.addressType || '0',
             expirationIndex,
             memo: settings?.invoices?.memo || '',
+            receiverName: settings?.invoices?.receiverName || '',
             expiry: settings?.invoices?.expiry || '3600',
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: newExpirySeconds,
@@ -480,11 +483,15 @@ export default class Receive extends React.Component<
         addressType?: string
     ) => {
         const { InvoicesStore } = this.props;
-        const { lspIsActive } = this.state;
+        const { lspIsActive, receiverName } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
         createUnifiedInvoice({
-            memo: lspIsActive ? '' : memo || '',
+            memo: lspIsActive
+                ? ''
+                : receiverName
+                ? `${receiverName}:  ${memo}`
+                : memo || '',
             value: amount || '0',
             expiry: expirySeconds || '3600',
             ampInvoice: lspIsActive ? false : ampInvoice || false,
@@ -599,7 +606,7 @@ export default class Receive extends React.Component<
 
     validateAddress = (text: string) => {
         const { navigation, InvoicesStore, route } = this.props;
-        const { lspIsActive } = this.state;
+        const { lspIsActive, receiverName } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
         const amount = getSatAmount(route.params?.amount);
 
@@ -615,7 +622,11 @@ export default class Receive extends React.Component<
                     // otherwise we present the user with the create invoice screen
                     if (Number(amount) > 0) {
                         createUnifiedInvoice({
-                            memo: lspIsActive ? '' : memo,
+                            memo: lspIsActive
+                                ? ''
+                                : receiverName
+                                ? `${receiverName}:  ${memo}`
+                                : memo,
                             value: amount.toString(),
                             expiry: '3600',
                             lnurl: lnurlParams,
@@ -1111,6 +1122,7 @@ export default class Receive extends React.Component<
             expirationIndex,
             addressType,
             memo,
+            receiverName,
             value,
             satAmount,
             expiry,
@@ -3069,6 +3081,8 @@ export default class Receive extends React.Component<
                                                         createUnifiedInvoice({
                                                             memo: lspIsActive
                                                                 ? ''
+                                                                : receiverName
+                                                                ? `${receiverName}:  ${memo}`
                                                                 : memo,
                                                             value:
                                                                 satAmount.toString() ||

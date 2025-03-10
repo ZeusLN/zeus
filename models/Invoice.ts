@@ -150,9 +150,33 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getMemo(): string | undefined {
-        const memo = this.memo || this.description;
-        if (typeof memo === 'string') return memo;
-        if (Array.isArray(memo)) return memo[0];
+        const source = this.memo || this.description;
+
+        let memo;
+        if (typeof source === 'string') memo = source;
+        if (Array.isArray(source)) memo = source[0];
+
+        // NameDesc
+        if (memo?.includes(':  ')) {
+            return memo.split(':  ')[1];
+        }
+        if (memo) return memo;
+
+        return undefined;
+    }
+
+    @computed public get getNameDescReceiver(): string | undefined {
+        const source = this.memo || this.description;
+
+        let memo;
+        if (typeof source === 'string') memo = source;
+        if (Array.isArray(source)) memo = source[0];
+
+        // NameDesc
+        if (memo?.includes(':  ')) {
+            return memo.split(':  ')[0];
+        }
+
         return undefined;
     }
 

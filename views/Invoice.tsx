@@ -63,6 +63,7 @@ export default class InvoiceView extends React.Component<
             isPaid,
             getKeysendMessage,
             getMemo,
+            getNameDescReceiver,
             receipt,
             formattedCreationDate,
             getDescriptionHash,
@@ -169,6 +170,16 @@ export default class InvoiceView extends React.Component<
                                     'views.Invoices.keysendMessage'
                                 )}
                                 value={getKeysendMessage}
+                                sensitive
+                            />
+                        )}
+
+                        {getNameDescReceiver && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.receiverName'
+                                )}
+                                value={getNameDescReceiver}
                                 sensitive
                             />
                         )}
