@@ -23,6 +23,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SwapStore from '../stores/SwapStore';
@@ -81,6 +82,14 @@ export default class SwapDetails extends React.Component<
         const isSubmarineSwap = Boolean(swapData.bip21);
 
         if (isSubmarineSwap) {
+            if (swapData?.status === 'invoice.failedToPay') {
+                this.setState({ updates: 'invoice.failedToPay' });
+                return;
+            }
+            if (swapData?.status === 'transaction.refunded') {
+                this.setState({ updates: 'transaction.refunded' });
+                return;
+            }
             this.subscribeSwapsUpdates(swapData, 2000, isSubmarineSwap);
         } else {
             this.subscribeReverseSwapsUpdates(swapData, 2000, isSubmarineSwap);
@@ -627,6 +636,22 @@ export default class SwapDetails extends React.Component<
                     )}
                     {isSubmarineSwap && (
                         <>
+                            {swapData?.txid && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.SendingOnChain.txid'
+                                    )}
+                                    value={swapData.txid}
+                                    mempoolLink={() =>
+                                        UrlUtils.goToBlockExplorerTXID(
+                                            swapData?.txid,
+                                            this.props.NodeInfoStore!.nodeInfo
+                                                .isTestNet
+                                        )
+                                    }
+                                    sensitive
+                                />
+                            )}
                             <KeyValue
                                 keyValue={localeString(
                                     'views.SwapDetails.bip21'
