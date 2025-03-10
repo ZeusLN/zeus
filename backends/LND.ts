@@ -1,145 +1,14 @@
-import ReactNativeBlobUtil, { StatefulPromise } from 'react-native-blob-util';
 import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
-import { BackendRequestCancelledError } from '../utils/BackendUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import { AbortSignal } from 'abort-controller';
+import { LndClnRestBase } from './LndClnRestBase';
 
-interface Headers {
-    macaroon?: string;
-    encodingtype?: string;
-    'Grpc-Metadata-Macaroon'?: string;
-    'Grpc-Metadata-macaroon'?: string;
-}
-
-// keep track of all active calls so we can cancel when appropriate
-const calls = new Map<
-    string,
-    { resultPromise: Promise<any>; cancellablePromise?: StatefulPromise<any> }
->();
-
-export default class LND {
+export default class LND extends LndClnRestBase {
     torSocksPort?: number = undefined;
-
-    clearCachedCalls = () => {
-        calls.forEach((call) => call.cancellablePromise?.cancel());
-        calls.clear();
-    };
-
-    restReq = async (
-        headers: Headers | any,
-        url: string,
-        method: any,
-        data?: any,
-        certVerification?: boolean,
-        useTor?: boolean,
-        abortSignal?: AbortSignal
-    ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
-        if (calls.has(id)) {
-            return calls.get(id)!.resultPromise;
-        }
-        // API is a bit of a mess but
-        // If tor enabled in setting, start up the daemon here
-        if (useTor === true) {
-            calls.set(id, {
-                resultPromise: doTorRequest(
-                    url,
-                    method as RequestMethod,
-                    JSON.stringify(data),
-                    headers
-                )
-                    .then((response: any) => {
-                        if (calls.delete(id)) {
-                            return response;
-                        }
-                        throw new BackendRequestCancelledError();
-                    })
-                    .catch((error) => {
-                        if (calls.delete(id)) {
-                            throw error;
-                        }
-                        throw new BackendRequestCancelledError();
-                    })
-            });
-        } else {
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Request timeout')), 30000);
-            });
-
-            const fetchStatefulPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
-            }).fetch(method, url, headers, data ? JSON.stringify(data) : data);
-
-            const onAbort = () => fetchStatefulPromise.cancel();
-            abortSignal?.addEventListener('abort', onAbort);
-
-            const fetchPromise = fetchStatefulPromise.then((response: any) => {
-                calls.delete(id);
-                abortSignal?.removeEventListener('abort', onAbort);
-                if (response.info().status < 300) {
-                    // handle ws responses
-                    if (response.data.includes('\n')) {
-                        const split = response.data.split('\n');
-                        const length = split.length;
-                        // last instance is empty
-                        return JSON.parse(split[length - 2]);
-                    }
-                    return response.json();
-                } else {
-                    try {
-                        const errorInfo = response.json();
-                        throw new Error(
-                            (errorInfo.error && errorInfo.error.message) ||
-                                errorInfo.message ||
-                                errorInfo.error
-                        );
-                    } catch (e) {
-                        if (
-                            response.data &&
-                            typeof response.data === 'string'
-                        ) {
-                            throw new Error(response.data);
-                        } else {
-                            throw new Error(
-                                localeString(
-                                    'backends.LND.restReq.connectionError'
-                                )
-                            );
-                        }
-                    }
-                }
-            });
-
-            const racePromise = Promise.race([
-                fetchPromise,
-                timeoutPromise
-            ]).catch((error) => {
-                calls.delete(id);
-                if (error.name === 'ReactNativeBlobUtilCanceledFetch') {
-                    throw new BackendRequestCancelledError();
-                }
-                abortSignal?.removeEventListener('abort', onAbort);
-                if (error.message === 'Request timeout') {
-                    console.log('Request timed out for:', url);
-                }
-                throw error;
-            });
-
-            calls.set(id, {
-                resultPromise: racePromise,
-                cancellablePromise: fetchStatefulPromise
-            });
-        }
-
-        return calls.get(id)?.resultPromise;
-    };
 
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = nodeInfoStore;
@@ -204,26 +73,6 @@ export default class LND {
         return {
             'Grpc-Metadata-macaroon': macaroonHex
         };
-    };
-
-    getURL = (
-        host: string,
-        port: string | number,
-        route: string,
-        ws?: boolean
-    ) => {
-        const hostPath = host.includes('://') ? host : `https://${host}`;
-        let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
-
-        if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
-        }
-
-        if (baseUrl[baseUrl.length - 1] === '/') {
-            baseUrl = baseUrl.slice(0, -1);
-        }
-
-        return `${baseUrl}${route}`;
     };
 
     request = (
