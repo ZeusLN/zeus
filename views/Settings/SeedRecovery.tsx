@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -21,12 +22,14 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
+import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import {
     createLndWallet,
-    optimizeNeutrinoPeers
+    optimizeNeutrinoPeers,
+    stopLnd
 } from '../../utils/LndMobileUtils';
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
@@ -128,7 +131,12 @@ export default class SeedRecovery extends React.PureComponent<
             seedPhrase,
             lndDir
         } = this.state;
-        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+        const {
+            setConnectingStatus,
+            updateSettings,
+            settings,
+            embeddedLndStarted
+        } = SettingsStore;
 
         const node = {
             seedPhrase,
@@ -147,18 +155,20 @@ export default class SeedRecovery extends React.PureComponent<
             nodes = [node];
         }
 
-        updateSettings({ nodes }).then(async () => {
-            if (recoveryCipherSeed) {
-                await updateSettings({
-                    recovery: true
-                });
-            }
-
+        updateSettings({
+            nodes,
+            selectedNode: nodes.length - 1,
+            recovery: recoveryCipherSeed ? true : false
+        }).then(async () => {
             if (nodes.length === 1) {
                 setConnectingStatus(true);
                 navigation.popTo('Wallet');
             } else {
-                navigation.popTo('Wallets');
+                if (Platform.OS === 'android' && embeddedLndStarted) {
+                    restartNeeded(true);
+                } else {
+                    navigation.popTo('Wallets');
+                }
             }
         });
     };
@@ -312,6 +322,8 @@ export default class SeedRecovery extends React.PureComponent<
 
         const restore = async () => {
             this.setState({ loading: true });
+
+            await stopLnd();
 
             await optimizeNeutrinoPeers(network === 'testnet');
 
