@@ -309,53 +309,59 @@ export default class BalancePane extends React.PureComponent<
                                             'views.Wallet.BalancePane.sync.text'
                                         ).replace('Zeus', 'ZEUS')}
                                     </Text>
-                                    {currentBlockHeight && bestBlockHeight && (
-                                        <View
-                                            style={{
-                                                marginTop: 30,
-                                                flex: 1,
-                                                flexDirection: 'row',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                minWidth: '100%'
-                                            }}
-                                        >
-                                            <LinearProgress
-                                                value={
-                                                    Math.floor(
+                                    {currentBlockHeight !== undefined &&
+                                        bestBlockHeight && (
+                                            <View
+                                                style={{
+                                                    marginTop: 30,
+                                                    flex: 1,
+                                                    flexDirection: 'row',
+                                                    display: 'flex',
+                                                    justifyContent:
+                                                        'space-between',
+                                                    minWidth: '100%'
+                                                }}
+                                            >
+                                                <LinearProgress
+                                                    value={
+                                                        Math.floor(
+                                                            (currentBlockHeight /
+                                                                bestBlockHeight) *
+                                                                100
+                                                        ) / 100
+                                                    }
+                                                    variant="determinate"
+                                                    color={themeColor(
+                                                        'highlight'
+                                                    )}
+                                                    trackColor={themeColor(
+                                                        'secondaryBackground'
+                                                    )}
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row'
+                                                    }}
+                                                />
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Medium',
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        marginTop: -8,
+                                                        marginLeft: 14,
+                                                        height: 40
+                                                    }}
+                                                >
+                                                    {`${Math.floor(
                                                         (currentBlockHeight /
                                                             bestBlockHeight) *
                                                             100
-                                                    ) / 100
-                                                }
-                                                variant="determinate"
-                                                color={themeColor('highlight')}
-                                                trackColor={themeColor(
-                                                    'secondaryBackground'
-                                                )}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
-                                                }}
-                                            />
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
-                                                    color: themeColor('text'),
-                                                    marginTop: -8,
-                                                    marginLeft: 14,
-                                                    height: 40
-                                                }}
-                                            >
-                                                {`${Math.floor(
-                                                    (currentBlockHeight /
-                                                        bestBlockHeight) *
-                                                        100
-                                                ).toString()}%`}
-                                            </Text>
-                                        </View>
-                                    )}
+                                                    ).toString()}%`}
+                                                </Text>
+                                            </View>
+                                        )}
                                 </View>
                             </TouchableOpacity>
                         )}
