@@ -86,8 +86,10 @@ export interface ILndMobile {
         transactionHex: string,
         privateKey: string,
         servicePubKey: string,
-        feeRate: numberstring,
+        feeRate: number,
+        timeoutBlockHeight: number,
         destinationAddress: string,
+        lockupAddress: string,
         isTestnet?: boolean
     ): Promise<string>;
 }

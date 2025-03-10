@@ -11,7 +11,10 @@ import Header from '../components/Header';
 import TextInput from '../components/TextInput';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import Button from '../components/Button';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    SuccessMessage
+} from '../components/SuccessErrorMessage';
 import LoadingIndicator from '../components/LoadingIndicator';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -38,6 +41,7 @@ interface RefundSwapState {
     error: string;
     swapData: any;
     loading: boolean;
+    refundStatus: string;
 }
 
 @inject('SwapStore', 'NodeInfoStore')
@@ -47,11 +51,12 @@ export default class RefundSwap extends React.Component<
     RefundSwapState
 > {
     state = {
-        destinationAddress: 'tb1q5yhqklg9me33rpc5vas88rcs8fr6guhkyksr6x',
+        destinationAddress: '',
         fee: '',
         error: '',
         loading: false,
-        swapData: this.props.route.params.swapData
+        swapData: this.props.route.params.swapData,
+        refundStatus: ''
     };
 
     createRefundTransaction = async (
@@ -63,7 +68,7 @@ export default class RefundSwap extends React.Component<
     ): Promise<boolean> => {
         try {
             await createRefundTransaction({
-                endpoint,
+                endpoint: endpoint.replace('/v2', ''),
                 swapId: swapData.id,
                 claimLeaf: swapData.swapTree.claimLeaf.output,
                 refundLeaf: swapData.swapTree.refundLeaf.output,
@@ -71,8 +76,14 @@ export default class RefundSwap extends React.Component<
                 privateKey: swapData.refundPrivateKey,
                 servicePubKey: swapData.claimPublicKey,
                 feeRate: Number(fee),
+                timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
                 destinationAddress,
+                lockupAddress: swapData.address,
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            });
+            this.setState({
+                loading: false,
+                refundStatus: 'Refund transaction created successfully'
             });
 
             console.log('Refund transaction created successfully');
@@ -86,8 +97,14 @@ export default class RefundSwap extends React.Component<
 
     render() {
         const { navigation, SwapStore } = this.props;
-        const { fee, destinationAddress, swapData, error, loading } =
-            this.state;
+        const {
+            fee,
+            destinationAddress,
+            swapData,
+            error,
+            loading,
+            refundStatus
+        } = this.state;
         return (
             <Screen>
                 <Header
@@ -112,6 +129,11 @@ export default class RefundSwap extends React.Component<
                             <ErrorMessage message={error} />
                         </View>
                     )}
+                    {refundStatus && (
+                        <View style={{ marginBottom: 10 }}>
+                            <SuccessMessage message={refundStatus} />
+                        </View>
+                    )}
                     <Text style={{ color: themeColor('secondaryText') }}>
                         {localeString('views.Transaction.destAddress')}
                     </Text>
@@ -122,6 +144,9 @@ export default class RefundSwap extends React.Component<
                                 error: ''
                             });
                         }}
+                        placeholder={localeString(
+                            'views.Swaps.enterRefundAddress'
+                        )}
                         value={destinationAddress}
                     />
                     <Text
@@ -144,11 +169,19 @@ export default class RefundSwap extends React.Component<
                 <Button
                     title={localeString('views.Swaps.initiateRefund')}
                     onPress={async () => {
-                        this.setState({ loading: true, error: '' });
+                        this.setState({
+                            loading: true,
+                            error: '',
+                            refundStatus: ''
+                        });
                         let submitted = false;
 
                         try {
                             if (submitted) {
+                                this.setState({
+                                    refundStatus:
+                                        'Refund Transaction already created and submitted successfully'
+                                });
                                 console.log(
                                     'Refund Transaction already created and submitted successfully. Skipping.'
                                 );
@@ -172,6 +205,7 @@ export default class RefundSwap extends React.Component<
                         console.log('Refund submission status:', submitted);
                     }}
                     secondary
+                    disabled={!destinationAddress}
                 />
             </Screen>
         );
