@@ -347,10 +347,10 @@ class LndMobileTools: RCTEventEmitter {
     }
   }
 
-  @objc(tailLog:network:resolver:rejecter:)
-  func tailLog(numberOfLines: Int32, network: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(tailLog:lndDir:network:resolver:rejecter:)
+  func tailLog(numberOfLines: Int32, lndDir: String, network: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-    let url = paths[0].appendingPathComponent("lnd", isDirectory: true)
+    let url = paths[0].appendingPathComponent(lndDir, isDirectory: true)
                       .appendingPathComponent("logs", isDirectory: true)
                       .appendingPathComponent("bitcoin", isDirectory: true)
                       .appendingPathComponent(network ?? "mainnet", isDirectory: true)
@@ -366,14 +366,14 @@ class LndMobileTools: RCTEventEmitter {
   }
 
   var lndLogFileObservingStarted = false
-  @objc(observeLndLogFile:resolver:rejecter:)
-  func observeLndLogFile(network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+  @objc(observeLndLogFile:network:resolver:rejecter:)
+  func observeLndLogFile(lndDir: String, network: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
     if (lndLogFileObservingStarted) {
       resolve(true)
       return
     }
     let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-    let url = paths[0].appendingPathComponent("lnd", isDirectory: true)
+    let url = paths[0].appendingPathComponent(lndDir, isDirectory: true)
                       .appendingPathComponent("logs", isDirectory: true)
                       .appendingPathComponent("bitcoin", isDirectory: true)
                       .appendingPathComponent(network ?? "mainnet", isDirectory: true)
@@ -403,51 +403,6 @@ class LndMobileTools: RCTEventEmitter {
     })
     lndLogFileObservingStarted = true
     resolve(true)
-  }
-
-  @objc(copyLndLog:resolver:rejecter:)
-  func copyLndLog(network: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
-    DispatchQueue.main.async {
-      let paths = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-      let url = paths[0].appendingPathComponent("lnd", isDirectory: true)
-        .appendingPathComponent("logs", isDirectory: true)
-        .appendingPathComponent("bitcoin", isDirectory: true)
-        .appendingPathComponent(network ?? "mainnet", isDirectory: true)
-        .appendingPathComponent("lnd.log", isDirectory: false)
-#if os(iOS)
-      do {
-        let data = try String(contentsOf: url)
-        let activityController = UIActivityViewController(activityItems: [data], applicationActivities: nil)
-        RCTSharedApplication()?.delegate?.window??.rootViewController?.present(activityController, animated: true, completion: {
-          resolve(true)
-        })
-      } catch {
-        reject("error", error.localizedDescription, error)
-      }
-#else
-      do {
-        let data = try Data(contentsOf: url)
-        let savePanel = NSSavePanel()
-        savePanel.nameFieldStringValue = "lnd.log"
-        if (savePanel.runModal() == NSApplication.ModalResponse.OK) {
-          let saveUrl = savePanel.url
-          NSLog(saveUrl?.path ?? "")
-          NSLog(saveUrl?.absoluteString ?? "")
-          NSLog(saveUrl?.relativeString ?? "")
-
-          if let saveUrlUnwrapped = saveUrl {
-            try data.write(to: saveUrlUnwrapped)
-          }
-          resolve(true)
-        } else {
-          resolve(false)
-        }
-      } catch {
-        print("Error saving backup")
-        reject("error", error.localizedDescription, error)
-      }
-#endif
-    }
   }
 
   @objc(macosOpenFileDialog:rejecter:)

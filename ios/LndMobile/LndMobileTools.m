@@ -100,19 +100,15 @@ RCT_EXTERN_METHOD(
 
 RCT_EXTERN_METHOD(
   tailLog: (NSInteger)numberOfLines
+  lndDir: (NSString)lndDir
   network: (NSString)network
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
 
 RCT_EXTERN_METHOD(
-  observeLndLogFile: (NSString)network
-  resolver: (RCTPromiseResolveBlock)resolve
-  rejecter: (RCTPromiseRejectBlock)reject
-)
-
-RCT_EXTERN_METHOD(
-  copyLndLog: (NSString)network 
+  observeLndLogFile: (NSString)lndDir
+  network: (NSString)network
   resolver: (RCTPromiseResolveBlock)resolve
   rejecter: (RCTPromiseRejectBlock)reject
 )
