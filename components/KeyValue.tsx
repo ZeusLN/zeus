@@ -109,11 +109,11 @@ export default class KeyValue extends React.Component<KeyValueProps, {}> {
             Key = (
                 <TouchableOpacity
                     onPress={() =>
-                        toggleInfoModal(
-                            infoModalText,
-                            infoModalLink,
-                            infoModalAdditionalButtons
-                        )
+                        toggleInfoModal({
+                            text: infoModalText,
+                            link: infoModalLink,
+                            buttons: infoModalAdditionalButtons
+                        })
                     }
                 >
                     {KeyBase}
