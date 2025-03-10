@@ -306,12 +306,12 @@ RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, isTestnet, &error);
+    NSString *txid = LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, isTestnet, &error);
     if (error) {
         NSLog(@"createRefundTransaction error   %@",   error);
         reject(@"createRefundTransaction_error", error.localizedDescription, error);
     } else {
-        resolve(@"Success");
+        resolve(txid); 
     }
 }
 
