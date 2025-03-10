@@ -213,8 +213,8 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      Log.d("createRefundTransaction called", "");
 
      try {
-         Lndmobile.createRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, isTestnet)
-         promise.resolve(null)
+         var txid = Lndmobile.createRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, isTestnet)
+         promise.resolve(txid)
      } catch (e: Exception) {
          val exceptionAsString = e.toString()
          promise.reject(exceptionAsString)
