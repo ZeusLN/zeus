@@ -22,6 +22,7 @@ import { localeString } from '../utils/LocaleUtils';
 
 import SwapStore, { HOST } from '../stores/SwapStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 interface RefundSwapProps {
     navigation: any;
@@ -81,6 +82,9 @@ export default class RefundSwap extends React.Component<
                 lockupAddress: swapData.address,
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
+
+            await this.updateSwapInStorage(swapData.id, txid);
+
             this.setState({
                 loading: false,
                 refundStatus: `Refund transaction created successfully. TXID: ${txid}`
@@ -90,6 +94,39 @@ export default class RefundSwap extends React.Component<
         } catch (error: any) {
             this.setState({ loading: false, error: error.message });
             console.error('Error creating refund transaction:', error);
+            throw error;
+        }
+    };
+
+    updateSwapInStorage = async (swapId: string, txid: string) => {
+        try {
+            // Retrieve the swaps from encrypted storage
+            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            if (!storedSwaps) {
+                throw new Error('No swaps found in storage');
+            }
+
+            // Parse the swaps array
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            // Find the swap by swapId
+            const swapIndex = swaps.findIndex(
+                (swap: any) => swap.id === swapId
+            );
+            if (swapIndex === -1) {
+                throw new Error(`Swap with ID ${swapId} not found`);
+            }
+
+            // Update the swap
+            swaps[swapIndex].status = 'transaction.refunded';
+            swaps[swapIndex].txid = txid;
+
+            // Save the updated swaps back to encrypted storage
+            await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
+
+            console.log('Swap updated in storage:', swaps[swapIndex]);
+        } catch (error) {
+            console.error('Error updating swap in storage:', error);
             throw error;
         }
     };
@@ -115,14 +152,18 @@ export default class RefundSwap extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        loading ? (
+                            <View style={{ marginTop: -6 }}>
+                                <LoadingIndicator size={32} />
+                            </View>
+                        ) : (
+                            <></>
+                        )
+                    }
                     navigation={this.props.navigation}
                 />
                 <View style={{ paddingHorizontal: 20 }}>
-                    {loading && (
-                        <View style={{ marginBottom: 20 }}>
-                            <LoadingIndicator />
-                        </View>
-                    )}
                     {error && (
                         <View style={{ marginBottom: 10 }}>
                             <ErrorMessage message={error} />
