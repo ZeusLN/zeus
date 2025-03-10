@@ -25,6 +25,7 @@ export default class SwapStore {
         switch (status) {
             case 'transaction.claimed':
             case 'invoice.settled':
+            case 'transaction.refunded':
                 stateColor = 'green';
                 break;
             case 'invoice.failedToPay':
