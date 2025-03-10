@@ -35,12 +35,13 @@ export default class LNDLogs extends React.Component<
 
     UNSAFE_componentWillMount(): void {
         const { SettingsStore } = this.props;
-        const { embeddedLndNetwork } = SettingsStore;
+        const { embeddedLndNetwork, lndDir } = SettingsStore;
         (async () => {
             const network =
                 embeddedLndNetwork === 'Testnet' ? 'testnet' : 'mainnet';
             const tailLog = await NativeModules.LndMobileTools.tailLog(
                 100,
+                lndDir || 'lnd',
                 network
             );
             let log = tailLog
@@ -55,7 +56,10 @@ export default class LNDLogs extends React.Component<
                 });
             });
 
-            NativeModules.LndMobileTools.observeLndLogFile(network);
+            NativeModules.LndMobileTools.observeLndLogFile(
+                lndDir || 'lnd',
+                network
+            );
             this.setState({
                 log
             });
