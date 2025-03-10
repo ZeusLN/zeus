@@ -298,13 +298,15 @@ RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
                  privateKey:(NSString *)privateKey
                  servicePubKey:(NSString *)servicePubKey
                  feeRate:(NSInteger)feeRate
+                 timeoutBlockHeight:(NSInteger)timeoutBlockHeight
                  destinationAddress:(NSString *)destinationAddress
+                 lockupAddress:(NSString *)lockupAddress
                  isTestnet:(BOOL)isTestnet
                  resolver:(RCTPromiseResolveBlock)resolve
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, destinationAddress, isTestnet, &error);
+    LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, isTestnet, &error);
     if (error) {
         NSLog(@"createRefundTransaction error   %@",   error);
         reject(@"createRefundTransaction_error", error.localizedDescription, error);

@@ -1527,6 +1527,7 @@
     "views.Swaps.create": "Create atomic swap",
     "views.Swaps.initiate": "Initiate swap",
     "views.Swaps.refundSwap": "Refund swap",
+    "views.Swaps.enterRefundAddress": "Enter the onchain address to receive refund",
     "views.Swaps.initiateRefund": "Initiate Refund",
     "views.SwapDetails.title": "Swap Details",
     "views.SwapDetails.acceptZerpConf": "Accept Zero Conf",
