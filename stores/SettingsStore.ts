@@ -1237,6 +1237,7 @@ export default class SettingsStore {
     @observable public loggedIn = false;
     @observable public triggerSettingsRefresh: boolean = false;
     @observable public connecting = true;
+    @observable public fetchLock = false;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
@@ -1725,6 +1726,8 @@ export default class SettingsStore {
             this.error = false;
             this.errorMsg = '';
             BackendUtils.clearCachedCalls();
+            // remove fetchLock on reconnect
+            this.fetchLock = false;
         }
         this.connecting = status;
         return this.connecting;

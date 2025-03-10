@@ -113,7 +113,6 @@ interface WalletProps {
 interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
-    fetchLock: boolean;
 }
 
 @inject(
@@ -148,8 +147,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         super(props);
         this.state = {
             unlocked: false,
-            initialLoad: true,
-            fetchLock: false
+            initialLoad: true
         };
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
@@ -341,7 +339,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LnurlPayStore,
             NotesStore
         } = this.props;
-        const { fetchLock } = this.state;
         const {
             settings,
             implementation,
@@ -356,7 +353,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             walletPassword,
             lndDir,
             embeddedLndNetwork,
-            updateSettings
+            updateSettings,
+            fetchLock
         } = SettingsStore;
         const { isSyncing } = SyncStore;
         const {
@@ -374,9 +372,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // ensure we don't run this twice in parallel
         if (fetchLock) return;
-        this.setState({
-            fetchLock: true
-        });
+        SettingsStore.fetchLock = true;
 
         let start;
         if (connecting) {
@@ -596,15 +592,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             )
         ) {
             this.setState({
-                initialLoad: false,
-                fetchLock: false
+                initialLoad: false
             });
+            SettingsStore.fetchLock = false;
             LinkingUtils.handleInitialUrl(this.props.navigation);
         }
 
-        this.setState({
-            fetchLock: false
-        });
+        SettingsStore.fetchLock = false;
     }
 
     handleOpenURL = (event: any) => {
