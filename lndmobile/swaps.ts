@@ -144,7 +144,7 @@ export const createRefundTransaction = async ({
     isTestnet?: boolean;
 }): Promise<string> => {
     try {
-        const error: string = await LncModule.createRefundTransaction(
+        const txid: string = await LncModule.createRefundTransaction(
             endpoint,
             swapId,
             claimLeaf,
@@ -158,7 +158,7 @@ export const createRefundTransaction = async ({
             lockupAddress,
             isTestnet
         );
-        return error;
+        return txid;
     } catch (e) {
         throw e;
     }
