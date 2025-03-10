@@ -125,7 +125,9 @@ export const createRefundTransaction = async ({
     privateKey,
     servicePubKey,
     feeRate,
+    timeoutBlockHeight,
     destinationAddress,
+    lockupAddress,
     isTestnet
 }: {
     endpoint: string;
@@ -136,7 +138,9 @@ export const createRefundTransaction = async ({
     privateKey: string;
     servicePubKey: string;
     feeRate: number;
+    timeoutBlockHeight: number;
     destinationAddress: string;
+    lockupAddress: string;
     isTestnet?: boolean;
 }): Promise<string> => {
     try {
@@ -149,7 +153,9 @@ export const createRefundTransaction = async ({
             privateKey,
             servicePubKey,
             feeRate,
+            timeoutBlockHeight,
             destinationAddress,
+            lockupAddress,
             isTestnet
         );
         return error;
