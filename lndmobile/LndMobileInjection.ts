@@ -563,7 +563,9 @@ export interface ILndMobileInjections {
             privateKey,
             servicePubKey,
             feeRate,
+            timeoutBlockHeight,
             destinationAddress,
+            lockupAddress,
             isTestnet
         }: {
             endpoint: string;
@@ -574,7 +576,9 @@ export interface ILndMobileInjections {
             privateKey: string;
             servicePubKey: string;
             feeRate: number;
+            timeoutBlockHeight: number;
             destinationAddress: string;
+            lockupAddress: string;
             isTestnet?: boolean;
         }) => Promise<string>;
     };
