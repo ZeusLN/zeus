@@ -413,7 +413,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (connecting) {
                 AlertStore.checkNeutrinoPeers();
 
-                await stopLnd();
+                if (!recovery) await stopLnd();
 
                 console.log('lndDir', lndDir);
                 await initializeLnd({
@@ -467,11 +467,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (isSyncing) return;
                 try {
                     await ChannelBackupStore.recoverStaticChannelBackup();
-
                     await updateSettings({
                         recovery: false
                     });
-
                     if (SettingsStore.settings.automaticDisasterRecoveryBackup)
                         ChannelBackupStore.initSubscribeChannelEvents();
                 } catch (e) {
