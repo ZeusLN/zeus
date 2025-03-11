@@ -119,4 +119,5 @@ export default class NostrWalletConnect {
     supportsAddressesWithDerivationPaths = () => false;
     isLNDBased = () => false;
     supportInboundFees = () => false;
+    supportsCashu = () => false;
 }

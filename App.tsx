@@ -157,6 +157,9 @@ import LSPS1Order from './views/LSPS1/Order';
 import LSPS7 from './views/LSPS7/index';
 import LSPS7Order from './views/LSPS7/Order';
 
+// Cashu Ecash
+import EcashSettings from './views/Settings/EcashSettings';
+
 // Chantools
 import Chantools from './views/Settings/EmbeddedNode/Chantools';
 import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
@@ -936,6 +939,12 @@ export default class App extends React.PureComponent {
                                                         name="ActivityExport" // @ts-ignore:next-line
                                                         component={
                                                             ActivityExport
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="EcashSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            EcashSettings
                                                         }
                                                     />
                                                 </Stack.Navigator>

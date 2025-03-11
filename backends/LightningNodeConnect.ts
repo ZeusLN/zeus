@@ -568,4 +568,5 @@ export default class LightningNodeConnect {
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
+    supportsCashu = () => false;
 }
