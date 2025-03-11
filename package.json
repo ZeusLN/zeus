@@ -154,7 +154,7 @@
     "@babel/plugin-proposal-optional-chaining": "7.21.0",
     "@babel/preset-env": "7.22.15",
     "@babel/preset-typescript": "7.22.15",
-    "@babel/runtime": "7.22.15",
+    "@babel/runtime": "7.26.10",
     "@react-native/babel-preset": "0.74.84",
     "@react-native/eslint-config": "0.74.84",
     "@react-native/metro-config": "0.74.84",
