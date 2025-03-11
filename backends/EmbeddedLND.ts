@@ -325,4 +325,5 @@ export default class EmbeddedLND extends LND {
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
+    supportsCashu = () => true;
 }

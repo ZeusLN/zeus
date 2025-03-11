@@ -133,6 +133,10 @@ interface Bolt12AddressSettings {
     localPart: string;
 }
 
+interface EcashSettings {
+    enableCashu: boolean;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -193,6 +197,7 @@ export interface Settings {
     lightningAddress: LightningAddressSettings;
     bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
+    ecash: EcashSettings;
 }
 
 export const FIAT_RATES_SOURCE_KEYS = [
@@ -1217,6 +1222,9 @@ export default class SettingsStore {
         },
         bolt12Address: {
             localPart: ''
+        },
+        ecash: {
+            enableCashu: false
         },
         selectNodeOnStartup: false
     };

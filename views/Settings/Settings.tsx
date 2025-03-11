@@ -9,6 +9,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import EcashIcon from '../../assets/images/SVG/Ecash.svg';
 import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import ChannelsIcon from '../../assets/images/SVG/Channels.svg';
 import PrivacyIcon from '../../assets/images/SVG/Eye On.svg';
@@ -125,6 +126,44 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                     }}
                                 >
                                     {localeString('general.lsp')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {BackendUtils.supportsCashu() && selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => {
+                                    navigation.navigate('EcashSettings');
+                                }}
+                            >
+                                <View style={styles.icon}>
+                                    <EcashIcon
+                                        fill={themeColor('text')}
+                                        width={25}
+                                        height={25}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('general.ecash')}
                                 </Text>
                                 <View style={styles.ForwardArrow}>
                                     <ForwardIcon stroke={forwardArrowColor} />
