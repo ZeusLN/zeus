@@ -77,6 +77,21 @@ export interface ILndMobile {
         feeRate: number,
         isTestnet?: boolean
     ): Promise<string>;
+
+    createRefundTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        transactionHex: string,
+        privateKey: string,
+        servicePubKey: string,
+        feeRate: number,
+        timeoutBlockHeight: number,
+        destinationAddress: string,
+        lockupAddress: string,
+        isTestnet?: boolean
+    ): Promise<string>;
 }
 
 export interface ILndMobileTools {

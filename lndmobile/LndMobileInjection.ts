@@ -98,7 +98,8 @@ import { checkScheduledSyncWorkStatus } from './scheduled-sync'; // TODO(hsjober
 import {
     // swaps
     createClaimTransaction,
-    createReverseClaimTransaction
+    createReverseClaimTransaction,
+    createRefundTransaction
 } from './swaps';
 
 import {
@@ -512,6 +513,33 @@ export interface ILndMobileInjections {
             feeRate: number;
             isTestnet?: boolean;
         }) => Promise<string>;
+        createRefundTransaction: ({
+            endpoint,
+            swapId,
+            claimLeaf,
+            refundLeaf,
+            transactionHex,
+            privateKey,
+            servicePubKey,
+            feeRate,
+            timeoutBlockHeight,
+            destinationAddress,
+            lockupAddress,
+            isTestnet
+        }: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            transactionHex: string;
+            privateKey: string;
+            servicePubKey: string;
+            feeRate: number;
+            timeoutBlockHeight: number;
+            destinationAddress: string;
+            lockupAddress: string;
+            isTestnet?: boolean;
+        }) => Promise<string>;
     };
 }
 
@@ -621,6 +649,7 @@ export default {
     },
     swaps: {
         createClaimTransaction,
-        createReverseClaimTransaction
+        createReverseClaimTransaction,
+        createRefundTransaction
     }
 } as ILndMobileInjections;

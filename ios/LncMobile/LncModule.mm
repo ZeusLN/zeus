@@ -264,6 +264,31 @@ RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
     }
 }
 
+RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 transactionHex:(NSString *)transactionHex
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 feeRate:(NSInteger)feeRate
+                 timeoutBlockHeight:(NSInteger)timeoutBlockHeight
+                 destinationAddress:(NSString *)destinationAddress
+                 lockupAddress:(NSString *)lockupAddress
+                 isTestnet:(BOOL)isTestnet
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    NSString *txid = LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, isTestnet, &error);
+    if (error) {
+        NSLog(@"createRefundTransaction error   %@",   error);
+        reject(@"createRefundTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(txid); 
+    }
+}
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

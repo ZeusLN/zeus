@@ -1295,6 +1295,9 @@
     "views.Swaps.title": "Swaps",
     "views.Swaps.create": "Create atomic swap",
     "views.Swaps.initiate": "Initiate swap",
+    "views.Swaps.refundSwap": "Refund swap",
+    "views.Swaps.enterRefundAddress": "Enter the onchain address to receive refund",
+    "views.Swaps.initiateRefund": "Initiate Refund",
     "views.SwapDetails.title": "Swap Details",
     "views.SwapDetails.acceptZerpConf": "Accept Zero Conf",
     "views.SwapDetails.expectedAmount": "Expected amount",
@@ -1302,5 +1305,5 @@
     "views.SwapDetails.timeoutBlockHeight": "Timeout Block Height",
     "views.SwapDetails.claimPublicKey": "Claim Public Key",
     "views.SwapDetails.swapTree": "Swap Tree",
-    "views.SwapDetails.bip21": "BIP21"
+    "views.SwapDetails.bip21": "BIP21",
 }
