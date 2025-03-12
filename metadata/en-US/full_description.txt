@@ -1,4 +1,4 @@
-ZEUS is a mobile Bitcoin/Lightning wallet
+ZEUS is a mobile Bitcoin wallet with cutting edge Lightning functionality.
 
 Features:
 
