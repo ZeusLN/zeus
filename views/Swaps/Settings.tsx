@@ -2,15 +2,15 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
-import Header from '../components/Header';
-import Screen from '../components/Screen';
-import DropdownSetting from '../components/DropdownSetting';
-import TextInput from '../components/TextInput';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import DropdownSetting from '../../components/DropdownSetting';
+import TextInput from '../../components/TextInput';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import NodeInfoStore from '../stores/NodeInfoStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 interface SwapSettingsProps {
     navigation: any;
@@ -81,9 +81,7 @@ export default class LSPS1Settings extends React.Component<
                                     host: host
                                 });
                             } else if (value === 'ZEUS') {
-                                const host = isTestnet
-                                    ? 'https://api.testnet.zeus.exchange/v2'
-                                    : 'https://api.zeus.exchange/v2';
+                                const host = isTestnet ? '' : '';
                                 this.setState({
                                     serviceProvider: 'ZEUS',
                                     host: host
@@ -91,7 +89,7 @@ export default class LSPS1Settings extends React.Component<
                             } else {
                                 this.setState({
                                     serviceProvider: 'Custom',
-                                    host: ''
+                                    host: 'https://api.boltz.exchange/v2'
                                 });
                             }
                         }}
