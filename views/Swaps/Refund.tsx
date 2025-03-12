@@ -3,25 +3,25 @@ import { Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
-import lndMobile from '../lndmobile/LndMobileInjection';
+import lndMobile from '../../lndmobile/LndMobileInjection';
 const { createRefundTransaction } = lndMobile.swaps;
 
-import Screen from '../components/Screen';
-import Header from '../components/Header';
-import TextInput from '../components/TextInput';
-import OnchainFeeInput from '../components/OnchainFeeInput';
-import Button from '../components/Button';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import TextInput from '../../components/TextInput';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
+import Button from '../../components/Button';
 import {
     ErrorMessage,
     SuccessMessage
-} from '../components/SuccessErrorMessage';
-import LoadingIndicator from '../components/LoadingIndicator';
+} from '../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { themeColor } from '../utils/ThemeUtils';
-import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import SwapStore, { HOST } from '../stores/SwapStore';
-import NodeInfoStore from '../stores/NodeInfoStore';
+import SwapStore, { HOST } from '../../stores/SwapStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
 interface RefundSwapProps {

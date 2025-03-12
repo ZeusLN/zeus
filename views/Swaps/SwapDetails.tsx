@@ -9,26 +9,26 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
-import lndMobile from '../lndmobile/LndMobileInjection';
+import lndMobile from '../../lndmobile/LndMobileInjection';
 const { createClaimTransaction, createReverseClaimTransaction } =
     lndMobile.swaps;
 
-import Screen from '../components/Screen';
-import Header from '../components/Header';
-import KeyValue from '../components/KeyValue';
-import Amount from '../components/Amount';
-import Button from '../components/Button';
-import LoadingIndicator from '../components/LoadingIndicator';
-import { ErrorMessage } from '../components/SuccessErrorMessage';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
-import UrlUtils from '../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import NodeInfoStore from '../stores/NodeInfoStore';
-import SwapStore from '../stores/SwapStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import SwapStore from '../../stores/SwapStore';
 
-import QR from '../assets/images/SVG/QR.svg';
+import QR from '../../assets/images/SVG/QR.svg';
 
 interface SwapDetailsProps {
     navigation: StackNavigationProp<any, any>;
