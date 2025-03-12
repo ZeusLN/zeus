@@ -4,34 +4,34 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import BigNumber from 'bignumber.js';
 
-import Amount from '../components/Amount';
-import Button from '../components/Button';
-import Header from '../components/Header';
-import { Row } from '../components/layout/Row';
-import Screen from '../components/Screen';
-import Text from '../components/Text';
-import TextInput from '../components/TextInput';
-import AmountInput from '../components/AmountInput';
-import LoadingIndicator from '../components/LoadingIndicator';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import Header from '../../components/Header';
+import { Row } from '../../components/layout/Row';
+import Screen from '../../components/Screen';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
+import AmountInput from '../../components/AmountInput';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import {
     ErrorMessage,
     SuccessMessage
-} from '../components/SuccessErrorMessage';
-import OnchainFeeInput from '../components/OnchainFeeInput';
+} from '../../components/SuccessErrorMessage';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
-import { SATS_PER_BTC, numberWithCommas } from '../utils/UnitsUtils';
-import AddressUtils from '../utils/AddressUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { SATS_PER_BTC, numberWithCommas } from '../../utils/UnitsUtils';
+import AddressUtils from '../../utils/AddressUtils';
 
-import SwapStore from '../stores/SwapStore';
-import UnitsStore from '../stores/UnitsStore';
-import InvoicesStore from '../stores/InvoicesStore';
+import SwapStore from '../../stores/SwapStore';
+import UnitsStore from '../../stores/UnitsStore';
+import InvoicesStore from '../../stores/InvoicesStore';
 
-import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
-import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
-import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
-import OrderList from '../assets/images/SVG/order-list.svg';
+import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
+import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
+import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
+import OrderList from '../../assets/images/SVG/order-list.svg';
 import { Icon } from 'react-native-elements';
 
 interface SwapPaneProps {
@@ -117,10 +117,6 @@ export default class SwapPane extends React.PureComponent<
                 style={{ marginTop: -10 }}
                 onPress={() => {
                     navigation.navigate('SwapsPane');
-                    // EncryptedStorage.setItem(
-                    //     'reverse-swaps',
-                    //     JSON.stringify([])
-                    // );
                 }}
                 accessibilityLabel={localeString('general.add')}
             >
@@ -745,7 +741,7 @@ export default class SwapPane extends React.PureComponent<
                                                   navigation
                                               );
                                     }}
-                                    disabled={!isValid}
+                                    // disabled={!isValid}
                                 />
                             </View>
                         </>
