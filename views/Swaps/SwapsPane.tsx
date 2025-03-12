@@ -9,16 +9,16 @@ import moment from 'moment';
 import {
     ErrorMessage,
     WarningMessage
-} from '../components/SuccessErrorMessage';
-import Screen from '../components/Screen';
-import Header from '../components/Header';
-import Amount from '../components/Amount';
-import LoadingIndicator from '../components/LoadingIndicator';
+} from '../../components/SuccessErrorMessage';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import Amount from '../../components/Amount';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
-import { themeColor } from '../utils/ThemeUtils';
-import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
 
-import SwapStore, { HOST } from '../stores/SwapStore';
+import SwapStore, { HOST } from '../../stores/SwapStore';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
