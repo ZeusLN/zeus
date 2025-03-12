@@ -24,7 +24,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC, numberWithCommas } from '../utils/UnitsUtils';
 import AddressUtils from '../utils/AddressUtils';
 
-import SwapStore, { HOST } from '../stores/SwapStore';
+import SwapStore from '../stores/SwapStore';
 import UnitsStore from '../stores/UnitsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 
@@ -32,6 +32,7 @@ import ArrowDown from '../assets/images/SVG/Arrow_down.svg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OrderList from '../assets/images/SVG/order-list.svg';
+import { Icon } from 'react-native-elements';
 
 interface SwapPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -128,6 +129,20 @@ export default class SwapPane extends React.PureComponent<
                     width="40"
                     height="40"
                     style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
+        );
+
+        const SettingsBtn = () => (
+            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
+                <Icon
+                    name="settings"
+                    onPress={() => {
+                        this.props.navigation.navigate('SwapSettings');
+                    }}
+                    color={themeColor('text')}
+                    underlayColor="transparent"
+                    size={33}
                 />
             </TouchableOpacity>
         );
@@ -236,7 +251,12 @@ export default class SwapPane extends React.PureComponent<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<SwapsPaneBtn />}
+                    rightComponent={
+                        <Row>
+                            {SwapStore.loading ? <></> : <SettingsBtn />}
+                            <SwapsPaneBtn />
+                        </Row>
+                    }
                     navigation={navigation}
                 />
                 <View style={{ flex: 1, margin: 10 }}>

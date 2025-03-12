@@ -1306,4 +1306,5 @@
     "views.SwapDetails.claimPublicKey": "Claim Public Key",
     "views.SwapDetails.swapTree": "Swap Tree",
     "views.SwapDetails.bip21": "BIP21",
+    "views.SwapSettings.customHost": "Enter a custom host"
 }
