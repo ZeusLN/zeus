@@ -30,7 +30,7 @@ export default class AndroidNfcModal extends React.Component<
             <ModalBox
                 isOpen={showAndroidNfcModal}
                 style={{
-                    backgroundColor: themeColor('background'),
+                    backgroundColor: 'transparent',
                     paddingLeft: 24,
                     paddingRight: 24,
                     height: 380
