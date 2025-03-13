@@ -421,45 +421,25 @@ export default class SwapDetails extends React.Component<
      */
     validatePreimage = (preimage: string, invoice: string): boolean => {
         let invoicePreimageHash: any;
+        let decoded: any;
+        let result: any;
+
         try {
-            console.log('inside validatePreimage func--->', invoice);
-            let decoded: any;
-            try {
-                decoded = bolt11.decode(invoice);
-            } catch (error) {
-                console.log(error);
-            }
-
-            let paymentHash: any;
-            paymentHash = decoded.tags.find(
-                (tag: any) => tag.tagName === 'payment_hash'
-            );
-            console.log('paymenthash', paymentHash);
-
-            invoicePreimageHash = Buffer.from(paymentHash!.data || '', 'hex');
-
-            console.log('final invoicePreimageHash ', invoicePreimageHash);
-
-            // invoicePreimageHash = Buffer.from(
-            //     bolt11
-            //         .decode(invoice)
-            //         .tags.find((tag) => tag.tagName === 'payment_hash')!
-            //         .data as string,
-            //     'hex'
-            // );
+            decoded = bolt11.decode(invoice);
         } catch (error) {
-            console.log('block 1', error);
-        }
-        let resp: any;
-        try {
-            resp = crypto
-                .sha256(Buffer.from(preimage, 'hex'))
-                .equals(invoicePreimageHash);
-        } catch (error) {
-            console.log('block 2', error);
+            console.log(error);
         }
 
-        return resp;
+        const paymentHash = decoded.tags.find(
+            (tag: any) => tag.tagName === 'payment_hash'
+        );
+        invoicePreimageHash = Buffer.from(paymentHash!.data || '', 'hex');
+
+        result = crypto
+            .sha256(Buffer.from(preimage, 'hex'))
+            .equals(invoicePreimageHash);
+
+        return result;
     };
 
     /**

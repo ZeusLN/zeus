@@ -48,7 +48,7 @@ interface SwapPaneState {
     outputSats: number | any;
     invoice: string;
     isValid: boolean;
-    apiError: any;
+    error: string;
     apiUpdates: any;
     response: any;
     fetchingInvoice: boolean;
@@ -69,7 +69,7 @@ export default class SwapPane extends React.PureComponent<
         invoice: '',
         isValid: false,
         apiUpdates: '',
-        apiError: null,
+        error: '',
         response: null,
         fetchingInvoice: false,
         fee: ''
@@ -86,14 +86,14 @@ export default class SwapPane extends React.PureComponent<
             serviceFeeSats,
             inputSats,
             outputSats,
-            apiError,
+            error,
             apiUpdates,
             invoice,
             isValid,
             fetchingInvoice,
             fee
         } = this.state;
-        const { subInfo, reverseInfo, loading } = SwapStore;
+        const { subInfo, reverseInfo, loading, apiError } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
 
@@ -249,7 +249,7 @@ export default class SwapPane extends React.PureComponent<
                     }}
                     rightComponent={
                         <Row>
-                            {SwapStore.loading ? <></> : <SettingsBtn />}
+                            {loading ? <></> : <SettingsBtn />}
                             <SwapsPaneBtn />
                         </Row>
                     }
@@ -259,12 +259,8 @@ export default class SwapPane extends React.PureComponent<
                     {loading && <LoadingIndicator />}
                     {!loading && (
                         <>
-                            {apiError && (
-                                <ErrorMessage
-                                    message={
-                                        apiError['message'] || String(apiError)
-                                    }
-                                />
+                            {(error || apiError) && (
+                                <ErrorMessage message={error || apiError} />
                             )}
 
                             {apiUpdates && (
@@ -304,7 +300,7 @@ export default class SwapPane extends React.PureComponent<
                                             _,
                                             satAmount: string | number
                                         ) => {
-                                            this.setState({ apiError: '' });
+                                            this.setState({ error: '' });
 
                                             // remove commas
                                             const sanitizedSatAmount =
@@ -419,7 +415,7 @@ export default class SwapPane extends React.PureComponent<
                                                 _,
                                                 satAmount: string | number
                                             ) => {
-                                                this.setState({ apiError: '' });
+                                                this.setState({ error: '' });
 
                                                 // remove commas
                                                 const sanitizedSatAmount =
@@ -569,7 +565,7 @@ export default class SwapPane extends React.PureComponent<
                                         }
                                         this.setState({
                                             invoice: text,
-                                            apiError: '',
+                                            error: '',
                                             apiUpdates: '',
                                             isValid
                                         });
@@ -624,8 +620,7 @@ export default class SwapPane extends React.PureComponent<
 
                                             if (!amount) {
                                                 this.setState({
-                                                    apiError:
-                                                        'Please enter a amount!',
+                                                    error: 'Please enter a amount!',
                                                     fetchingInvoice: false
                                                 });
                                                 return;
@@ -648,13 +643,12 @@ export default class SwapPane extends React.PureComponent<
                                                     this.setState({
                                                         invoice:
                                                             InvoicesStore.onChainAddress,
-                                                        apiError: '',
+                                                        error: '',
                                                         isValid: true
                                                     });
                                                 } else {
                                                     this.setState({
-                                                        apiError:
-                                                            'Failed to retrieve on-chain address',
+                                                        error: 'Failed to retrieve on-chain address',
                                                         fetchingInvoice: false
                                                     });
                                                 }
@@ -666,12 +660,11 @@ export default class SwapPane extends React.PureComponent<
                                                         invoice:
                                                             InvoicesStore.payment_request,
                                                         isValid: true,
-                                                        apiError: ''
+                                                        error: ''
                                                     });
                                                 } else {
                                                     this.setState({
-                                                        apiError:
-                                                            'Failed to retrieve Lightning payment request',
+                                                        error: 'Failed to retrieve Lightning payment request',
                                                         fetchingInvoice: false
                                                     });
                                                 }
@@ -685,8 +678,7 @@ export default class SwapPane extends React.PureComponent<
                                                 error
                                             );
                                             this.setState({
-                                                apiError:
-                                                    'Failed to generate invoice',
+                                                error: 'Failed to generate invoice',
                                                 fetchingInvoice: false
                                             });
                                         }
@@ -728,7 +720,6 @@ export default class SwapPane extends React.PureComponent<
                                 <Button
                                     title={localeString('views.Swaps.initiate')}
                                     onPress={() => {
-                                        SwapStore.loading = true;
                                         reverse
                                             ? SwapStore?.createReverseSwap(
                                                   invoice,
@@ -741,7 +732,7 @@ export default class SwapPane extends React.PureComponent<
                                                   navigation
                                               );
                                     }}
-                                    // disabled={!isValid}
+                                    disabled={!isValid}
                                 />
                             </View>
                         </>
