@@ -78,6 +78,7 @@ export default class ActivityFilter extends React.Component<
         const {
             lightning,
             onChain,
+            cashu,
             sent,
             received,
             unpaid,
@@ -184,7 +185,16 @@ export default class ActivityFilter extends React.Component<
                 value: onChain,
                 var: 'onChain',
                 type: 'Toggle',
-                condition: true
+                condition:
+                    BackendUtils.supportsOnchainReceiving() ||
+                    BackendUtils.supportsOnchainSends()
+            },
+            {
+                label: localeString('views.ActivityFilter.cashuPayments'),
+                value: cashu,
+                var: 'cashu',
+                type: 'Toggle',
+                condition: BackendUtils.supportsCashu()
             },
             {
                 label: localeString('general.sent'),

@@ -159,6 +159,8 @@ import LSPS7Order from './views/LSPS7/Order';
 
 // Cashu Ecash
 import EcashSettings from './views/Settings/EcashSettings';
+import ReceiveEcash from './views/ReceiveEcash';
+import CashuInvoice from './views/CashuInvoice';
 
 // Chantools
 import Chantools from './views/Settings/EmbeddedNode/Chantools';
@@ -239,6 +241,7 @@ export default class App extends React.PureComponent {
                 LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
+                CashuStore={Stores.cashuStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -946,6 +949,14 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             EcashSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ReceiveEcash" // @ts-ignore:next-line
+                                                        component={ReceiveEcash}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuInvoice" // @ts-ignore:next-line
+                                                        component={CashuInvoice}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

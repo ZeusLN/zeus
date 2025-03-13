@@ -15,15 +15,18 @@ import { inject, observer } from 'mobx-react';
 import Amount from '../Amount';
 import Button from '../Button';
 import { Spacer } from '../layout/Spacer';
-import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
+import OnchainSwipeableRow from './OnchainSwipeableRow';
+import EcashSwipeableRow from './EcashSwipeableRow';
 import { Row as LayoutRow } from '../layout/Row';
 
 import stores from '../../stores/Stores';
 
 import BalanceStore from '../../stores/BalanceStore';
+import CashuStore from '../../stores/CashuStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -31,12 +34,15 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
 import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
+import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import MatiSvg from '../../assets/images/SVG/DynamicSVG/MatiSvg';
 
 interface LayerBalancesProps {
     BalanceStore?: BalanceStore;
+    CashuStore?: CashuStore;
+    SettingsStore?: SettingsStore;
     UTXOsStore?: UTXOsStore;
     UnitsStore?: UnitsStore;
     navigation: StackNavigationProp<any, any>;
@@ -92,6 +98,8 @@ const Row = ({ item }: { item: DataRow }) => {
                 <View style={styles.left}>
                     {item.watchOnly ? (
                         <MatiSvg />
+                    ) : item.layer === 'Ecash' ? (
+                        <EcashSvg />
                     ) : item.layer === 'On-chain' ? (
                         <OnChainSvg />
                     ) : item.layer === 'Lightning' ? (
@@ -203,6 +211,19 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'Ecash') {
+        return (
+            <EcashSwipeableRow
+                navigation={navigation}
+                value={value}
+                amount={amount}
+                locked={locked}
+            >
+                <Row item={item} />
+            </EcashSwipeableRow>
+        );
+    }
+
     if (item.layer === localeString('components.LayerBalances.moreAccounts')) {
         return (
             <TouchableOpacity onPress={() => navigation.navigate('Accounts')}>
@@ -254,12 +275,14 @@ const SwipeableRow = ({
     );
 };
 
-@inject('BalanceStore', 'UTXOsStore')
+@inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'SettingsStore')
 @observer
 export default class LayerBalances extends Component<LayerBalancesProps, {}> {
     render() {
         const {
             BalanceStore,
+            CashuStore,
+            SettingsStore,
             navigation,
             value,
             amount,
@@ -272,7 +295,9 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             refreshing
         } = this.props;
 
+        const { settings } = SettingsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const { totalBalanceSats } = CashuStore!;
 
         const otherAccounts = editMode
             ? this.props.UTXOsStore?.accounts
@@ -292,6 +317,15 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             DATA.push({
                 layer: 'On-chain',
                 balance: Number(totalBlockchainBalance).toFixed(3)
+            });
+        }
+
+        // Only show on-chain balance for non-Lnbank accounts
+        if (BackendUtils.supportsCashu() && settings?.ecash?.enableCashu) {
+            DATA.push({
+                layer: 'Ecash',
+                subtitle: '⚠ Custodial',
+                balance: Number(totalBalanceSats).toFixed(3)
             });
         }
 

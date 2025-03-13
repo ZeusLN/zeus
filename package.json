@@ -31,6 +31,7 @@
     "fetch-libraries": "bash fetch-libraries.sh"
   },
   "dependencies": {
+    "@cashu/cashu-ts": "2.2.2",
     "@getalby/sdk": "3.9.0",
     "@keystonehq/bc-ur-registry": "0.7.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",

@@ -7,9 +7,12 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
 import PinPad from '../../components/PinPad';
+import EcashToggle from '../../components/EcashToggle';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 import { getSatAmount } from '../../components/AmountInput';
+import { Row } from '../../components/layout/Row';
+import { Spacer } from '../../components/layout/Spacer';
 
 import ChannelsStore from '../../stores/ChannelsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -39,6 +42,7 @@ interface KeypadPaneState {
     belowMinAmount: boolean;
     overrideBelowMinAmount: boolean;
     flowLspNotConfigured: boolean;
+    ecashMode: boolean;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'UnitsStore')
@@ -54,10 +58,23 @@ export default class KeypadPane extends React.PureComponent<
         needInbound: false,
         belowMinAmount: false,
         overrideBelowMinAmount: false,
-        flowLspNotConfigured: true
+        flowLspNotConfigured: true,
+        ecashMode: false
     };
 
     async UNSAFE_componentWillMount() {
+        if (BackendUtils.supportsCashu()) {
+            const { SettingsStore } = this.props;
+            const { settings } = SettingsStore!;
+
+            this.setState({
+                ecashMode:
+                    settings?.ecash?.enableCashu !== null
+                        ? settings.ecash.enableCashu
+                        : false
+            });
+        }
+
         this.handleLsp();
 
         this.props.navigation.addListener('focus', async () => {
@@ -255,10 +272,16 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     render() {
-        const { UnitsStore, navigation } = this.props;
-        const { amount, needInbound, belowMinAmount, overrideBelowMinAmount } =
-            this.state;
+        const { UnitsStore, SettingsStore, navigation } = this.props;
+        const {
+            amount,
+            needInbound,
+            belowMinAmount,
+            overrideBelowMinAmount,
+            ecashMode
+        } = this.state;
         const { units } = UnitsStore!;
+        const { settings } = SettingsStore!;
 
         const color = this.textAnimation.interpolate({
             inputRange: [0, 1],
@@ -347,7 +370,23 @@ export default class KeypadPane extends React.PureComponent<
                         </Text>
                     </Animated.Text>
 
-                    <UnitToggle onToggle={this.clearValue} />
+                    <Row style={{ alignSelf: 'center' }}>
+                        {BackendUtils.supportsCashu() &&
+                            settings?.ecash?.enableCashu && (
+                                <>
+                                    <EcashToggle
+                                        ecashMode={ecashMode}
+                                        onToggle={() => {
+                                            this.setState({
+                                                ecashMode: !ecashMode
+                                            });
+                                        }}
+                                    />
+                                    <Spacer width={10} />
+                                </>
+                            )}
+                        <UnitToggle onToggle={this.clearValue} />
+                    </Row>
 
                     {amount !== '0' && (
                         <View style={{ top: 10, alignItems: 'center' }}>
@@ -453,10 +492,15 @@ export default class KeypadPane extends React.PureComponent<
                                     quaternary
                                     noUppercase
                                     onPress={() => {
-                                        navigation.navigate('Receive', {
-                                            amount,
-                                            autoGenerate: true
-                                        });
+                                        navigation.navigate(
+                                            ecashMode
+                                                ? 'ReceiveEcash'
+                                                : 'Receive',
+                                            {
+                                                amount,
+                                                autoGenerate: true
+                                            }
+                                        );
                                     }}
                                     buttonStyle={{ height: 40 }}
                                 />
@@ -474,9 +518,14 @@ export default class KeypadPane extends React.PureComponent<
                                     quaternary
                                     noUppercase
                                     onPress={() => {
-                                        navigation.navigate('Receive', {
-                                            amount
-                                        });
+                                        navigation.navigate(
+                                            ecashMode
+                                                ? 'ReceiveEcash'
+                                                : 'Receive',
+                                            {
+                                                amount
+                                            }
+                                        );
                                     }}
                                     buttonStyle={{ height: 40 }}
                                 />

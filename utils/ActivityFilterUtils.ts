@@ -3,6 +3,7 @@ import { Filter } from '../stores/ActivityStore';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
+import CashuInvoice from '../models/CashuInvoice';
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -23,6 +24,16 @@ class ActivityFilterUtils {
         if (filter.onChain == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) => !(activity instanceof Transaction)
+            );
+        }
+
+        if (filter.cashu == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    !(
+                        (activity instanceof CashuInvoice)
+                        // || activity instanceof CashuPayment
+                    )
             );
         }
 
