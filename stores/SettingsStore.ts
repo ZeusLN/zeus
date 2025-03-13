@@ -99,6 +99,7 @@ interface PaymentsSettings {
 interface InvoicesSettings {
     addressType?: string;
     memo?: string;
+    receiverName?: string;
     expiry?: string;
     timePeriod?: string;
     expirySeconds?: string;
@@ -1145,6 +1146,7 @@ export default class SettingsStore {
         invoices: {
             addressType: '0',
             memo: '',
+            receiverName: '',
             expiry: '3600',
             timePeriod: 'Seconds',
             expirySeconds: '3600',
