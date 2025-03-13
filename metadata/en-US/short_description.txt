@@ -1,1 +1,1 @@
-Mobile Bitcoin/Lightning app catered to node operators
+ZEUS is a mobile Bitcoin wallet with cutting edge Lightning functionality.
