@@ -10,6 +10,7 @@ import ModalStore from '../../stores/ModalStore';
 import { localeString } from '../../utils/LocaleUtils';
 
 import NFC from '../../assets/images/SVG/NFC.svg';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface AndroidNfcModalProps {
     ModalStore: ModalStore;
@@ -29,7 +30,7 @@ export default class AndroidNfcModal extends React.Component<
             <ModalBox
                 isOpen={showAndroidNfcModal}
                 style={{
-                    backgroundColor: 'transparent',
+                    backgroundColor: themeColor('background'),
                     paddingLeft: 24,
                     paddingRight: 24,
                     height: 380
@@ -49,7 +50,7 @@ export default class AndroidNfcModal extends React.Component<
                 >
                     <View
                         style={{
-                            backgroundColor: 'white',
+                            backgroundColor: themeColor('background'),
                             borderRadius: 30,
                             padding: 35,
                             alignItems: 'center',
@@ -64,7 +65,7 @@ export default class AndroidNfcModal extends React.Component<
                             style={{
                                 fontSize: 30,
                                 fontWeight: 'bold',
-                                color: 'darkgrey',
+                                color: themeColor('text'),
                                 marginBottom: 30
                             }}
                         >
@@ -74,7 +75,7 @@ export default class AndroidNfcModal extends React.Component<
                         <Text
                             style={{
                                 fontSize: 18,
-                                color: 'black',
+                                color: themeColor('text'),
                                 marginTop: 30,
                                 marginBottom: 30,
                                 textAlign: 'center'
