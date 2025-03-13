@@ -26,6 +26,7 @@
     "general.goBack": "Go Back",
     "general.lightning": "Lightning",
     "general.onchain": "On-chain",
+    "general.cashu": "Cashu",
     "general.activity": "Activity",
     "general.transaction": "Transaction",
     "general.confirmed": "Confirmed",
@@ -134,6 +135,7 @@
     "general.retry": "Retry",
     "general.response": "Response",
     "general.approximately": "Approximately",
+    "general.selfCustody": "Self-custody",
     "general.ecash": "Ecash",
     "channel.status.good": "Good",
     "channel.status.stable": "Stable",
@@ -1017,6 +1019,7 @@
     "views.ActivityFilter.endDate": "End Date",
     "views.ActivityFilter.lightningPayments": "Lightning payments",
     "views.ActivityFilter.onChainPayments": "On-chain payments",
+    "views.ActivityFilter.cashuPayments": "Cashu payments",
     "views.ActivityFilter.minimumAmount": "Minimum Amount (sats)",
     "views.ActivityFilter.maximumAmount": "Maximum Amount (sats)",
     "views.ActivityFilter.maximumAmountPlaceHolder":"No limit",
@@ -1394,6 +1397,9 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Balance (descending)",
     "views.OnChainAddresses.createAddress": "Create address",
     "views.OnChainAddresses.changeAddresses": "Change addresses",
+    "views.ReceiveEcash.title": "Receive Ecash",
+    "views.CashuInvoice.title": "Cashu Invoice",
     "androidNotification.lndRunningBackground": "LND is running in the background",
-    "androidNotification.shutdown": "Shutdown"
+    "androidNotification.shutdown": "Shutdown",
+    "cashu.mintUrl": "Mint URL"
 }

@@ -1,4 +1,5 @@
 import AlertStore from './AlertStore';
+import CashuStore from './CashuStore';
 import ChannelsStore from './ChannelsStore';
 import InvoicesStore from './InvoicesStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -26,6 +27,7 @@ import OffersStore from './OffersStore';
 
 class Stores {
     public alertStore: AlertStore;
+    public cashuStore: CashuStore;
     public channelsStore: ChannelsStore;
     public invoicesStore: InvoicesStore;
     public nodeInfoStore: NodeInfoStore;
@@ -105,11 +107,13 @@ class Stores {
         this.notesStore = new NotesStore();
         this.contactStore = new ContactStore();
         this.syncStore = new SyncStore(this.settingsStore);
+        this.cashuStore = new CashuStore(this.settingsStore);
         this.activityStore = new ActivityStore(
             this.settingsStore,
             this.paymentsStore,
             this.invoicesStore,
-            this.transactionsStore
+            this.transactionsStore,
+            this.cashuStore
         );
         this.posStore = new PosStore(this.settingsStore, this.fiatStore);
         this.inventoryStore = new InventoryStore();

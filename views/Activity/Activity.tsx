@@ -40,6 +40,7 @@ import NotesStore from '../../stores/NotesStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
+import CashuInvoice from '../../models/CashuInvoice';
 import ActivityToCsv from './ActivityToCsv';
 
 interface ActivityProps {
@@ -119,6 +120,28 @@ const ActivityListItem = React.memo(
                             {PrivacyUtils.sensitiveValue(
                                 keysendMessageOrMemo
                             )?.toString()}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item instanceof CashuInvoice) {
+            displayName = item.isPaid
+                ? localeString('views.Activity.youReceived')
+                : item.isExpired
+                ? localeString('views.Activity.expiredRequested')
+                : localeString('views.Activity.requestedPayment');
+            const memo = item.getMemo;
+            subTitle = (
+                <Text>
+                    {item.isPaid
+                        ? localeString('general.cashu')
+                        : localeString('views.CashuInvoice.title')}
+                    {memo ? ': ' : ''}
+                    {memo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {PrivacyUtils.sensitiveValue(memo)?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -429,6 +452,9 @@ export default class Activity extends React.PureComponent<
 
         if (item.model === localeString('views.Invoice.title')) {
             navigation.navigate('Invoice', { invoice: item });
+        }
+        if (item.model === localeString('views.CashuInvoice.title')) {
+            navigation.navigate('CashuInvoice', { invoice: item });
         }
         if (item.model === localeString('general.transaction')) {
             navigation.navigate('Transaction', { transaction: item });

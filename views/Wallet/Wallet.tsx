@@ -56,6 +56,7 @@ import Storage from '../../storage';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
+import CashuStore from '../../stores/CashuStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
@@ -92,6 +93,7 @@ interface WalletProps {
     navigation: StackNavigationProp<any, any>;
     AlertStore: AlertStore;
     BalanceStore: BalanceStore;
+    CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     NodeInfoStore: NodeInfoStore;
@@ -118,6 +120,7 @@ interface WalletState {
 @inject(
     'AlertStore',
     'BalanceStore',
+    'CashuStore',
     'ChannelsStore',
     'TransactionsStore',
     'NodeInfoStore',
@@ -327,6 +330,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             AlertStore,
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             ChannelsStore,
             TransactionsStore,
             UTXOsStore,
@@ -391,6 +395,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
+            CashuStore.reset();
         }
 
         LnurlPayStore.reset();
@@ -409,6 +414,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
+                if (settings?.ecash?.enableCashu)
+                    CashuStore.initializeWallets();
                 AlertStore.checkNeutrinoPeers();
 
                 if (!recovery) await stopLnd();
