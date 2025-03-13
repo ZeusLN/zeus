@@ -246,31 +246,42 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 : 'transparent'
                                         }}
                                         onPress={async () => {
-                                            const currentImplementation =
-                                                implementation;
-                                            if (
-                                                currentImplementation ===
-                                                'lightning-node-connect'
-                                            ) {
-                                                BackendUtils.disconnect();
-                                            }
-                                            await updateSettings({
-                                                nodes,
-                                                selectedNode: index
-                                            }).then(() => {
+                                            if (nodeActive) {
+                                                // if already on selected node, just pop to
+                                                // the Wallet view, skip connecting procedures
+                                                navigation.popTo('Wallet');
+                                            } else {
+                                                const currentImplementation =
+                                                    implementation;
                                                 if (
-                                                    item.implementation ===
-                                                        'embedded-lnd' &&
-                                                    Platform.OS === 'android' &&
-                                                    embeddedLndStarted
+                                                    currentImplementation ===
+                                                    'lightning-node-connect'
                                                 ) {
-                                                    restartNeeded(true);
-                                                } else {
-                                                    setConnectingStatus(true);
-                                                    setInitialStart(false);
-                                                    navigation.popTo('Wallet');
+                                                    BackendUtils.disconnect();
                                                 }
-                                            });
+                                                await updateSettings({
+                                                    nodes,
+                                                    selectedNode: index
+                                                }).then(() => {
+                                                    if (
+                                                        item.implementation ===
+                                                            'embedded-lnd' &&
+                                                        Platform.OS ===
+                                                            'android' &&
+                                                        embeddedLndStarted
+                                                    ) {
+                                                        restartNeeded(true);
+                                                    } else {
+                                                        setConnectingStatus(
+                                                            true
+                                                        );
+                                                        setInitialStart(false);
+                                                        navigation.popTo(
+                                                            'Wallet'
+                                                        );
+                                                    }
+                                                });
+                                            }
                                         }}
                                     >
                                         <ListItem
