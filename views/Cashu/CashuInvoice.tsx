@@ -4,23 +4,23 @@ import { inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import CashuStore from '../stores/CashuStore';
-import SettingsStore from '../stores/SettingsStore';
+import CashuStore from '../../stores/CashuStore';
+import SettingsStore from '../../stores/SettingsStore';
 
-import Amount from '../components/Amount';
-import Header from '../components/Header';
-import KeyValue from '../components/KeyValue';
-import Screen from '../components/Screen';
-import Button from '../components/Button';
-import { Row } from '../components/layout/Row';
+import Amount from '../../components/Amount';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
+import Screen from '../../components/Screen';
+import Button from '../../components/Button';
+import { Row } from '../../components/layout/Row';
 
-import CashuInvoice from '../models/CashuInvoice';
+import CashuInvoice from '../../models/CashuInvoice';
 
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import EditNotes from '../assets/images/SVG/Pen.svg';
-import QR from '../assets/images/SVG/QR.svg';
+import EditNotes from '../../assets/images/SVG/Pen.svg';
+import QR from '../../assets/images/SVG/QR.svg';
 
 interface CashuInvoiceProps {
     navigation: StackNavigationProp<any, any>;

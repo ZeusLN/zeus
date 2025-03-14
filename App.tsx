@@ -159,8 +159,12 @@ import LSPS7Order from './views/LSPS7/Order';
 
 // Cashu Ecash
 import EcashSettings from './views/Settings/EcashSettings';
-import ReceiveEcash from './views/ReceiveEcash';
-import CashuInvoice from './views/CashuInvoice';
+import ReceiveEcash from './views/Cashu/ReceiveEcash';
+import CashuInvoice from './views/Cashu/CashuInvoice';
+import Proofs from './views/Cashu/Proofs';
+import Mint from './views/Cashu/Mint';
+import Mints from './views/Cashu/Mints';
+import AddMint from './views/Cashu/AddMint';
 
 // Chantools
 import Chantools from './views/Settings/EmbeddedNode/Chantools';
@@ -957,6 +961,22 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="CashuInvoice" // @ts-ignore:next-line
                                                         component={CashuInvoice}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Proofs" // @ts-ignore:next-line
+                                                        component={Proofs}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Mint" // @ts-ignore:next-line
+                                                        component={Mint}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Mints" // @ts-ignore:next-line
+                                                        component={Mints}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AddMint" // @ts-ignore:next-line
+                                                        component={AddMint}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

@@ -67,8 +67,76 @@ export default class CashuStore {
     };
 
     @action
-    public initializeWallets = async () => {
+    public addMint = async (mintUrl: string) => {
+        this.loading = true;
+        const newMintUrls = this.mintUrls;
+        newMintUrls.push(mintUrl);
+        await Storage.setItem(`${this.lndDir}-cashu-mintUrls`, this.mintUrls);
+        await this.initializeWallet(mintUrl);
+        runInAction(() => {
+            this.mintUrls = newMintUrls;
+            this.loading = false;
+        });
+    };
+
+    @action
+    public initializeWallet = async (mintUrl: string) => {
+        console.log('initializing wallet for URL', mintUrl);
+
+        const walletId = `${this.lndDir}==${mintUrl}`;
+
+        const storedCounter = await Storage.getItem(`${walletId}-counter`);
+        const counter = storedCounter ? JSON.parse(storedCounter) : 0;
+
+        const storedProofs = await Storage.getItem(`${walletId}-proofs`);
+        const proofs = storedProofs ? JSON.parse(storedProofs) : [];
+
+        const storedBalanceSats = await Storage.getItem(`${walletId}-balance`);
+        const balanceSats = storedBalanceSats
+            ? JSON.parse(storedBalanceSats)
+            : 0;
+
+        const mint = new CashuMint(mintUrl);
+        const keysets = (await mint.getKeySets()).keysets.filter(
+            (ks) => ks.unit === 'sat'
+        );
+        const keys = (await mint.getKeys()).keysets.find(
+            (ks) => ks.unit === 'sat'
+        );
+
         const seedPhrase = this.settingsStore.seedPhrase;
+        const mnemonic = seedPhrase.join(' ');
+        const seed = bip39.mnemonicToSeedSync(mnemonic);
+
+        const mintInfo = await mint.getInfo();
+
+        const wallet = new CashuWallet(mint, {
+            bip39seed: new Uint8Array(seed),
+            mintInfo,
+            unit: 'sat',
+            keysets,
+            keys
+        });
+
+        // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
+        await wallet.loadMint();
+        await wallet.getKeys();
+
+        runInAction(() => {
+            this.cashuWallets[mintUrl] = {
+                wallet,
+                walletId,
+                counter,
+                proofs,
+                balanceSats
+            };
+        });
+
+        return this.cashuWallets[mintUrl];
+    };
+
+    @action
+    public initializeWallets = async () => {
         this.lndDir = this.settingsStore.lndDir || 'lnd';
 
         const storedMintUrls = await Storage.getItem(
@@ -102,57 +170,7 @@ export default class CashuStore {
             : [];
 
         this.mintUrls.forEach(async (mintUrl) => {
-            console.log('initializing wallet for URL', mintUrl);
-
-            const walletId = `${this.lndDir}==${mintUrl}`;
-
-            const storedCounter = await Storage.getItem(`${walletId}-counter`);
-            const counter = storedCounter ? JSON.parse(storedCounter) : 0;
-
-            const storedProofs = await Storage.getItem(`${walletId}-proofs`);
-            const proofs = storedProofs ? JSON.parse(storedProofs) : [];
-
-            const storedBalanceSats = await Storage.getItem(
-                `${walletId}-balance`
-            );
-            const balanceSats = storedBalanceSats
-                ? JSON.parse(storedBalanceSats)
-                : 0;
-
-            const mint = new CashuMint(mintUrl);
-            const keysets = (await mint.getKeySets()).keysets.filter(
-                (ks) => ks.unit === 'sat'
-            );
-            const keys = (await mint.getKeys()).keysets.find(
-                (ks) => ks.unit === 'sat'
-            );
-
-            const mnemonic = seedPhrase.join(' ');
-            const seed = bip39.mnemonicToSeedSync(mnemonic);
-
-            const mintInfo = await mint.getInfo();
-
-            const wallet = new CashuWallet(mint, {
-                bip39seed: new Uint8Array(seed),
-                mintInfo,
-                unit: 'sat',
-                keysets,
-                keys
-            });
-
-            // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
-            await wallet.loadMint();
-            await wallet.getKeys();
-
-            runInAction(() => {
-                this.cashuWallets[mintUrl] = {
-                    wallet,
-                    walletId,
-                    counter,
-                    proofs,
-                    balanceSats
-                };
-            });
+            await this.initializeWallet(mintUrl);
         });
     };
 

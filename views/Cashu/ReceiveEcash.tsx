@@ -17,48 +17,48 @@ import NfcManager, {
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import handleAnything from '../utils/handleAnything';
+import handleAnything from '../../utils/handleAnything';
 
-import Wordmark from '../assets/images/SVG/wordmark-black.svg';
+import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
-const ZPayIcon = require('../assets/images/pay-z-black.png');
+const ZPayIcon = require('../../assets/images/pay-z-black.png');
 
-const ZPayIconWhite = require('../assets/images/pay-z-white.png');
+const ZPayIconWhite = require('../../assets/images/pay-z-white.png');
 
-import AmountInput, { getSatAmount } from '../components/AmountInput';
-import Button from '../components/Button';
-import CollapsedQR from '../components/CollapsedQR';
-import Header from '../components/Header';
-import HopPicker from '../components/HopPicker';
-import LoadingIndicator from '../components/LoadingIndicator';
-import PaidIndicator from '../components/PaidIndicator';
-import Pill from '../components/Pill';
-import { Row } from '../components/layout/Row';
-import Screen from '../components/Screen';
-import SuccessAnimation from '../components/SuccessAnimation';
+import AmountInput, { getSatAmount } from '../../components/AmountInput';
+import Button from '../../components/Button';
+import CollapsedQR from '../../components/CollapsedQR';
+import Header from '../../components/Header';
+import HopPicker from '../../components/HopPicker';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import PaidIndicator from '../../components/PaidIndicator';
+import Pill from '../../components/Pill';
+import { Row } from '../../components/layout/Row';
+import Screen from '../../components/Screen';
+import SuccessAnimation from '../../components/SuccessAnimation';
 import {
     SuccessMessage,
     ErrorMessage
-} from '../components/SuccessErrorMessage';
-import Text from '../components/Text';
-import TextInput from '../components/TextInput';
+} from '../../components/SuccessErrorMessage';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
-import CashuStore from '../stores/CashuStore';
-import ModalStore from '../stores/ModalStore';
-import NodeInfoStore from '../stores/NodeInfoStore';
-import PosStore from '../stores/PosStore';
-import SettingsStore from '../stores/SettingsStore';
-import LightningAddressStore from '../stores/LightningAddressStore';
-import UnitsStore from '../stores/UnitsStore';
+import CashuStore from '../../stores/CashuStore';
+import ModalStore from '../../stores/ModalStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
+import PosStore from '../../stores/PosStore';
+import SettingsStore from '../../stores/SettingsStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
+import UnitsStore from '../../stores/UnitsStore';
 
-import CashuInvoice from '../models/CashuInvoice';
+import CashuInvoice from '../../models/CashuInvoice';
 
-import { localeString } from '../utils/LocaleUtils';
-import NFCUtils from '../utils/NFCUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import NFCUtils from '../../utils/NFCUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
-import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
+import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
+import AddressSvg from '../../assets/images/SVG/DynamicSVG/AddressSvg';
 
 interface ReceiveEcashProps {
     exitSetup: any;

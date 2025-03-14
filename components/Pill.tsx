@@ -1,36 +1,74 @@
 import * as React from 'react';
-import { Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface PillProps {
     title: string;
     textColor?: string;
     borderColor?: string;
+    borderWidth?: number;
     backgroundColor?: string;
+    width?: number;
+    height?: number;
     onPress?: () => void;
 }
 
 function Pill(props: PillProps) {
-    const { title, textColor, borderColor, backgroundColor, onPress } = props;
+    const {
+        title,
+        textColor,
+        borderColor,
+        borderWidth,
+        backgroundColor,
+        width,
+        height,
+        onPress
+    } = props;
+
+    if (!onPress) {
+        return (
+            <View
+                style={{
+                    ...styles.wrapper,
+                    borderWidth: borderWidth
+                        ? borderWidth
+                        : borderColor
+                        ? 3
+                        : 0,
+                    borderColor: borderColor || themeColor('highlight'),
+                    width: width || 90,
+                    height: height || 40,
+                    backgroundColor: backgroundColor || themeColor('background')
+                }}
+            >
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: textColor || themeColor('highlight')
+                    }}
+                >
+                    {title}
+                </Text>
+            </View>
+        );
+    }
 
     return (
         <TouchableOpacity
             style={{
-                borderWidth: borderColor ? 3 : 0,
+                ...styles.wrapper,
+                borderWidth: borderWidth ? borderWidth : borderColor ? 3 : 0,
                 borderColor: borderColor || themeColor('highlight'),
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 90,
-                height: 40,
-                backgroundColor: backgroundColor || themeColor('background'),
-                borderRadius: 50
+                width: width || 90,
+                height: height || 40,
+                backgroundColor: backgroundColor || themeColor('background')
             }}
             onPress={onPress}
         >
             <Text
                 style={{
-                    color: textColor || themeColor('highlight'),
-                    fontFamily: 'PPNeueMontreal-Book'
+                    ...styles.text,
+                    color: textColor || themeColor('highlight')
                 }}
             >
                 {title}
@@ -38,5 +76,16 @@ function Pill(props: PillProps) {
         </TouchableOpacity>
     );
 }
+
+const styles = StyleSheet.create({
+    wrapper: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 50
+    },
+    text: {
+        fontFamily: 'PPNeueMontreal-Book'
+    }
+});
 
 export default Pill;

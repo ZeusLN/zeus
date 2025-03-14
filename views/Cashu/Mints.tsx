@@ -1,0 +1,229 @@
+import * as React from 'react';
+import {
+    FlatList,
+    Image,
+    View,
+    StyleSheet,
+    TouchableOpacity
+} from 'react-native';
+import { Button, ListItem } from 'react-native-elements';
+import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+
+import Amount from '../../components/Amount';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import CashuStore from '../../stores/CashuStore';
+
+import Add from '../../assets/images/SVG/Add.svg';
+
+interface MintsProps {
+    navigation: StackNavigationProp<any, any>;
+    CashuStore: CashuStore;
+    route: Route<'Mints'>;
+}
+
+interface MintsState {
+    mints: any;
+}
+
+@inject('CashuStore')
+@observer
+export default class Mints extends React.Component<MintsProps, MintsState> {
+    state = {
+        mints: []
+    };
+
+    UNSAFE_componentWillMount(): void {
+        const { navigation } = this.props;
+        // triggers when loaded from navigation or back action
+        navigation.addListener('focus', this.handleFocus);
+    }
+
+    handleFocus = () => {
+        const { CashuStore } = this.props;
+        const { cashuWallets, mintUrls } = CashuStore;
+        let mints: any = [];
+        mintUrls.forEach((mintUrl) => {
+            const mintInfo = cashuWallets[mintUrl].wallet.mintInfo;
+            mints.push({
+                ...mintInfo,
+                mintUrl,
+                mintBalance: cashuWallets[mintUrl].balanceSats
+            });
+        });
+
+        this.setState({
+            mints
+        });
+    };
+
+    renderSeparator = () => (
+        <View
+            style={{
+                height: 0.4,
+                backgroundColor: themeColor('separator')
+            }}
+        />
+    );
+
+    render() {
+        const { navigation } = this.props;
+        const { mints } = this.state;
+
+        const AddMintButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('AddMint')}
+                accessibilityLabel={localeString('views.Cashu.AddMint.title')}
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{ alignSelf: 'center' }}
+                />
+            </TouchableOpacity>
+        );
+
+        return (
+            <Screen>
+                <Header
+                    leftComponent="Back"
+                    centerComponent={{
+                        text:
+                            mints.length > 0
+                                ? `${localeString('cashu.mints')} (${
+                                      mints.length
+                                  })`
+                                : localeString('cashu.mints'),
+                        style: {
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }
+                    }}
+                    rightComponent={<AddMintButton />}
+                    navigation={navigation}
+                />
+                {!!mints && mints.length > 0 ? (
+                    <FlatList
+                        data={mints}
+                        renderItem={({ item }: any) => {
+                            const subTitle = item.mintUrl;
+                            return (
+                                <React.Fragment>
+                                    <ListItem
+                                        containerStyle={{
+                                            borderBottomWidth: 0,
+                                            backgroundColor: 'transparent'
+                                        }}
+                                        onPress={() => {
+                                            navigation.navigate('Mint', {
+                                                mint: item
+                                            });
+                                        }}
+                                    >
+                                        {item._mintInfo?.icon_url && (
+                                            <Image
+                                                source={{
+                                                    uri: item._mintInfo
+                                                        ?.icon_url
+                                                }}
+                                                style={{
+                                                    alignSelf: 'center',
+                                                    width: 42,
+                                                    height: 42,
+                                                    borderRadius: 68
+                                                }}
+                                            />
+                                        )}
+                                        <ListItem.Content>
+                                            <View style={styles.row}>
+                                                <ListItem.Title
+                                                    style={{
+                                                        ...styles.leftCell,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontSize: 18
+                                                    }}
+                                                >
+                                                    {item._mintInfo.name}
+                                                </ListItem.Title>
+                                                <View style={styles.rightCell}>
+                                                    <Amount
+                                                        sats={item.mintBalance}
+                                                        sensitive
+                                                    />
+                                                </View>
+                                            </View>
+                                            <View style={styles.row}>
+                                                <ListItem.Subtitle
+                                                    style={{
+                                                        ...styles.leftCell,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 12,
+                                                        fontFamily:
+                                                            'Lato-Regular',
+                                                        flexWrap: 'wrap',
+                                                        flexShrink: 1
+                                                    }}
+                                                >
+                                                    {subTitle}
+                                                </ListItem.Subtitle>
+                                            </View>
+                                        </ListItem.Content>
+                                    </ListItem>
+                                </React.Fragment>
+                            );
+                        }}
+                        keyExtractor={(_, index) => `utxo-${index}`}
+                        ItemSeparatorComponent={this.renderSeparator}
+                        onEndReachedThreshold={50}
+                    />
+                ) : (
+                    <Button
+                        title={localeString('views.Mints.noMints')}
+                        icon={{
+                            name: 'error-outline',
+                            size: 25,
+                            color: themeColor('text')
+                        }}
+                        buttonStyle={{
+                            backgroundColor: 'transparent',
+                            borderRadius: 30
+                        }}
+                        titleStyle={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book'
+                        }}
+                    />
+                )}
+            </Screen>
+        );
+    }
+}
+
+const styles = StyleSheet.create({
+    row: {
+        flexDirection: 'row',
+        width: '100%',
+        justifyContent: 'space-between',
+        columnGap: 10
+    },
+    leftCell: {
+        flexGrow: 0,
+        flexShrink: 1
+    },
+    rightCell: {
+        flexGrow: 0,
+        flexShrink: 1,
+        textAlign: 'right'
+    }
+});
