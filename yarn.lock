@@ -3142,7 +3142,7 @@ Base64@~0.2.0:
   resolved "https://registry.yarnpkg.com/Base64/-/Base64-0.2.1.tgz#ba3a4230708e186705065e66babdd4c35cf60028"
   integrity sha512-reGEWshDmTDQDsCec/HduOO9Wyj6yMOupMfhIf3ugN1TDlK2NQW4DDJSqNNtp380SNcvRfXtO8HSCQot0d0SMw==
 
-abort-controller@^3.0.0:
+abort-controller@3.0.0, abort-controller@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/abort-controller/-/abort-controller-3.0.0.tgz#eaf54d53b62bae4138e809ca225c8439a6efb392"
   integrity sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==
