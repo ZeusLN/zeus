@@ -20,6 +20,7 @@ import stores from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import Coins from './../../assets/images/SVG/Coins.svg';
+import Mint from './../../assets/images/SVG/Mint.svg';
 import Receive from './../../assets/images/SVG/Receive.svg';
 import Send from './../../assets/images/SVG/Send.svg';
 
@@ -60,8 +61,10 @@ export default class EcashSwipeableRow extends Component<
 
             if (text === localeString('general.receive')) {
                 navigation.navigate('ReceiveEcash');
-            } else if (text === localeString('general.coins')) {
-                navigation.navigate('CoinControl', { account });
+            } else if (text === localeString('cashu.mints')) {
+                navigation.navigate('Mints', { account });
+            } else if (text === localeString('cashu.proofs')) {
+                navigation.navigate('Proofs');
             } else if (text === localeString('general.send')) {
                 navigation.navigate('Send');
             }
@@ -81,9 +84,20 @@ export default class EcashSwipeableRow extends Component<
                         accessible
                         accessibilityRole="button"
                     >
-                        {text === localeString('general.coins') && (
-                            <Coins
+                        {text === localeString('cashu.mints') && (
+                            <Mint
                                 fill={
+                                    themeColor('action') ||
+                                    themeColor('highlight')
+                                }
+                                width={30}
+                                height={30}
+                            />
+                        )}
+                        {text === localeString('cashu.proofs') && (
+                            <Coins
+                                fill="none"
+                                stroke={
                                     themeColor('action') ||
                                     themeColor('highlight')
                                 }
@@ -131,7 +145,7 @@ export default class EcashSwipeableRow extends Component<
         <View
             style={{
                 marginLeft: 15,
-                width: BackendUtils.supportsCoinControl() ? 210 : 140,
+                width: 280,
                 flexDirection: I18nManager.isRTL ? 'row-reverse' : 'row'
             }}
         >
@@ -140,8 +154,8 @@ export default class EcashSwipeableRow extends Component<
                 BackendUtils.supportsCoinControl() ? 210 : 140,
                 progress
             )}
-            {BackendUtils.supportsCoinControl() &&
-                this.renderAction(localeString('general.coins'), 200, progress)}
+            {this.renderAction(localeString('cashu.proofs'), 200, progress)}
+            {this.renderAction(localeString('cashu.mints'), 200, progress)}
             {this.renderAction(
                 localeString('general.send'),
                 BackendUtils.supportsCoinControl() ? 210 : 140,

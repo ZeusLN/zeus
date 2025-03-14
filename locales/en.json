@@ -1399,7 +1399,13 @@
     "views.OnChainAddresses.changeAddresses": "Change addresses",
     "views.ReceiveEcash.title": "Receive Ecash",
     "views.CashuInvoice.title": "Cashu Invoice",
+    "views.Proofs.noProofs": "No proofs",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown",
-    "cashu.mintUrl": "Mint URL"
+    "cashu.mint": "Mint",
+    "cashu.mints": "Mints",
+    "cashu.mintUrl": "Mint URL",
+    "cashu.proofs": "Proofs",
+    "views.Cashu.AddMint.title": "Add mint",
+    "views.Cashu.Mint.supportedNuts": "Supported Nuts"
 }
