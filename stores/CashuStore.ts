@@ -42,6 +42,7 @@ export default class CashuStore {
     @observable public creatingInvoiceError = false;
     @observable public watchedInvoicePaid = false;
     @observable public watchedInvoicePaidAmt: number | string;
+    @observable public loading_msg?: string;
     @observable public error = false;
     @observable public error_msg?: string;
     settingsStore: SettingsStore;
@@ -80,22 +81,8 @@ export default class CashuStore {
     };
 
     @action
-    public initializeWallet = async (mintUrl: string) => {
-        console.log('initializing wallet for URL', mintUrl);
-
-        const walletId = `${this.lndDir}==${mintUrl}`;
-
-        const storedCounter = await Storage.getItem(`${walletId}-counter`);
-        const counter = storedCounter ? JSON.parse(storedCounter) : 0;
-
-        const storedProofs = await Storage.getItem(`${walletId}-proofs`);
-        const proofs = storedProofs ? JSON.parse(storedProofs) : [];
-
-        const storedBalanceSats = await Storage.getItem(`${walletId}-balance`);
-        const balanceSats = storedBalanceSats
-            ? JSON.parse(storedBalanceSats)
-            : 0;
-
+    public startWallet = async (mintUrl: string): Promise<CashuWallet> => {
+        console.log('starting wallet for URL', mintUrl);
         const mint = new CashuMint(mintUrl);
         const keysets = (await mint.getKeySets()).keysets.filter(
             (ks) => ks.unit === 'sat'
@@ -121,6 +108,33 @@ export default class CashuStore {
         // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
         await wallet.loadMint();
         await wallet.getKeys();
+        return wallet;
+    };
+
+    @action
+    public initializeWallet = async (
+        mintUrl: string,
+        startup?: boolean
+    ): Promise<Wallet> => {
+        console.log('initializing wallet for URL', mintUrl);
+
+        const walletId = `${this.lndDir}==${mintUrl}`;
+
+        const storedCounter = await Storage.getItem(`${walletId}-counter`);
+        const counter = storedCounter ? JSON.parse(storedCounter) : 0;
+
+        const storedProofs = await Storage.getItem(`${walletId}-proofs`);
+        const proofs = storedProofs ? JSON.parse(storedProofs) : [];
+
+        const storedBalanceSats = await Storage.getItem(`${walletId}-balance`);
+        const balanceSats = storedBalanceSats
+            ? JSON.parse(storedBalanceSats)
+            : 0;
+
+        let wallet: CashuWallet;
+        if (startup) {
+            wallet = await this.startWallet(mintUrl);
+        }
 
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
@@ -169,8 +183,22 @@ export default class CashuStore {
               )
             : [];
 
-        this.mintUrls.forEach(async (mintUrl) => {
-            await this.initializeWallet(mintUrl);
+        for (let i = 0; i < this.mintUrls.length; i++) {
+            const mintUrl = this.mintUrls[i];
+            runInAction(() => {
+                this.loading_msg = `Initializing ecash wallet for ${mintUrl}`;
+            });
+            await new Promise(async (resolve) => {
+                const wallet = await this.initializeWallet(
+                    mintUrl,
+                    true // TODO mintUrl === this.selectedMintUrl
+                );
+                resolve(wallet);
+            });
+        }
+
+        runInAction(() => {
+            this.loading_msg = undefined;
         });
     };
 

@@ -414,8 +414,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         if (implementation === 'embedded-lnd') {
             if (connecting) {
-                if (settings?.ecash?.enableCashu)
-                    CashuStore.initializeWallets();
                 AlertStore.checkNeutrinoPeers();
 
                 if (!recovery) await stopLnd();
@@ -450,6 +448,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     isTorEnabled: embeddedTor,
                     isTestnet: embeddedLndNetwork === 'Testnet'
                 });
+
+                if (settings?.ecash?.enableCashu)
+                    await CashuStore.initializeWallets();
             }
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
@@ -622,6 +623,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const {
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             SettingsStore,
             SyncStore,
             navigation
@@ -989,7 +991,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         loggedIn &&
                                         implementation
                                             ? implementation === 'embedded-lnd'
-                                                ? isInExpressGraphSync
+                                                ? CashuStore.loading_msg
+                                                    ? CashuStore.loading_msg
+                                                    : isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'
                                                       ).replace('Zeus', 'ZEUS')
