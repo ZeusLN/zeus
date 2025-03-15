@@ -11,13 +11,9 @@ import {
     getOffchainBalance,
     listPeers
 } from './CoreLightningRequestHandler';
-import { localeString } from '../utils/LocaleUtils';
-import ReactNativeBlobUtil from 'react-native-blob-util';
-import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import { LndClnRestBase } from './LndClnRestBase';
 
-const calls = new Map<string, Promise<any>>();
-
-export default class CLNRest {
+export default class CLNRest extends LndClnRestBase {
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
@@ -39,97 +35,6 @@ export default class CLNRest {
             );
         }
         return isSupportedVersion(version, minVersion, eosVersion);
-    };
-
-    clearCachedCalls = () => calls.clear();
-
-    restReq = async (
-        headers: Headers | any,
-        url: string,
-        method: any,
-        data?: any,
-        certVerification?: boolean,
-        useTor?: boolean
-    ) => {
-        // use body data as an identifier too, we don't want to cancel when we
-        // are making multiples calls to get all the node names, for example
-        const id = data ? `${url}${JSON.stringify(data)}` : url;
-        if (calls.has(id)) {
-            return calls.get(id);
-        }
-        // API is a bit of a mess but
-        // If tor enabled in setting, start up the daemon here
-        if (useTor === true) {
-            calls.set(
-                id,
-                doTorRequest(
-                    url,
-                    method as RequestMethod,
-                    JSON.stringify(data),
-                    headers
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
-            );
-        } else {
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Request timeout')), 30000);
-            });
-
-            const fetchPromise = ReactNativeBlobUtil.config({
-                trusty: !certVerification
-            })
-                .fetch(method, url, headers, data ? JSON.stringify(data) : data)
-                .then((response: any) => {
-                    calls.delete(id);
-                    if (response.info().status < 300) {
-                        // handle ws responses
-                        if (response.data.includes('\n')) {
-                            const split = response.data.split('\n');
-                            const length = split.length;
-                            // last instance is empty
-                            return JSON.parse(split[length - 2]);
-                        }
-                        return response.json();
-                    } else {
-                        try {
-                            const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
-                        } catch (e) {
-                            if (
-                                response.data &&
-                                typeof response.data === 'string'
-                            ) {
-                                throw new Error(response.data);
-                            } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
-                                    )
-                                );
-                            }
-                        }
-                    }
-                });
-
-            const racePromise = Promise.race([
-                fetchPromise,
-                timeoutPromise
-            ]).catch((error) => {
-                calls.delete(id);
-                console.log('Request timed out for:', url);
-                throw error;
-            });
-
-            calls.set(id, racePromise);
-        }
-
-        return await calls.get(id);
     };
 
     request = (route: string, method: string, data?: any, params?: any) => {
@@ -154,26 +59,6 @@ export default class CLNRest {
             certVerification,
             enableTor
         );
-    };
-
-    getURL = (
-        host: string,
-        port: string | number,
-        route: string,
-        ws?: boolean
-    ) => {
-        const hostPath = host.includes('://') ? host : `https://${host}`;
-        let baseUrl = `${hostPath}${port ? ':' + port : ''}`;
-
-        if (ws) {
-            baseUrl = baseUrl.replace('https', 'wss').replace('http', 'ws');
-        }
-
-        if (baseUrl[baseUrl.length - 1] === '/') {
-            baseUrl = baseUrl.slice(0, -1);
-        }
-
-        return `${baseUrl}${route}`;
     };
 
     postRequest = (route: string, data?: any) =>
