@@ -9626,6 +9626,11 @@ rn-nodeify@10.3.0:
     semver "^5.0.1"
     xtend "^4.0.0"
 
+rn-qr-generator@1.4.3:
+  version "1.4.3"
+  resolved "https://registry.yarnpkg.com/rn-qr-generator/-/rn-qr-generator-1.4.3.tgz#8d2cd3226599df2d92310572f9ba7cb0ca0dc5ea"
+  integrity sha512-+hZFzqkWjxg7Ey9Tw8wjGuyY6I7R8ypQJa23wL0GUyeEBISxGCnz0W/2ULMxvd/w2FethMeTAkXe8+lDy8/vvw==
+
 run-parallel@^1.1.2, run-parallel@^1.1.9:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/run-parallel/-/run-parallel-1.2.0.tgz#66d1368da7bdf921eb9d95bd1a9229e7f21a43ee"
