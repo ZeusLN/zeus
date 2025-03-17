@@ -5,6 +5,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
@@ -80,7 +81,15 @@ export default class EcashSettings extends React.Component<
                         marginTop: 5
                     }}
                 >
-                    <View style={{ flexDirection: 'row' }}>
+                    <Pill
+                        title={localeString(
+                            'general.experimental'
+                        ).toUpperCase()}
+                        textColor={themeColor('warning')}
+                        borderColor={themeColor('warning')}
+                        width={'100%'}
+                    />
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View
                             style={{
                                 flex: 1,

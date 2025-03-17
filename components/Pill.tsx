@@ -8,7 +8,7 @@ interface PillProps {
     borderColor?: string;
     borderWidth?: number;
     backgroundColor?: string;
-    width?: number;
+    width?: number | string;
     height?: number;
     onPress?: () => void;
 }
