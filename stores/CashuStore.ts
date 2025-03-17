@@ -50,7 +50,7 @@ export default class CashuStore {
     @observable public creatingInvoice = false;
     @observable public creatingInvoiceError = false;
     @observable public watchedInvoicePaid = false;
-    @observable public watchedInvoicePaidAmt: number | string;
+    @observable public watchedInvoicePaidAmt?: number | string;
     @observable public restorationProgress?: number;
     @observable public restorationKeyset?: number;
     @observable public loading_msg?: string;
@@ -74,6 +74,8 @@ export default class CashuStore {
     @action
     public clearInvoice = () => {
         this.payment_request = undefined;
+        this.watchedInvoicePaid = false;
+        this.watchedInvoicePaidAmt = undefined;
         this.quoteId = undefined;
         this.error = false;
     };
