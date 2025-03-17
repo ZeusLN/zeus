@@ -35,7 +35,9 @@ export const openChannelSync = async (
         options: simpleTaprootChannel
             ? {
                   node_pubkey_string: pubkey,
-                  local_funding_amount: amount
+                  local_funding_amount: fund_max
+                      ? undefined
+                      : amount
                       ? Long.fromValue(amount)
                       : undefined,
                   target_conf: fee_rate_sat ? undefined : 2,
@@ -60,7 +62,9 @@ export const openChannelSync = async (
               }
             : {
                   node_pubkey_string: pubkey,
-                  local_funding_amount: amount
+                  local_funding_amount: fund_max
+                      ? undefined
+                      : amount
                       ? Long.fromValue(amount)
                       : undefined,
                   target_conf: fee_rate_sat ? undefined : 2,
