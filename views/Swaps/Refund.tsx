@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
@@ -8,6 +8,7 @@ const { createRefundTransaction } = lndMobile.swaps;
 
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import Button from '../../components/Button';
@@ -16,6 +17,7 @@ import {
     SuccessMessage
 } from '../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Switch from '../../components/Switch';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -43,6 +45,7 @@ interface RefundSwapState {
     swapData: any;
     loading: boolean;
     refundStatus: string;
+    cooperative: boolean;
 }
 
 @inject('SwapStore', 'NodeInfoStore')
@@ -57,7 +60,8 @@ export default class RefundSwap extends React.Component<
         error: '',
         loading: false,
         swapData: this.props.route.params.swapData,
-        refundStatus: ''
+        refundStatus: '',
+        cooperative: false
     };
 
     createRefundTransaction = async (
@@ -80,7 +84,8 @@ export default class RefundSwap extends React.Component<
                 timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
                 destinationAddress,
                 lockupAddress: swapData.address,
-                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet,
+                cooperative: this.state.cooperative
             });
 
             await this.updateSwapInStorage(swapData.id, txid);
@@ -139,7 +144,8 @@ export default class RefundSwap extends React.Component<
             swapData,
             error,
             loading,
-            refundStatus
+            refundStatus,
+            cooperative
         } = this.state;
         return (
             <Screen>
@@ -174,6 +180,7 @@ export default class RefundSwap extends React.Component<
                             <SuccessMessage message={refundStatus} />
                         </View>
                     )}
+
                     <Text style={{ color: themeColor('secondaryText') }}>
                         {localeString('views.Transaction.destAddress')}
                     </Text>
@@ -204,6 +211,32 @@ export default class RefundSwap extends React.Component<
                         }
                         navigation={navigation}
                     />
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            marginTop: 4
+                        }}
+                        infoModalText={localeString('views.Swaps.infoText')}
+                    >
+                        {localeString('views.Swaps.cooperative')}
+                    </Text>
+                    <View
+                        style={{
+                            flex: 1,
+                            flexDirection: 'row',
+                            justifyContent: 'flex-end',
+                            marginTop: 4
+                        }}
+                    >
+                        <Switch
+                            value={cooperative}
+                            onValueChange={async () => {
+                                this.setState({
+                                    cooperative: !cooperative
+                                });
+                            }}
+                        />
+                    </View>
                 </View>
 
                 <Button
@@ -240,6 +273,7 @@ export default class RefundSwap extends React.Component<
                             this.setState({ loading: false });
                         }
                     }}
+                    containerStyle={{ marginTop: 20 }}
                     secondary
                     disabled={!destinationAddress || this.state.loading}
                 />
