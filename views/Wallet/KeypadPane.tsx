@@ -292,7 +292,7 @@ export default class KeypadPane extends React.PureComponent<
             <View style={{ flex: 1 }}>
                 <WalletHeader navigation={navigation} />
 
-                {needInbound && (
+                {!ecashMode && needInbound && (
                     <TouchableOpacity
                         onPress={() =>
                             navigation.navigate('LspExplanationFees')
@@ -405,7 +405,7 @@ export default class KeypadPane extends React.PureComponent<
                             amount
                         />
                     </View>
-                    {belowMinAmount && !overrideBelowMinAmount ? (
+                    {!ecashMode && belowMinAmount && !overrideBelowMinAmount ? (
                         <View style={{ alignItems: 'center' }}>
                             <View
                                 style={{
