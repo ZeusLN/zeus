@@ -18,6 +18,12 @@ export default class SwapStore {
     @observable public apiError = '';
     @observable public swapInfo = {};
     @observable public reverseSwapInfo = {};
+    @observable public host = HOST;
+
+    @action
+    public setHost = (newHost: string) => {
+        this.host = newHost;
+    };
 
     @action
     public statusColor = (status: string) => {
