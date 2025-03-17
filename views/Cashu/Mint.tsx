@@ -191,8 +191,8 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 style={{
                                     width: 100,
                                     height: 100,
-                                    borderRadius: 75,
-                                    marginBottom: 20
+                                    borderRadius: 50,
+                                    marginBottom: 15
                                 }}
                             />
                         )}
@@ -200,13 +200,37 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 30,
+                                    fontSize: 28,
                                     fontWeight: 'bold',
                                     marginBottom: 10,
-                                    color: 'white'
+                                    color: themeColor('text')
                                 }}
                             >
                                 {mintInfo?.name}
+                            </Text>
+                        )}
+                        {mintInfo?.description && (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 18,
+                                    marginBottom: 14,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {mintInfo?.description}
+                            </Text>
+                        )}
+                        {mintInfo?.description_long && (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 14,
+                                    marginBottom: 10,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {mintInfo?.description_long}
                             </Text>
                         )}
                     </View>
@@ -230,24 +254,6 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         <KeyValue
                             keyValue={localeString('cashu.mintUrl')}
                             value={mint?.mintUrl}
-                        />
-                    )}
-
-                    {mintInfo?.description && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.PaymentRequest.description'
-                            )}
-                            value={mintInfo?.description}
-                        />
-                    )}
-
-                    {mintInfo?.description_long && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.PaymentRequest.description'
-                            )}
-                            value={mintInfo?.description_long}
                         />
                     )}
 
