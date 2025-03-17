@@ -19,6 +19,7 @@ import LightningSwipeableRow from './LightningSwipeableRow';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import EcashSwipeableRow from './EcashSwipeableRow';
 import { Row as LayoutRow } from '../layout/Row';
+import Pill from '../Pill';
 
 import stores from '../../stores/Stores';
 
@@ -67,6 +68,7 @@ type DataRow = {
     // TODO check if exists
     count?: number;
     watchOnly?: boolean;
+    custodial?: boolean;
     hidden?: boolean;
 };
 
@@ -139,6 +141,19 @@ const Row = ({ item }: { item: DataRow }) => {
                             >
                                 {item.subtitle}
                             </Text>
+                        )}
+                        {item.custodial && (
+                            <View style={{ marginTop: 5 }}>
+                                <Pill
+                                    title={localeString(
+                                        'general.custodialWallet'
+                                    ).toUpperCase()}
+                                    textColor={themeColor('highlight')}
+                                    borderColor={themeColor('highlight')}
+                                    width={160}
+                                    height={25}
+                                />
+                            </View>
                         )}
                     </View>
                 </View>
@@ -324,7 +339,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         if (BackendUtils.supportsCashu() && settings?.ecash?.enableCashu) {
             DATA.push({
                 layer: 'Ecash',
-                subtitle: '⚠ Custodial',
+                custodial: true,
                 balance: Number(totalBalanceSats).toFixed(3)
             });
         }
