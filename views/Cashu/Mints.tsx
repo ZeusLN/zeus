@@ -73,8 +73,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     );
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, CashuStore } = this.props;
         const { mints } = this.state;
+        const { preferredMintUrl } = CashuStore;
 
         const AddMintButton = () => (
             <TouchableOpacity
@@ -119,7 +120,16 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             item: any;
                             index: number;
                         }) => {
-                            const subTitle = item.mintUrl;
+                            const isPreferredMint =
+                                preferredMintUrl &&
+                                item?.mintUrl &&
+                                preferredMintUrl === item?.mintUrl;
+
+                            const subTitle = isPreferredMint
+                                ? `${localeString('general.preferred')} | ${
+                                      item.mintUrl
+                                  }`
+                                : item.mintUrl;
                             return (
                                 <React.Fragment>
                                     <ListItem
@@ -153,9 +163,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 <ListItem.Title
                                                     style={{
                                                         ...styles.leftCell,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
+                                                        color: isPreferredMint
+                                                            ? themeColor(
+                                                                  'highlight'
+                                                              )
+                                                            : themeColor(
+                                                                  'text'
+                                                              ),
                                                         fontSize: 18
                                                     }}
                                                 >

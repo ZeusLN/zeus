@@ -37,9 +37,8 @@ interface Wallet {
 }
 
 export default class CashuStore {
-    @observable public lndDir: string;
     @observable public mintUrls: Array<string>;
-    @observable public selectedMintUrl: string;
+    @observable public preferredMintUrl: string;
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
@@ -68,7 +67,7 @@ export default class CashuStore {
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
         this.mintUrls = [];
-        this.selectedMintUrl = '';
+        this.preferredMintUrl = '';
         this.clearInvoice();
     };
 
@@ -79,6 +78,10 @@ export default class CashuStore {
         this.error = false;
     };
 
+    getLndDir = () => {
+        return this.settingsStore.lndDir || 'lnd';
+    };
+
     calculateTotalBalance = async () => {
         let newTotalBalance = 0;
         Object.keys(this.cashuWallets).forEach((mintUrl: string) => {
@@ -87,10 +90,24 @@ export default class CashuStore {
         });
         this.totalBalanceSats = newTotalBalance;
         await Storage.setItem(
-            `${this.lndDir}-cashu-totalBalanceSats`,
+            `${this.getLndDir()}-cashu-totalBalanceSats`,
             newTotalBalance
         );
         return this.totalBalanceSats;
+    };
+
+    @action
+    public setPreferredMint = async (mintUrl: string) => {
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-preferredMintUrl`,
+            mintUrl
+        );
+
+        runInAction(() => {
+            this.preferredMintUrl = mintUrl;
+        });
+
+        return mintUrl;
     };
 
     @action
@@ -101,7 +118,16 @@ export default class CashuStore {
         this.loading = true;
         const newMintUrls = this.mintUrls;
         newMintUrls.push(mintUrl);
-        await Storage.setItem(`${this.lndDir}-cashu-mintUrls`, this.mintUrls);
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-mintUrls`,
+            this.mintUrls
+        );
+
+        // set mint as preferred if it's the first one
+        if (newMintUrls.length === 1) {
+            await this.setPreferredMint(mintUrl);
+        }
+
         await this.initializeWallet(mintUrl);
         if (checkForExistingProofs) {
             await this.restoreMintProofs(mintUrl);
@@ -118,12 +144,20 @@ export default class CashuStore {
     public removeMint = async (mintUrl: string) => {
         this.loading = true;
         const newMintUrls = this.mintUrls.filter((item) => item !== mintUrl);
-        console.log('newMintUrls', newMintUrls);
-        await Storage.setItem(`${this.lndDir}-cashu-mintUrls`, newMintUrls);
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-mintUrls`,
+            newMintUrls
+        );
         delete this.cashuWallets[mintUrl];
 
-        const walletId = `${this.lndDir}==${mintUrl}`;
-        console.log('testB', `${walletId}-counter`);
+        // if preferred mint is deleted, set the next in line
+        if (this.preferredMintUrl === mintUrl) {
+            let newPreferredMintUrl = '';
+            if (newMintUrls[0]) newPreferredMintUrl = newMintUrls[0];
+            await this.setPreferredMint(newPreferredMintUrl);
+        }
+
+        const walletId = `${this.getLndDir()}==${mintUrl}`;
         await Storage.removeItem(`${walletId}-counter`);
         await Storage.removeItem(`${walletId}-proofs`);
         await Storage.removeItem(`${walletId}-balance`);
@@ -194,7 +228,6 @@ export default class CashuStore {
     };
 
     setMintBalance = async (mintUrl: string, balanceSats: number) => {
-        console.log('testA', `${this.cashuWallets[mintUrl].walletId}-balance`);
         await Storage.setItem(
             `${this.cashuWallets[mintUrl].walletId}-balance`,
             balanceSats
@@ -211,7 +244,7 @@ export default class CashuStore {
     public initializeWallet = async (mintUrl: string): Promise<Wallet> => {
         console.log('initializing wallet for URL', mintUrl);
 
-        const walletId = `${this.lndDir}==${mintUrl}`;
+        const walletId = `${this.getLndDir()}==${mintUrl}`;
 
         const storedCounter = await Storage.getItem(`${walletId}-counter`);
         const counter = storedCounter ? JSON.parse(storedCounter) : 0;
@@ -241,29 +274,29 @@ export default class CashuStore {
 
     @action
     public initializeWallets = async () => {
-        this.lndDir = this.settingsStore.lndDir || 'lnd';
+        const lndDir = this.getLndDir();
 
         const storedMintUrls = await Storage.getItem(
-            `${this.lndDir}-cashu-mintUrls`
+            `${lndDir}-cashu-mintUrls`
         );
         this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
 
-        const storedSelectedMintUrl = await Storage.getItem(
-            `${this.lndDir}-cashu-selectedMintUrl`
+        const storedPreferredMintUrl = await Storage.getItem(
+            `${lndDir}-cashu-preferredMintUrl`
         );
-        this.selectedMintUrl = storedSelectedMintUrl
-            ? storedSelectedMintUrl
+        this.preferredMintUrl = storedPreferredMintUrl
+            ? storedPreferredMintUrl
             : '';
 
         const storedTotalBalanceSats = await Storage.getItem(
-            `${this.lndDir}-cashu-totalBalanceSats`
+            `${lndDir}-cashu-totalBalanceSats`
         );
         this.totalBalanceSats = storedTotalBalanceSats
             ? JSON.parse(storedTotalBalanceSats)
             : 0;
 
         const storedInvoices = await Storage.getItem(
-            `${this.lndDir}-cashu-invoices`
+            `${lndDir}-cashu-invoices`
         );
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
@@ -304,7 +337,7 @@ export default class CashuStore {
 
         try {
             const mintQuote = await this.cashuWallets[
-                this.selectedMintUrl
+                this.preferredMintUrl
             ].wallet.createMintQuote(value ? Number(value) : 0, memo);
 
             let invoice: any;
@@ -313,12 +346,12 @@ export default class CashuStore {
                 invoice = new CashuInvoice({
                     ...mintQuote,
                     mintUrl:
-                        this.cashuWallets[this.selectedMintUrl].wallet.mint
+                        this.cashuWallets[this.preferredMintUrl].wallet.mint
                             .mintUrl
                 });
                 this.invoices?.push(invoice);
                 await Storage.setItem(
-                    `${this.lndDir}-cashu-invoices`,
+                    `${this.getLndDir()}-cashu-invoices`,
                     this.invoices
                 );
             }
@@ -398,9 +431,9 @@ export default class CashuStore {
     @action
     public checkInvoicePaid = async (
         quoteId?: string,
-        selectedMintUrl?: string
+        preferredMintUrl?: string
     ) => {
-        const mintUrl = selectedMintUrl || this.selectedMintUrl;
+        const mintUrl = preferredMintUrl || this.preferredMintUrl;
         const quote = await this.cashuWallets[mintUrl].wallet?.checkMintQuote(
             quoteId || this.quoteId || ''
         );
@@ -454,7 +487,7 @@ export default class CashuStore {
                         newCounter
                     );
                     await Storage.setItem(
-                        `${this.lndDir}-cashu-totalBalanceSats`,
+                        `${this.getLndDir()}-cashu-totalBalanceSats`,
                         totalBalanceSats
                     );
                     await Storage.setItem(
@@ -471,7 +504,7 @@ export default class CashuStore {
                     // save new instance of invoice
                     this.invoices?.push(updatedInvoice);
                     await Storage.setItem(
-                        `${this.lndDir}-cashu-invoices`,
+                        `${this.getLndDir()}-cashu-invoices`,
                         this.invoices
                     );
 

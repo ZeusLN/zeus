@@ -55,6 +55,8 @@ export default class Mint extends React.Component<MintProps, MintState> {
         const {
             addMint,
             removeMint,
+            setPreferredMint,
+            preferredMintUrl,
             restorationProgress,
             restorationKeyset,
             loading
@@ -63,6 +65,11 @@ export default class Mint extends React.Component<MintProps, MintState> {
         const lookup = route.params?.lookup;
 
         const mintInfo = mint._mintInfo || mint;
+
+        const isPreferredMint =
+            preferredMintUrl &&
+            mint?.mintUrl &&
+            preferredMintUrl === mint?.mintUrl;
 
         return (
             <Screen>
@@ -202,11 +209,22 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     fontFamily: 'PPNeueMontreal-Book',
                                     fontSize: 28,
                                     fontWeight: 'bold',
-                                    marginBottom: 10,
                                     color: themeColor('text')
                                 }}
                             >
                                 {mintInfo?.name}
+                            </Text>
+                        )}
+                        {isPreferredMint && (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 16,
+                                    marginBottom: 10,
+                                    color: themeColor('highlight')
+                                }}
+                            >
+                                {localeString('views.Cashu.Mint.preferredMint')}
                             </Text>
                         )}
                         {mintInfo?.description && (
@@ -452,28 +470,54 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 </View>
                             </View>
                         ) : (
-                            <View
-                                style={{
-                                    ...styles.bottom,
-                                    backgroundColor: themeColor('background')
-                                }}
-                            >
-                                <View style={{ width: '100%' }}>
-                                    <Button
-                                        title={localeString(
-                                            'views.Cashu.Mint.removeMint'
-                                        ).toUpperCase()}
-                                        warning
-                                        noUppercase
-                                        onPress={async () => {
-                                            await removeMint(mint?.mintUrl);
-                                            navigation.goBack();
-                                        }}
-                                        buttonStyle={{ height: 40 }}
-                                        disabled={loading}
-                                    />
+                            <>
+                                <View
+                                    style={{
+                                        ...styles.bottom,
+                                        backgroundColor:
+                                            themeColor('background')
+                                    }}
+                                >
+                                    {!isPreferredMint && (
+                                        <View
+                                            style={{
+                                                width: '100%',
+                                                marginBottom: 20
+                                            }}
+                                        >
+                                            <Button
+                                                title={localeString(
+                                                    'views.Cashu.Mint.setPreferred'
+                                                ).toUpperCase()}
+                                                tertiary
+                                                noUppercase
+                                                onPress={async () => {
+                                                    await setPreferredMint(
+                                                        mint?.mintUrl
+                                                    );
+                                                }}
+                                                buttonStyle={{ height: 40 }}
+                                                disabled={loading}
+                                            />
+                                        </View>
+                                    )}
+                                    <View style={{ width: '100%' }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Cashu.Mint.removeMint'
+                                            ).toUpperCase()}
+                                            warning
+                                            noUppercase
+                                            onPress={async () => {
+                                                await removeMint(mint?.mintUrl);
+                                                navigation.goBack();
+                                            }}
+                                            buttonStyle={{ height: 40 }}
+                                            disabled={loading}
+                                        />
+                                    </View>
                                 </View>
-                            </View>
+                            </>
                         )}
                     </>
                 )}
