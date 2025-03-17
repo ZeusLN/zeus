@@ -11,10 +11,12 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SwapStore from '../../stores/SwapStore';
 
 interface SwapSettingsProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    SwapStore: SwapStore;
 }
 
 interface SwapSettingsState {
@@ -22,7 +24,7 @@ interface SwapSettingsState {
     host: string;
 }
 
-@inject('NodeInfoStore')
+@inject('NodeInfoStore', 'SwapStore')
 @observer
 export default class LSPS1Settings extends React.Component<
     SwapSettingsProps,
@@ -36,7 +38,7 @@ export default class LSPS1Settings extends React.Component<
         };
     }
     render() {
-        const { navigation } = this.props;
+        const { navigation, SwapStore } = this.props;
         const { serviceProvider, host } = this.state;
         const isTestnet = this.props.NodeInfoStore?.nodeInfo?.isTestNet;
         return (
@@ -66,6 +68,10 @@ export default class LSPS1Settings extends React.Component<
                                 value: 'Boltz'
                             },
                             {
+                                key: 'Swap Market',
+                                value: 'SwapMarket'
+                            },
+                            {
                                 key: 'Custom',
                                 translateKey: 'general.custom',
                                 value: 'Custom'
@@ -81,9 +87,18 @@ export default class LSPS1Settings extends React.Component<
                                     host: host
                                 });
                             } else if (value === 'ZEUS') {
+                                // zeus endpoints are in WIP
                                 const host = isTestnet ? '' : '';
                                 this.setState({
                                     serviceProvider: 'ZEUS',
+                                    host: host
+                                });
+                            } else if (value === 'SwapMarket') {
+                                const host = isTestnet
+                                    ? 'https://api.testnet.boltz.exchange/v2/swap/submarine'
+                                    : 'https://api.middleway.space/v2/swap/submarine';
+                                this.setState({
+                                    serviceProvider: 'SwapMarket',
                                     host: host
                                 });
                             } else {
@@ -92,6 +107,7 @@ export default class LSPS1Settings extends React.Component<
                                     host: 'https://api.boltz.exchange/v2'
                                 });
                             }
+                            SwapStore.setHost(host);
                         }}
                     />
 
@@ -111,11 +127,12 @@ export default class LSPS1Settings extends React.Component<
                                     'views.SwapSettings.customHost'
                                 )}
                                 value={host}
-                                onChangeText={(text: string) =>
+                                onChangeText={(text: string) => {
                                     this.setState({
                                         host: text
-                                    })
-                                }
+                                    });
+                                    SwapStore.setHost(host);
+                                }}
                             />
                         </>
                     )}
