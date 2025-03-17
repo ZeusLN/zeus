@@ -506,7 +506,7 @@ export interface ILndMobileInjections {
             publish: boolean,
             isTestNet: boolean
         ) => Promise<string>;
-    },
+    };
     swaps: {
         createClaimTransaction: ({
             endpoint,
