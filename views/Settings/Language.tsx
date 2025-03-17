@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { FlatList, View } from 'react-native';
+import { FlatList, Platform, View } from 'react-native';
 import { Icon, ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -116,7 +116,8 @@ export default class Language extends React.Component<
                                     await updateSettings({
                                         locale: item.key
                                     }).then(() => {
-                                        bridgeJavaStrings(item.key);
+                                        if (Platform.OS === 'android')
+                                            bridgeJavaStrings(item.key);
                                         navigation.goBack();
                                     });
                                 }}
