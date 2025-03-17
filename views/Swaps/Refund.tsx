@@ -267,8 +267,8 @@ export default class RefundSwap extends React.Component<
                             console.log(
                                 'Refund transaction created successfully.'
                             );
-                        } catch (error) {
-                            console.error('Error in refund process:', error);
+                        } catch (e) {
+                            console.error('Error in refund process:', e);
                         } finally {
                             this.setState({ loading: false });
                         }

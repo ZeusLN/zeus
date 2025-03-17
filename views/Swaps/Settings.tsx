@@ -84,14 +84,14 @@ export default class LSPS1Settings extends React.Component<
                                     : 'https://api.boltz.exchange/v2';
                                 this.setState({
                                     serviceProvider: 'Boltz',
-                                    host: host
+                                    host
                                 });
                             } else if (value === 'ZEUS') {
                                 // zeus endpoints are in WIP
                                 const host = isTestnet ? '' : '';
                                 this.setState({
                                     serviceProvider: 'ZEUS',
-                                    host: host
+                                    host
                                 });
                             } else if (value === 'SwapMarket') {
                                 const host = isTestnet
@@ -99,7 +99,7 @@ export default class LSPS1Settings extends React.Component<
                                     : 'https://api.middleway.space/v2/swap/submarine';
                                 this.setState({
                                     serviceProvider: 'SwapMarket',
-                                    host: host
+                                    host
                                 });
                             } else {
                                 this.setState({
