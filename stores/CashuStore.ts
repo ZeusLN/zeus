@@ -18,6 +18,16 @@ import { localeString } from '../utils/LocaleUtils';
 
 const bip39 = require('bip39');
 
+const BATCH_SIZE = 100;
+const MAX_GAP = 3;
+const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
+
+const sumProofsValue = (proofs: any) => {
+    return proofs.reduce((r: number, c: any) => {
+        return r + c.amount;
+    }, 0);
+};
+
 interface Wallet {
     wallet: CashuWallet;
     walletId: string;
@@ -42,6 +52,8 @@ export default class CashuStore {
     @observable public creatingInvoiceError = false;
     @observable public watchedInvoicePaid = false;
     @observable public watchedInvoicePaidAmt: number | string;
+    @observable public restorationProgress?: number;
+    @observable public restorationKeyset?: number;
     @observable public loading_msg?: string;
     @observable public error = false;
     @observable public error_msg?: string;
@@ -67,17 +79,61 @@ export default class CashuStore {
         this.error = false;
     };
 
+    calculateTotalBalance = async () => {
+        let newTotalBalance = 0;
+        Object.keys(this.cashuWallets).forEach((mintUrl: string) => {
+            newTotalBalance =
+                newTotalBalance + this.cashuWallets[mintUrl].balanceSats;
+        });
+        this.totalBalanceSats = newTotalBalance;
+        await Storage.setItem(
+            `${this.lndDir}-cashu-totalBalanceSats`,
+            newTotalBalance
+        );
+        return this.totalBalanceSats;
+    };
+
     @action
-    public addMint = async (mintUrl: string) => {
+    public addMint = async (
+        mintUrl: string,
+        checkForExistingProofs?: boolean
+    ) => {
         this.loading = true;
         const newMintUrls = this.mintUrls;
         newMintUrls.push(mintUrl);
         await Storage.setItem(`${this.lndDir}-cashu-mintUrls`, this.mintUrls);
         await this.initializeWallet(mintUrl);
+        if (checkForExistingProofs) {
+            await this.restoreMintProofs(mintUrl);
+            await this.calculateTotalBalance();
+        }
         runInAction(() => {
             this.mintUrls = newMintUrls;
             this.loading = false;
         });
+        return this.cashuWallets;
+    };
+
+    @action
+    public removeMint = async (mintUrl: string) => {
+        this.loading = true;
+        const newMintUrls = this.mintUrls.filter((item) => item !== mintUrl);
+        console.log('newMintUrls', newMintUrls);
+        await Storage.setItem(`${this.lndDir}-cashu-mintUrls`, newMintUrls);
+        delete this.cashuWallets[mintUrl];
+
+        const walletId = `${this.lndDir}==${mintUrl}`;
+        console.log('testB', `${walletId}-counter`);
+        await Storage.removeItem(`${walletId}-counter`);
+        await Storage.removeItem(`${walletId}-proofs`);
+        await Storage.removeItem(`${walletId}-balance`);
+
+        await this.calculateTotalBalance();
+        runInAction(() => {
+            this.mintUrls = newMintUrls;
+            this.loading = false;
+        });
+        return this.cashuWallets;
     };
 
     @action
@@ -101,8 +157,8 @@ export default class CashuStore {
             bip39seed: new Uint8Array(seed),
             mintInfo,
             unit: 'sat',
-            keysets,
-            keys
+            keys,
+            keysets
         });
 
         // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
@@ -111,11 +167,48 @@ export default class CashuStore {
         return wallet;
     };
 
+    setMintCounter = async (mintUrl: string, count: number) => {
+        await Storage.setItem(
+            `${this.cashuWallets[mintUrl].walletId}-counter`,
+            count
+        );
+
+        runInAction(() => {
+            this.cashuWallets[mintUrl].counter = count;
+        });
+
+        return count;
+    };
+
+    setMintProofs = async (mintUrl: string, mintProofs: Proof[]) => {
+        await Storage.setItem(
+            `${this.cashuWallets[mintUrl].walletId}-proofs`,
+            mintProofs
+        );
+
+        runInAction(() => {
+            this.cashuWallets[mintUrl].proofs = mintProofs;
+        });
+
+        return mintProofs;
+    };
+
+    setMintBalance = async (mintUrl: string, balanceSats: number) => {
+        console.log('testA', `${this.cashuWallets[mintUrl].walletId}-balance`);
+        await Storage.setItem(
+            `${this.cashuWallets[mintUrl].walletId}-balance`,
+            balanceSats
+        );
+
+        runInAction(() => {
+            this.cashuWallets[mintUrl].balanceSats = balanceSats;
+        });
+
+        return balanceSats;
+    };
+
     @action
-    public initializeWallet = async (
-        mintUrl: string,
-        startup?: boolean
-    ): Promise<Wallet> => {
+    public initializeWallet = async (mintUrl: string): Promise<Wallet> => {
         console.log('initializing wallet for URL', mintUrl);
 
         const walletId = `${this.lndDir}==${mintUrl}`;
@@ -131,10 +224,7 @@ export default class CashuStore {
             ? JSON.parse(storedBalanceSats)
             : 0;
 
-        let wallet: CashuWallet;
-        if (startup) {
-            wallet = await this.startWallet(mintUrl);
-        }
+        const wallet: CashuWallet = await this.startWallet(mintUrl);
 
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
@@ -156,16 +246,14 @@ export default class CashuStore {
         const storedMintUrls = await Storage.getItem(
             `${this.lndDir}-cashu-mintUrls`
         );
-        this.mintUrls = storedMintUrls
-            ? JSON.parse(storedMintUrls)
-            : ['https://mint.minibits.cash/Bitcoin'];
+        this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
 
         const storedSelectedMintUrl = await Storage.getItem(
             `${this.lndDir}-cashu-selectedMintUrl`
         );
         this.selectedMintUrl = storedSelectedMintUrl
             ? storedSelectedMintUrl
-            : 'https://mint.minibits.cash/Bitcoin';
+            : '';
 
         const storedTotalBalanceSats = await Storage.getItem(
             `${this.lndDir}-cashu-totalBalanceSats`
@@ -189,10 +277,7 @@ export default class CashuStore {
                 this.loading_msg = `Initializing ecash wallet for ${mintUrl}`;
             });
             await new Promise(async (resolve) => {
-                const wallet = await this.initializeWallet(
-                    mintUrl,
-                    true // TODO mintUrl === this.selectedMintUrl
-                );
+                const wallet = await this.initializeWallet(mintUrl);
                 resolve(wallet);
             });
         }
@@ -415,6 +500,205 @@ export default class CashuStore {
             }
         } else {
             return { isPaid: false, amtSat, paymentRequest, updatedInvoice };
+        }
+    };
+
+    @action
+    public restoreMintProofs = async (mintURL: string) => {
+        try {
+            this.restorationProgress = 0;
+
+            console.log(RESTORE_PROOFS_EVENT_NAME, 'Loading mint keysets...');
+
+            const mint = this.cashuWallets[mintURL].wallet.mint;
+            const allKeysets = await mint.getKeySets();
+            const keysets = allKeysets.keysets;
+
+            this.restorationProgress = 5;
+
+            let highestCount = 0;
+            const ksLen = keysets.length;
+            const hexDigitsRegex = /^[0-9A-Fa-f]+$/;
+
+            for (const [i, keyset] of keysets.entries()) {
+                // Hex keyset validation
+                if (!hexDigitsRegex.test(keyset.id)) {
+                    console.log(
+                        RESTORE_PROOFS_EVENT_NAME,
+                        `Skipping ${keyset.id}. Not a hex keyset.`
+                    );
+                    continue;
+                }
+
+                const statusMessage = `Keyset ${i + 1} of ${ksLen}`;
+                console.log(RESTORE_PROOFS_EVENT_NAME, statusMessage);
+
+                // Restore keyset proofs
+                const { restoredProofs, count } = await this.restoreKeyset(
+                    mint,
+                    keyset
+                );
+                console.log(`Keyset ${i + 1} of ${ksLen}`, {
+                    restoredProofs,
+                    count
+                });
+                this.restorationProgress = Math.floor(((i + 1) / ksLen) * 100);
+
+                if (count > highestCount) {
+                    highestCount = count;
+                    // Update the counter for this keyset
+                    console.log('SETTING COUNT', count + 1);
+                    await this.setMintCounter(mintURL, count + 1);
+                }
+
+                const restoredAmount = sumProofsValue(restoredProofs);
+                if (restoredAmount > 0) {
+                    console.log(
+                        RESTORE_PROOFS_EVENT_NAME,
+                        `Restored ${restoredAmount} for keyset ${keyset.id} (${this.restorationProgress}%)`
+                    );
+                }
+            }
+            console.log(RESTORE_PROOFS_EVENT_NAME, 'end');
+            this.restorationProgress = undefined;
+            this.restorationKeyset = undefined;
+            return true;
+        } catch (error: any) {
+            console.error('Error restoring proofs:', error);
+            console.log(RESTORE_PROOFS_EVENT_NAME, `Error: ${error.message}`);
+            return null;
+        }
+    };
+
+    // Separate function for restoring a single keyset
+    restoreKeyset = async (mint: CashuMint, keyset: any) => {
+        try {
+            const keys = await mint.getKeys(keyset.id);
+
+            const seedPhrase = this.settingsStore.seedPhrase;
+            const mnemonic = seedPhrase.join(' ');
+            const seed = bip39.mnemonicToSeedSync(mnemonic);
+
+            const mintInfo = await mint.getInfo();
+
+            const wallet = new CashuWallet(mint, {
+                bip39seed: new Uint8Array(seed),
+                mintInfo,
+                unit: 'sat',
+                keys: keys.keysets,
+                keysets: [keyset]
+            });
+
+            this.restorationKeyset = keyset.id;
+
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `Loading keys for keyset ${keyset.id}`
+            );
+
+            const { keysetProofs, count } = await this.restoreBatch(
+                wallet,
+                keyset.id
+            );
+
+            // Check proof states similar to the original
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `Checking proof states for keyset ${keyset.id}`
+            );
+
+            let restoredProofs: any[] = [];
+
+            // Process proofs in batches to avoid potential issues with large sets
+            for (let i = 0; i < keysetProofs.length; i += BATCH_SIZE) {
+                const batchProofs = keysetProofs.slice(i, i + BATCH_SIZE);
+                if (batchProofs.length === 0) continue;
+
+                const proofStates = await wallet.checkProofsStates(batchProofs);
+
+                // Filter for unspent proofs using the approach from the original code
+                const unspentProofStateYs = proofStates
+                    .filter((ps) => ps.state === 'UNSPENT')
+                    .map((ps) => ps.Y);
+
+                const unspentKeysetProofs = batchProofs.filter((p, idx) =>
+                    unspentProofStateYs.includes(proofStates[idx].Y)
+                );
+
+                // Store only new proofs
+                const existingProofSecrets =
+                    this.cashuWallets[mint.mintUrl].proofs;
+                const newProofs = unspentKeysetProofs.filter(
+                    (p) => !existingProofSecrets.includes(p)
+                );
+
+                if (newProofs.length > 0) {
+                    const mintProofs =
+                        this.cashuWallets[mint.mintUrl].proofs.concat(
+                            newProofs
+                        );
+                    const balanceSats = sumProofsValue(mintProofs);
+                    await this.setMintProofs(mint.mintUrl, mintProofs);
+                    await this.setMintBalance(mint.mintUrl, balanceSats);
+                }
+            }
+
+            return { restoredProofs, count };
+        } catch (error: any) {
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `Error restoring keyset ${keyset.id}: ${error.message}`
+            );
+            throw error;
+        }
+    };
+
+    restoreBatch = async (wallet: CashuWallet, keysetId: string) => {
+        let keysetProofs = [];
+        try {
+            let newProofs = [];
+            let start = 0;
+            let lastFound = 0;
+            let noProofsFoundCounter = 0;
+            const noProofsFoundLimit = MAX_GAP;
+
+            do {
+                console.log(
+                    RESTORE_PROOFS_EVENT_NAME,
+                    `Restoring ${start} through ${start + BATCH_SIZE}`
+                );
+
+                const { proofs } = await wallet.restore(start, BATCH_SIZE, {
+                    keysetId
+                });
+                newProofs = [...proofs];
+                keysetProofs.push(...proofs);
+
+                if (newProofs.length) {
+                    const proofsSum = sumProofsValue(proofs);
+                    console.log(
+                        `> Restored ${proofs.length} proofs with sum ${proofsSum} - starting at ${start}`
+                    );
+                    noProofsFoundCounter = 0;
+                    lastFound = start + proofs.length;
+                } else {
+                    noProofsFoundCounter++;
+                    console.log(
+                        `No proofs found in batch starting at ${start}`
+                    );
+                }
+
+                start = start + BATCH_SIZE;
+            } while (noProofsFoundCounter < noProofsFoundLimit);
+
+            console.log(lastFound + 1, 'setting count');
+            return { keysetProofs, count: lastFound + 1 };
+        } catch (error: any) {
+            console.log(
+                RESTORE_PROOFS_EVENT_NAME,
+                `Error restoring batch: ${error.message}`
+            );
+            throw error;
         }
     };
 }
