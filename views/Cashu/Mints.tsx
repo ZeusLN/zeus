@@ -112,11 +112,18 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                 {!!mints && mints.length > 0 ? (
                     <FlatList
                         data={mints}
-                        renderItem={({ item }: any) => {
+                        renderItem={({
+                            item,
+                            index
+                        }: {
+                            item: any;
+                            index: number;
+                        }) => {
                             const subTitle = item.mintUrl;
                             return (
                                 <React.Fragment>
                                     <ListItem
+                                        key={`mint-${index}`}
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor: 'transparent'

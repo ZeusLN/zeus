@@ -302,7 +302,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                     )}
 
                     {mintInfo?.contact &&
-                        mintInfo?.contact.map((contact: any) => {
+                        mintInfo?.contact.map((contact: any, index: number) => {
                             const { info, method } = contact;
                             const methodCapitalized =
                                 String(method).charAt(0).toUpperCase() +
@@ -314,6 +314,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             if (!contact.info) return;
                             return (
                                 <KeyValue
+                                    key={`contact-${index}`}
                                     keyValue={methodCapitalized}
                                     value={
                                         <TouchableOpacity

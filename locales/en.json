@@ -1405,6 +1405,7 @@
     "cashu.mintUrl": "Mint URL",
     "cashu.proofs": "Proofs",
     "views.Cashu.AddMint.title": "Add mint",
+    "views.Cashu.AddMint.find": "Find a mint",
     "views.Mints.noMints": "No mints added yet",
     "views.Cashu.Mint.supportedNuts": "Supported Nuts",
     "views.Cashu.Mint.removeMint": "Remove mint",

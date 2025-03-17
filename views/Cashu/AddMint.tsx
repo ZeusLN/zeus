@@ -15,6 +15,7 @@ import TextInput from '../../components/TextInput';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import CashuStore from '../../stores/CashuStore';
 
@@ -136,7 +137,20 @@ export default class AddMint extends React.Component<
                                 onPress={() => {
                                     this.getMintInfo();
                                 }}
-                                disabled={false}
+                                disabled={loading}
+                            />
+                        </View>
+
+                        <View style={{ ...styles.button, paddingTop: 10 }}>
+                            <Button
+                                title={localeString('views.Cashu.AddMint.find')}
+                                onPress={() => {
+                                    UrlUtils.goToUrl(
+                                        'https://bitcoinmints.com/'
+                                    );
+                                }}
+                                disabled={loading}
+                                tertiary
                             />
                         </View>
                     </View>
