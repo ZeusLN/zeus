@@ -290,6 +290,7 @@ export default class App extends React.PureComponent {
                                                 ref={(nav) => {
                                                     if (nav != null) {
                                                         NavigationService.setTopLevelNavigator(
+                                                            // @ts-ignore:next-line
                                                             nav
                                                         );
                                                     }
@@ -1008,6 +1009,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             EcashSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Swaps" // @ts-ignore:next-line
+                                                        component={Swaps}
                                                     />
                                                     <Stack.Screen
                                                         name="ReceiveEcash" // @ts-ignore:next-line
