@@ -18,6 +18,12 @@ export default class SwapStore {
     @observable public apiError = '';
     @observable public swapInfo = {};
     @observable public reverseSwapInfo = {};
+    @observable public host = HOST;
+
+    @action
+    public setHost = (newHost: string) => {
+        this.host = newHost;
+    };
 
     @action
     public statusColor = (status: string) => {
@@ -107,11 +113,6 @@ export default class SwapStore {
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
         try {
-            runInAction(() => {
-                this.apiError = '';
-                this.loading = true;
-            });
-
             console.log('Creating submarine swap...');
             let refundPublicKey: any;
             let refundPrivateKey: any;
@@ -142,7 +143,7 @@ export default class SwapStore {
                 })
             );
 
-            const responseData = JSON.parse(response.data); // Parse the response
+            const responseData = JSON.parse(response.data);
             console.log('Parsed Response Data:', responseData);
 
             // Check for errors in the response
@@ -224,11 +225,6 @@ export default class SwapStore {
         navigation: any
     ) => {
         try {
-            runInAction(() => {
-                this.apiError = '';
-                this.loading = true;
-            });
-
             initEccLib(ecc);
             console.log('Creating reverse swap...');
 
@@ -255,7 +251,7 @@ export default class SwapStore {
                 data
             );
 
-            const responseData = JSON.parse(response.data); // Parse the response
+            const responseData = JSON.parse(response.data);
             console.log('Created reverse swap:', responseData);
 
             // Handle API errors
@@ -276,7 +272,6 @@ export default class SwapStore {
             responseData.type = 'Reverse';
             responseData.preimage = preimage;
 
-            // Step 3: Save to storage
             await this.saveReverseSwaps(
                 responseData,
                 keys,

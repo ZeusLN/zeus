@@ -525,7 +525,8 @@ export interface ILndMobileInjections {
             timeoutBlockHeight,
             destinationAddress,
             lockupAddress,
-            isTestnet
+            isTestnet,
+            cooperative
         }: {
             endpoint: string;
             swapId: string;
@@ -539,6 +540,7 @@ export interface ILndMobileInjections {
             destinationAddress: string;
             lockupAddress: string;
             isTestnet?: boolean;
+            cooperative: boolean;
         }) => Promise<string>;
     };
 }
