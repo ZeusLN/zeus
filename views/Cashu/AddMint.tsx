@@ -40,7 +40,7 @@ export default class AddMint extends React.Component<
     constructor(props: any) {
         super(props);
         this.state = {
-            mintUrl: 'https://mint.lnwallet.app',
+            mintUrl: 'https://mint.minibits.cash/Bitcoin',
             loading: false,
             error: false
         };

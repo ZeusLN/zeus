@@ -5,12 +5,12 @@ import {
     Linking,
     StyleSheet,
     ScrollView,
-    Text,
     TouchableOpacity,
     View
 } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { LinearProgress } from 'react-native-elements';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -18,8 +18,10 @@ import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Pill from '../../components/Pill';
-import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 
 import { localeString } from '../../utils/LocaleUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -34,14 +36,29 @@ interface MintProps {
     CashuStore: CashuStore;
 }
 
+interface MintState {
+    checkForExistingBalances: boolean;
+}
+
 const supportedContacts = ['email', 'nostr', 'twitter', 'x'];
 
 @inject('CashuStore')
 @observer
-export default class Mint extends React.Component<MintProps> {
+export default class Mint extends React.Component<MintProps, MintState> {
+    state = {
+        checkForExistingBalances: false
+    };
+
     render() {
         const { navigation, route, CashuStore } = this.props;
-        const { addMint, loading } = CashuStore;
+        const { checkForExistingBalances } = this.state;
+        const {
+            addMint,
+            removeMint,
+            restorationProgress,
+            restorationKeyset,
+            loading
+        } = CashuStore;
         const mint = route.params?.mint;
         const lookup = route.params?.lookup;
 
@@ -67,6 +84,102 @@ export default class Mint extends React.Component<MintProps> {
                     }
                     navigation={navigation}
                 />
+                {restorationProgress !== undefined && (
+                    <View
+                        style={{
+                            backgroundColor: themeColor('highlight'),
+                            borderRadius: 10,
+                            margin: 20,
+                            marginBottom: 0,
+                            padding: 15,
+                            borderWidth: 0.5
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Medium',
+                                color: themeColor('background')
+                            }}
+                        >
+                            {`${localeString(
+                                'views.Wallet.BalancePane.recovery.title'
+                            )}${
+                                !restorationProgress
+                                    ? ` - ${localeString(
+                                          'views.Wallet.BalancePane.recovery.textAlt'
+                                      )}`
+                                    : ''
+                            }`}
+                        </Text>
+                        {restorationProgress !== undefined && (
+                            <>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('background'),
+                                        marginTop: 20
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Cashu.Mint.restoration'
+                                    )}
+                                </Text>
+                                {restorationKeyset && (
+                                    <Text
+                                        style={{
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            color: themeColor('background')
+                                        }}
+                                    >
+                                        {`${localeString(
+                                            'views.Cashu.Mint.restorationKeyset'
+                                        )}: ${restorationKeyset}`}
+                                    </Text>
+                                )}
+                            </>
+                        )}
+                        {restorationProgress !== undefined && (
+                            <View
+                                style={{
+                                    marginTop: 30,
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    minWidth: '100%'
+                                }}
+                            >
+                                <LinearProgress
+                                    value={
+                                        Math.floor(restorationProgress) / 100
+                                    }
+                                    variant="determinate"
+                                    color={themeColor('background')}
+                                    trackColor={themeColor(
+                                        'secondaryBackground'
+                                    )}
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row'
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        color: themeColor('background'),
+                                        marginTop: -8,
+                                        marginLeft: 14,
+                                        height: 40
+                                    }}
+                                >
+                                    {`${Math.floor(
+                                        restorationProgress
+                                    ).toString()}%`}
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
                 <ScrollView
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
@@ -191,6 +304,8 @@ export default class Mint extends React.Component<MintProps> {
                             const methodLower = method.toLowerCase();
                             const supported =
                                 supportedContacts.includes(methodLower);
+
+                            if (!contact.info) return;
                             return (
                                 <KeyValue
                                     keyValue={methodCapitalized}
@@ -256,31 +371,104 @@ export default class Mint extends React.Component<MintProps> {
                             );
                         })}
                 </ScrollView>
-                {mint?.mintUrl && lookup && (
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            position: 'absolute',
-                            bottom: 10
-                        }}
-                    >
-                        <View style={{ width: '100%' }}>
-                            <Button
-                                title={localeString(
-                                    'views.Cashu.AddMint.title'
-                                ).toUpperCase()}
-                                tertiary
-                                noUppercase
-                                onPress={async () => {
-                                    await addMint(mint?.mintUrl);
-                                    navigation.popTo('Mints');
+                {mint?.mintUrl && !loading && (
+                    <>
+                        {lookup ? (
+                            <View
+                                style={{
+                                    ...styles.bottom,
+                                    backgroundColor: themeColor('background')
                                 }}
-                                buttonStyle={{ height: 40 }}
-                                disabled={loading}
-                            />
-                        </View>
-                    </View>
+                            >
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        margin: 20,
+                                        marginTop: 20
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            flex: 1,
+                                            justifyContent: 'center'
+                                        }}
+                                    >
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.Mint.checkForExistingBalances'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center',
+                                            marginLeft: 5
+                                        }}
+                                    >
+                                        <Switch
+                                            value={checkForExistingBalances}
+                                            onValueChange={() =>
+                                                this.setState({
+                                                    checkForExistingBalances:
+                                                        !checkForExistingBalances
+                                                })
+                                            }
+                                            disabled={loading}
+                                        />
+                                    </View>
+                                </View>
+                                <View style={{ width: '100%' }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Cashu.AddMint.title'
+                                        ).toUpperCase()}
+                                        tertiary
+                                        noUppercase
+                                        onPress={async () => {
+                                            await addMint(
+                                                mint?.mintUrl,
+                                                checkForExistingBalances
+                                            );
+                                            navigation.popTo('Mints');
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                        disabled={loading}
+                                    />
+                                </View>
+                            </View>
+                        ) : (
+                            <View
+                                style={{
+                                    ...styles.bottom,
+                                    backgroundColor: themeColor('background')
+                                }}
+                            >
+                                <View style={{ width: '100%' }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Cashu.Mint.removeMint'
+                                        ).toUpperCase()}
+                                        warning
+                                        noUppercase
+                                        onPress={async () => {
+                                            await removeMint(mint?.mintUrl);
+                                            navigation.goBack();
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                        disabled={loading}
+                                    />
+                                </View>
+                            </View>
+                        )}
+                    </>
                 )}
             </Screen>
         );
@@ -290,7 +478,8 @@ export default class Mint extends React.Component<MintProps> {
 const styles = StyleSheet.create({
     content: {
         paddingLeft: 20,
-        paddingRight: 20
+        paddingRight: 20,
+        overflow: 'hidden'
     },
     center: {
         alignItems: 'center',
@@ -300,5 +489,13 @@ const styles = StyleSheet.create({
     valueWithLink: {
         paddingBottom: 5,
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    bottom: {
+        flex: 1,
+        flexDirection: 'column',
+        position: 'absolute',
+        bottom: 0,
+        paddingBottom: 10,
+        width: '100%'
     }
 });

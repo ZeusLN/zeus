@@ -1400,12 +1400,17 @@
     "views.ReceiveEcash.title": "Receive Ecash",
     "views.CashuInvoice.title": "Cashu Invoice",
     "views.Proofs.noProofs": "No proofs",
-    "androidNotification.lndRunningBackground": "LND is running in the background",
-    "androidNotification.shutdown": "Shutdown",
     "cashu.mint": "Mint",
     "cashu.mints": "Mints",
     "cashu.mintUrl": "Mint URL",
     "cashu.proofs": "Proofs",
     "views.Cashu.AddMint.title": "Add mint",
-    "views.Cashu.Mint.supportedNuts": "Supported Nuts"
+    "views.Mints.noMints": "No mints added yet",
+    "views.Cashu.Mint.supportedNuts": "Supported Nuts",
+    "views.Cashu.Mint.removeMint": "Remove mint",
+    "views.Cashu.Mint.restoration": "Recovering your Cashu proofs and balances",
+    "views.Cashu.Mint.restorationKeyset": "Restoring keyset",
+    "views.Cashu.Mint.checkForExistingBalances": "Check for existing balances",
+    "androidNotification.lndRunningBackground": "LND is running in the background",
+    "androidNotification.shutdown": "Shutdown"
 }
