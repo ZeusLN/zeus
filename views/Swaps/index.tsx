@@ -672,10 +672,10 @@ export default class SwapPane extends React.PureComponent<
                                             this.setState({
                                                 fetchingInvoice: false
                                             });
-                                        } catch (error: any) {
+                                        } catch (e: any) {
                                             console.error(
                                                 'Error generating invoice:',
-                                                error
+                                                e
                                             );
                                             this.setState({
                                                 error: 'Failed to generate invoice',

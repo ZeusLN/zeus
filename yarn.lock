@@ -3196,6 +3196,14 @@ aes-js@^3.1.2:
   resolved "https://registry.yarnpkg.com/aes-js/-/aes-js-3.1.2.tgz#db9aabde85d5caabbfc0d4f2a4446960f627146a"
   integrity sha512-e5pEa2kBnBOgR4Y/p20pskXI74UEz7de8ZGVo58asOtvSVG5YAbJeELPZxOmt+Bnz3rX753YKhfIn4X4l1PPRQ==
 
+aez@1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/aez/-/aez-1.0.1.tgz#e4efbef7113a92102f03754bfdf08380c4b0dec8"
+  integrity sha512-AtZEVcZcOLBAcNevz2e+Zu1zSLuPjtUA6CFY+ie8tF0IshKfcpJ0LiwnTqePOKaNidQQM/MfvtzUFOfAvHz5wQ==
+  dependencies:
+    blakejs "^1.1.0"
+    safe-buffer "^5.1.1"
+
 ajv@^6.10.0, ajv@^6.12.4:
   version "6.12.6"
   resolved "https://registry.yarnpkg.com/ajv/-/ajv-6.12.6.tgz#baf5a62e802b07d977034586f8c3baf5adf26df4"
@@ -3724,6 +3732,11 @@ bl@~0.8.1:
   integrity sha512-pfqikmByp+lifZCS0p6j6KreV6kNU6Apzpm2nKOk+94cZb/jvle55+JxWiByUQ0Wo/+XnDXEy5MxxKMb6r0VIw==
   dependencies:
     readable-stream "~1.0.26"
+
+blakejs@^1.1.0:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/blakejs/-/blakejs-1.2.1.tgz#5057e4206eadb4a97f7c0b6e197a505042fc3814"
+  integrity sha512-QXUSXI3QVc/gJME0dBpXrag1kbzOqCjCX8/b54ntNyW6sjtoqxqRk3LTmXzaJoh71zMsDCjM+47jS7XiwN/+fQ==
 
 bluebird@^3.7.2:
   version "3.7.2"
