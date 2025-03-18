@@ -1029,13 +1029,15 @@ export default class CashuStore {
             const mintQuote = await wallet.checkMeltQuote(
                 this.meltQuote!!.quote
             );
-            if (
-                mintQuote.state == MeltQuoteState.PAID ||
-                mintQuote.state == MeltQuoteState.PENDING
-            ) {
-                // TODO ecash localize
+            if (mintQuote.state == MeltQuoteState.PAID) {
                 this.error = true;
-                this.paymentError = 'Invoice already paid or pending.';
+                this.paymentError = localeString(
+                    'stores.CashuStore.alreadyPaid'
+                );
+                return;
+            } else if (mintQuote.state == MeltQuoteState.PENDING) {
+                this.error = true;
+                this.paymentError = localeString('stores.CashuStore.pending');
                 return;
             }
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);
