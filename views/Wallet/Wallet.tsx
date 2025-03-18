@@ -273,8 +273,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // This awaits on settings, so should await on Tor being bootstrapped before making requests
         await SettingsStore.getSettings().then(async (settings: Settings) => {
-            const locale = settings.locale || 'en';
-            bridgeJavaStrings(locale);
+            if (Platform.OS === 'android') {
+                const locale = settings.locale || 'en';
+                bridgeJavaStrings(locale);
+            }
 
             SystemNavigationBar.setNavigationColor(
                 themeColor('background'),
