@@ -104,6 +104,11 @@ const handleAnything = async (
     const hasMultiple: boolean =
         (value && lightning) || (value && offer) || (lightning && offer);
 
+    // ecash mode
+    const ecash =
+        BackendUtils.supportsCashu() &&
+        settingsStore?.settings?.ecash?.enableCashu;
+
     let lnurl;
     // if the value is from clipboard and looks like a url we don't want to decode it
     if (!isClipboardValue || !data.match(/^https?:\/\//i)) {
@@ -145,11 +150,11 @@ const handleAnything = async (
                 try {
                     const params = await getlnurlParams(lightning);
                     if ('tag' in params && params.tag === 'payRequest') {
-                        // TODO ecash
                         return [
                             'LnurlPay',
                             {
-                                lnurlParams: params
+                                lnurlParams: params,
+                                ecash
                             }
                         ];
                     } else {
@@ -165,10 +170,7 @@ const handleAnything = async (
                     );
                 }
             } else {
-                if (
-                    BackendUtils.supportsCashu() &&
-                    settingsStore?.settings?.ecash?.enableCashu
-                ) {
+                if (ecash) {
                     return [
                         'ChoosePaymentMethod',
                         {
@@ -458,7 +460,8 @@ const handleAnything = async (
                         'LnurlPay',
                         {
                             lnurlParams: response,
-                            amount: setAmount
+                            amount: setAmount,
+                            ecash
                         }
                     ];
                 })
@@ -478,7 +481,8 @@ const handleAnything = async (
                             'LnurlPay',
                             {
                                 lnurlParams: data,
-                                amount: setAmount
+                                amount: setAmount,
+                                ecash
                             }
                         ];
                     } else {
@@ -560,7 +564,8 @@ const handleAnything = async (
                             'LnurlPay',
                             {
                                 lnurlParams: params,
-                                amount: setAmount
+                                amount: setAmount,
+                                ecash
                             }
                         ];
                     case 'channelRequest':

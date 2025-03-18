@@ -16,6 +16,7 @@ import TextInput from '../../components/TextInput';
 import { Row } from '../..//components/layout/Row';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
+import CashuStore from '../../stores/CashuStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -28,6 +29,7 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
     navigation: StackNavigationProp<any, any>;
+    CashuStore: CashuStore;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
     UnitsStore: UnitsStore;
@@ -45,7 +47,7 @@ interface LnurlPayState {
     loading: boolean;
 }
 
-@inject('InvoicesStore', 'LnurlPayStore', 'UnitsStore')
+@inject('CashuStore', 'InvoicesStore', 'LnurlPayStore', 'UnitsStore')
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -109,7 +111,8 @@ export default class LnurlPay extends React.Component<
     sendValues(satAmount: string | number) {
         this.setState({ loading: true });
 
-        const { navigation, InvoicesStore, LnurlPayStore, route } = this.props;
+        const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
+            this.props;
         const { domain, comment } = this.state;
         const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
@@ -164,8 +167,61 @@ export default class LnurlPay extends React.Component<
                 const relays = data.relays;
                 const relays_sig = data.relays_sig;
 
-                // TODO ecash
                 if (ecash) {
+                    // load up both the payment routes
+                    InvoicesStore.getPayReq(pr);
+                    CashuStore.getPayReq(pr).then(() => {
+                        this.setState({ loading: false });
+
+                        if (CashuStore.getPayReqError) {
+                            Alert.alert(
+                                localeString(
+                                    'views.LnurlPay.LnurlPay.invalidInvoice'
+                                ),
+                                CashuStore.getPayReqError,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                            return;
+                        }
+
+                        const payment_hash: string =
+                            (CashuStore.payReq &&
+                                CashuStore.payReq.payment_hash) ||
+                            '';
+                        const description_hash: string =
+                            (CashuStore.payReq &&
+                                CashuStore.payReq.description_hash) ||
+                            '';
+
+                        LnurlPayStore.keep(
+                            payment_hash,
+                            domain,
+                            lnurl.lnurlText,
+                            lnurl.metadata,
+                            description_hash,
+                            successAction,
+                            // Zaplocker
+                            pmthash_sig,
+                            user_pubkey,
+                            relays,
+                            relays_sig,
+                            pr
+                        );
+
+                        return [
+                            'ChoosePaymentMethod',
+                            {
+                                lightning: CashuStore.paymentRequest,
+                                locked: true
+                            }
+                        ];
+                    });
                 } else {
                     InvoicesStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
