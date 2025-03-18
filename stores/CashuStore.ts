@@ -1,13 +1,23 @@
 import { action, observable, runInAction } from 'mobx';
 import { Alert } from 'react-native';
+import bolt11 from 'bolt11';
 import url from 'url';
 import querystring from 'querystring-es3';
-import { CashuMint, CashuWallet, Proof } from '@cashu/cashu-ts';
+import {
+    CashuMint,
+    CashuWallet,
+    MeltQuoteResponse,
+    MeltQuoteState,
+    Proof
+} from '@cashu/cashu-ts';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
+import reject from 'lodash/reject';
 
+import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
+import CashuPayment from '../models/CashuPayment';
 
 import Storage from '../storage';
 
@@ -15,6 +25,7 @@ import stores from './Stores';
 import SettingsStore from './SettingsStore';
 
 import { localeString } from '../utils/LocaleUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 const bip39 = require('bip39');
 
@@ -42,10 +53,10 @@ export default class CashuStore {
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
-    // @observable public payments?: Array<CashuPayments>;
-
-    @observable public payment_request?: string;
+    @observable public payments?: Array<CashuPayment>;
+    @observable public invoice?: string;
     @observable public quoteId?: string;
+
     @observable public loading = false;
     @observable public creatingInvoice = false;
     @observable public creatingInvoiceError = false;
@@ -53,9 +64,21 @@ export default class CashuStore {
     @observable public watchedInvoicePaidAmt?: number | string;
     @observable public restorationProgress?: number;
     @observable public restorationKeyset?: number;
-    @observable public loading_msg?: string;
+    @observable public loadingMsg?: string;
     @observable public error = false;
     @observable public error_msg?: string;
+
+    @observable public payReq?: Invoice;
+    @observable public paymentRequest?: string; // bolt11 invoice
+    @observable public paymentPreimage?: string;
+    @observable public getPayReqError?: string;
+    @observable public paymentError?: string;
+    @observable public feeEstimate?: number;
+    @observable public proofsToUse?: Proof[];
+    @observable public meltQuote?: MeltQuoteResponse;
+    @observable public noteKey?: string;
+    @observable loadingFeeEstimate = false;
+
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -69,15 +92,30 @@ export default class CashuStore {
         this.mintUrls = [];
         this.preferredMintUrl = '';
         this.clearInvoice();
+        this.clearPayReq();
     };
 
     @action
     public clearInvoice = () => {
-        this.payment_request = undefined;
+        this.invoice = undefined;
         this.watchedInvoicePaid = false;
         this.watchedInvoicePaidAmt = undefined;
         this.quoteId = undefined;
         this.error = false;
+    };
+
+    @action
+    public clearPayReq = () => {
+        this.payReq = undefined;
+        this.paymentRequest = undefined;
+        this.paymentPreimage = undefined;
+        this.getPayReqError = undefined;
+        this.feeEstimate = undefined;
+        this.proofsToUse = undefined;
+        this.meltQuote = undefined;
+        this.noteKey = undefined;
+        this.error = false;
+        this.paymentError = undefined;
     };
 
     getLndDir = () => {
@@ -216,6 +254,25 @@ export default class CashuStore {
         return count;
     };
 
+    addMintProofs = async (mintUrl: string, newMintProofs: Proof[]) => {
+        const allProofs =
+            this.cashuWallets[mintUrl].proofs.concat(newMintProofs);
+        await this.setMintProofs(mintUrl, allProofs);
+        return allProofs;
+    };
+
+    removeMintProofs = async (mintUrl: string, proofsToRemove: Proof[]) => {
+        let newProofs = this.cashuWallets[mintUrl].proofs;
+        proofsToRemove.forEach((proofToRemove: Proof) => {
+            newProofs = reject(
+                newProofs,
+                (proof: Proof) => proof == proofToRemove
+            );
+        });
+        await this.setMintProofs(mintUrl, newProofs);
+        return newProofs;
+    };
+
     setMintProofs = async (mintUrl: string, mintProofs: Proof[]) => {
         await Storage.setItem(
             `${this.cashuWallets[mintUrl].walletId}-proofs`,
@@ -305,11 +362,19 @@ export default class CashuStore {
                   (invoice: any) => new CashuInvoice(invoice)
               )
             : [];
+        const storedPayments = await Storage.getItem(
+            `${lndDir}-cashu-payments`
+        );
+        this.payments = storedPayments
+            ? JSON.parse(storedPayments).map(
+                  (payment: any) => new CashuPayment(payment)
+              )
+            : [];
 
         for (let i = 0; i < this.mintUrls.length; i++) {
             const mintUrl = this.mintUrls[i];
             runInAction(() => {
-                this.loading_msg = `Initializing ecash wallet for ${mintUrl}`;
+                this.loadingMsg = `Initializing ecash wallet for ${mintUrl}`;
             });
             await new Promise(async (resolve) => {
                 const wallet = await this.initializeWallet(mintUrl);
@@ -318,7 +383,7 @@ export default class CashuStore {
         }
 
         runInAction(() => {
-            this.loading_msg = undefined;
+            this.loadingMsg = undefined;
         });
     };
 
@@ -332,7 +397,7 @@ export default class CashuStore {
         value: string;
         lnurl?: LNURLWithdrawParams;
     }) => {
-        this.payment_request = undefined;
+        this.invoice = undefined;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = undefined;
@@ -359,7 +424,7 @@ export default class CashuStore {
             }
 
             runInAction(() => {
-                this.payment_request = invoice?.getPaymentRequest;
+                this.invoice = invoice?.getPaymentRequest;
                 this.creatingInvoice = false;
             });
 
@@ -447,7 +512,7 @@ export default class CashuStore {
 
         const amtSat = updatedInvoice.getAmount;
 
-        const paymentRequest = this.payment_request || '';
+        const paymentRequest = this.invoice || '';
         if (quote?.state === 'PAID') {
             // try up to 3 counters in case we get out of sync (DEBUG)
             let attempts = 0;
@@ -476,7 +541,7 @@ export default class CashuStore {
                         .plus(amtSat || 0)
                         .toNumber();
                     const newCounter = new BigNumber(counter || 0)
-                        .plus(1)
+                        .plus(newProofs.length)
                         .toNumber();
                     // update proofs, counter, balance
                     this.cashuWallets[mintUrl].proofs.push(...newProofs);
@@ -734,6 +799,251 @@ export default class CashuStore {
                 `Error restoring batch: ${error.message}`
             );
             throw error;
+        }
+    };
+
+    getProofsToUse = (
+        proofsAvailable: Proof[],
+        amount: number,
+        order = 'desc'
+    ) => {
+        const proofsToSend: Proof[] = [];
+        let amountAvailable = 0;
+        if (order === 'desc') {
+            proofsAvailable.sort((a, b) => b.amount - a.amount);
+        } else {
+            proofsAvailable.sort((a, b) => a.amount - b.amount);
+        }
+
+        proofsAvailable.forEach((proof) => {
+            if (amountAvailable >= amount) {
+                return;
+            }
+
+            amountAvailable = amountAvailable + proof.amount;
+
+            proofsToSend.push(proof);
+        });
+        return { proofsToUse: proofsToSend };
+    };
+
+    @action
+    public getPayReq = async (bolt11Invoice: string) => {
+        this.loading = true;
+        this.payReq = undefined;
+        this.paymentRequest = bolt11Invoice;
+        this.feeEstimate = undefined;
+
+        try {
+            const data = await new Promise((resolve) => {
+                const decoded: any = bolt11.decode(bolt11Invoice || '');
+                for (let i = 0; i < decoded.tags.length; i++) {
+                    const tag = decoded.tags[i];
+                    switch (tag.tagName) {
+                        case 'purpose_commit_hash':
+                            decoded.description_hash = tag.data;
+                            break;
+                        case 'payment_hash':
+                            decoded.payment_hash = tag.data;
+                            break;
+                        case 'expire_time':
+                            decoded.expiry = tag.data;
+                            break;
+                        case 'description':
+                            decoded.description = tag.data;
+                            break;
+                    }
+                }
+                resolve(decoded);
+            });
+
+            const cashuWallet = this.cashuWallets[this.preferredMintUrl];
+            const meltQuote = await cashuWallet.wallet.createMeltQuote(
+                bolt11Invoice
+            );
+            const { proofsToUse }: { proofsToUse: Proof[] } =
+                this.getProofsToUse(
+                    cashuWallet.proofs,
+                    meltQuote.amount + meltQuote.fee_reserve,
+                    'desc'
+                );
+
+            runInAction(() => {
+                this.payReq = new Invoice(data);
+                this.getPayReqError = undefined;
+                this.loading = false;
+            });
+
+            this.proofsToUse = proofsToUse;
+            this.meltQuote = meltQuote;
+            this.feeEstimate = this.meltQuote.fee_reserve || 0;
+
+            return;
+        } catch (e: any) {
+            runInAction(() => {
+                this.payReq = undefined;
+                this.getPayReqError = errorToUserFriendly(e);
+                this.loading = false;
+            });
+        }
+    };
+
+    getSpendingProofsWithPreciseCounter = async (
+        wallet: CashuWallet,
+        amountToPay: number,
+        proofs: Proof[],
+        currentCounter: number
+    ) => {
+        try {
+            const { keep: proofsToKeep, send: proofsToSend } =
+                await wallet.send(amountToPay, proofs, {
+                    counter: currentCounter,
+                    includeFees: true
+                });
+
+            const existingProofsIds = proofs.map((p) => p.secret);
+            const newKeepProofsCount = proofsToKeep.filter(
+                (p) => !existingProofsIds.includes(p.secret)
+            ).length;
+            const newSendProofsCount = proofsToSend.filter(
+                (p) => !existingProofsIds.includes(p.secret)
+            ).length;
+
+            console.log(newKeepProofsCount, 'NEW PROOFS KEEP COUNT');
+            console.log(newSendProofsCount, 'NEW PROOFS SEND COUNT');
+
+            const newCounterValue =
+                currentCounter + newKeepProofsCount + newSendProofsCount;
+
+            return {
+                proofsToSend,
+                proofsToKeep,
+                newCounterValue
+            };
+        } catch (err) {
+            console.error('Error in getSpendingProofsWithPreciseCounter:', err);
+            throw err;
+        }
+    };
+
+    @action
+    public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
+        this.loading = true;
+
+        const mintUrl = this.preferredMintUrl;
+        const wallet = this.cashuWallets[mintUrl].wallet;
+        let proofs = this.proofsToUse;
+
+        const paymentAmt = this.payReq?.getRequestAmount
+            ? this.payReq?.getRequestAmount
+            : Number(amount);
+        const amountToPay = this.feeEstimate
+            ? this.feeEstimate + paymentAmt
+            : paymentAmt;
+        const totalProofsValue = sumProofsValue(proofs);
+
+        console.log('ecash quote fee reserve:', this.feeEstimate);
+        console.log('Proofs before send', proofs);
+        console.log(totalProofsValue, amountToPay);
+
+        try {
+            if (totalProofsValue < amountToPay)
+                throw new Error('Not enough funds to cover payment');
+            console.log('[payLnInvoce] use send ', {
+                amountToPay,
+                amount,
+                fee: this.feeEstimate,
+                totalProofsValue
+            });
+
+            let currentCount = this.cashuWallets[mintUrl].counter;
+
+            const { proofsToSend, proofsToKeep, newCounterValue } =
+                await this.getSpendingProofsWithPreciseCounter(
+                    wallet,
+                    amountToPay,
+                    this.proofsToUse!!,
+                    currentCount
+                );
+
+            console.log('PROOFS TO SEND:', proofsToSend);
+            console.log('PROOFS TO KEEP:', proofsToKeep);
+
+            proofs = proofsToSend;
+
+            if (proofsToKeep.length)
+                await this.addMintProofs(mintUrl, proofsToKeep);
+
+            let meltResponse = await wallet.meltProofs(
+                this.meltQuote!!,
+                proofsToSend,
+                {
+                    counter: newCounterValue + 1
+                }
+            );
+            console.log('melt response', meltResponse);
+
+            if (meltResponse?.change?.length) {
+                await this.setMintCounter(
+                    mintUrl,
+                    newCounterValue + meltResponse.change.length + 1
+                );
+                await this.addMintProofs(mintUrl, meltResponse.change);
+            } else {
+                await this.setMintCounter(mintUrl, newCounterValue + 1);
+            }
+
+            const realFee = Math.max(
+                0,
+                meltResponse.quote?.fee_reserve -
+                    sumProofsValue(meltResponse?.change)
+            );
+
+            this.paymentPreimage = meltResponse.quote.payment_preimage!!;
+
+            const payment = new CashuPayment({
+                ...this.payReq,
+                bolt11: this.paymentRequest,
+                meltResponse,
+                amount: meltResponse.quote.amount,
+                fee: realFee,
+                payment_preimage: this.paymentPreimage,
+                mintUrl
+            });
+
+            this.noteKey = payment.getNoteKey;
+
+            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
+            // store Ecash payment
+            this.payments?.push(payment);
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-payments`,
+                this.payments
+            );
+
+            this.loading = false;
+
+            return payment;
+        } catch (err: any) {
+            console.log('paying ln invoice from ecash error', err);
+            const mintQuote = await wallet.checkMeltQuote(
+                this.meltQuote!!.quote
+            );
+            if (
+                mintQuote.state == MeltQuoteState.PAID ||
+                mintQuote.state == MeltQuoteState.PENDING
+            ) {
+                // TODO ecash localize
+                this.error = true;
+                this.paymentError = 'Invoice already paid or pending.';
+                return;
+            }
+            await this.removeMintProofs(mintUrl, this.proofsToUse!!);
+            await this.addMintProofs(mintUrl, proofs!!);
+            this.error = true;
+            this.paymentError = String(err.message);
+            this.loading = false;
+            return;
         }
     };
 }

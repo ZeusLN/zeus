@@ -1143,6 +1143,7 @@
     "components.ChannelPicker.modal.description.multiple": "Select the channel(s) to be used in this operation. You may want to only use specific channels to preserve your privacy.",
     "components.LayerBalances.moreAccounts": "More accounts",
     "components.LayerBalances.moveFundsToLn": "Move on-chain funds to lightning",
+    "components.LayerBalances.lightningViaEcash": "Lightning via ecash",
     "backends.LND.wsReq.warning": "You may have to enable Certificate Verification to make these kind of calls",
     "backends.LND.restReq.connectionError": "Connection error",
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
@@ -1400,6 +1401,7 @@
     "views.OnChainAddresses.changeAddresses": "Change addresses",
     "views.ReceiveEcash.title": "Receive Ecash",
     "views.CashuInvoice.title": "Cashu Invoice",
+    "views.CashuPayment.title": "Cashu Payment",
     "views.Proofs.noProofs": "No proofs",
     "cashu.mint": "Mint",
     "cashu.mints": "Mints",
@@ -1415,6 +1417,10 @@
     "views.Cashu.Mint.restoration": "Recovering your Cashu proofs and balances",
     "views.Cashu.Mint.restorationKeyset": "Restoring keyset",
     "views.Cashu.Mint.checkForExistingBalances": "Check for existing balances",
+    "views.Cashu.CashuPaymentRequest.noBalance": "No ecash balance available. Receive a payment first.",
+    "views.Cashu.CashuPayment.title": "Cashu Payment",
+    "views.Cashu.CashuPayment.inTransitPayment": "In Transit Cashu Payment",
+    "views.Cashu.CashuPayment.failedPayment": "Failed Cashu Payment",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }

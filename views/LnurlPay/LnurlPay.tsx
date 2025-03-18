@@ -31,7 +31,10 @@ interface LnurlPayProps {
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
     UnitsStore: UnitsStore;
-    route: Route<'LnurlPay', { lnurlParams: any; amount: any; satAmount: any }>;
+    route: Route<
+        'LnurlPay',
+        { lnurlParams: any; amount: any; satAmount: any; ecash: boolean }
+    >;
 }
 
 interface LnurlPayState {
@@ -108,6 +111,7 @@ export default class LnurlPay extends React.Component<
 
         const { navigation, InvoicesStore, LnurlPayStore, route } = this.props;
         const { domain, comment } = this.state;
+        const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
@@ -160,51 +164,55 @@ export default class LnurlPay extends React.Component<
                 const relays = data.relays;
                 const relays_sig = data.relays_sig;
 
-                InvoicesStore.getPayReq(pr).then(() => {
-                    this.setState({ loading: false });
+                // TODO ecash
+                if (ecash) {
+                } else {
+                    InvoicesStore.getPayReq(pr).then(() => {
+                        this.setState({ loading: false });
 
-                    if (InvoicesStore.getPayReqError) {
-                        Alert.alert(
-                            localeString(
-                                'views.LnurlPay.LnurlPay.invalidInvoice'
-                            ),
-                            InvoicesStore.getPayReqError,
-                            [
-                                {
-                                    text: localeString('general.ok'),
-                                    onPress: () => void 0
-                                }
-                            ],
-                            { cancelable: false }
+                        if (InvoicesStore.getPayReqError) {
+                            Alert.alert(
+                                localeString(
+                                    'views.LnurlPay.LnurlPay.invalidInvoice'
+                                ),
+                                InvoicesStore.getPayReqError,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                            return;
+                        }
+
+                        const payment_hash: string =
+                            (InvoicesStore.pay_req &&
+                                InvoicesStore.pay_req.payment_hash) ||
+                            '';
+                        const description_hash: string =
+                            (InvoicesStore.pay_req &&
+                                InvoicesStore.pay_req.description_hash) ||
+                            '';
+
+                        LnurlPayStore.keep(
+                            payment_hash,
+                            domain,
+                            lnurl.lnurlText,
+                            lnurl.metadata,
+                            description_hash,
+                            successAction,
+                            // Zaplocker
+                            pmthash_sig,
+                            user_pubkey,
+                            relays,
+                            relays_sig,
+                            pr
                         );
-                        return;
-                    }
-
-                    const payment_hash: string =
-                        (InvoicesStore.pay_req &&
-                            InvoicesStore.pay_req.payment_hash) ||
-                        '';
-                    const description_hash: string =
-                        (InvoicesStore.pay_req &&
-                            InvoicesStore.pay_req.description_hash) ||
-                        '';
-
-                    LnurlPayStore.keep(
-                        payment_hash,
-                        domain,
-                        lnurl.lnurlText,
-                        lnurl.metadata,
-                        description_hash,
-                        successAction,
-                        // Zaplocker
-                        pmthash_sig,
-                        user_pubkey,
-                        relays,
-                        relays_sig,
-                        pr
-                    );
-                    navigation.navigate('PaymentRequest');
-                });
+                        navigation.navigate('PaymentRequest');
+                    });
+                }
             });
     }
 

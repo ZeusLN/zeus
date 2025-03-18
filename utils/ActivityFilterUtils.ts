@@ -4,6 +4,7 @@ import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
 import CashuInvoice from '../models/CashuInvoice';
+import CashuPayment from '../models/CashuPayment';
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -31,8 +32,8 @@ class ActivityFilterUtils {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
                     !(
-                        (activity instanceof CashuInvoice)
-                        // || activity instanceof CashuPayment
+                        activity instanceof CashuInvoice ||
+                        activity instanceof CashuPayment
                     )
             );
         }

@@ -7,6 +7,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Spacer } from '../layout/Spacer';
 import OnchainSwipeableRow from './OnchainSwipeableRow';
 import LightningSwipeableRow from './LightningSwipeableRow';
+import EcashSwipeableRow from './EcashSwipeableRow';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -14,12 +15,16 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
+import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
+
+import stores from '../../stores/Stores';
 
 interface PaymentMethodListProps {
     navigation: StackNavigationProp<any, any>;
     value?: string;
     amount?: string;
     lightning?: string;
+    ecash?: string;
     offer?: string;
 }
 
@@ -53,6 +58,8 @@ const Row = ({ item }: { item: DataRow }) => {
                         <OnChainSvg />
                     ) : item.layer === 'Lightning' || item.layer === 'Offer' ? (
                         <LightningSvg />
+                    ) : item.layer === 'Lightning via ecash' ? (
+                        <EcashSvg />
                     ) : (
                         <OnChainSvg />
                     )}
@@ -72,6 +79,10 @@ const Row = ({ item }: { item: DataRow }) => {
                         >
                             {item.layer === 'Lightning'
                                 ? localeString('general.lightning')
+                                : item.layer === 'Lightning via ecash'
+                                ? localeString(
+                                      'components.LayerBalances.lightningViaEcash'
+                                  )
                                 : item.layer === 'Offer'
                                 ? localeString('views.Settings.Bolt12Offer')
                                 : item.layer === 'On-chain'
@@ -126,6 +137,19 @@ const SwipeableRow = ({
         );
     }
 
+    if (item.layer === 'Lightning via ecash') {
+        return (
+            <EcashSwipeableRow
+                navigation={navigation}
+                lightning={lightning}
+                locked={true}
+                disabled={item.disabled}
+            >
+                <Row item={item} />
+            </EcashSwipeableRow>
+        );
+    }
+
     if (item.layer === 'Offer') {
         return (
             <LightningSwipeableRow
@@ -172,6 +196,19 @@ export default class PaymentMethodList extends Component<
             });
         }
 
+        if (
+            lightning &&
+            BackendUtils.supportsCashu() &&
+            stores?.settingsStore?.settings?.ecash?.enableCashu
+        ) {
+            DATA.push({
+                layer: 'Lightning via ecash',
+                subtitle: `${lightning?.slice(0, 12)}...${lightning?.slice(
+                    -12
+                )}`
+            });
+        }
+
         if (offer) {
             DATA.push({
                 layer: 'Offer',
@@ -181,7 +218,7 @@ export default class PaymentMethodList extends Component<
         }
 
         // Only show on-chain balance for non-Lnbank accounts
-        if (BackendUtils.supportsOnchainReceiving()) {
+        if (value && BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
                 layer: 'On-chain',
                 subtitle: value

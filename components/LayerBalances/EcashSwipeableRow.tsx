@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import {
+    Alert,
     Animated,
     StyleSheet,
     Text,
@@ -7,6 +8,7 @@ import {
     I18nManager,
     TouchableOpacity
 } from 'react-native';
+import { getParams as getlnurlParams } from 'js-lnurl';
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -18,6 +20,7 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import stores from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
+const { cashuStore } = stores;
 
 import Coins from './../../assets/images/SVG/Coins.svg';
 import Mint from './../../assets/images/SVG/Mint.svg';
@@ -26,6 +29,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 
 interface EcashSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
+    lightning?: string;
     value?: string;
     amount?: string;
     locked?: boolean;
@@ -178,18 +182,68 @@ export default class EcashSwipeableRow extends Component<
         if (this.swipeableRow) this.swipeableRow.openLeft();
     };
 
-    private sendToAddress = () => {
-        const { navigation, value, amount } = this.props;
-        navigation.navigate('Send', {
-            destination: value,
-            amount,
-            transactionType: 'On-chain'
-        });
+    private fetchLnInvoice = () => {
+        const { lightning } = this.props;
+        if (lightning?.toLowerCase().startsWith('lnurl')) {
+            return getlnurlParams(lightning)
+                .then((params: any) => {
+                    if (
+                        params.status === 'ERROR' &&
+                        params.domain.endsWith('.onion')
+                    ) {
+                        // TODO handle fetching of params with internal Tor
+                        throw new Error(
+                            `${params.domain} says: ${params.reason}`
+                        );
+                    }
+
+                    switch (params.tag) {
+                        case 'payRequest':
+                            params.lnurlText = lightning;
+                            this.props.navigation.navigate('LnurlPay', {
+                                lnurlParams: params,
+                                ecash: true
+                            });
+                            return;
+                        default:
+                            Alert.alert(
+                                localeString('general.error'),
+                                params.status === 'ERROR'
+                                    ? `${params.domain} says: ${params.reason}`
+                                    : `${localeString(
+                                          'utils.handleAnything.unsupportedLnurlType'
+                                      )}: ${params.tag}`,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                    }
+                })
+                .catch(() => {
+                    throw new Error(
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                });
+        } else {
+            cashuStore.getPayReq(lightning ?? '');
+            this.props.navigation.navigate('CashuPaymentRequest', {});
+        }
     };
 
     render() {
-        const { children, value, locked, hidden, disabled, SyncStore } =
-            this.props;
+        const {
+            children,
+            lightning,
+            value,
+            locked,
+            hidden,
+            disabled,
+            SyncStore
+        } = this.props;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -208,10 +262,10 @@ export default class EcashSwipeableRow extends Component<
                 </TouchableOpacity>
             );
         }
-        if (locked && value) {
+        if (locked && lightning) {
             return (
                 <TouchableOpacity
-                    onPress={() => (disabled ? null : this.sendToAddress())}
+                    onPress={() => (disabled ? null : this.fetchLnInvoice())}
                     activeOpacity={1}
                     style={{ width: '100%' }}
                 >
@@ -236,7 +290,9 @@ export default class EcashSwipeableRow extends Component<
                 containerStyle={{ width: '100%' }}
             >
                 <TouchableOpacity
-                    onPress={() => (value ? this.sendToAddress() : this.open())}
+                    onPress={() =>
+                        value ? this.fetchLnInvoice() : this.open()
+                    }
                     activeOpacity={1}
                 >
                     {children}
