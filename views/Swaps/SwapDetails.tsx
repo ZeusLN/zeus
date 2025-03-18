@@ -58,8 +58,6 @@ export default class SwapDetails extends React.Component<
     SwapDetailsProps,
     SwapDetailsState
 > {
-    pollingTimer: any = null;
-
     constructor(props: SwapDetailsProps) {
         super(props);
         this.state = {
@@ -90,9 +88,13 @@ export default class SwapDetails extends React.Component<
                 this.setState({ updates: 'transaction.refunded' });
                 return;
             }
-            this.subscribeSwapsUpdates(swapData, 2000, isSubmarineSwap);
+            if (swapData?.status === 'transaction.claimed') {
+                this.setState({ updates: 'transaction.claimed' });
+                return;
+            }
+            this.getSwapUpdates(swapData, isSubmarineSwap);
         } else {
-            this.subscribeReverseSwapsUpdates(swapData, 2000, isSubmarineSwap);
+            this.getReverseSwapUpdates(swapData, isSubmarineSwap);
         }
     }
 
@@ -124,11 +126,7 @@ export default class SwapDetails extends React.Component<
         );
     };
 
-    subscribeSwapsUpdates = async (
-        createdResponse: any,
-        pollingInterval: number,
-        isSubmarineSwap: boolean
-    ) => {
+    getSwapUpdates = async (createdResponse: any, isSubmarineSwap: boolean) => {
         const { keys, endpoint, invoice } = this.props.route.params;
 
         if (!createdResponse || !createdResponse.id) {
@@ -139,55 +137,72 @@ export default class SwapDetails extends React.Component<
 
         let submitted = false;
 
-        console.log('Starting polling for updates...');
+        console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
 
-        const pollForUpdates = async () => {
-            try {
-                const response = await fetch(
-                    `${endpoint}/swap/${createdResponse.id}`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-                const data = await response.json();
+        // Create a WebSocket connection
+        const webSocket = new WebSocket(
+            endpoint.replace('https', 'wss') + '/ws'
+        );
 
-                // Check for API errors
-                if (data?.error) {
-                    if (data.error === 'Operation timeout') {
-                        this.setState({
-                            error: 'The operation timed out.',
-                            loading: false
-                        });
-                        this.stopPolling(); // Stop polling
-                        return;
-                    }
+        // Handle WebSocket connection open
+        webSocket.onopen = () => {
+            console.log('WebSocket connection opened');
+            webSocket.send(
+                JSON.stringify({
+                    op: 'subscribe',
+                    channel: 'swap.update',
+                    args: [createdResponse.id]
+                })
+            );
+        };
 
+        // Handle incoming WebSocket messages
+        webSocket.onmessage = async (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.event !== 'update') {
+                return;
+            }
+
+            console.log('Got WebSocket update');
+            console.log(msg);
+
+            const data = msg.args[0];
+
+            // Check for API errors
+            if (data?.error) {
+                if (data.error === 'Operation timeout') {
                     this.setState({
-                        error: data.error
+                        error: 'The operation timed out.',
+                        loading: false
                     });
-                    this.stopPolling(); // Stop polling
+                    webSocket.close();
                     return;
                 }
 
-                // Update the status in the component state
-                this.setState({ updates: data.status, loading: false });
+                this.setState({
+                    error: data.error
+                });
+                webSocket.close();
+                return;
+            }
 
-                // Update the status in Encrypted Storage
-                await this.updateSwapStatusInStorage(
-                    createdResponse.id,
-                    data.status,
-                    isSubmarineSwap
-                );
+            // Update the status in the component state
+            this.setState({ updates: data.status, loading: false });
 
-                console.log('Update:', data);
+            // Update the status in Encrypted Storage
+            await this.updateSwapStatusInStorage(
+                createdResponse.id,
+                data.status,
+                isSubmarineSwap
+            );
 
-                if (data.status === 'invoice.set') {
+            switch (data.status) {
+                case 'invoice.set':
                     console.log('Waiting for onchain transaction...');
-                } else if (data.status === 'transaction.claim.pending') {
+                    break;
+                case 'transaction.claim.pending':
                     if (submitted) {
                         console.log(
                             'Cooperative claim transaction already created and submitted successfully. Skipping.'
@@ -224,36 +239,39 @@ export default class SwapDetails extends React.Component<
                             endpoint
                         );
                     }
-                } else if (
-                    data.status === 'transaction.claimed' ||
-                    data.status === 'invoice.failedToPay' ||
-                    data.status === 'swap.expired'
-                ) {
-                    this.stopPolling(); // Stop polling
-
+                    break;
+                case 'transaction.claimed':
+                case 'invoice.failedToPay':
+                case 'swap.expired':
+                    webSocket.close();
                     data?.failureReason &&
                         this.setState({ error: data?.failureReason });
-                } else {
+                    break;
+                default:
                     console.log('Unhandled status:', data.status);
-                }
-            } catch (error: any) {
-                this.setState({
-                    error: error.message || error || 'An unknown error occurred'
-                });
-                console.error('Error while polling for updates:', error);
             }
         };
 
-        this.pollingTimer = setInterval(pollForUpdates, pollingInterval);
+        webSocket.onerror = (error) => {
+            this.setState({
+                error: error.message || error || 'An unknown error occurred'
+            });
+            console.error('WebSocket error:', error);
+        };
+
+        webSocket.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
 
         this.componentWillUnmount = () => {
-            this.stopPolling();
+            if (webSocket) {
+                webSocket.close();
+            }
         };
     };
 
-    subscribeReverseSwapsUpdates = async (
+    getReverseSwapUpdates = (
         createdResponse: any,
-        pollingInterval: number,
         isSubmarineSwap: boolean
     ) => {
         const { keys, endpoint, swapData, fee } = this.props.route.params;
@@ -266,55 +284,73 @@ export default class SwapDetails extends React.Component<
 
         let submitted = false;
 
-        console.log('Starting polling for reverse swap updates...');
+        console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
 
-        const pollForUpdates = async () => {
-            try {
-                const response = await fetch(
-                    `${endpoint}/swap/${createdResponse.id}`,
-                    {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-                const data = await response.json();
+        // Create a WebSocket connection
+        const webSocket = new WebSocket(
+            endpoint.replace('https', 'wss') + '/ws'
+        );
 
-                // Check for API errors
-                if (data?.error) {
-                    if (data.error === 'Operation timeout') {
-                        this.setState({
-                            error: 'The operation timed out.',
-                            loading: false
-                        });
-                        this.stopPolling(); // Stop polling
-                        return;
-                    }
+        // Handle WebSocket connection open
+        webSocket.onopen = () => {
+            console.log('WebSocket connection opened');
+            webSocket.send(
+                JSON.stringify({
+                    op: 'subscribe',
+                    channel: 'swap.update',
+                    args: [createdResponse.id]
+                })
+            );
+        };
 
+        // Handle incoming WebSocket messages
+        webSocket.onmessage = async (event) => {
+            const msg = JSON.parse(event.data);
+
+            if (msg.event !== 'update') {
+                return;
+            }
+
+            console.log('Got WebSocket update');
+            console.log(msg);
+
+            const data = msg.args[0];
+
+            // Check for API errors
+            if (data?.error) {
+                if (data.error === 'Operation timeout') {
                     this.setState({
-                        error: data.error
+                        error: 'The operation timed out.',
+                        loading: false
                     });
-                    this.stopPolling(); // Stop polling
+                    webSocket.close();
                     return;
                 }
 
-                // Update the status in the component state
-                this.setState({ updates: data.status, loading: false });
+                this.setState({
+                    error: data.error
+                });
+                webSocket.close();
+                return;
+            }
 
-                // Update the status in Encrypted Storage
-                await this.updateSwapStatusInStorage(
-                    createdResponse.id,
-                    data.status,
-                    isSubmarineSwap
-                );
+            // Update the status in the component state
+            this.setState({ updates: data.status, loading: false });
 
-                console.log('Update:', data);
+            // Update the status in Encrypted Storage
+            await this.updateSwapStatusInStorage(
+                createdResponse.id,
+                data.status,
+                isSubmarineSwap
+            );
 
-                if (data.status === 'swap.created') {
-                    console.log('Waiting invoice to be paid');
-                } else if (data.status === 'transaction.mempool') {
+            switch (data.status) {
+                case 'swap.created':
+                    console.log('Waiting for invoice to be paid');
+                    break;
+
+                case 'transaction.mempool':
                     if (submitted) {
                         console.log(
                             'Claim transaction already created and submitted successfully. Skipping.'
@@ -333,47 +369,44 @@ export default class SwapDetails extends React.Component<
                             fee
                         );
                     }
-                } else if (
-                    data.status === 'invoice.expired' ||
-                    data.status === 'transaction.failed' ||
-                    data.status === 'swap.expired'
-                ) {
-                    this.stopPolling();
+                    break;
 
+                case 'invoice.expired':
+                case 'transaction.failed':
+                case 'swap.expired':
+                    webSocket.close();
                     data?.failureReason &&
                         this.setState({ error: data?.failureReason });
-                } else if (data.status === 'invoice.settled') {
+                    break;
+
+                case 'invoice.settled':
                     console.log('Swap successful');
-                    this.stopPolling();
-                } else {
+                    webSocket.close();
+                    break;
+
+                default:
                     console.log('Unhandled status:', data.status);
-                }
-            } catch (error: any) {
-                this.setState({
-                    error: error.message || error || 'An unknown error occurred'
-                });
-                console.error('Error while polling for updates:', error);
+                    break;
             }
         };
 
-        this.pollingTimer = setInterval(pollForUpdates, pollingInterval);
+        webSocket.onerror = (error) => {
+            this.setState({
+                error: error.message || error || 'An unknown error occurred'
+            });
+            console.error('WebSocket error:', error);
+        };
+
+        webSocket.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
 
         this.componentWillUnmount = () => {
-            this.stopPolling();
+            if (webSocket) {
+                webSocket.close();
+            }
         };
     };
-
-    stopPolling = () => {
-        if (this.pollingTimer) {
-            clearInterval(this.pollingTimer);
-            this.pollingTimer = null;
-            console.log('Polling stopped.');
-        }
-    };
-
-    componentWillUnmount() {
-        this.stopPolling();
-    }
 
     updateSwapStatusInStorage = async (
         swapId: string,
