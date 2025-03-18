@@ -84,8 +84,8 @@ export default class RefundSwap extends React.Component<
                 timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
                 destinationAddress,
                 lockupAddress: swapData.address,
-                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet,
-                cooperative: this.state.cooperative
+                cooperative: this.state.cooperative,
+                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
 
             await this.updateSwapInStorage(swapData.id, txid);

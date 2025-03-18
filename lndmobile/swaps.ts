@@ -128,8 +128,8 @@ export const createRefundTransaction = async ({
     timeoutBlockHeight,
     destinationAddress,
     lockupAddress,
-    isTestnet,
-    cooperative
+    cooperative,
+    isTestnet
 }: {
     endpoint: string;
     swapId: string;
@@ -142,8 +142,8 @@ export const createRefundTransaction = async ({
     timeoutBlockHeight: number;
     destinationAddress: string;
     lockupAddress: string;
-    isTestnet?: boolean;
     cooperative: boolean;
+    isTestnet?: boolean;
 }): Promise<string> => {
     try {
         const txid: string = await LncModule.createRefundTransaction(
@@ -158,8 +158,8 @@ export const createRefundTransaction = async ({
             timeoutBlockHeight,
             destinationAddress,
             lockupAddress,
-            isTestnet,
-            cooperative
+            cooperative,
+            isTestnet
         );
         return txid;
     } catch (e) {
