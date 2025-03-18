@@ -92,8 +92,8 @@ export interface ILndMobile {
         timeoutBlockHeight: number,
         destinationAddress: string,
         lockupAddress: string,
-        isTestnet?: boolean,
-        cooperative: boolean
+        cooperative: boolean,
+        isTestnet?: boolean
     ): Promise<string>;
 }
 
