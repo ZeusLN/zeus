@@ -93,7 +93,7 @@ import PayCode from './views/PayCode';
 import CreatePayCode from './views/PayCodeCreate';
 import Bolt12Address from './views/Settings/Bolt12Address';
 
-//Embedded Node
+// Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
 import DisasterRecoveryAdvanced from './views/Settings/EmbeddedNode/DisasterRecoveryAdvanced';
@@ -161,6 +161,9 @@ import LSPS7Order from './views/LSPS7/Order';
 import EcashSettings from './views/Settings/EcashSettings';
 import ReceiveEcash from './views/Cashu/ReceiveEcash';
 import CashuInvoice from './views/Cashu/CashuInvoice';
+import CashuPayment from './views/Cashu/CashuPayment';
+import CashuPaymentRequest from './views/Cashu/CashuPaymentRequest';
+import CashuSendingLightning from './views/Cashu/CashuSendingLightning';
 import Proofs from './views/Cashu/Proofs';
 import Mint from './views/Cashu/Mint';
 import Mints from './views/Cashu/Mints';
@@ -961,6 +964,22 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="CashuInvoice" // @ts-ignore:next-line
                                                         component={CashuInvoice}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuPayment" // @ts-ignore:next-line
+                                                        component={CashuPayment}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuPaymentRequest" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuPaymentRequest
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuSendingLightning" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuSendingLightning
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Proofs" // @ts-ignore:next-line

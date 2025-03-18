@@ -145,6 +145,7 @@ const handleAnything = async (
                 try {
                     const params = await getlnurlParams(lightning);
                     if ('tag' in params && params.tag === 'payRequest') {
+                        // TODO ecash
                         return [
                             'LnurlPay',
                             {
@@ -164,8 +165,21 @@ const handleAnything = async (
                     );
                 }
             } else {
-                await invoicesStore.getPayReq(lightning);
-                return ['PaymentRequest', {}];
+                if (
+                    BackendUtils.supportsCashu() &&
+                    settingsStore?.settings?.ecash?.enableCashu
+                ) {
+                    return [
+                        'ChoosePaymentMethod',
+                        {
+                            lightning,
+                            locked: true
+                        }
+                    ];
+                } else {
+                    await invoicesStore.getPayReq(lightning);
+                    return ['PaymentRequest', {}];
+                }
             }
         }
         return [
@@ -210,8 +224,21 @@ const handleAnything = async (
         AddressUtils.isValidLightningPaymentRequest(value || lightning)
     ) {
         if (isClipboardValue) return true;
-        await invoicesStore.getPayReq(value);
-        return ['PaymentRequest', {}];
+        if (
+            BackendUtils.supportsCashu() &&
+            settingsStore?.settings?.ecash?.enableCashu
+        ) {
+            return [
+                'ChoosePaymentMethod',
+                {
+                    lightning: value,
+                    locked: true
+                }
+            ];
+        } else {
+            await invoicesStore.getPayReq(value);
+            return ['PaymentRequest', {}];
+        }
     } else if (
         !hasAt &&
         AddressUtils.isValidLightningOffer(value || lightning)

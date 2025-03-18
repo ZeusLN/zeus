@@ -991,8 +991,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         loggedIn &&
                                         implementation
                                             ? implementation === 'embedded-lnd'
-                                                ? CashuStore.loading_msg
-                                                    ? CashuStore.loading_msg
+                                                ? CashuStore.loadingMsg
+                                                    ? CashuStore.loadingMsg
                                                     : isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'

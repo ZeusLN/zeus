@@ -171,6 +171,7 @@ export default class ActivityStore {
         const invoices = this.invoicesStore.invoices;
 
         const cashuInvoices = this.cashuStore.invoices;
+        const cashuPayments = this.cashuStore.payments;
 
         let additions = payments.concat(invoices);
         if (BackendUtils.supportsOnchainSends()) {
@@ -178,7 +179,7 @@ export default class ActivityStore {
         }
 
         if (BackendUtils.supportsCashu()) {
-            additions = additions.concat(cashuInvoices);
+            additions = additions.concat(cashuInvoices).concat(cashuPayments);
         }
 
         // push payments, txs, invoices to one array

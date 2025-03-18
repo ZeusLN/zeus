@@ -431,7 +431,7 @@ export default class ReceiveEcash extends React.Component<
 
         const {
             createInvoice,
-            payment_request,
+            invoice,
             creatingInvoice,
             creatingInvoiceError,
             watchedInvoicePaid,
@@ -505,13 +505,13 @@ export default class ReceiveEcash extends React.Component<
             { element: lightningAddressButton }
         ];
 
-        const haveInvoice = !!payment_request;
+        const haveInvoice = !!invoice;
 
         let lnInvoice, lnInvoiceCopyValue;
 
-        if (payment_request) {
-            lnInvoice = `lightning:${payment_request.toUpperCase()}`;
-            lnInvoiceCopyValue = payment_request;
+        if (invoice) {
+            lnInvoice = `lightning:${invoice.toUpperCase()}`;
+            lnInvoiceCopyValue = invoice;
         }
 
         const windowSize = Dimensions.get('window');
@@ -635,7 +635,7 @@ export default class ReceiveEcash extends React.Component<
                             {error_msg && <ErrorMessage message={error_msg} />}
 
                             <View>
-                                {!!payment_request && (
+                                {!!invoice && (
                                     <>
                                         {!!lnurl && (
                                             <SuccessMessage
