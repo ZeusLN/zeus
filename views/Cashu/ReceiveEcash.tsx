@@ -397,7 +397,7 @@ export default class ReceiveEcash extends React.Component<
                     }
                 }
             );
-        }, 5000);
+        }, 3000);
     };
 
     updateIndex = (selectedIndex: number) => {
