@@ -1421,6 +1421,8 @@
     "views.Cashu.CashuPayment.title": "Cashu Payment",
     "views.Cashu.CashuPayment.inTransitPayment": "In Transit Cashu Payment",
     "views.Cashu.CashuPayment.failedPayment": "Failed Cashu Payment",
+    "stores.CashuStore.alreadyPaid": "Invoice has already been paid.",
+    "stores.CashuStore.pending": "Payment is pending.",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }
