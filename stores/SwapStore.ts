@@ -1,4 +1,4 @@
-import { action, observable, runInAction } from 'mobx';
+import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -8,8 +8,11 @@ import { crypto, initEccLib } from 'bitcoinjs-lib';
 import { themeColor } from '../utils/ThemeUtils';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
-// wss://api.testnet.boltz.exchange/v2/ws
-export const HOST = 'https://api.testnet.boltz.exchange/v2';
+import NodeInfoStore from './NodeInfoStore';
+import SettingsStore, {
+    DEFAULT_SWAP_HOST_MAINNET,
+    DEFAULT_SWAP_HOST_TESTNET
+} from './SettingsStore';
 
 export default class SwapStore {
     @observable public subInfo = {};
@@ -18,12 +21,38 @@ export default class SwapStore {
     @observable public apiError = '';
     @observable public swapInfo = {};
     @observable public reverseSwapInfo = {};
-    @observable public host = HOST;
 
-    @action
-    public setHost = (newHost: string) => {
-        this.host = newHost;
-    };
+    nodeInfoStore: NodeInfoStore;
+    settingsStore: SettingsStore;
+
+    constructor(nodeInfoStore: NodeInfoStore, settingsStore: SettingsStore) {
+        this.nodeInfoStore = nodeInfoStore;
+        this.settingsStore = settingsStore;
+
+        reaction(
+            () => this.getHost,
+            () => this.getSwapFees()
+        );
+    }
+
+    /** Returns the API host based on network type */
+    @computed
+    public get getHost() {
+        const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
+        const settings = this.settingsStore.settings;
+
+        if (
+            settings.customSwapHost &&
+            (settings.swapHostTestnet === 'Custom' ||
+                settings.swapHostMainnet === 'Custom')
+        ) {
+            return settings.customSwapHost;
+        }
+
+        return isTestnet
+            ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
+            : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+    }
 
     @action
     public statusColor = (status: string) => {
@@ -62,10 +91,11 @@ export default class SwapStore {
     @action
     public getSwapFees = async () => {
         this.loading = true;
+        console.log(`Fetching fees from: ${this.getHost}`);
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${HOST}/swap/submarine`
+                `${this.getHost}/swap/submarine`
             );
             const status = response.info().status;
             if (status == 200) {
@@ -77,7 +107,7 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${HOST}/swap/reverse`
+                `${this.getHost}/swap/reverse`
             );
             const status = response.info().status;
             if (status == 200) {
@@ -92,7 +122,7 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${HOST}/swap/submarine/${id}/transaction`
+                `${this.getHost}/swap/submarine/${id}/transaction`
             );
 
             const status = response.info().status;
@@ -131,7 +161,7 @@ export default class SwapStore {
 
             const response = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${HOST}/swap/submarine`,
+                `${this.getHost}/swap/submarine`,
                 {
                     'Content-Type': 'application/json'
                 },
@@ -165,7 +195,12 @@ export default class SwapStore {
             responseData.refundPrivateKey = refundPrivateKey;
             responseData.refundPublicKey = refundPublicKey;
 
-            await this.saveSwapToStorage(responseData, keys, invoice);
+            await this.saveSubmarineSwap(
+                responseData,
+                keys,
+                invoice,
+                this.getHost
+            );
 
             runInAction(() => {
                 this.swapInfo = responseData;
@@ -176,7 +211,7 @@ export default class SwapStore {
             navigation.navigate('SwapDetails', {
                 swapData: responseData,
                 keys,
-                endpoint: HOST,
+                endpoint: this.getHost,
                 invoice
             });
         } catch (error: any) {
@@ -188,10 +223,11 @@ export default class SwapStore {
         }
     };
 
-    private saveSwapToStorage = async (
+    private saveSubmarineSwap = async (
         newSwap: any,
         keys: any,
-        invoice: any
+        invoice: any,
+        endpoint: string
     ) => {
         try {
             // Retrieve existing swaps
@@ -202,7 +238,8 @@ export default class SwapStore {
             const enrichedSwap = {
                 ...newSwap,
                 keys,
-                invoice
+                invoice,
+                endpoint
             };
 
             // Add the enriched swap to the beginning of array
@@ -244,7 +281,7 @@ export default class SwapStore {
 
             const response = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${HOST}/swap/reverse`,
+                `${this.getHost}/swap/reverse`,
                 {
                     'Content-Type': 'application/json'
                 },
@@ -276,7 +313,8 @@ export default class SwapStore {
                 responseData,
                 keys,
                 destinationAddress,
-                preimage
+                preimage,
+                this.getHost
             );
 
             runInAction(() => {
@@ -288,7 +326,7 @@ export default class SwapStore {
             navigation.navigate('SwapDetails', {
                 swapData: responseData,
                 keys,
-                endpoint: HOST,
+                endpoint: this.getHost,
                 invoice: destinationAddress,
                 fee
             });
@@ -305,7 +343,8 @@ export default class SwapStore {
         newSwap: any,
         keys: any,
         destinationAddress: string,
-        preimage: any
+        preimage: any,
+        endpoint: string
     ) => {
         try {
             // Retrieve existing swaps
@@ -317,7 +356,8 @@ export default class SwapStore {
                 ...newSwap,
                 keys,
                 destinationAddress,
-                preimage
+                preimage,
+                endpoint
             };
 
             // Add the enriched swap to the beginning of array
