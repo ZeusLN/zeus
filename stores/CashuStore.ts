@@ -10,6 +10,7 @@ import {
     MeltQuoteState,
     Proof
 } from '@cashu/cashu-ts';
+import { getPubKeyFromPrivKey } from '@cashu/crypto/modules/mint';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
@@ -24,6 +25,7 @@ import Storage from '../storage';
 import stores from './Stores';
 import SettingsStore from './SettingsStore';
 
+import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
@@ -40,12 +42,13 @@ const sumProofsValue = (proofs: any) => {
 };
 
 interface Wallet {
-    wallet: CashuWallet;
+    wallet?: CashuWallet;
     walletId: string;
     mintInfo: any;
     counter: number;
     proofs: Array<Proof>;
     balanceSats: number;
+    pubkey: string;
     errorConnecting: boolean;
 }
 
@@ -215,7 +218,9 @@ export default class CashuStore {
     };
 
     @action
-    public startWallet = async (mintUrl: string): Promise<CashuWallet> => {
+    public startWallet = async (
+        mintUrl: string
+    ): Promise<{ wallet: CashuWallet; pubkey: string }> => {
         this.loading = true;
         console.log('starting wallet for URL', mintUrl);
         const mint = new CashuMint(mintUrl);
@@ -229,6 +234,20 @@ export default class CashuStore {
         const seedPhrase = this.settingsStore.seedPhrase;
         const mnemonic = seedPhrase.join(' ');
         const seed = bip39.mnemonicToSeedSync(mnemonic);
+        const bip39seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+
+        let pubkey: string;
+        const walletId = `${this.getLndDir()}==${mintUrl}`;
+        if (!this.cashuWallets[mintUrl].pubkey) {
+            const pubkeyBytes = getPubKeyFromPrivKey(bip39seed);
+            pubkey = Base64Utils.base64ToHex(
+                Base64Utils.bytesToBase64(pubkeyBytes)
+            );
+
+            await Storage.setItem(`${walletId}-pubkey`, pubkey);
+        } else {
+            pubkey = this.cashuWallets[mintUrl].pubkey;
+        }
 
         // Give wallet 10 seconds to startup
         const mintInfoPromise = mint.getInfo();
@@ -242,11 +261,11 @@ export default class CashuStore {
                 mintInfoPromise,
                 timeoutPromise
             ]);
-            const walletId = `${this.getLndDir()}==${mintUrl}`;
+
             await Storage.setItem(`${walletId}-mintInfo`, mintInfo);
 
             const wallet = new CashuWallet(mint, {
-                bip39seed: new Uint8Array(seed),
+                bip39seed,
                 mintInfo,
                 unit: 'sat',
                 keys,
@@ -257,7 +276,7 @@ export default class CashuStore {
             await wallet.loadMint();
             await wallet.getKeys();
 
-            return wallet;
+            return { wallet, pubkey };
         } catch (error: any) {
             console.error(
                 `Error connecting to mint ${mintUrl}:`,
@@ -348,24 +367,13 @@ export default class CashuStore {
             ? JSON.parse(storedBalanceSats)
             : 0;
 
-        let wallet: CashuWallet;
-        let errorConnecting = false;
-        if (startWallet) {
-            runInAction(() => {
-                this.loadingMsg = `${localeString(
-                    'stores.CashuStore.startingWallet'
-                )}: ${mintUrl}`;
-            });
-            try {
-                wallet = await this.startWallet(mintUrl);
-            } catch (e) {
-                errorConnecting = true;
-            }
-        }
+        const storedPubkey = await Storage.getItem(`${walletId}-pubkey`);
+        const pubkey: string = storedPubkey ? storedPubkey : '';
 
+        let errorConnecting = false;
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
-                wallet,
+                pubkey,
                 walletId,
                 mintInfo,
                 counter,
@@ -373,6 +381,33 @@ export default class CashuStore {
                 balanceSats,
                 errorConnecting
             };
+            this.loadingMsg = `${localeString(
+                'stores.CashuStore.startingWallet'
+            )}: ${mintUrl}`;
+        });
+
+        if (startWallet) {
+            runInAction(() => {
+                this.loadingMsg = `${localeString(
+                    'stores.CashuStore.startingWallet'
+                )}: ${mintUrl}`;
+            });
+            try {
+                const {
+                    wallet,
+                    pubkey
+                }: { wallet: CashuWallet; pubkey: string } =
+                    await this.startWallet(mintUrl);
+                runInAction(() => {
+                    this.cashuWallets[mintUrl].wallet = wallet;
+                    this.cashuWallets[mintUrl].pubkey = pubkey;
+                });
+            } catch (e) {
+                errorConnecting = true;
+            }
+        }
+
+        runInAction(() => {
             this.loading = false;
         });
 
@@ -453,7 +488,7 @@ export default class CashuStore {
         try {
             const mintQuote = await this.cashuWallets[
                 this.preferredMintUrl
-            ].wallet.createMintQuote(value ? Number(value) : 0, memo);
+            ].wallet!!.createMintQuote(value ? Number(value) : 0, memo);
 
             let invoice: any;
             if (mintQuote) {
@@ -461,7 +496,7 @@ export default class CashuStore {
                 invoice = new CashuInvoice({
                     ...mintQuote,
                     mintUrl:
-                        this.cashuWallets[this.preferredMintUrl].wallet.mint
+                        this.cashuWallets[this.preferredMintUrl].wallet!!.mint
                             .mintUrl
                 });
                 this.invoices?.push(invoice);
@@ -573,9 +608,13 @@ export default class CashuStore {
                         this.cashuWallets[mintUrl].counter + attempts;
                     const newProofs: Proof[] = await this.cashuWallets[
                         mintUrl
-                    ].wallet.mintProofs(amtSat, quoteId || this.quoteId || '', {
-                        counter
-                    });
+                    ].wallet!!.mintProofs(
+                        amtSat,
+                        quoteId || this.quoteId || '',
+                        {
+                            counter
+                        }
+                    );
                     success = true;
 
                     const totalBalanceSats = new BigNumber(
@@ -658,7 +697,7 @@ export default class CashuStore {
 
             console.log(RESTORE_PROOFS_EVENT_NAME, 'Loading mint keysets...');
 
-            const mint = this.cashuWallets[mintURL].wallet.mint;
+            const mint = this.cashuWallets[mintURL].wallet!!.mint;
             const allKeysets = await mint.getKeySets();
             const keysets = allKeysets.keysets;
 
@@ -906,7 +945,7 @@ export default class CashuStore {
             });
 
             const cashuWallet = this.cashuWallets[this.preferredMintUrl];
-            const meltQuote = await cashuWallet.wallet.createMeltQuote(
+            const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
                 bolt11Invoice
             );
             const { proofsToUse }: { proofsToUse: Proof[] } =
@@ -1008,7 +1047,7 @@ export default class CashuStore {
 
             const { proofsToSend, proofsToKeep, newCounterValue } =
                 await this.getSpendingProofsWithPreciseCounter(
-                    wallet,
+                    wallet!!,
                     amountToPay,
                     this.proofsToUse!!,
                     currentCount
@@ -1022,7 +1061,7 @@ export default class CashuStore {
             if (proofsToKeep.length)
                 await this.addMintProofs(mintUrl, proofsToKeep);
 
-            let meltResponse = await wallet.meltProofs(
+            let meltResponse = await wallet!!.meltProofs(
                 this.meltQuote!!,
                 proofsToSend,
                 {
@@ -1074,7 +1113,7 @@ export default class CashuStore {
             return payment;
         } catch (err: any) {
             console.log('paying ln invoice from ecash error', err);
-            const mintQuote = await wallet.checkMeltQuote(
+            const mintQuote = await wallet!!.checkMeltQuote(
                 this.meltQuote!!.quote
             );
             if (mintQuote.state == MeltQuoteState.PAID) {
