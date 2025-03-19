@@ -125,7 +125,7 @@ class Stores {
         );
         this.posStore = new PosStore(this.settingsStore, this.fiatStore);
         this.inventoryStore = new InventoryStore();
-        this.swapStore = new SwapStore();
+        this.swapStore = new SwapStore(this.nodeInfoStore, this.settingsStore);
     }
 }
 

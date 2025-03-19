@@ -249,7 +249,7 @@ export default class SwapPane extends React.PureComponent<
                     }}
                     rightComponent={
                         <Row>
-                            {loading ? <></> : <SettingsBtn />}
+                            <SettingsBtn />
                             <SwapsPaneBtn />
                         </Row>
                     }
