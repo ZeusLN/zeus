@@ -4,7 +4,7 @@ import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { cloneDeep } from 'lodash';
+import cloneDeep from 'lodash/cloneDeep';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';

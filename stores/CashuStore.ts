@@ -42,9 +42,11 @@ const sumProofsValue = (proofs: any) => {
 interface Wallet {
     wallet: CashuWallet;
     walletId: string;
+    mintInfo: any;
     counter: number;
     proofs: Array<Proof>;
     balanceSats: number;
+    errorConnecting: boolean;
 }
 
 export default class CashuStore {
@@ -138,6 +140,8 @@ export default class CashuStore {
 
     @action
     public setPreferredMint = async (mintUrl: string) => {
+        if (!this.cashuWallets[mintUrl].wallet)
+            this.initializeWallet(mintUrl, true);
         await Storage.setItem(
             `${this.getLndDir()}-cashu-preferredMintUrl`,
             mintUrl
@@ -168,7 +172,7 @@ export default class CashuStore {
             await this.setPreferredMint(mintUrl);
         }
 
-        await this.initializeWallet(mintUrl);
+        await this.initializeWallet(mintUrl, true);
         if (checkForExistingProofs) {
             await this.restoreMintProofs(mintUrl);
             await this.calculateTotalBalance();
@@ -212,6 +216,7 @@ export default class CashuStore {
 
     @action
     public startWallet = async (mintUrl: string): Promise<CashuWallet> => {
+        this.loading = true;
         console.log('starting wallet for URL', mintUrl);
         const mint = new CashuMint(mintUrl);
         const keysets = (await mint.getKeySets()).keysets.filter(
@@ -225,20 +230,41 @@ export default class CashuStore {
         const mnemonic = seedPhrase.join(' ');
         const seed = bip39.mnemonicToSeedSync(mnemonic);
 
-        const mintInfo = await mint.getInfo();
+        // Give wallet 10 seconds to startup
+        const mintInfoPromise = mint.getInfo();
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout exceeded')), 10000)
+        );
 
-        const wallet = new CashuWallet(mint, {
-            bip39seed: new Uint8Array(seed),
-            mintInfo,
-            unit: 'sat',
-            keys,
-            keysets
-        });
+        try {
+            // update the latest mint info anytime we start a wallet
+            const mintInfo: any = await Promise.race([
+                mintInfoPromise,
+                timeoutPromise
+            ]);
+            const walletId = `${this.getLndDir()}==${mintUrl}`;
+            await Storage.setItem(`${walletId}-mintInfo`, mintInfo);
 
-        // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
-        await wallet.loadMint();
-        await wallet.getKeys();
-        return wallet;
+            const wallet = new CashuWallet(mint, {
+                bip39seed: new Uint8Array(seed),
+                mintInfo,
+                unit: 'sat',
+                keys,
+                keysets
+            });
+
+            // persist wallet.keys and wallet.keysets to avoid calling loadMint() in the future
+            await wallet.loadMint();
+            await wallet.getKeys();
+
+            return wallet;
+        } catch (error: any) {
+            console.error(
+                `Error connecting to mint ${mintUrl}:`,
+                error.message
+            );
+            throw error; // or handle the timeout error as you see fit
+        }
     };
 
     setMintCounter = async (mintUrl: string, count: number) => {
@@ -300,10 +326,16 @@ export default class CashuStore {
     };
 
     @action
-    public initializeWallet = async (mintUrl: string): Promise<Wallet> => {
+    public initializeWallet = async (
+        mintUrl: string,
+        startWallet?: boolean
+    ): Promise<Wallet> => {
         console.log('initializing wallet for URL', mintUrl);
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;
+
+        const storedMintInfo = await Storage.getItem(`${walletId}-mintInfo`);
+        const mintInfo = storedMintInfo ? JSON.parse(storedMintInfo) : [];
 
         const storedCounter = await Storage.getItem(`${walletId}-counter`);
         const counter = storedCounter ? JSON.parse(storedCounter) : 0;
@@ -316,16 +348,32 @@ export default class CashuStore {
             ? JSON.parse(storedBalanceSats)
             : 0;
 
-        const wallet: CashuWallet = await this.startWallet(mintUrl);
+        let wallet: CashuWallet;
+        let errorConnecting = false;
+        if (startWallet) {
+            runInAction(() => {
+                this.loadingMsg = `${localeString(
+                    'stores.CashuStore.startingWallet'
+                )}: ${mintUrl}`;
+            });
+            try {
+                wallet = await this.startWallet(mintUrl);
+            } catch (e) {
+                errorConnecting = true;
+            }
+        }
 
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
                 wallet,
                 walletId,
+                mintInfo,
                 counter,
                 proofs,
-                balanceSats
+                balanceSats,
+                errorConnecting
             };
+            this.loading = false;
         });
 
         return this.cashuWallets[mintUrl];
@@ -373,11 +421,11 @@ export default class CashuStore {
 
         for (let i = 0; i < this.mintUrls.length; i++) {
             const mintUrl = this.mintUrls[i];
-            runInAction(() => {
-                this.loadingMsg = `Initializing ecash wallet for ${mintUrl}`;
-            });
             await new Promise(async (resolve) => {
-                const wallet = await this.initializeWallet(mintUrl);
+                const wallet = await this.initializeWallet(
+                    mintUrl,
+                    this.preferredMintUrl === mintUrl
+                );
                 resolve(wallet);
             });
         }
