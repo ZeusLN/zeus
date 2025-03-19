@@ -11,36 +11,63 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import SettingsStore, {
+    DEFAULT_SWAP_HOST_TESTNET,
+    DEFAULT_SWAP_HOST_MAINNET,
+    SWAP_HOST_KEYS_TESTNET,
+    SWAP_HOST_KEYS_MAINNET
+} from '../../stores/SettingsStore';
 import SwapStore from '../../stores/SwapStore';
 
 interface SwapSettingsProps {
     navigation: any;
     NodeInfoStore: NodeInfoStore;
+    SettingsStore: SettingsStore;
     SwapStore: SwapStore;
 }
 
 interface SwapSettingsState {
-    serviceProvider: string;
     host: string;
+    customSwapHost: string;
 }
 
-@inject('NodeInfoStore', 'SwapStore')
+@inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
 @observer
-export default class LSPS1Settings extends React.Component<
+export default class SwapSettings extends React.Component<
     SwapSettingsProps,
     SwapSettingsState
 > {
     constructor(props: SwapSettingsProps) {
         super(props);
+
+        const isTestnet = props.NodeInfoStore?.nodeInfo?.isTestNet;
+        const { settings } = props.SettingsStore;
+
         this.state = {
-            serviceProvider: 'ZEUS',
-            host: ''
+            host: isTestnet
+                ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
+                : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET,
+            customSwapHost: settings.customSwapHost || ''
         };
     }
+
+    async UNSAFE_componentWillMount() {
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
+        const { settings } = SettingsStore;
+
+        this.setState({
+            host: isTestnet
+                ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
+                : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET,
+            customSwapHost: settings.customSwapHost || ''
+        });
+    }
     render() {
-        const { navigation, SwapStore } = this.props;
-        const { serviceProvider, host } = this.state;
-        const isTestnet = this.props.NodeInfoStore?.nodeInfo?.isTestNet;
+        const { navigation, SettingsStore, NodeInfoStore } = this.props;
+        const { customSwapHost, host } = this.state;
+        const { updateSettings } = SettingsStore;
+        const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
         return (
             <Screen>
                 <Header
@@ -57,82 +84,49 @@ export default class LSPS1Settings extends React.Component<
                 <View style={{ paddingHorizontal: 20 }}>
                     <DropdownSetting
                         title="Service Provider"
-                        selectedValue={serviceProvider}
-                        values={[
-                            {
-                                key: 'ZEUS',
-                                value: 'ZEUS'
-                            },
-                            {
-                                key: 'Boltz',
-                                value: 'Boltz'
-                            },
-                            {
-                                key: 'Swap Market',
-                                value: 'SwapMarket'
-                            },
-                            {
-                                key: 'Custom',
-                                translateKey: 'general.custom',
-                                value: 'Custom'
-                            }
-                        ]}
-                        onValueChange={(value: string) => {
-                            if (value === 'Boltz') {
-                                const host = isTestnet
-                                    ? 'https://api.testnet.boltz.exchange/v2'
-                                    : 'https://api.boltz.exchange/v2';
-                                this.setState({
-                                    serviceProvider: 'Boltz',
-                                    host
-                                });
-                            } else if (value === 'ZEUS') {
-                                // zeus endpoints are in WIP
-                                const host = isTestnet ? '' : '';
-                                this.setState({
-                                    serviceProvider: 'ZEUS',
-                                    host
-                                });
-                            } else if (value === 'SwapMarket') {
-                                const host = isTestnet
-                                    ? 'https://api.testnet.boltz.exchange/v2/swap/submarine'
-                                    : 'https://api.middleway.space/v2/swap/submarine';
-                                this.setState({
-                                    serviceProvider: 'SwapMarket',
-                                    host
-                                });
-                            } else {
-                                this.setState({
-                                    serviceProvider: 'Custom',
-                                    host: 'https://api.boltz.exchange/v2'
-                                });
-                            }
-                            SwapStore.setHost(host);
+                        selectedValue={host}
+                        onValueChange={async (value: string) => {
+                            this.setState({ host: value });
+
+                            await updateSettings({
+                                [isTestnet
+                                    ? 'swapHostTestnet'
+                                    : 'swapHostMainnet']: value
+                            });
                         }}
+                        values={
+                            isTestnet
+                                ? SWAP_HOST_KEYS_TESTNET
+                                : SWAP_HOST_KEYS_MAINNET
+                        }
                     />
 
-                    {serviceProvider === 'Custom' && (
+                    {host === 'Custom' && (
                         <>
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
-                                {localeString(
-                                    'views.Settings.AddEditNode.host'
-                                )}
+                                {localeString('views.OpenChannel.host')}
                             </Text>
                             <TextInput
-                                placeholder={localeString(
-                                    'views.SwapSettings.customHost'
-                                )}
-                                value={host}
-                                onChangeText={(text: string) => {
-                                    this.setState({
-                                        host: text
+                                value={customSwapHost}
+                                placeholder={
+                                    isTestnet
+                                        ? DEFAULT_SWAP_HOST_TESTNET
+                                        : DEFAULT_SWAP_HOST_MAINNET
+                                }
+                                onChangeText={async (text: string) => {
+                                    this.setState({ customSwapHost: text });
+
+                                    await updateSettings({
+                                        customSwapHost: text
                                     });
-                                    SwapStore.setHost(host);
                                 }}
+                                autoCapitalize="none"
+                                error={!customSwapHost}
                             />
                         </>
                     )}

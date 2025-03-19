@@ -18,7 +18,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import SwapStore, { HOST } from '../../stores/SwapStore';
+import SwapStore from '../../stores/SwapStore';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -85,7 +85,7 @@ export default class SwapsPane extends React.Component<
 
             this.setState({ swaps: sortedSwaps, loading: false });
         } catch (error) {
-            this.setState({ error: 'Failed to load swaps' });
+            this.setState({ error: 'Failed to load swaps', loading: false });
             console.error('Error retrieving swaps:', error);
         }
     };
@@ -96,7 +96,7 @@ export default class SwapsPane extends React.Component<
         navigation.navigate('SwapDetails', {
             swapData: swap,
             keys,
-            endpoint: HOST,
+            endpoint: swap.endpoint,
             invoice
         });
     };
