@@ -59,6 +59,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
             preferredMintUrl,
             restorationProgress,
             restorationKeyset,
+            cashuWallets,
             loading
         } = CashuStore;
         const mint = route.params?.mint;
@@ -70,6 +71,8 @@ export default class Mint extends React.Component<MintProps, MintState> {
             preferredMintUrl &&
             mint?.mintUrl &&
             preferredMintUrl === mint?.mintUrl;
+
+        const errorConnecting = cashuWallets[mint?.mintUrl]?.errorConnecting;
 
         return (
             <Screen>
@@ -215,6 +218,18 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 {mintInfo?.name}
                             </Text>
                         )}
+                        {errorConnecting && (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 16,
+                                    marginBottom: 10,
+                                    color: themeColor('warning')
+                                }}
+                            >
+                                {localeString('general.errorConnecting')}
+                            </Text>
+                        )}
                         {isPreferredMint && (
                             <Text
                                 style={{
@@ -297,8 +312,11 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             value={
                                 <>
                                     {Object.keys(mintInfo?.nuts).map(
-                                        (title) => (
-                                            <View style={{ margin: 3 }}>
+                                        (title, index) => (
+                                            <View
+                                                key={`nuts-${index}`}
+                                                style={{ margin: 3 }}
+                                            >
                                                 <Pill
                                                     title={title}
                                                     borderColor={themeColor(

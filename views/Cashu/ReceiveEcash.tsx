@@ -425,7 +425,7 @@ export default class ReceiveEcash extends React.Component<
             nfcSupported
         } = this.state;
 
-        const { fontScale } = Dimensions.get('window');
+        const { width, scale, fontScale } = Dimensions.get('window');
 
         const { getAmountFromSats } = UnitsStore;
 
@@ -435,7 +435,9 @@ export default class ReceiveEcash extends React.Component<
             creatingInvoice,
             creatingInvoiceError,
             watchedInvoicePaid,
-            watchedInvoicePaidAmt
+            watchedInvoicePaidAmt,
+            cashuWallets,
+            preferredMintUrl
         } = CashuStore;
         const { posStatus, settings } = SettingsStore;
         const loading = SettingsStore.loading || CashuStore.loading;
@@ -514,8 +516,6 @@ export default class ReceiveEcash extends React.Component<
             lnInvoiceCopyValue = invoice;
         }
 
-        const windowSize = Dimensions.get('window');
-
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
         return (
@@ -555,8 +555,8 @@ export default class ReceiveEcash extends React.Component<
                         >
                             <PaidIndicator />
                             <Wordmark
-                                height={windowSize.width * 0.25}
-                                width={windowSize.width}
+                                height={width * 0.25}
+                                width={width}
                                 fill={themeColor('highlight')}
                             />
                             <SuccessAnimation />
@@ -565,10 +565,7 @@ export default class ReceiveEcash extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
-                                            fontSize:
-                                                windowSize.width *
-                                                windowSize.scale *
-                                                0.017,
+                                            fontSize: width * scale * 0.017,
                                             alignSelf: 'center',
                                             color: themeColor('text'),
                                             textAlign: 'center'
@@ -659,6 +656,26 @@ export default class ReceiveEcash extends React.Component<
 
                                 {haveInvoice && !creatingInvoiceError && (
                                     <View>
+                                        <View style={{ alignItems: 'center' }}>
+                                            <Pill
+                                                title={`${localeString(
+                                                    'views.Cashu.ReceiveEcash.receivingTo'
+                                                )}: ${
+                                                    cashuWallets[
+                                                        preferredMintUrl
+                                                    ]?.wallet?.mintInfo?.name
+                                                }`}
+                                                borderColor={themeColor(
+                                                    'highlight'
+                                                )}
+                                                width={width * 0.75}
+                                                onPress={() => {
+                                                    navigation.navigate(
+                                                        'Mints'
+                                                    );
+                                                }}
+                                            />
+                                        </View>
                                         {selectedIndex == 1 &&
                                             !lightningAddressLoading &&
                                             !lightningAddress && (
@@ -739,11 +756,6 @@ export default class ReceiveEcash extends React.Component<
 
                                         {selectedIndex === 0 && (
                                             <>
-                                                <Pill
-                                                    title={
-                                                        CashuStore.selectedMintUrl
-                                                    }
-                                                />
                                                 <CollapsedQR
                                                     value={lnInvoice || ''}
                                                     copyValue={

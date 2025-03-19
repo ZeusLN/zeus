@@ -10,6 +10,7 @@ import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import cloneDeep from 'lodash/cloneDeep';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -50,11 +51,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         const { cashuWallets, mintUrls } = CashuStore;
         let mints: any = [];
         mintUrls.forEach((mintUrl) => {
-            const mintInfo = cashuWallets[mintUrl].wallet.mintInfo;
+            const wallet = cashuWallets[mintUrl];
+            const mintInfo = wallet.mintInfo;
             mints.push({
                 ...mintInfo,
                 mintUrl,
-                mintBalance: cashuWallets[mintUrl].balanceSats
+                mintBalance: wallet.balanceSats,
+                errorConnecting: wallet.errorConnecting
             });
         });
 
@@ -75,7 +78,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     render() {
         const { navigation, CashuStore } = this.props;
         const { mints } = this.state;
-        const { preferredMintUrl } = CashuStore;
+        const { preferredMintUrl, clearInvoice } = CashuStore;
 
         const AddMintButton = () => (
             <TouchableOpacity
@@ -109,6 +112,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     }}
                     rightComponent={<AddMintButton />}
                     navigation={navigation}
+                    onBack={() => {
+                        clearInvoice();
+                    }}
                 />
                 {!!mints && mints.length > 0 ? (
                     <FlatList
@@ -120,16 +126,24 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             item: any;
                             index: number;
                         }) => {
+                            const mintInfo = item._mintInfo || item;
                             const isPreferredMint =
                                 preferredMintUrl &&
-                                item?.mintUrl &&
-                                preferredMintUrl === item?.mintUrl;
+                                mintInfo?.mintUrl &&
+                                preferredMintUrl === mintInfo?.mintUrl;
+                            const errorConnecting = item.errorConnecting;
 
-                            const subTitle = isPreferredMint
+                            let subTitle = isPreferredMint
                                 ? `${localeString('general.preferred')} | ${
                                       item.mintUrl
                                   }`
                                 : item.mintUrl;
+
+                            if (errorConnecting) {
+                                subTitle = `${localeString(
+                                    'general.errorConnecting'
+                                )} | ${subTitle}`;
+                            }
                             return (
                                 <React.Fragment>
                                     <ListItem
@@ -140,15 +154,14 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                         }}
                                         onPress={() => {
                                             navigation.navigate('Mint', {
-                                                mint: item
+                                                mint: cloneDeep(mintInfo)
                                             });
                                         }}
                                     >
-                                        {item._mintInfo?.icon_url && (
+                                        {mintInfo?.icon_url && (
                                             <Image
                                                 source={{
-                                                    uri: item._mintInfo
-                                                        ?.icon_url
+                                                    uri: mintInfo?.icon_url
                                                 }}
                                                 style={{
                                                     alignSelf: 'center',
@@ -163,7 +176,11 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 <ListItem.Title
                                                     style={{
                                                         ...styles.leftCell,
-                                                        color: isPreferredMint
+                                                        color: errorConnecting
+                                                            ? themeColor(
+                                                                  'error'
+                                                              )
+                                                            : isPreferredMint
                                                             ? themeColor(
                                                                   'highlight'
                                                               )
@@ -173,7 +190,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                         fontSize: 18
                                                     }}
                                                 >
-                                                    {item._mintInfo.name}
+                                                    {mintInfo.name}
                                                 </ListItem.Title>
                                                 <View style={styles.rightCell}>
                                                     <Amount
@@ -204,7 +221,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                 </React.Fragment>
                             );
                         }}
-                        keyExtractor={(_, index) => `utxo-${index}`}
+                        keyExtractor={(_, index) => `mint-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                     />

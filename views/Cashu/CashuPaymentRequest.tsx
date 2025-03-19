@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Dimensions,
     ScrollView,
     StyleSheet,
     Text,
@@ -17,6 +18,7 @@ import Conversion from '../../components/Conversion';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 
@@ -141,7 +143,10 @@ export default class CashuPaymentRequest extends React.Component<
             loading,
             loadingFeeEstimate,
             feeEstimate,
-            clearPayReq
+            clearPayReq,
+            cashuWallets,
+            preferredMintUrl,
+            totalBalanceSats
         } = CashuStore;
 
         // Zaplocker
@@ -172,7 +177,7 @@ export default class CashuPaymentRequest extends React.Component<
         const isNoAmountInvoice: boolean =
             !requestAmount || requestAmount === 0;
 
-        const noBalance = this.props.CashuStore.totalBalanceSats === 0;
+        const noBalance = totalBalanceSats === 0;
 
         const showZaplockerWarning =
             isZaplocker ||
@@ -180,6 +185,8 @@ export default class CashuPaymentRequest extends React.Component<
                 zaplockerDestinations.includes(destination) &&
                 cltv_expiry &&
                 Number(cltv_expiry) > 200);
+
+        const { width } = Dimensions.get('window');
 
         const QRButton = () => (
             <TouchableOpacity
@@ -522,6 +529,21 @@ export default class CashuPaymentRequest extends React.Component<
                     !loadingFeeEstimate &&
                     BackendUtils.supportsLightningSends() && (
                         <View style={{ bottom: 10 }}>
+                            <View style={{ alignItems: 'center' }}>
+                                <Pill
+                                    title={`${localeString(
+                                        'views.Cashu.CashuPaymentRequest.sendingFrom'
+                                    )}: ${
+                                        cashuWallets[preferredMintUrl]?.wallet
+                                            ?.mintInfo?.name
+                                    }`}
+                                    borderColor={themeColor('highlight')}
+                                    width={width * 0.85}
+                                    onPress={() => {
+                                        navigation.navigate('Mints');
+                                    }}
+                                />
+                            </View>
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
