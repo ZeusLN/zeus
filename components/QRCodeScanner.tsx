@@ -17,7 +17,7 @@ import {
 import { launchImageLibrary } from 'react-native-image-picker';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-const LocalQRCode = require('../zeus_modules/@remobile/react-native-qrcode-local-image');
+import RNQRGenerator from 'rn-qr-generator';
 
 import Header from './Header';
 import Button from '../components/Button';
@@ -90,26 +90,27 @@ export default function QRCodeScanner({
     };
 
     const handleOpenGallery = () => {
-        launchImageLibrary({ mediaType: 'photo' }, (response) => {
+        launchImageLibrary({ mediaType: 'photo' }, async (response) => {
             if (!response.didCancel) {
                 const asset = response.assets?.[0];
                 if (asset?.uri) {
                     const uri = asset.uri?.replace('file://', '');
-                    LocalQRCode.decode(uri, (error: any, result: any) => {
-                        if (!error) {
-                            handleRead(result);
-                        } else {
-                            console.error('Error decoding QR code:', error);
-                            Alert.alert(
-                                localeString('general.error'),
-                                localeString(
-                                    'components.QRCodeScanner.notRecognized'
-                                ),
-                                undefined,
-                                { cancelable: true }
-                            );
-                        }
+
+                    const result = await RNQRGenerator.detect({
+                        uri: decodeURI(uri.toString())
                     });
+                    if (result?.values.length > 0) {
+                        handleRead(result.values[0]);
+                    } else {
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString(
+                                'components.QRCodeScanner.notRecognized'
+                            ),
+                            undefined,
+                            { cancelable: true }
+                        );
+                    }
                 }
             }
         });
