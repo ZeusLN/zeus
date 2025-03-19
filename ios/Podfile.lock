@@ -20,6 +20,11 @@ PODS:
     - fmt (= 9.1.0)
     - glog
     - RCT-Folly/Default (= 2024.01.01.00)
+  - RCT-Folly/Default (2024.01.01.00):
+    - boost
+    - DoubleConversion
+    - fmt (= 9.1.0)
+    - glog
   - RCT-Folly/Fabric (2024.01.01.00):
     - boost
     - DoubleConversion
@@ -959,8 +964,6 @@ PODS:
     - React
   - react-native-print (0.11.0):
     - React-Core
-  - react-native-qrcode-local-image (1.0.4):
-    - React
   - react-native-randombytes (3.5.3):
     - React
   - react-native-restart (0.0.27):
@@ -1295,6 +1298,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNQrGenerator (1.4.3):
+    - React
+    - ZXingObjC
   - RNReactNativeHapticFeedback (2.2.0):
     - React-Core
   - RNReanimated (3.12.0):
@@ -1378,6 +1384,9 @@ PODS:
   - VisionCamera/React (4.3.2):
     - React-Core
   - Yoga (0.0.0)
+  - ZXingObjC (3.6.9):
+    - ZXingObjC/All (= 3.6.9)
+  - ZXingObjC/All (3.6.9)
 
 DEPENDENCIES:
   - boost (from `../node_modules/react-native/third-party-podspecs/boost.podspec`)
@@ -1425,7 +1434,6 @@ DEPENDENCIES:
   - react-native-notifications (from `../node_modules/react-native-notifications`)
   - react-native-ping (from `../node_modules/react-native-ping`)
   - react-native-print (from `../node_modules/react-native-print`)
-  - "react-native-qrcode-local-image (from `../zeus_modules/@remobile/react-native-qrcode-local-image`)"
   - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-restart (from `../node_modules/react-native-restart`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
@@ -1463,6 +1471,7 @@ DEPENDENCIES:
   - RNFS (from `../node_modules/react-native-fs`)
   - RNGestureHandler (from `../node_modules/react-native-gesture-handler`)
   - RNKeychain (from `../node_modules/react-native-keychain`)
+  - RNQrGenerator (from `../node_modules/rn-qr-generator`)
   - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
@@ -1481,6 +1490,7 @@ SPEC REPOS:
     - lottie-ios
     - SocketRocket
     - SwiftProtobuf
+    - ZXingObjC
 
 EXTERNAL SOURCES:
   boost:
@@ -1570,8 +1580,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-ping"
   react-native-print:
     :path: "../node_modules/react-native-print"
-  react-native-qrcode-local-image:
-    :path: "../zeus_modules/@remobile/react-native-qrcode-local-image"
   react-native-randombytes:
     :path: "../node_modules/react-native-randombytes"
   react-native-restart:
@@ -1646,6 +1654,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-gesture-handler"
   RNKeychain:
     :path: "../node_modules/react-native-keychain"
+  RNQrGenerator:
+    :path: "../node_modules/rn-qr-generator"
   RNReactNativeHapticFeedback:
     :path: "../node_modules/react-native-haptic-feedback"
   RNReanimated:
@@ -1671,14 +1681,14 @@ SPEC CHECKSUMS:
   boost: d3f49c53809116a5d38da093a8aa78bf551aed09
   BVLinearGradient: 7815a70ab485b7b155186dd0cc836363e0288cad
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
-  DoubleConversion: f16ae600a246532c4020132d54af21d0ddb2a385
+  DoubleConversion: 76ab83afb40bddeeee456813d9c04f67f78771b5
   FBLazyVector: 4bc164e5b5e6cfc288d2b5ff28643ea15fa1a589
-  fmt: 10c6e61f4be25dc963c36bd73fc7b1705fe975be
-  glog: 08b301085f15bcbb6ff8632a8ebaf239aae04e6a
+  fmt: 4c2741a687cc09f0634a2e2c72a838b99f1ff120
+  glog: fdfdfe5479092de0c4bdbebedd9056951f092c4f
   hermes-engine: 01d3e052018c2a13937aca1860fbedbccd4a41b7
   lottie-ios: 8f97d3271e155c2d688875c29cd3c74908aef5f8
   lottie-react-native: 5d89c05930d4180a1e39b1757d46e6c0eec90255
-  RCT-Folly: 84578c8756030547307e4572ab1947de1685c599
+  RCT-Folly: 5dc73daec3476616d19e8a53f0156176f7b55461
   RCTDeprecation: b03c35057846b685b3ccadc9bfe43e349989cdb2
   RCTRequired: 194626909cfa8d39ca6663138c417bc6c431648c
   RCTTypeSafety: 552aff5b8e8341660594db00e53ac889682bc120
@@ -1713,7 +1723,6 @@ SPEC CHECKSUMS:
   react-native-notifications: 3bafa1237ae8a47569a84801f17d80242fe9f6a5
   react-native-ping: 589027e929c300b0b68cc5c34105f33610177055
   react-native-print: 692e8782bc89872ea01738c6759631388e77358c
-  react-native-qrcode-local-image: d0067bbd2dc6c23f62cbf38a1c9b2a2af58e47ec
   react-native-randombytes: 4a00fba06ca0d80a7c02a6b73cfe58ffa4a093a0
   react-native-restart: 0bc732f4461709022a742bb29bcccf6bbc5b4863
   react-native-safe-area-context: 8c70551c8688cd584a53487aa1b9361e991a3b4a
@@ -1751,6 +1760,7 @@ SPEC CHECKSUMS:
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
   RNGestureHandler: 326e35460fb6c8c64a435d5d739bea90d7ed4e49
   RNKeychain: c339dd4a9f13baac6cf6b617bfad3a0eab5df8b1
+  RNQrGenerator: afacf12b55dfba0e3aaca963eec23691e8426431
   RNReactNativeHapticFeedback: a6fb5b7a981683bf58af43e3fb827d4b7ed87f83
   RNReanimated: f1a8e928e0a5e8698c354c226d8d5f80629f8658
   RNScreens: a2d8a2555b4653d7a19706eb172f855657ac30d7
@@ -1763,7 +1773,8 @@ SPEC CHECKSUMS:
   TcpSockets: c5f030d4dbc758c4c7acb00496dc92c412b02cd2
   VisionCamera: 6ad4b86176f6fea45e90e380d3d530bc5e1abff9
   Yoga: ae3c32c514802d30f687a04a6a35b348506d411f
+  ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
-PODFILE CHECKSUM: 7f57cf007e54dd34e05bfbf127badc08dcead3e1
+PODFILE CHECKSUM: 729b36873182b9c4e555807ad9ca7519788863e0
 
 COCOAPODS: 1.16.2
