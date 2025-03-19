@@ -1094,6 +1094,7 @@ export default class CashuStore {
 
             const payment = new CashuPayment({
                 ...this.payReq,
+                proofs: proofsToSend,
                 bolt11: this.paymentRequest,
                 meltResponse,
                 amount: meltResponse.quote.amount,
