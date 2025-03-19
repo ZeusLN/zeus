@@ -344,6 +344,19 @@ export default class CashuStore {
         return balanceSats;
     };
 
+    setTotalBalance = async (totalBalanceSats: number) => {
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-totalBalanceSats`,
+            totalBalanceSats
+        );
+
+        runInAction(() => {
+            this.totalBalanceSats = totalBalanceSats;
+        });
+
+        return totalBalanceSats;
+    };
+
     @action
     public initializeWallet = async (
         mintUrl: string,
@@ -630,27 +643,18 @@ export default class CashuStore {
                     const newCounter = new BigNumber(counter || 0)
                         .plus(newProofs.length)
                         .toNumber();
+
                     // update proofs, counter, balance
                     this.cashuWallets[mintUrl].proofs.push(...newProofs);
-                    await Storage.setItem(
-                        `${this.cashuWallets[mintUrl].walletId}-proofs`,
+                    await this.setMintProofs(
+                        mintUrl,
                         this.cashuWallets[mintUrl].proofs
                     );
-                    await Storage.setItem(
-                        `${this.cashuWallets[mintUrl].walletId}-counter`,
-                        newCounter
-                    );
-                    await Storage.setItem(
-                        `${this.getLndDir()}-cashu-totalBalanceSats`,
-                        totalBalanceSats
-                    );
-                    await Storage.setItem(
-                        `${this.cashuWallets[mintUrl].walletId}-balance`,
-                        balanceSats
-                    );
-                    this.totalBalanceSats = totalBalanceSats;
-                    this.cashuWallets[mintUrl].balanceSats = balanceSats;
-                    this.cashuWallets[mintUrl].counter = newCounter;
+
+                    await this.setMintCounter(mintUrl, newCounter);
+                    await this.setMintBalance(mintUrl, balanceSats);
+                    await this.setTotalBalance(totalBalanceSats);
+
                     // delete old instance of invoice
                     this.invoices = this.invoices?.filter(
                         (item) => item.quote !== quote.quote
@@ -1106,6 +1110,13 @@ export default class CashuStore {
             await Storage.setItem(
                 `${this.getLndDir()}-cashu-payments`,
                 this.payments
+            );
+
+            // update balances
+            await this.setTotalBalance(this.totalBalanceSats - amountToPay);
+            await this.setMintBalance(
+                mintUrl,
+                this.cashuWallets[mintUrl].balanceSats - amountToPay
             );
 
             this.loading = false;
