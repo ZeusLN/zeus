@@ -105,6 +105,7 @@
 		74668A582AE3CBB90023695A /* Marlide-Display-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A562AE3CBB90023695A /* Marlide-Display-Bold.ttf */; };
 		74668A592AE3CBB90023695A /* Marlide-Display.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 74668A572AE3CBB90023695A /* Marlide-Display.ttf */; };
 		749E81B02D55D70800A2A7C0 /* DroidSansMono.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 749E81AF2D55D70800A2A7C0 /* DroidSansMono.ttf */; };
+		74A3C9D52D8C9F6D00FF7B8C /* libRNQrGenerator.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 74A3C9D42D8C9F6D00FF7B8C /* libRNQrGenerator.a */; };
 		74B637822A5A350B00750202 /* LncModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B637792A5A350A00750202 /* LncModule.mm */; };
 		74B637832A5A350B00750202 /* StreamingCallback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377A2A5A350A00750202 /* StreamingCallback.mm */; };
 		74B637842A5A350B00750202 /* Callback.mm in Sources */ = {isa = PBXBuildFile; fileRef = 74B6377C2A5A350A00750202 /* Callback.mm */; };
@@ -512,6 +513,7 @@
 		748C86FB5D4F4CB0B3F9FF0C /* Key.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Key.svg; path = ../assets/images/SVG/Key.svg; sourceTree = "<group>"; };
 		749E81AF2D55D70800A2A7C0 /* DroidSansMono.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; name = DroidSansMono.ttf; path = ../assets/fonts/DroidSansMono.ttf; sourceTree = SOURCE_ROOT; };
 		74A116702A55DEE600F7078C /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
+		74A3C9D42D8C9F6D00FF7B8C /* libRNQrGenerator.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libRNQrGenerator.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		74B637792A5A350A00750202 /* LncModule.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = LncModule.mm; sourceTree = "<group>"; };
 		74B6377A2A5A350A00750202 /* StreamingCallback.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = StreamingCallback.mm; sourceTree = "<group>"; };
 		74B6377B2A5A350A00750202 /* StreamingCallback.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = StreamingCallback.h; sourceTree = "<group>"; };
@@ -660,6 +662,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				74A3C9D52D8C9F6D00FF7B8C /* libRNQrGenerator.a in Frameworks */,
 				ED297163215061F000B7C4FE /* JavaScriptCore.framework in Frameworks */,
 				74B637872A5A35B600750202 /* Lndmobile.xcframework in Frameworks */,
 				120C1A21E0566E9107515C30 /* libPods-zeus.a in Frameworks */,
@@ -788,6 +791,7 @@
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				74A3C9D42D8C9F6D00FF7B8C /* libRNQrGenerator.a */,
 				74DE86022BB530E5001FEC15 /* libresolv.9.tbd */,
 				74A116702A55DEE600F7078C /* libresolv.tbd */,
 				74B637862A5A35B600750202 /* Lndmobile.xcframework */,
