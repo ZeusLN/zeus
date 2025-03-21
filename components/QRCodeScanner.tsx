@@ -90,30 +90,31 @@ export default function QRCodeScanner({
     };
 
     const handleOpenGallery = () => {
-        launchImageLibrary({ mediaType: 'photo' }, async (response) => {
-            if (!response.didCancel) {
-                const asset = response.assets?.[0];
-                if (asset?.uri) {
-                    const uri = asset.uri?.replace('file://', '');
-
-                    const result = await RNQRGenerator.detect({
-                        uri: decodeURI(uri.toString())
-                    });
-                    if (result?.values.length > 0) {
-                        handleRead(result.values[0]);
-                    } else {
-                        Alert.alert(
-                            localeString('general.error'),
-                            localeString(
-                                'components.QRCodeScanner.notRecognized'
-                            ),
-                            undefined,
-                            { cancelable: true }
-                        );
+        launchImageLibrary(
+            { mediaType: 'photo', includeBase64: true },
+            async (response) => {
+                if (!response.didCancel) {
+                    const asset = response.assets?.[0];
+                    if (asset?.base64) {
+                        const result = await RNQRGenerator.detect({
+                            base64: asset.base64
+                        });
+                        if (result?.values.length > 0) {
+                            handleRead(result.values[0]);
+                        } else {
+                            Alert.alert(
+                                localeString('general.error'),
+                                localeString(
+                                    'components.QRCodeScanner.notRecognized'
+                                ),
+                                undefined,
+                                { cancelable: true }
+                            );
+                        }
                     }
                 }
             }
-        });
+        );
     };
 
     const codeScanner = useCodeScanner({
