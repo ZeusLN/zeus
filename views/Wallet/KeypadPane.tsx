@@ -7,6 +7,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
 import PinPad from '../../components/PinPad';
+import EcashMintPicker from '../../components/EcashMintPicker';
 import EcashToggle from '../../components/EcashToggle';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
@@ -359,7 +360,8 @@ export default class KeypadPane extends React.PureComponent<
                                     : color,
                             fontSize: this.amountSize(),
                             textAlign: 'center',
-                            fontFamily: 'PPNeueMontreal-Medium'
+                            fontFamily: 'PPNeueMontreal-Medium',
+                            height: 95
                         }}
                     >
                         {units === 'BTC'
@@ -370,7 +372,13 @@ export default class KeypadPane extends React.PureComponent<
                         </Text>
                     </Animated.Text>
 
-                    <Row style={{ alignSelf: 'center' }}>
+                    <Row
+                        style={{
+                            alignSelf: 'center',
+                            padding: 10,
+                            width: '85%'
+                        }}
+                    >
                         {BackendUtils.supportsCashu() &&
                             settings?.ecash?.enableCashu && (
                                 <>
@@ -383,6 +391,15 @@ export default class KeypadPane extends React.PureComponent<
                                         }}
                                     />
                                     <Spacer width={10} />
+                                    {ecashMode && (
+                                        <>
+                                            <EcashMintPicker
+                                                hideAmount
+                                                navigation={navigation}
+                                            />
+                                            <Spacer width={10} />
+                                        </>
+                                    )}
                                 </>
                             )}
                         <UnitToggle onToggle={this.clearValue} />

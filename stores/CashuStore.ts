@@ -55,7 +55,7 @@ interface Wallet {
 
 export default class CashuStore {
     @observable public mintUrls: Array<string>;
-    @observable public preferredMintUrl: string;
+    @observable public selectedMintUrl: string;
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
@@ -96,7 +96,7 @@ export default class CashuStore {
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
         this.mintUrls = [];
-        this.preferredMintUrl = '';
+        this.selectedMintUrl = '';
         this.clearInvoice();
         this.clearPayReq();
     };
@@ -143,16 +143,15 @@ export default class CashuStore {
     };
 
     @action
-    public setPreferredMint = async (mintUrl: string) => {
-        if (!this.cashuWallets[mintUrl].wallet)
-            this.initializeWallet(mintUrl, true);
+    public setSelectedMint = async (mintUrl: string) => {
+        this.clearInvoice();
         await Storage.setItem(
-            `${this.getLndDir()}-cashu-preferredMintUrl`,
+            `${this.getLndDir()}-cashu-selectedMintUrl`,
             mintUrl
         );
 
         runInAction(() => {
-            this.preferredMintUrl = mintUrl;
+            this.selectedMintUrl = mintUrl;
         });
 
         return mintUrl;
@@ -171,9 +170,9 @@ export default class CashuStore {
             this.mintUrls
         );
 
-        // set mint as preferred if it's the first one
+        // set mint as selected if it's the first one
         if (newMintUrls.length === 1) {
-            await this.setPreferredMint(mintUrl);
+            await this.setSelectedMint(mintUrl);
         }
 
         await this.initializeWallet(mintUrl, true);
@@ -198,11 +197,11 @@ export default class CashuStore {
         );
         delete this.cashuWallets[mintUrl];
 
-        // if preferred mint is deleted, set the next in line
-        if (this.preferredMintUrl === mintUrl) {
-            let newPreferredMintUrl = '';
-            if (newMintUrls[0]) newPreferredMintUrl = newMintUrls[0];
-            await this.setPreferredMint(newPreferredMintUrl);
+        // if selected mint is deleted, set the next in line
+        if (this.selectedMintUrl === mintUrl) {
+            let newSelectedMintUrl = '';
+            if (newMintUrls[0]) newSelectedMintUrl = newMintUrls[0];
+            await this.setSelectedMint(newSelectedMintUrl);
         }
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;
@@ -453,11 +452,11 @@ export default class CashuStore {
         );
         this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
 
-        const storedPreferredMintUrl = await Storage.getItem(
-            `${lndDir}-cashu-preferredMintUrl`
+        const storedselectedMintUrl = await Storage.getItem(
+            `${lndDir}-cashu-selectedMintUrl`
         );
-        this.preferredMintUrl = storedPreferredMintUrl
-            ? storedPreferredMintUrl
+        this.selectedMintUrl = storedselectedMintUrl
+            ? storedselectedMintUrl
             : '';
 
         const storedTotalBalanceSats = await Storage.getItem(
@@ -512,13 +511,13 @@ export default class CashuStore {
         this.creatingInvoiceError = false;
         this.error_msg = undefined;
 
-        if (!this.cashuWallets[this.preferredMintUrl].wallet) {
-            await this.initializeWallet(this.preferredMintUrl, true);
+        if (!this.cashuWallets[this.selectedMintUrl].wallet) {
+            await this.initializeWallet(this.selectedMintUrl, true);
         }
 
         try {
             const mintQuote = await this.cashuWallets[
-                this.preferredMintUrl
+                this.selectedMintUrl
             ].wallet!!.createMintQuote(value ? Number(value) : 0, memo);
 
             let invoice: any;
@@ -527,7 +526,7 @@ export default class CashuStore {
                 invoice = new CashuInvoice({
                     ...mintQuote,
                     mintUrl:
-                        this.cashuWallets[this.preferredMintUrl].wallet!!.mint
+                        this.cashuWallets[this.selectedMintUrl].wallet!!.mint
                             .mintUrl
                 });
                 this.invoices?.push(invoice);
@@ -615,7 +614,7 @@ export default class CashuStore {
         quoteMintUrl?: string,
         lockedQuote?: boolean
     ) => {
-        const mintUrl = quoteMintUrl || this.preferredMintUrl;
+        const mintUrl = quoteMintUrl || this.selectedMintUrl;
 
         if (!this.cashuWallets[mintUrl].wallet) {
             await this.initializeWallet(mintUrl, true);
@@ -983,10 +982,10 @@ export default class CashuStore {
                 resolve(decoded);
             });
 
-            const cashuWallet = this.cashuWallets[this.preferredMintUrl];
+            const cashuWallet = this.cashuWallets[this.selectedMintUrl];
 
             if (!cashuWallet.wallet) {
-                await this.initializeWallet(this.preferredMintUrl, true);
+                await this.initializeWallet(this.selectedMintUrl, true);
             }
             const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
                 bolt11Invoice
@@ -1060,7 +1059,7 @@ export default class CashuStore {
     public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
         this.loading = true;
 
-        const mintUrl = this.preferredMintUrl;
+        const mintUrl = this.selectedMintUrl;
 
         if (!this.cashuWallets[mintUrl].wallet) {
             await this.initializeWallet(mintUrl, true);

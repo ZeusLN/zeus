@@ -28,11 +28,11 @@ const ZPayIconWhite = require('../../assets/images/pay-z-white.png');
 import AmountInput, { getSatAmount } from '../../components/AmountInput';
 import Button from '../../components/Button';
 import CollapsedQR from '../../components/CollapsedQR';
+import EcashMintPicker from '../../components/EcashMintPicker';
 import Header from '../../components/Header';
 import HopPicker from '../../components/HopPicker';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import PaidIndicator from '../../components/PaidIndicator';
-import Pill from '../../components/Pill';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
 import SuccessAnimation from '../../components/SuccessAnimation';
@@ -89,6 +89,7 @@ interface ReceiveEcashProps {
 }
 
 interface ReceiveEcashState {
+    loading: boolean;
     selectedIndex: number;
     memo: string;
     value: string;
@@ -119,6 +120,7 @@ export default class ReceiveEcash extends React.Component<
     constructor(props: ReceiveEcashProps) {
         super(props);
         this.state = {
+            loading: true,
             selectedIndex: props.route.params?.selectedIndex ?? 0,
             memo: '',
             value: '',
@@ -212,29 +214,10 @@ export default class ReceiveEcash extends React.Component<
         if (autoGenerate) {
             this.autoGenerateInvoice(getSatAmount(amount).toString(), memo);
         }
-    }
 
-    async UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { route, CashuStore } = nextProps;
-        const { clearInvoice } = CashuStore;
-
-        clearInvoice();
-        const { amount, lnurlParams: lnurl } = route.params ?? {};
-
-        if (amount && amount != '0') {
-            this.setState({
-                value: amount,
-                satAmount: getSatAmount(amount)
-            });
-        }
-
-        if (lnurl) {
-            this.setState({
-                memo: lnurl.defaultDescription,
-                value: (lnurl.maxWithdrawable / 1000).toString(),
-                satAmount: getSatAmount(lnurl.maxWithdrawable / 1000)
-            });
-        }
+        this.setState({
+            loading: false
+        });
     }
 
     async componentDidMount() {
@@ -440,12 +423,11 @@ export default class ReceiveEcash extends React.Component<
             creatingInvoiceError,
             watchedInvoicePaid,
             watchedInvoicePaidAmt,
-            cashuWallets,
-            preferredMintUrl,
             loadingMsg
         } = CashuStore;
         const { posStatus, settings } = SettingsStore;
-        const loading = SettingsStore.loading || CashuStore.loading;
+        const loading =
+            SettingsStore.loading || CashuStore.loading || this.state.loading;
         const { cashuLightningAddress } = CashuLightningAddressStore;
         const cashuLightningAddressLoading = CashuLightningAddressStore.loading;
 
@@ -673,180 +655,203 @@ export default class ReceiveEcash extends React.Component<
                                     </View>
                                 )}
 
-                                {haveInvoice && !creatingInvoiceError && (
-                                    <View>
-                                        {posStatus !== 'active' &&
-                                            selectedIndex === 0 && (
-                                                <View
-                                                    style={{
-                                                        alignItems: 'center'
-                                                    }}
-                                                >
-                                                    <Pill
-                                                        title={`${localeString(
-                                                            'views.Cashu.ReceiveEcash.receivingTo'
-                                                        )}: ${
-                                                            cashuWallets[
-                                                                preferredMintUrl
-                                                            ]?.wallet?.mintInfo
-                                                                ?.name
-                                                        }`}
-                                                        borderColor={themeColor(
-                                                            'highlight'
-                                                        )}
-                                                        width={width * 0.75}
-                                                        onPress={() => {
-                                                            navigation.navigate(
-                                                                'Mints'
-                                                            );
-                                                        }}
-                                                    />
-                                                </View>
-                                            )}
-                                        {selectedIndex == 1 &&
-                                            !cashuLightningAddressLoading &&
-                                            !cashuLightningAddress && (
-                                                <View
-                                                    style={{
-                                                        marginTop: 20,
-                                                        marginBottom: 20
-                                                    }}
-                                                >
-                                                    <Button
-                                                        title={localeString(
-                                                            'views.Receive.createLightningAddress'
-                                                        )}
-                                                        onPress={() =>
-                                                            navigation.navigate(
-                                                                'CashuLightningAddress'
-                                                            )
-                                                        }
-                                                    />
-                                                </View>
-                                            )}
-
-                                        {selectedIndex == 1 &&
-                                            !cashuLightningAddressLoading && (
-                                                <Row
-                                                    style={{
-                                                        alignSelf: 'center',
-                                                        marginBottom: 15
-                                                    }}
-                                                >
-                                                    <Text
+                                {haveInvoice &&
+                                    !loading &&
+                                    !creatingInvoiceError && (
+                                        <View>
+                                            {posStatus !== 'active' &&
+                                                selectedIndex === 0 && (
+                                                    <View
                                                         style={{
-                                                            fontFamily:
-                                                                'PPNeueMontreal-Book',
-                                                            fontSize:
-                                                                26 / fontScale,
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            textAlign: 'center'
+                                                            alignSelf: 'center',
+                                                            width: '85%'
                                                         }}
                                                     >
-                                                        {cashuLightningAddress}
-                                                    </Text>
-                                                </Row>
-                                            )}
-
-                                        {selectedIndex == 1 &&
-                                            !cashuLightningAddressLoading &&
-                                            cashuLightningAddress && (
-                                                <CollapsedQR
-                                                    value={`lightning:${cashuLightningAddress}`}
-                                                    iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
-                                                    showShare={true}
-                                                    expanded
-                                                    textBottom
-                                                    hideText
-                                                    logo={
-                                                        themeColor(
-                                                            'invertQrIcons'
-                                                        )
-                                                            ? ZPayIconWhite
-                                                            : ZPayIcon
-                                                    }
-                                                    nfcSupported={nfcSupported}
-                                                />
-                                            )}
-
-                                        {selectedIndex == 1 &&
-                                            cashuLightningAddressLoading && (
-                                                <View style={{ margin: 40 }}>
-                                                    <LoadingIndicator />
-                                                </View>
-                                            )}
-
-                                        {selectedIndex === 0 && (
-                                            <>
-                                                <CollapsedQR
-                                                    value={lnInvoice || ''}
-                                                    copyValue={
-                                                        lnInvoiceCopyValue
-                                                    }
-                                                    iconOnly={true}
-                                                    iconContainerStyle={{
-                                                        marginRight: 40
-                                                    }}
-                                                    showShare={true}
-                                                    expanded
-                                                    textBottom
-                                                    truncateLongValue
-                                                    nfcSupported={nfcSupported}
-                                                    satAmount={satAmount}
-                                                    displayAmount={
-                                                        settings?.invoices
-                                                            ?.displayAmountOnInvoice ||
-                                                        false
-                                                    }
-                                                />
-                                            </>
-                                        )}
-                                        {!(
-                                            selectedIndex === 1 &&
-                                            (!cashuLightningAddress ||
-                                                cashuLightningAddressLoading)
-                                        ) &&
-                                            nfcSupported && (
-                                                <View
-                                                    style={[
-                                                        styles.button,
-                                                        {
-                                                            marginTop: 15,
-                                                            paddingTop: 0
-                                                        }
-                                                    ]}
-                                                >
-                                                    <Button
-                                                        title={
-                                                            posStatus ===
-                                                            'active'
-                                                                ? localeString(
-                                                                      'general.payNfc'
-                                                                  )
-                                                                : localeString(
-                                                                      'general.receiveNfc'
-                                                                  )
-                                                        }
-                                                        icon={{
-                                                            name: 'nfc',
-                                                            size: 25
+                                                        <EcashMintPicker
+                                                            hideAmount
+                                                            navigation={
+                                                                navigation
+                                                            }
+                                                        />
+                                                    </View>
+                                                )}
+                                            {selectedIndex == 1 &&
+                                                !cashuLightningAddressLoading &&
+                                                !cashuLightningAddress && (
+                                                    <View
+                                                        style={{
+                                                            marginTop: 20,
+                                                            marginBottom: 20
                                                         }}
-                                                        onPress={() =>
-                                                            this.enableNfc()
+                                                    >
+                                                        <Button
+                                                            title={localeString(
+                                                                'views.Receive.createLightningAddress'
+                                                            )}
+                                                            onPress={() =>
+                                                                navigation.navigate(
+                                                                    'CashuLightningAddress'
+                                                                )
+                                                            }
+                                                        />
+                                                    </View>
+                                                )}
+
+                                            {selectedIndex == 1 &&
+                                                !cashuLightningAddressLoading && (
+                                                    <Row
+                                                        style={{
+                                                            alignSelf: 'center',
+                                                            marginBottom: 15
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                fontSize:
+                                                                    26 /
+                                                                    fontScale,
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                textAlign:
+                                                                    'center'
+                                                            }}
+                                                        >
+                                                            {
+                                                                cashuLightningAddress
+                                                            }
+                                                        </Text>
+                                                    </Row>
+                                                )}
+
+                                            {selectedIndex == 1 &&
+                                                !cashuLightningAddressLoading &&
+                                                cashuLightningAddress && (
+                                                    <CollapsedQR
+                                                        value={`lightning:${cashuLightningAddress}`}
+                                                        iconOnly={true}
+                                                        iconContainerStyle={{
+                                                            marginRight: 40
+                                                        }}
+                                                        showShare={true}
+                                                        expanded
+                                                        textBottom
+                                                        hideText
+                                                        logo={
+                                                            themeColor(
+                                                                'invertQrIcons'
+                                                            )
+                                                                ? ZPayIconWhite
+                                                                : ZPayIcon
                                                         }
-                                                        secondary
+                                                        nfcSupported={
+                                                            nfcSupported
+                                                        }
                                                     />
-                                                </View>
+                                                )}
+
+                                            {selectedIndex == 1 &&
+                                                cashuLightningAddressLoading && (
+                                                    <View
+                                                        style={{ margin: 40 }}
+                                                    >
+                                                        <LoadingIndicator />
+                                                    </View>
+                                                )}
+
+                                            {selectedIndex === 0 && (
+                                                <>
+                                                    <CollapsedQR
+                                                        value={lnInvoice || ''}
+                                                        copyValue={
+                                                            lnInvoiceCopyValue
+                                                        }
+                                                        iconOnly={true}
+                                                        iconContainerStyle={{
+                                                            marginRight: 40
+                                                        }}
+                                                        showShare={true}
+                                                        expanded
+                                                        textBottom
+                                                        truncateLongValue
+                                                        nfcSupported={
+                                                            nfcSupported
+                                                        }
+                                                        satAmount={satAmount}
+                                                        displayAmount={
+                                                            settings?.invoices
+                                                                ?.displayAmountOnInvoice ||
+                                                            false
+                                                        }
+                                                    />
+                                                </>
                                             )}
-                                    </View>
-                                )}
+                                            {!(
+                                                selectedIndex === 1 &&
+                                                (!cashuLightningAddress ||
+                                                    cashuLightningAddressLoading)
+                                            ) &&
+                                                nfcSupported && (
+                                                    <View
+                                                        style={[
+                                                            styles.button,
+                                                            {
+                                                                marginTop: 15,
+                                                                paddingTop: 0
+                                                            }
+                                                        ]}
+                                                    >
+                                                        <Button
+                                                            title={
+                                                                posStatus ===
+                                                                'active'
+                                                                    ? localeString(
+                                                                          'general.payNfc'
+                                                                      )
+                                                                    : localeString(
+                                                                          'general.receiveNfc'
+                                                                      )
+                                                            }
+                                                            icon={{
+                                                                name: 'nfc',
+                                                                size: 25
+                                                            }}
+                                                            onPress={() =>
+                                                                this.enableNfc()
+                                                            }
+                                                            secondary
+                                                        />
+                                                    </View>
+                                                )}
+                                        </View>
+                                    )}
                                 {!loading && !haveInvoice && !creatingInvoice && (
                                     <>
+                                        <>
+                                            <Text
+                                                style={{
+                                                    ...styles.secondaryText,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString('cashu.mint')}
+                                            </Text>
+                                            <View
+                                                style={{
+                                                    marginTop: 10,
+                                                    marginBottom: 10
+                                                }}
+                                            >
+                                                <EcashMintPicker
+                                                    hideAmount
+                                                    navigation={navigation}
+                                                />
+                                            </View>
+                                        </>
                                         <>
                                             <Text
                                                 style={{
