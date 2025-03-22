@@ -9,6 +9,7 @@ import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
 
@@ -263,9 +264,7 @@ export default class CashuLightningAddressStore {
             return { results };
         } catch (error) {
             runInAction(() => {
-                // TODO ecash localize
-                this.error_msg =
-                    'Error connecting to service. Please try again later.';
+                this.error_msg = localeString('error.serviceConnection');
                 this.loading = false;
                 this.error = true;
             });
