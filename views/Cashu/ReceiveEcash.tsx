@@ -441,7 +441,8 @@ export default class ReceiveEcash extends React.Component<
             watchedInvoicePaid,
             watchedInvoicePaidAmt,
             cashuWallets,
-            preferredMintUrl
+            preferredMintUrl,
+            loadingMsg
         } = CashuStore;
         const { posStatus, settings } = SettingsStore;
         const loading = SettingsStore.loading || CashuStore.loading;
@@ -655,6 +656,20 @@ export default class ReceiveEcash extends React.Component<
                                 {(creatingInvoice || loading) && (
                                     <View style={{ marginTop: 40 }}>
                                         <LoadingIndicator />
+                                        {loadingMsg && (
+                                            <Text
+                                                style={{
+                                                    marginTop: 35,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book',
+                                                    fontSize: 16 / fontScale,
+                                                    color: themeColor('text'),
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                {loadingMsg}
+                                            </Text>
+                                        )}
                                     </View>
                                 )}
 
