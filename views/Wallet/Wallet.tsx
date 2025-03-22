@@ -590,7 +590,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         CashuLightningAddressStore.prepareToAutomaticallyAccept();
                     }
 
-                    console.log('about to push!');
                     LightningAddressStore.updatePushCredentials();
                 } catch (e) {
                     console.error('Cashu Lightning address error', e);

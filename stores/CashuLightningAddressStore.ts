@@ -365,6 +365,7 @@ export default class CashuLightningAddressStore {
 
                     if (localNotification) fireLocalNotification();
                     if (!skipStatus) this.status(true);
+                    return true;
                 } catch (error) {
                     this.error_msg = error?.toString();
                     runInAction(() => {
@@ -377,13 +378,17 @@ export default class CashuLightningAddressStore {
                 runInAction(() => {
                     this.redeeming = false;
                     this.error = true;
+                    // TODO ecash
                     this.error_msg = 'Quote not paid.';
                 });
+                return true;
             }
         } catch (e) {
             this.redeeming = false;
             this.error = true;
+            // TODO ecash
             this.error_msg = 'Error checking for quote payment.';
+            return true;
         }
     };
 
@@ -391,8 +396,8 @@ export default class CashuLightningAddressStore {
     public redeemAllOpenPayments = async (localNotification?: boolean) => {
         this.redeemingAll = true;
 
-        for (const item of this.paid) {
-            return await this.redeem(
+        for (const item of this.paid.reverse()) {
+            await this.redeem(
                 item.quote_id,
                 item.mint_url,
                 item.amount_msat,
