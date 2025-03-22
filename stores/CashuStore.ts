@@ -227,10 +227,7 @@ export default class CashuStore {
     };
 
     private getSeedString = () => {
-        const seedPhrase = this.settingsStore.seedPhrase;
-        const mnemonic = seedPhrase.join(' ');
-        const seed = bip39.mnemonicToSeedSync(mnemonic);
-        const bip39seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+        const bip39seed = this.getSeed();
         const bip39seedString = Base64Utils.base64ToHex(
             Base64Utils.bytesToBase64(bip39seed)
         );
@@ -440,6 +437,7 @@ export default class CashuStore {
         }
 
         runInAction(() => {
+            this.loadingMsg = undefined;
             this.loading = false;
         });
 
@@ -489,10 +487,7 @@ export default class CashuStore {
         for (let i = 0; i < this.mintUrls.length; i++) {
             const mintUrl = this.mintUrls[i];
             await new Promise(async (resolve) => {
-                const wallet = await this.initializeWallet(
-                    mintUrl,
-                    this.preferredMintUrl === mintUrl
-                );
+                const wallet = await this.initializeWallet(mintUrl);
                 resolve(wallet);
             });
         }
@@ -516,6 +511,10 @@ export default class CashuStore {
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
         this.error_msg = undefined;
+
+        if (!this.cashuWallets[this.preferredMintUrl].wallet) {
+            await this.initializeWallet(this.preferredMintUrl, true);
+        }
 
         try {
             const mintQuote = await this.cashuWallets[
@@ -628,8 +627,6 @@ export default class CashuStore {
             invoiceQuoteId
         );
 
-        console.log('QQuote', quote);
-
         const updatedInvoice = new CashuInvoice({
             ...quote,
             mintUrl
@@ -729,13 +726,17 @@ export default class CashuStore {
     };
 
     @action
-    public restoreMintProofs = async (mintURL: string) => {
+    public restoreMintProofs = async (mintUrl: string) => {
         try {
             this.restorationProgress = 0;
 
             console.log(RESTORE_PROOFS_EVENT_NAME, 'Loading mint keysets...');
 
-            const mint = this.cashuWallets[mintURL].wallet!!.mint;
+            if (!this.cashuWallets[mintUrl].wallet) {
+                await this.initializeWallet(mintUrl, true);
+            }
+
+            const mint = this.cashuWallets[mintUrl].wallet!!.mint;
             const allKeysets = await mint.getKeySets();
             const keysets = allKeysets.keysets;
 
@@ -773,7 +774,7 @@ export default class CashuStore {
                     highestCount = count;
                     // Update the counter for this keyset
                     console.log('SETTING COUNT', count + 1);
-                    await this.setMintCounter(mintURL, count + 1);
+                    await this.setMintCounter(mintUrl, count + 1);
                 }
 
                 const restoredAmount = sumProofsValue(restoredProofs);
@@ -983,6 +984,10 @@ export default class CashuStore {
             });
 
             const cashuWallet = this.cashuWallets[this.preferredMintUrl];
+
+            if (!cashuWallet.wallet) {
+                await this.initializeWallet(this.preferredMintUrl, true);
+            }
             const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
                 bolt11Invoice
             );
@@ -1056,6 +1061,11 @@ export default class CashuStore {
         this.loading = true;
 
         const mintUrl = this.preferredMintUrl;
+
+        if (!this.cashuWallets[mintUrl].wallet) {
+            await this.initializeWallet(mintUrl, true);
+        }
+
         const wallet = this.cashuWallets[mintUrl].wallet;
         let proofs = this.proofsToUse;
 

@@ -650,7 +650,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const {
             NodeInfoStore,
             BalanceStore,
-            CashuStore,
             SettingsStore,
             SyncStore,
             navigation
@@ -1018,9 +1017,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         loggedIn &&
                                         implementation
                                             ? implementation === 'embedded-lnd'
-                                                ? CashuStore.loadingMsg
-                                                    ? CashuStore.loadingMsg
-                                                    : isInExpressGraphSync
+                                                ? isInExpressGraphSync
                                                     ? localeString(
                                                           'views.Wallet.Wallet.expressGraphSync'
                                                       ).replace('Zeus', 'ZEUS')
