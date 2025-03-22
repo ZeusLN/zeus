@@ -107,7 +107,7 @@ export default class CashuLightningAddress extends React.Component<
 
     loadMints = () => {
         const { CashuStore } = this.props;
-        const { preferredMintUrl, mintUrls, cashuWallets } = CashuStore;
+        const { selectedMintUrl, mintUrls, cashuWallets } = CashuStore;
 
         const mintList: Array<MintItem> = mintUrls
             ? mintUrls.map((mintUrl) => {
@@ -120,7 +120,7 @@ export default class CashuLightningAddress extends React.Component<
 
         this.setState({
             mintList,
-            mintUrl: preferredMintUrl
+            mintUrl: selectedMintUrl
         });
     };
 

@@ -55,8 +55,8 @@ export default class Mint extends React.Component<MintProps, MintState> {
         const {
             addMint,
             removeMint,
-            setPreferredMint,
-            preferredMintUrl,
+            setSelectedMint,
+            selectedMintUrl,
             restorationProgress,
             restorationKeyset,
             cashuWallets,
@@ -67,10 +67,10 @@ export default class Mint extends React.Component<MintProps, MintState> {
 
         const mintInfo = mint._mintInfo || mint;
 
-        const isPreferredMint =
-            preferredMintUrl &&
+        const isselectedMint =
+            selectedMintUrl &&
             mint?.mintUrl &&
-            preferredMintUrl === mint?.mintUrl;
+            selectedMintUrl === mint?.mintUrl;
 
         const errorConnecting = cashuWallets[mint?.mintUrl]?.errorConnecting;
 
@@ -230,7 +230,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                 {localeString('general.errorConnecting')}
                             </Text>
                         )}
-                        {isPreferredMint && (
+                        {isselectedMint && (
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
@@ -239,7 +239,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     color: themeColor('highlight')
                                 }}
                             >
-                                {localeString('views.Cashu.Mint.preferredMint')}
+                                {localeString('views.Cashu.Mint.selectedMint')}
                             </Text>
                         )}
                         {mintInfo?.description && (
@@ -496,7 +496,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                             themeColor('background')
                                     }}
                                 >
-                                    {!isPreferredMint && (
+                                    {!isselectedMint && (
                                         <View
                                             style={{
                                                 width: '100%',
@@ -505,12 +505,12 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                         >
                                             <Button
                                                 title={localeString(
-                                                    'views.Cashu.Mint.setPreferred'
+                                                    'views.Cashu.Mint.setSelected'
                                                 ).toUpperCase()}
                                                 tertiary
                                                 noUppercase
                                                 onPress={async () => {
-                                                    await setPreferredMint(
+                                                    await setSelectedMint(
                                                         mint?.mintUrl
                                                     );
                                                 }}
