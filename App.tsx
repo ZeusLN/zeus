@@ -169,6 +169,12 @@ import Mint from './views/Cashu/Mint';
 import Mints from './views/Cashu/Mints';
 import AddMint from './views/Cashu/AddMint';
 
+// Cashu Lightning address
+import CashuLightningAddress from './views/Cashu/LightningAddress';
+import CashuLightningAddressInfo from './views/Cashu/LightningAddress/LightningAddressInfo';
+import CashuLightningAddressSettings from './views/Cashu/LightningAddress/LightningAddressSettings';
+import CashuChangeAddress from './views/Cashu/LightningAddress/ChangeAddress';
+
 // Chantools
 import Chantools from './views/Settings/EmbeddedNode/Chantools';
 import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
@@ -249,6 +255,7 @@ export default class App extends React.PureComponent {
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
                 CashuStore={Stores.cashuStore}
+                CashuLightningAddressStore={Stores.cashuLightningAddressStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -773,6 +780,30 @@ export default class App extends React.PureComponent {
                                                         name="LightningAddressSettings" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddressSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuLightningAddress" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuLightningAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuLightningAddressInfo" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuLightningAddressInfo
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuLightningAddressSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuLightningAddressSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuChangeAddress" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuChangeAddress
                                                         }
                                                     />
                                                     <Stack.Screen

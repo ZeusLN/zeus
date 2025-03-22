@@ -1528,10 +1528,10 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@cashu/cashu-ts@2.2.2":
-  version "2.2.2"
-  resolved "https://registry.yarnpkg.com/@cashu/cashu-ts/-/cashu-ts-2.2.2.tgz#26e57e75571a55dcb5d02e7b0e79609d3a2f1a59"
-  integrity sha512-s4DRaIZOh2MC0qi0G1Te4KfOzzw91EZiIVupssKDmaPSUbT1ggLonj5qyzB4OCpI7uZ4lDpnxh43xkRZyAqotw==
+"@cashu/cashu-ts@2.4.1":
+  version "2.4.1"
+  resolved "https://registry.yarnpkg.com/@cashu/cashu-ts/-/cashu-ts-2.4.1.tgz#7cdcfbc1c07d0de85e9bb6305b5735cafb26c939"
+  integrity sha512-9lDHP5GtWvC/mIDPRg5KdRQAsqoYYm93efPyfgDtRd9eW1BhWrzLuS0sN1WVkL9noAXCZoWjjpX8TElMXhpFhA==
   dependencies:
     "@cashu/crypto" "^0.3.4"
     "@noble/curves" "^1.3.0"

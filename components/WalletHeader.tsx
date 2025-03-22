@@ -17,6 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import AlertStore from '../stores/AlertStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
+import CashuLightningAddressStore from '../stores/CashuLightningAddressStore';
 import ModalStore from '../stores/ModalStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
@@ -46,6 +47,7 @@ import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
 import Sync from '../assets/images/SVG/Sync.svg';
 import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
+import Cashu from '../assets/images/SVG/Ecash.svg';
 
 import stores from '../stores/Stores';
 
@@ -84,6 +86,40 @@ const MailboxAnimated = () => {
             }}
         >
             <Mailbox />
+        </Animated.View>
+    );
+};
+
+const CashuMailbox = () => (
+    <Cashu fill={themeColor('highlight')} width={34.29} height={30} />
+);
+
+const CashuMailboxAnimated = () => {
+    let state = new Animated.Value(1);
+    Animated.loop(
+        Animated.sequence([
+            Animated.timing(state, {
+                toValue: 0,
+                duration: 500,
+                delay: 1000,
+                useNativeDriver: true
+            }),
+            Animated.timing(state, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true
+            })
+        ])
+    ).start();
+
+    return (
+        <Animated.View
+            style={{
+                alignSelf: 'center',
+                opacity: state
+            }}
+        >
+            <Cashu />
         </Animated.View>
     );
 };
@@ -200,6 +236,7 @@ interface WalletHeaderProps {
     ModalStore?: ModalStore;
     NodeInfoStore?: NodeInfoStore;
     LightningAddressStore?: LightningAddressStore;
+    CashuLightningAddressStore?: CashuLightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     navigation: StackNavigationProp<any, any>;
@@ -216,6 +253,7 @@ interface WalletHeaderState {
     'AlertStore',
     'ChannelsStore',
     'LightningAddressStore',
+    'CashuLightningAddressStore',
     'ModalStore',
     'SettingsStore',
     'NodeInfoStore',
@@ -258,6 +296,7 @@ export default class WalletHeader extends React.Component<
             NodeInfoStore,
             ChannelsStore,
             LightningAddressStore,
+            CashuLightningAddressStore,
             ModalStore,
             PosStore,
             SyncStore
@@ -267,6 +306,9 @@ export default class WalletHeader extends React.Component<
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
         const laLoading = LightningAddressStore?.loading;
+        const cashuPaid = CashuLightningAddressStore?.paid;
+        const cashuRedeemingAll = CashuLightningAddressStore!.redeemingAll;
+        const claLoading = CashuLightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
         const selectedNode: any =
@@ -499,12 +541,29 @@ export default class WalletHeader extends React.Component<
                                             { skipStatus: true }
                                         )
                                     }
-                                    style={{ left: 20 }}
+                                    style={{ marginLeft: 20 }}
                                 >
                                     {redeemingAll ? (
                                         <MailboxAnimated />
                                     ) : (
                                         <Mailbox />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                            {!loading && cashuPaid && cashuPaid.length > 0 && (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'CashuLightningAddress',
+                                            { skipStatus: true }
+                                        )
+                                    }
+                                    style={{ marginLeft: 20 }}
+                                >
+                                    {cashuRedeemingAll ? (
+                                        <CashuMailboxAnimated />
+                                    ) : (
+                                        <CashuMailbox />
                                     )}
                                 </TouchableOpacity>
                             )}
@@ -568,7 +627,8 @@ export default class WalletHeader extends React.Component<
                                 (stores.balanceStore.loadingBlockchainBalance ||
                                     stores.balanceStore
                                         .loadingLightningBalance ||
-                                    laLoading) && (
+                                    laLoading ||
+                                    claLoading) && (
                                     <View style={{ paddingRight: 15 }}>
                                         <LoadingIndicator size={35} />
                                     </View>
