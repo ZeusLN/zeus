@@ -119,7 +119,7 @@ const CashuMailboxAnimated = () => {
                 opacity: state
             }}
         >
-            <Cashu />
+            <CashuMailbox />
         </Animated.View>
     );
 };
