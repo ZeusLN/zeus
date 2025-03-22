@@ -62,6 +62,7 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 import FiatStore from '../../stores/FiatStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
+import CashuLightningAddressStore from '../../stores/CashuLightningAddressStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import LSPStore from '../../stores/LSPStore';
 import ModalStore from '../../stores/ModalStore';
@@ -108,6 +109,7 @@ interface WalletProps {
     LSPStore: LSPStore;
     NotesStore: NotesStore;
     ChannelBackupStore: ChannelBackupStore;
+    CashuLightningAddressStore: CashuLightningAddressStore;
     LightningAddressStore: LightningAddressStore;
     LnurlPayStore: LnurlPayStore;
 }
@@ -136,6 +138,7 @@ interface WalletState {
     'LnurlPayStore',
     'ChannelBackupStore',
     'LightningAddressStore',
+    'CashuLightningAddressStore',
     'NotesStore'
 )
 @observer
@@ -342,6 +345,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ChannelBackupStore,
             SyncStore,
             LightningAddressStore,
+            CashuLightningAddressStore,
             LnurlPayStore,
             NotesStore
         } = this.props;
@@ -370,6 +374,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             compactDb,
             recovery,
             lightningAddress,
+            cashuLightningAddress,
             embeddedTor,
             initialLoad
         } = settings;
@@ -390,6 +395,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             TransactionsStore.reset();
             SyncStore.reset();
             LightningAddressStore.reset();
+            CashuLightningAddressStore.reset();
             LSPStore.reset();
             ChannelBackupStore.reset();
             UTXOsStore.reset();
@@ -567,6 +573,27 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     }
                 } catch (e) {
                     console.error('Lightning address error', e);
+                }
+            }
+        }
+
+        if (
+            cashuLightningAddress.enabled &&
+            BackendUtils.supportsCashu() &&
+            !NodeInfoStore.testnet
+        ) {
+            if (connecting) {
+                try {
+                    await CashuLightningAddressStore.status();
+
+                    if (cashuLightningAddress.automaticallyAccept) {
+                        CashuLightningAddressStore.prepareToAutomaticallyAccept();
+                    }
+
+                    console.log('about to push!');
+                    LightningAddressStore.updatePushCredentials();
+                } catch (e) {
+                    console.error('Cashu Lightning address error', e);
                 }
             }
         }

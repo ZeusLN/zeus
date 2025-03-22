@@ -10,11 +10,12 @@ import {
     MeltQuoteState,
     Proof
 } from '@cashu/cashu-ts';
-import { getPubKeyFromPrivKey } from '@cashu/crypto/modules/mint';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import reject from 'lodash/reject';
+import { schnorr } from '@noble/curves/secp256k1';
+import { bytesToHex } from '@noble/hashes/utils';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -217,6 +218,25 @@ export default class CashuStore {
         return this.cashuWallets;
     };
 
+    private getSeed = () => {
+        const seedPhrase = this.settingsStore.seedPhrase;
+        const mnemonic = seedPhrase.join(' ');
+        const seed = bip39.mnemonicToSeedSync(mnemonic);
+        const bip39seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+        return bip39seed;
+    };
+
+    private getSeedString = () => {
+        const seedPhrase = this.settingsStore.seedPhrase;
+        const mnemonic = seedPhrase.join(' ');
+        const seed = bip39.mnemonicToSeedSync(mnemonic);
+        const bip39seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+        const bip39seedString = Base64Utils.base64ToHex(
+            Base64Utils.bytesToBase64(bip39seed)
+        );
+        return bip39seedString;
+    };
+
     @action
     public startWallet = async (
         mintUrl: string
@@ -231,19 +251,18 @@ export default class CashuStore {
             (ks) => ks.unit === 'sat'
         );
 
-        const seedPhrase = this.settingsStore.seedPhrase;
-        const mnemonic = seedPhrase.join(' ');
-        const seed = bip39.mnemonicToSeedSync(mnemonic);
-        const bip39seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+        const bip39seed = this.getSeed();
 
         let pubkey: string;
         const walletId = `${this.getLndDir()}==${mintUrl}`;
         if (!this.cashuWallets[mintUrl].pubkey) {
-            const pubkeyBytes = getPubKeyFromPrivKey(bip39seed);
-            pubkey = Base64Utils.base64ToHex(
-                Base64Utils.bytesToBase64(pubkeyBytes)
+            const privkey = Base64Utils.base64ToHex(
+                Base64Utils.bytesToBase64(bip39seed)
             );
 
+            pubkey = '02' + bytesToHex(schnorr.getPublicKey(privkey));
+
+            this.cashuWallets[mintUrl].pubkey = pubkey;
             await Storage.setItem(`${walletId}-pubkey`, pubkey);
         } else {
             pubkey = this.cashuWallets[mintUrl].pubkey;
@@ -594,12 +613,22 @@ export default class CashuStore {
     @action
     public checkInvoicePaid = async (
         quoteId?: string,
-        preferredMintUrl?: string
+        quoteMintUrl?: string,
+        lockedQuote?: boolean
     ) => {
-        const mintUrl = preferredMintUrl || this.preferredMintUrl;
+        const mintUrl = quoteMintUrl || this.preferredMintUrl;
+
+        if (!this.cashuWallets[mintUrl].wallet) {
+            await this.initializeWallet(mintUrl, true);
+        }
+
+        const invoiceQuoteId = quoteId || this.quoteId || '';
+
         const quote = await this.cashuWallets[mintUrl].wallet?.checkMintQuote(
-            quoteId || this.quoteId || ''
+            invoiceQuoteId
         );
+
+        console.log('QQuote', quote);
 
         const updatedInvoice = new CashuInvoice({
             ...quote,
@@ -623,10 +652,15 @@ export default class CashuStore {
                         mintUrl
                     ].wallet!!.mintProofs(
                         amtSat,
-                        quoteId || this.quoteId || '',
-                        {
-                            counter
-                        }
+                        lockedQuote ? quote : invoiceQuoteId,
+                        lockedQuote
+                            ? {
+                                  counter,
+                                  privateKey: this.getSeedString()
+                              }
+                            : {
+                                  counter
+                              }
                     );
                     success = true;
 

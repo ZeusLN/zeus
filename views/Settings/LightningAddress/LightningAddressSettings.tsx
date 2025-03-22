@@ -392,7 +392,8 @@ export default class LightningAddressSettings extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent',
                                 padding: 0,
-                                marginTop: 20
+                                marginTop: 20,
+                                marginBottom: 20
                             }}
                             onPress={() => navigation.navigate('ChangeAddress')}
                         >
@@ -413,7 +414,7 @@ export default class LightningAddressSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
-                        <View style={{ marginTop: 40, marginBottom: 20 }}>
+                        <View style={{ marginTop: 20, marginBottom: 20 }}>
                             <Button
                                 title={localeString(
                                     'views.Settings.LightningAddress.deleteAddress'
