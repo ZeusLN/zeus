@@ -542,10 +542,7 @@ export default class CashuPaymentRequest extends React.Component<
                                     )}
                                 </Text>
                                 <View style={{ marginTop: 10 }}>
-                                    <EcashMintPicker
-                                        hideAmount
-                                        navigation={navigation}
-                                    />
+                                    <EcashMintPicker navigation={navigation} />
                                 </View>
                             </View>
                             {requestAmount &&
