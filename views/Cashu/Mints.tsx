@@ -128,13 +128,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             index: number;
                         }) => {
                             const mintInfo = item._mintInfo || item;
-                            const isselectedMint =
+                            const isSelectedMint =
                                 selectedMintUrl &&
                                 mintInfo?.mintUrl &&
                                 selectedMintUrl === mintInfo?.mintUrl;
                             const errorConnecting = item.errorConnecting;
 
-                            let subTitle = isselectedMint
+                            let subTitle = isSelectedMint
                                 ? `${localeString('general.selected')} | ${
                                       item.mintUrl
                                   }`
@@ -184,7 +184,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                                 ? themeColor(
                                                                       'error'
                                                                   )
-                                                                : isselectedMint
+                                                                : isSelectedMint
                                                                 ? themeColor(
                                                                       'highlight'
                                                                   )

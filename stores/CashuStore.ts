@@ -16,6 +16,7 @@ import BigNumber from 'bignumber.js';
 import reject from 'lodash/reject';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
+import NDK, { NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -24,7 +25,7 @@ import CashuPayment from '../models/CashuPayment';
 import Storage from '../storage';
 
 import stores from './Stores';
-import SettingsStore from './SettingsStore';
+import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
@@ -51,6 +52,11 @@ interface Wallet {
     balanceSats: number;
     pubkey: string;
     errorConnecting: boolean;
+}
+
+interface MintRecommendation {
+    count: number;
+    url: string;
 }
 
 export default class CashuStore {
@@ -83,8 +89,11 @@ export default class CashuStore {
     @observable public proofsToUse?: Proof[];
     @observable public meltQuote?: MeltQuoteResponse;
     @observable public noteKey?: string;
+
+    @observable public mintRecommendations?: MintRecommendation[];
     @observable loadingFeeEstimate = false;
 
+    ndk: NDK;
     settingsStore: SettingsStore;
 
     constructor(settingsStore: SettingsStore) {
@@ -140,6 +149,42 @@ export default class CashuStore {
             newTotalBalance
         );
         return this.totalBalanceSats;
+    };
+
+    @action
+    public fetchMints = async () => {
+        this.loading = true;
+        this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
+        this.ndk.connect();
+
+        const filter: NDKFilter = { kinds: [38000 as NDKKind], limit: 2000 };
+        const events = await this.ndk.fetchEvents(filter);
+        let mintUrls: string[] = [];
+        events.forEach((event: any) => {
+            if (event.tagValue('k') == '38172' && event.tagValue('u')) {
+                const mintUrl = event.tagValue('u');
+                if (
+                    typeof mintUrl === 'string' &&
+                    mintUrl.length > 0 &&
+                    mintUrl.startsWith('https://')
+                ) {
+                    mintUrls.push(mintUrl);
+                }
+            }
+        });
+        // Count the number of times each mint URL appears
+        const mintUrlsSet = new Set(mintUrls);
+        const mintUrlsArray = Array.from(mintUrlsSet);
+        const mintUrlsCounted = mintUrlsArray.map((url) => {
+            return {
+                url,
+                count: mintUrls.filter((u) => u === url).length
+            };
+        });
+        mintUrlsCounted.sort((a, b) => b.count - a.count);
+        this.mintRecommendations = mintUrlsCounted;
+        this.loading = false;
+        return mintUrlsCounted;
     };
 
     @action
