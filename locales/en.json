@@ -1408,6 +1408,8 @@
     "cashu.mints": "Mints",
     "cashu.mintUrl": "Mint URL",
     "cashu.proofs": "Proofs",
+    "cashu.tapToConfigure": "No mints found. Tap to configure",
+    "cashu.tapToConfigure.short": "Tap to configure",
     "cashu.lightningAddress": "Cashu Lightning address",
     "views.Cashu.AddMint.title": "Add mint",
     "views.Cashu.AddMint.discover": "Discover mints",

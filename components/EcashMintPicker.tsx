@@ -6,11 +6,12 @@ import { inject, observer } from 'mobx-react';
 import Amount from './Amount';
 import { Row } from './layout/Row';
 
-import CashuStore from './../stores/CashuStore';
+import CashuStore from '../stores/CashuStore';
 
-import { themeColor } from './../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
 
-import CaretRight from './../assets/images/SVG/Caret Right.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 
 interface EcashMintPickerProps {
     title?: string;
@@ -33,12 +34,12 @@ export default class EcashMintPicker extends React.Component<
         let mints: any = {};
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
-            const mintInfo = wallet.mintInfo;
+            const mintInfo = wallet?.mintInfo;
             mints[mintUrl] = {
                 ...mintInfo,
                 mintUrl,
-                mintBalance: wallet.balanceSats,
-                errorConnecting: wallet.errorConnecting
+                mintBalance: wallet?.balanceSats,
+                errorConnecting: wallet?.errorConnecting
             };
         });
 
@@ -76,7 +77,9 @@ export default class EcashMintPicker extends React.Component<
                                 marginRight: 10
                             }}
                         >
-                            {mints[selectedMintUrl]?.name}
+                            {mints[selectedMintUrl]?.name
+                                ? mints[selectedMintUrl].name
+                                : localeString('cashu.tapToConfigure.short')}
                         </Text>
                         {!hideAmount && (
                             <View

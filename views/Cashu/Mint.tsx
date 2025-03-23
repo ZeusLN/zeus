@@ -414,7 +414,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             );
                         })}
                 </ScrollView>
-                {mint?.mintUrl && !loading && (
+                {mint?.mintUrl && !loading && !restorationProgress && (
                     <>
                         {lookup ? (
                             <View

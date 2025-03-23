@@ -55,6 +55,7 @@ interface LayerBalancesProps {
     locked?: boolean;
     consolidated?: boolean;
     editMode?: boolean;
+    needsConfig?: boolean;
     refreshing?: boolean;
 }
 
@@ -69,6 +70,7 @@ type DataRow = {
     count?: number;
     watchOnly?: boolean;
     custodial?: boolean;
+    needsConfig?: boolean;
     hidden?: boolean;
 };
 
@@ -142,7 +144,7 @@ const Row = ({ item }: { item: DataRow }) => {
                                 {item.subtitle}
                             </Text>
                         )}
-                        {item.custodial && (
+                        {item.custodial && !item.needsConfig && (
                             <View style={{ marginTop: 5 }}>
                                 <Pill
                                     title={localeString(
@@ -155,15 +157,32 @@ const Row = ({ item }: { item: DataRow }) => {
                                 />
                             </View>
                         )}
+                        {item.needsConfig && (
+                            <View style={{ marginTop: 5 }}>
+                                <Pill
+                                    title={localeString(
+                                        'cashu.tapToConfigure'
+                                    ).toUpperCase()}
+                                    textColor={themeColor('highlight')}
+                                    borderColor={themeColor('highlight')}
+                                    width={'110%'}
+                                    height={25}
+                                />
+                            </View>
+                        )}
                     </View>
                 </View>
 
                 {!moreAccounts ? (
-                    <Amount
-                        sats={item.balance}
-                        sensitive
-                        colorOverride={themeColor('buttonText')}
-                    />
+                    <>
+                        {!item.needsConfig && (
+                            <Amount
+                                sats={item.balance}
+                                sensitive
+                                colorOverride={themeColor('buttonText')}
+                            />
+                        )}
+                    </>
                 ) : (
                     <Text
                         style={{
@@ -233,6 +252,7 @@ const SwipeableRow = ({
                 value={value}
                 amount={amount}
                 locked={locked}
+                needsConfig={stores.cashuStore.mintUrls.length === 0}
             >
                 <Row item={item} />
             </EcashSwipeableRow>
@@ -312,7 +332,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
 
         const { settings } = SettingsStore!;
         const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
-        const { totalBalanceSats } = CashuStore!;
+        const { totalBalanceSats, mintUrls } = CashuStore!;
 
         const otherAccounts = editMode
             ? this.props.UTXOsStore?.accounts
@@ -340,6 +360,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             DATA.push({
                 layer: 'Ecash',
                 custodial: true,
+                needsConfig: mintUrls?.length === 0,
                 balance: Number(totalBalanceSats).toFixed(3)
             });
         }
