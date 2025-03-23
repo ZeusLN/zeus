@@ -844,15 +844,10 @@ export default class CashuStore {
     restoreKeyset = async (mint: CashuMint, keyset: any) => {
         try {
             const keys = await mint.getKeys(keyset.id);
-
-            const seedPhrase = this.settingsStore.seedPhrase;
-            const mnemonic = seedPhrase.join(' ');
-            const seed = bip39.mnemonicToSeedSync(mnemonic);
-
             const mintInfo = await mint.getInfo();
 
             const wallet = new CashuWallet(mint, {
-                bip39seed: new Uint8Array(seed),
+                bip39seed: this.getSeed(),
                 mintInfo,
                 unit: 'sat',
                 keys: keys.keysets,
