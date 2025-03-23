@@ -140,6 +140,7 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                             backgroundColor: themeColor('secondary')
                         }}
                         autoCapitalize="none"
+                        keyboardType="visible-password"
                         platform="default"
                         showLoading={false}
                         round={false}
