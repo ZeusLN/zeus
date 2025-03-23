@@ -44,7 +44,8 @@ class ActivityFilterUtils {
                     !(
                         (activity instanceof Transaction &&
                             Number(activity.getAmount) <= 0) ||
-                        activity instanceof Payment
+                        activity instanceof Payment ||
+                        activity instanceof CashuPayment
                     )
             );
         }
@@ -55,14 +56,17 @@ class ActivityFilterUtils {
                     !(
                         (activity instanceof Transaction &&
                             Number(activity.getAmount) >= 0) ||
-                        (activity instanceof Invoice && activity.isPaid)
+                        (activity instanceof Invoice && activity.isPaid) ||
+                        (activity instanceof CashuInvoice && activity.isPaid)
                     )
             );
         }
 
         if (filter.unpaid == false) {
             filteredActivity = filteredActivity.filter(
-                (activity) => !(activity instanceof Invoice && !activity.isPaid)
+                (activity) =>
+                    !(activity instanceof Invoice && !activity.isPaid) &&
+                    !(activity instanceof CashuInvoice && !activity.isPaid)
             );
         }
 
