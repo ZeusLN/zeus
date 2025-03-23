@@ -333,7 +333,9 @@ export default class CashuLightningAddress extends React.Component<
                                             {mintsNotConfigured ? (
                                                 <View style={{ marginTop: 20 }}>
                                                     <Button
-                                                        title="No mints found. Tap to configure"
+                                                        title={localeString(
+                                                            'cashu.tapToConfigure'
+                                                        )}
                                                         warning
                                                         onPress={() =>
                                                             navigation.navigate(

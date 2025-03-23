@@ -37,6 +37,7 @@ interface EcashSwipeableRowProps {
     hidden?: boolean;
     children?: React.ReactNode;
     disabled?: boolean;
+    needsConfig?: boolean;
     SyncStore?: SyncStore;
 }
 
@@ -240,11 +241,15 @@ export default class EcashSwipeableRow extends Component<
             lightning,
             value,
             locked,
-            hidden,
             disabled,
-            SyncStore
+            hidden,
+            needsConfig,
+            SyncStore,
+            navigation
         } = this.props;
+
         const { isSyncing } = SyncStore!;
+
         if (isSyncing) {
             return (
                 <TouchableOpacity
@@ -279,6 +284,7 @@ export default class EcashSwipeableRow extends Component<
                     {children}
                 </View>
             );
+
         return (
             <Swipeable
                 ref={this.updateRef}
@@ -291,9 +297,14 @@ export default class EcashSwipeableRow extends Component<
             >
                 <TouchableOpacity
                     onPress={() =>
-                        value ? this.fetchLnInvoice() : this.open()
+                        needsConfig
+                            ? navigation.navigate('Mints')
+                            : value
+                            ? this.fetchLnInvoice()
+                            : this.open()
                     }
                     activeOpacity={1}
+                    style={{ opacity: needsConfig ? 0.4 : 1 }}
                 >
                     {children}
                 </TouchableOpacity>

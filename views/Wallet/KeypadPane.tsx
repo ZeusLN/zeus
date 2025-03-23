@@ -15,6 +15,7 @@ import { getSatAmount } from '../../components/AmountInput';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 
+import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -31,6 +32,7 @@ import {
 
 interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
+    CashuStore?: CashuStore;
     ChannelsStore?: ChannelsStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
@@ -46,7 +48,13 @@ interface KeypadPaneState {
     ecashMode: boolean;
 }
 
-@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'UnitsStore')
+@inject(
+    'CashuStore',
+    'ChannelsStore',
+    'NodeInfoStore',
+    'SettingsStore',
+    'UnitsStore'
+)
 @observer
 export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
@@ -273,7 +281,8 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     render() {
-        const { UnitsStore, SettingsStore, navigation } = this.props;
+        const { CashuStore, UnitsStore, SettingsStore, navigation } =
+            this.props;
         const {
             amount,
             needInbound,
@@ -288,6 +297,8 @@ export default class KeypadPane extends React.PureComponent<
             inputRange: [0, 1],
             outputRange: [themeColor('text'), 'red']
         });
+
+        const noMints = CashuStore?.mintUrls.length === 0;
 
         return (
             <View style={{ flex: 1 }}>
@@ -520,6 +531,7 @@ export default class KeypadPane extends React.PureComponent<
                                         );
                                     }}
                                     buttonStyle={{ height: 40 }}
+                                    disabled={ecashMode && noMints}
                                 />
                             </View>
                             <View style={{ width: '20%' }}>
@@ -545,6 +557,7 @@ export default class KeypadPane extends React.PureComponent<
                                         );
                                     }}
                                     buttonStyle={{ height: 40 }}
+                                    disabled={ecashMode && noMints}
                                 />
                             </View>
                             <View style={{ width: '40%' }}>
@@ -559,7 +572,8 @@ export default class KeypadPane extends React.PureComponent<
                                     }}
                                     buttonStyle={{ height: 40 }}
                                     disabled={
-                                        !BackendUtils.supportsLightningSends()
+                                        !BackendUtils.supportsLightningSends() ||
+                                        (ecashMode && noMints)
                                     }
                                 />
                             </View>
