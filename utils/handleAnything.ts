@@ -5,6 +5,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import stores from '../stores/Stores';
 import { doTorRequest, RequestMethod } from './TorUtils';
 import AddressUtils from './AddressUtils';
+import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import NodeUriUtils from './NodeUriUtils';
 import { localeString } from './LocaleUtils';
@@ -226,10 +227,7 @@ const handleAnything = async (
         AddressUtils.isValidLightningPaymentRequest(value || lightning)
     ) {
         if (isClipboardValue) return true;
-        if (
-            BackendUtils.supportsCashu() &&
-            settingsStore?.settings?.ecash?.enableCashu
-        ) {
+        if (ecash) {
             return [
                 'ChoosePaymentMethod',
                 {
@@ -728,6 +726,15 @@ const handleAnything = async (
             'ImportAccount',
             {
                 extended_public_key: value
+            }
+        ];
+    } else if (ecash && CashuUtils.isValidCashuToken(value)) {
+        const decoded = CashuUtils.decodeCashuToken(value);
+        return [
+            'CashuToken',
+            {
+                token: value,
+                decoded
             }
         ];
     } else {

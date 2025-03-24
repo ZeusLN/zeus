@@ -36,7 +36,7 @@ export default class Proofs extends React.Component<ProofsProps, ProofsState> {
             const { wallet } = cashuWallets[mintUrl];
             const mintProofs = cloneDeep(cashuWallets[mintUrl].proofs);
             mintProofs.forEach((proof: any) => {
-                proof.mint = wallet.mintInfo?.name || mintUrl;
+                proof.mint = wallet?.mintInfo?.name || mintUrl;
             });
             allProofs.push(...mintProofs);
         });

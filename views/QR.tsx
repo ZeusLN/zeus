@@ -116,6 +116,8 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                             this.props.SettingsStore?.settings?.invoices
                                 ?.displayAmountOnInvoice || false
                         }
+                        showShare={true}
+                        iconOnly={true}
                     />
                 </View>
             </Screen>

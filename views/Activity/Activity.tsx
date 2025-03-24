@@ -42,6 +42,7 @@ import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
 import CashuInvoice from '../../models/CashuInvoice';
 import CashuPayment from '../../models/CashuPayment';
+import CashuToken from '../../models/CashuToken';
 import ActivityToCsv from './ActivityToCsv';
 
 interface ActivityProps {
@@ -121,6 +122,24 @@ const ActivityListItem = React.memo(
                             {PrivacyUtils.sensitiveValue(
                                 keysendMessageOrMemo
                             )?.toString()}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item instanceof CashuToken) {
+            displayName = item.received
+                ? localeString('views.Activity.youReceived')
+                : localeString('views.Activity.youSent');
+            const memo = item.getMemo;
+            subTitle = (
+                <Text>
+                    {localeString('cashu.token')}
+                    {memo ? ': ' : ''}
+                    {memo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {PrivacyUtils.sensitiveValue(memo)?.toString()}
                         </Text>
                     ) : (
                         ''
@@ -450,6 +469,10 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.CashuPayment.title'))
             return 'warning';
 
+        if (item.model === localeString('cashu.token')) {
+            return item.sent ? 'warning' : 'success';
+        }
+
         if (item.model === localeString('views.Invoice.title')) {
             if (item.isExpired && !item.isPaid) {
                 return 'text';
@@ -492,6 +515,9 @@ export default class Activity extends React.PureComponent<
         }
         if (item.model === localeString('views.CashuPayment.title')) {
             navigation.navigate('CashuPayment', { payment: item });
+        }
+        if (item.model === localeString('cashu.token')) {
+            navigation.navigate('CashuToken', { decoded: item });
         }
         if (item.model === localeString('general.transaction')) {
             navigation.navigate('Transaction', { transaction: item });
