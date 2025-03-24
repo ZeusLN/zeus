@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+    DimensionValue,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { themeColor } from './../utils/ThemeUtils';
 
 interface PillProps {
@@ -8,8 +14,8 @@ interface PillProps {
     borderColor?: string;
     borderWidth?: number;
     backgroundColor?: string;
-    width?: number | string;
-    height?: number;
+    width?: DimensionValue;
+    height?: DimensionValue;
     onPress?: () => void;
 }
 

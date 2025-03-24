@@ -649,6 +649,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const {
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             SettingsStore,
             SyncStore,
             navigation
@@ -694,6 +695,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
                         BalanceStore={BalanceStore}
+                        CashuStore={CashuStore}
                         SettingsStore={SettingsStore}
                         SyncStore={SyncStore}
                     />

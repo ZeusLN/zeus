@@ -5,6 +5,7 @@ import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
+import CashuToken from '../models/CashuToken';
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -33,7 +34,8 @@ class ActivityFilterUtils {
                 (activity) =>
                     !(
                         activity instanceof CashuInvoice ||
-                        activity instanceof CashuPayment
+                        activity instanceof CashuPayment ||
+                        activity instanceof CashuToken
                     )
             );
         }
@@ -45,7 +47,8 @@ class ActivityFilterUtils {
                         (activity instanceof Transaction &&
                             Number(activity.getAmount) <= 0) ||
                         activity instanceof Payment ||
-                        activity instanceof CashuPayment
+                        activity instanceof CashuPayment ||
+                        (activity instanceof CashuToken && activity.sent)
                     )
             );
         }
@@ -57,7 +60,8 @@ class ActivityFilterUtils {
                         (activity instanceof Transaction &&
                             Number(activity.getAmount) >= 0) ||
                         (activity instanceof Invoice && activity.isPaid) ||
-                        (activity instanceof CashuInvoice && activity.isPaid)
+                        (activity instanceof CashuInvoice && activity.isPaid) ||
+                        (activity instanceof CashuToken && activity.received)
                     )
             );
         }
