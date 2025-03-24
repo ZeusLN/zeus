@@ -22,7 +22,7 @@ import Switch from '../../components/Switch';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-import SwapStore, { HOST } from '../../stores/SwapStore';
+import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import EncryptedStorage from 'react-native-encrypted-storage';
 
@@ -68,12 +68,11 @@ export default class RefundSwap extends React.Component<
         swapData: any,
         lockupTransaction: any,
         fee: any,
-        endpoint: string,
         destinationAddress: string
     ): Promise<void> => {
         try {
             const txid = await createRefundTransaction({
-                endpoint: endpoint.replace('/v2', ''),
+                endpoint: swapData.endpoint.replace('/v2', ''),
                 swapId: swapData.id,
                 claimLeaf: swapData.swapTree.claimLeaf.output,
                 refundLeaf: swapData.swapTree.refundLeaf.output,
@@ -260,7 +259,6 @@ export default class RefundSwap extends React.Component<
                                 swapData,
                                 lockupTransaction,
                                 fee,
-                                HOST,
                                 destinationAddress
                             );
 
