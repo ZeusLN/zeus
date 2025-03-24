@@ -16,6 +16,7 @@ import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
+import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -362,6 +363,44 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                 </TouchableOpacity>
                             </View>
                         )}
+
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('NodeConfigExportImport')
+                            }
+                        >
+                            <View style={styles.icon}>
+                                <ExportImportIcon
+                                    stroke={themeColor('text')}
+                                    width={18}
+                                    height={18}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Tools.nodeConfigExportImport.title'
+                                )}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
                     {BackendUtils.supportsDevTools() && (
                         <View
