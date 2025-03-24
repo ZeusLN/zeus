@@ -299,7 +299,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             >
                                 <View style={styles.icon}>
                                     <Icon
-                                        name="download"
+                                        name="upload"
                                         type="feather"
                                         color={themeColor('text')}
                                         underlayColor="transparent"
