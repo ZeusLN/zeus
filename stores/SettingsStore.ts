@@ -277,6 +277,10 @@ export const SWAP_HOST_KEYS_MAINNET = [
         value: 'https://api.middleway.space/v2'
     },
     {
+        key: 'Eldamar Swaps',
+        value: 'https://boltz-api.eldamar.icu/v2'
+    },
+    {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom'
