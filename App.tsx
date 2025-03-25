@@ -169,6 +169,7 @@ import Mint from './views/Cashu/Mint';
 import Mints from './views/Cashu/Mints';
 import AddMint from './views/Cashu/AddMint';
 import CashuToken from './views/Cashu/CashuToken';
+import MintToken from './views/Cashu/MintToken';
 
 // Cashu Lightning address
 import CashuLightningAddress from './views/Cashu/LightningAddress';
@@ -1004,6 +1005,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="CashuToken" // @ts-ignore:next-line
                                                         component={CashuToken}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="MintToken" // @ts-ignore:next-line
+                                                        component={MintToken}
                                                     />
                                                     <Stack.Screen
                                                         name="CashuPaymentRequest" // @ts-ignore:next-line

@@ -131,7 +131,9 @@ const ActivityListItem = React.memo(
         } else if (item instanceof CashuToken) {
             displayName = item.received
                 ? localeString('views.Activity.youReceived')
-                : localeString('views.Activity.youSent');
+                : item.spent
+                ? localeString('views.Activity.youSent')
+                : localeString('general.unspent');
             const memo = item.getMemo;
             subTitle = (
                 <Text>
@@ -470,7 +472,11 @@ export default class Activity extends React.PureComponent<
             return 'warning';
 
         if (item.model === localeString('cashu.token')) {
-            return item.sent ? 'warning' : 'success';
+            return item.sent
+                ? item.spent
+                    ? 'warning'
+                    : 'highlight'
+                : 'success';
         }
 
         if (item.model === localeString('views.Invoice.title')) {

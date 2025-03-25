@@ -357,7 +357,9 @@ export default class ReceiveEcash extends React.Component<
         const { CashuStore, PosStore } = this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
-        const { setWatchedInvoicePaid, checkInvoicePaid } = CashuStore;
+        const { setWatchedInvoicePaid, checkInvoicePaid, quoteId } = CashuStore;
+
+        if (!quoteId) return;
 
         this.lnInterval = setInterval(() => {
             checkInvoicePaid().then(
@@ -609,13 +611,6 @@ export default class ReceiveEcash extends React.Component<
                             keyboardShouldPersistTaps="handled"
                             keyboardDismissMode="on-drag"
                         >
-                            {creatingInvoiceError && (
-                                <ErrorMessage
-                                    message={localeString(
-                                        'views.Receive.errorCreate'
-                                    )}
-                                />
-                            )}
                             {error_msg && <ErrorMessage message={error_msg} />}
 
                             <View>

@@ -9,7 +9,8 @@ import {
     MeltQuoteResponse,
     MeltQuoteState,
     MintQuoteResponse,
-    Proof
+    Proof,
+    getEncodedToken
 } from '@cashu/cashu-ts';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -76,6 +77,8 @@ export default class CashuStore {
     @observable public loading = false;
     @observable public creatingInvoice = false;
     @observable public creatingInvoiceError = false;
+    @observable public mintingToken = false;
+    @observable public mintingTokenError = false;
     @observable public watchedInvoicePaid = false;
     @observable public watchedInvoicePaidAmt?: number | string;
     @observable public restorationProgress?: number;
@@ -118,6 +121,8 @@ export default class CashuStore {
     @action
     public clearToken = () => {
         this.errorAddingMint = false;
+        this.mintingTokenError = false;
+        this.error_msg = undefined;
     };
 
     @action
@@ -1105,14 +1110,19 @@ export default class CashuStore {
         wallet: CashuWallet,
         amountToPay: number,
         proofs: Proof[],
-        currentCounter: number
+        currentCounter: number,
+        swap?: boolean
     ) => {
         try {
-            const { keep: proofsToKeep, send: proofsToSend } =
-                await wallet.send(amountToPay, proofs, {
-                    counter: currentCounter,
-                    includeFees: true
-                });
+            const { keep: proofsToKeep, send: proofsToSend } = swap
+                ? await wallet.swap(amountToPay, proofs, {
+                      counter: currentCounter,
+                      includeFees: true
+                  })
+                : await wallet.send(amountToPay, proofs, {
+                      counter: currentCounter,
+                      includeFees: true
+                  });
 
             const existingProofsIds = proofs.map((p) => p.secret);
             const newKeepProofsCount = proofsToKeep.filter(
@@ -1276,6 +1286,50 @@ export default class CashuStore {
     };
 
     @action
+    public checkTokenSpent = async (decoded: CashuToken) => {
+        const { mint } = decoded;
+        if (!this.cashuWallets[mint].wallet) {
+            await this.initializeWallet(mint, true);
+        }
+
+        const wallet = this.cashuWallets[mint].wallet;
+
+        const states = await wallet!!.checkProofsStates(decoded.proofs);
+
+        let alreadySpent = false;
+        states.forEach((state) => {
+            if (alreadySpent) return;
+            if (state.state !== 'UNSPENT') {
+                alreadySpent = true;
+            }
+        });
+
+        return alreadySpent;
+    };
+
+    @action
+    public markTokenSpent = async (decoded: CashuToken) => {
+        // delete old instance of token
+        this.sentTokens = this.sentTokens?.filter(
+            (item) => item.encodedToken !== decoded.encodedToken
+        );
+
+        const updatedToken = new CashuToken({
+            ...decoded,
+            spent: true
+        });
+
+        // save new instance of token
+        this.sentTokens?.push(updatedToken);
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-sent-tokens`,
+            this.sentTokens
+        );
+
+        return updatedToken;
+    };
+
+    @action
     public claimToken = async (
         encodedToken: string,
         decoded: CashuToken
@@ -1286,25 +1340,18 @@ export default class CashuStore {
             await this.initializeWallet(mintUrl, true);
         }
 
-        const wallet = this.cashuWallets[mintUrl].wallet;
-        const counter =
-            this.cashuWallets[mintUrl].counter + decoded.proofs.length;
         try {
-            const states = await wallet!!.checkProofsStates(decoded.proofs);
-
-            let alreadySpent = false;
-            states.forEach((state) => {
-                if (alreadySpent) return;
-                if (state.state !== 'UNSPENT') {
-                    alreadySpent = true;
-                }
-            });
+            const alreadySpent = await this.checkTokenSpent(decoded);
             if (alreadySpent) {
                 return {
                     success: false,
                     errorMessage: localeString('stores.CashuStore.alreadySpent')
                 };
             }
+
+            const wallet = this.cashuWallets[mintUrl].wallet;
+            const counter =
+                this.cashuWallets[mintUrl].counter + decoded.proofs.length;
 
             const newProofs = await wallet!!.receive(encodedToken, { counter });
             const amtSat = CashuUtils.sumProofsValue(newProofs);
@@ -1353,6 +1400,94 @@ export default class CashuStore {
                 success: false,
                 errorMessage: localeString('stores.CashuStore.claimError')
             };
+        }
+    };
+
+    @action
+    public mintToken = async ({
+        memo,
+        value
+    }: {
+        memo: string;
+        value: string;
+    }): Promise<{ token: string; decoded: CashuToken } | undefined> => {
+        runInAction(() => {
+            this.mintingToken = true;
+            this.mintingTokenError = false;
+            this.error_msg = undefined;
+        });
+
+        const mintUrl = this.selectedMintUrl;
+
+        if (!this.cashuWallets[mintUrl].wallet) {
+            await this.initializeWallet(mintUrl, true);
+        }
+
+        const { wallet, proofs, counter } = this.cashuWallets[mintUrl];
+
+        const { proofsToUse } = this.getProofsToUse(proofs, Number(value));
+
+        try {
+            const { proofsToSend, proofsToKeep, newCounterValue } =
+                await this.getSpendingProofsWithPreciseCounter(
+                    wallet!!,
+                    Number(value),
+                    proofsToUse!!,
+                    counter + proofsToUse.length + 1,
+                    true
+                );
+
+            if (proofsToKeep.length) {
+                await this.addMintProofs(mintUrl, proofsToKeep);
+            }
+
+            await this.setMintCounter(mintUrl, newCounterValue + 1);
+
+            await this.removeMintProofs(mintUrl, proofsToSend);
+
+            // update balances
+            await this.setTotalBalance(this.totalBalanceSats - Number(value));
+            await this.setMintBalance(
+                mintUrl,
+                this.cashuWallets[mintUrl].balanceSats - Number(value)
+            );
+
+            const tokenObj = {
+                mint: mintUrl,
+                proofs: proofsToSend,
+                memo,
+                unit: 'sat'
+            };
+            const token = getEncodedToken(tokenObj);
+            const decoded = new CashuToken({
+                ...tokenObj,
+                sent: true,
+                encodedToken: token,
+                created_at: Date.now() / 1000,
+                spent: false
+            });
+
+            // record received token activity
+            this.sentTokens?.push(decoded);
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-sent-tokens`,
+                this.sentTokens
+            );
+
+            runInAction(() => {
+                this.mintingToken = false;
+            });
+
+            return { token, decoded };
+        } catch (e) {
+            console.log('Cashu mintToken err', e);
+            runInAction(() => {
+                this.mintingTokenError = true;
+                this.mintingToken = false;
+                this.error_msg = localeString(
+                    'stores.CashuStore.errorMintingToken'
+                );
+            });
         }
     };
 }

@@ -6,6 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';
+import stores from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -46,28 +47,43 @@ export default class CashuInvoiceView extends React.Component<
 
     async componentDidMount() {
         const { CashuStore, navigation, route } = this.props;
+        const { checkInvoicePaid, initializeWallet, cashuWallets } =
+            CashuStore!!;
         const invoice = route.params?.invoice;
+        const { mintUrl, quote, getNote, isPaid } = invoice;
+
         navigation.addListener('focus', () => {
-            const note = invoice.getNote;
+            const note = getNote;
             this.setState({ storedNote: note });
         });
 
-        if (!invoice.isPaid) {
+        if (!isPaid) {
             console.log('invoice not paid last time checked, checking...', {
-                quote: invoice.quote,
-                mint: invoice.mintUrl
+                quote,
+                mint: mintUrl
             });
 
-            const result = await CashuStore?.checkInvoicePaid(
-                invoice.quote,
-                invoice.mintUrl
-            );
-
-            if (result?.isPaid) {
-                this.setState({
-                    updatedInvoice: result?.updatedInvoice
-                });
+            if (!cashuWallets[mintUrl].wallet) {
+                await initializeWallet(mintUrl, true);
             }
+
+            // Set up a periodic check every 5 seconds
+            const checkInterval = setInterval(async () => {
+                const result = await checkInvoicePaid(quote, mintUrl);
+
+                if (result?.isPaid) {
+                    console.log('Invoice paid, stopping check...');
+                    this.setState({
+                        updatedInvoice: result?.updatedInvoice
+                    });
+                    clearInterval(checkInterval); // Stop checking once paid
+                    stores.activityStore.getActivityAndFilter(
+                        stores.settingsStore.settings.locale
+                    );
+                } else {
+                    console.log('Invoice not paid, checking again...');
+                }
+            }, 5000);
         }
     }
 

@@ -15,6 +15,7 @@ export default class CashuToken extends BaseModel {
     public unit: string;
     public received?: boolean;
     public sent?: boolean;
+    public spent?: boolean; // only for sent tokens
     public encodedToken?: string;
     public proofs: Proof[];
     public created_at?: number;
