@@ -256,11 +256,13 @@ export default class CustodialWalletWarning extends React.Component<
                                     }
                                     containerStyle={{
                                         backgroundColor: 'transparent',
-                                        borderWidth: 0
+                                        borderWidth: 0,
+                                        width: '100%'
                                     }}
                                     textStyle={{
                                         ...styles.text,
-                                        color: themeColor('text')
+                                        color: themeColor('text'),
+                                        flex: 1
                                     }}
                                 />
                             ))}
@@ -288,6 +290,7 @@ export default class CustodialWalletWarning extends React.Component<
                         </View>
                     </View>
                 </Modal>
+
                 <Button
                     title={localeString(
                         'views.Settings.CustodialWalletWarning.dismissWarning'
