@@ -38,7 +38,9 @@ export default class CashuToken extends BaseModel {
     }
 
     @computed public get getDisplayTime(): string {
-        return DateTimeUtils.listFormattedDate(this.getTimestamp);
+        return this.getTimestamp
+            ? DateTimeUtils.listFormattedDate(this.getTimestamp)
+            : '';
     }
 
     @computed public get getDisplayTimeOrder(): string {
