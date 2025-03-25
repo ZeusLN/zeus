@@ -110,7 +110,8 @@ export default class CashuTokenView extends React.Component<
             received,
             sent,
             spent,
-            encodedToken
+            encodedToken,
+            getDisplayTime
         } = decoded;
         const token = route.params?.token || encodedToken;
 
@@ -219,6 +220,18 @@ export default class CashuTokenView extends React.Component<
                                     'views.Cashu.CashuToken.proofCount'
                                 )}
                                 value={proofs.length}
+                                sensitive
+                            />
+                        )}
+
+                        {getDisplayTime && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    sent
+                                        ? 'views.Invoice.creationDate'
+                                        : 'views.Invoice.settleDate'
+                                )}
+                                value={getDisplayTime}
                                 sensitive
                             />
                         )}
