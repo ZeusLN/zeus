@@ -5,6 +5,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import CashuStore from '../../stores/CashuStore';
+import stores from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -32,6 +33,7 @@ interface CashuTokenProps {
 }
 
 interface CashuTokenState {
+    updatedToken?: CashuToken;
     success: boolean;
     errorMessage: string;
 }
@@ -43,20 +45,61 @@ export default class CashuTokenView extends React.Component<
     CashuTokenState
 > {
     state = {
+        updatedToken: undefined,
         success: false,
         errorMessage: ''
     };
 
-    UNSAFE_componentWillMount(): void {
-        this.props.CashuStore!!.clearToken();
+    async componentDidMount() {
+        const { route, CashuStore } = this.props;
+        const {
+            checkTokenSpent,
+            markTokenSpent,
+            clearToken,
+            initializeWallet,
+            cashuWallets
+        } = CashuStore!!;
+
+        clearToken();
+        const decoded = route.params?.decoded;
+        const { spent, mint } = decoded;
+
+        if (!spent) {
+            console.log('token not spent last time checked, checking...', {
+                decoded
+            });
+
+            if (!cashuWallets[mint].wallet) {
+                await initializeWallet(mint, true);
+            }
+
+            // Set up a periodic check every 5 seconds
+            const checkInterval = setInterval(async () => {
+                const isSpent = await checkTokenSpent(decoded);
+
+                if (isSpent) {
+                    console.log('Token spent, stopping check...');
+                    const updatedToken = await markTokenSpent(decoded);
+                    this.setState({
+                        updatedToken
+                    });
+                    clearInterval(checkInterval); // Stop checking once spent
+                    stores.activityStore.getActivityAndFilter(
+                        stores.settingsStore.settings.locale
+                    );
+                } else {
+                    console.log('Token not spent, checking again...');
+                }
+            }, 5000);
+        }
     }
 
     render() {
         const { navigation, route, CashuStore } = this.props;
-        const { success, errorMessage } = this.state;
+        const { success, errorMessage, updatedToken } = this.state;
         const { mintUrls, addMint, claimToken, loading, errorAddingMint } =
             CashuStore!!;
-        const decoded = route.params?.decoded;
+        const decoded = updatedToken || route.params?.decoded;
         const {
             memo,
             mint,
@@ -66,6 +109,7 @@ export default class CashuTokenView extends React.Component<
             isSupported,
             received,
             sent,
+            spent,
             encodedToken
         } = decoded;
         const token = route.params?.token || encodedToken;
@@ -91,7 +135,9 @@ export default class CashuTokenView extends React.Component<
                     centerComponent={{
                         text: received
                             ? localeString('cashu.receivedToken')
-                            : sent
+                            : sent && !spent
+                            ? localeString('cashu.unspentToken')
+                            : sent && spent
                             ? localeString('cashu.sentToken')
                             : localeString('cashu.token'),
                         style: {
@@ -144,7 +190,8 @@ export default class CashuTokenView extends React.Component<
                                 jumboText
                                 toggleable
                                 credit={received}
-                                debit={sent}
+                                debit={sent && spent}
+                                pending={sent && !spent}
                             />
                         </View>
                     )}

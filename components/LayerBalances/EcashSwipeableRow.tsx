@@ -14,18 +14,18 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
 
-import BackendUtils from './../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import stores from './../../stores/Stores';
+import stores from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 const { cashuStore } = stores;
 
-import Coins from './../../assets/images/SVG/Coins.svg';
-import Mint from './../../assets/images/SVG/Mint.svg';
-import Receive from './../../assets/images/SVG/Receive.svg';
-import Send from './../../assets/images/SVG/Send.svg';
+import Coins from '../../assets/images/SVG/Coins.svg';
+import Mint from '../../assets/images/SVG/Mint.svg';
+import Receive from '../../assets/images/SVG/Receive.svg';
+import Send from '../../assets/images/SVG/Send.svg';
 
 interface EcashSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;

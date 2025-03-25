@@ -138,6 +138,8 @@
     "general.selfCustody": "Self-custody",
     "general.ecash": "Ecash",
     "general.errorConnecting": "Error connecting",
+    "general.bitcoinPayment": "Bitcoin payment",
+    "general.unspent": "Unspent",
     "channel.status.good": "Good",
     "channel.status.stable": "Stable",
     "channel.status.unstable": "Unstable",
@@ -1411,9 +1413,11 @@
     "cashu.token": "Cashu token",
     "cashu.receivedToken": "Received Cashu token",
     "cashu.sentToken": "Sent Cashu token",
+    "cashu.unspentToken": "Unspent Cashu token",
     "cashu.tapToConfigure": "No mints found. Tap to configure",
     "cashu.tapToConfigure.short": "Tap to configure",
     "cashu.lightningAddress": "Cashu Lightning address",
+    "cashu.mintEcashToken": "Mint ecash token",
     "cashu.errorAddingMint": "Error adding mint",
     "views.Cashu.AddMint.title": "Add mint",
     "views.Cashu.AddMint.discover": "Discover mints",
@@ -1442,6 +1446,7 @@
     "stores.CashuStore.alreadySpent": "Token has already been spent.",
     "stores.CashuStore.pending": "Payment is pending.",
     "stores.CashuStore.claimError": "Error claming token",
+    "stores.CashuStore.errorMintingToken": "Error minting token",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }
