@@ -89,12 +89,17 @@ export default class CashuPaymentRequest extends React.Component<
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
-        const { SettingsStore } = this.props;
-        const { getSettings } = SettingsStore;
-        const settings = await getSettings();
+        const { CashuStore, SettingsStore } = this.props;
+        const { paymentRequest, getPayReq } = CashuStore;
+        const settings = await SettingsStore.getSettings();
 
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
+        });
+
+        // Reload pay req info if mint is changed
+        this.props.navigation.addListener('focus', () => {
+            getPayReq(paymentRequest!!);
         });
     }
 

@@ -1186,8 +1186,15 @@ export default class CashuStore {
         console.log(totalProofsValue, amountToPay);
 
         try {
-            if (totalProofsValue < amountToPay)
-                throw new Error('Not enough funds to cover payment');
+            if (totalProofsValue < amountToPay) {
+                this.error = true;
+                this.paymentError = localeString(
+                    'stores.CashuStore.notEnoughFunds'
+                );
+                this.loading = false;
+                return;
+            }
+
             console.log('[payLnInvoce] use send ', {
                 amountToPay,
                 amount,
