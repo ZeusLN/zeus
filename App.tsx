@@ -75,6 +75,7 @@ import InvoicesSettings from './views/Settings/InvoicesSettings';
 import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetWalletPicture from './views/Settings/SetWalletPicture';
+import Notifications from './views/Settings/Notifications';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
 // Lightning address
@@ -936,6 +937,12 @@ export default class App extends React.PureComponent {
                                                         name="ActivityExport" // @ts-ignore:next-line
                                                         component={
                                                             ActivityExport
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Notifications" // @ts-ignore:next-line
+                                                        component={
+                                                            Notifications
                                                         }
                                                     />
                                                 </Stack.Navigator>
