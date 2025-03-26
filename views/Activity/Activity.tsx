@@ -15,6 +15,7 @@ import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import isEqual from 'lodash/isEqual';
+import { AbortController } from 'abort-controller';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -332,6 +333,8 @@ export default class Activity extends React.PureComponent<
     private transactionListener: EmitterSubscription;
     private invoicesListener: EmitterSubscription;
 
+    private readonly abortController = new AbortController();
+
     state = {
         loading: false,
         selectedPaymentForOrder: null,
@@ -345,7 +348,11 @@ export default class Activity extends React.PureComponent<
         } = this.props;
         this.setState({ loading: true });
         const filters = await getFilters();
-        await getActivityAndFilter(SettingsStore.settings.locale, filters);
+        await getActivityAndFilter(
+            this.abortController.signal,
+            SettingsStore.settings.locale,
+            filters
+        );
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
@@ -361,6 +368,7 @@ export default class Activity extends React.PureComponent<
     componentWillUnmount() {
         if (this.transactionListener) this.transactionListener.remove();
         if (this.invoicesListener) this.invoicesListener.remove();
+        this.abortController.abort();
     }
 
     subscribeEvents = () => {
@@ -370,7 +378,11 @@ export default class Activity extends React.PureComponent<
         const eventEmitter = new NativeEventEmitter(LncModule);
         this.transactionListener = eventEmitter.addListener(
             BackendUtils.subscribeTransactions(),
-            () => ActivityStore.updateTransactions(locale)
+            () =>
+                ActivityStore.updateTransactions(
+                    this.abortController.signal,
+                    locale
+                )
         );
 
         this.invoicesListener = eventEmitter.addListener(
@@ -633,7 +645,10 @@ export default class Activity extends React.PureComponent<
                         onEndReachedThreshold={50}
                         refreshing={loading}
                         onRefresh={() =>
-                            getActivityAndFilter(SettingsStore.settings.locale)
+                            getActivityAndFilter(
+                                this.abortController.signal,
+                                SettingsStore.settings.locale
+                            )
                         }
                         initialNumToRender={10}
                         maxToRenderPerBatch={5}
@@ -648,7 +663,10 @@ export default class Activity extends React.PureComponent<
                             color: themeColor('text')
                         }}
                         onPress={() =>
-                            getActivityAndFilter(SettingsStore.settings.locale)
+                            getActivityAndFilter(
+                                this.abortController.signal,
+                                SettingsStore.settings.locale
+                            )
                         }
                         buttonStyle={{
                             backgroundColor: 'transparent',
