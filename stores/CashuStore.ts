@@ -1004,7 +1004,7 @@ export default class CashuStore {
                         `> Restored ${proofs.length} proofs with sum ${proofsSum} - starting at ${start}`
                     );
                     noProofsFoundCounter = 0;
-                    lastFound = start + proofs.length;
+                    lastFound = start + proofs.length + 1;
                 } else {
                     noProofsFoundCounter++;
                     console.log(
