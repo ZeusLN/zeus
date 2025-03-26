@@ -1447,6 +1447,7 @@
     "stores.CashuStore.pending": "Payment is pending.",
     "stores.CashuStore.claimError": "Error claming token",
     "stores.CashuStore.errorMintingToken": "Error minting token",
+    "stores.CashuStore.notEnoughFunds": "Not enough funds to cover payment",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }
