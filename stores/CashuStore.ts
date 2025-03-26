@@ -9,6 +9,7 @@ import {
     MeltQuoteResponse,
     MeltQuoteState,
     MintQuoteResponse,
+    GetInfoResponse,
     Proof,
     getEncodedToken
 } from '@cashu/cashu-ts';
@@ -304,7 +305,11 @@ export default class CashuStore {
     @action
     public startWallet = async (
         mintUrl: string
-    ): Promise<{ wallet: CashuWallet; pubkey: string }> => {
+    ): Promise<{
+        wallet: CashuWallet;
+        pubkey: string;
+        mintInfo: GetInfoResponse;
+    }> => {
         this.loading = true;
         console.log('starting wallet for URL', mintUrl);
 
@@ -360,7 +365,7 @@ export default class CashuStore {
             await wallet.loadMint();
             await wallet.getKeys();
 
-            return { wallet, pubkey };
+            return { wallet, pubkey, mintInfo };
         } catch (error: any) {
             console.error(
                 `Error connecting to mint ${mintUrl}:`,
@@ -496,12 +501,17 @@ export default class CashuStore {
             try {
                 const {
                     wallet,
-                    pubkey
-                }: { wallet: CashuWallet; pubkey: string } =
-                    await this.startWallet(mintUrl);
+                    pubkey,
+                    mintInfo
+                }: {
+                    wallet: CashuWallet;
+                    pubkey: string;
+                    mintInfo: GetInfoResponse;
+                } = await this.startWallet(mintUrl);
                 runInAction(() => {
                     this.cashuWallets[mintUrl].wallet = wallet;
                     this.cashuWallets[mintUrl].pubkey = pubkey;
+                    this.cashuWallets[mintUrl].mintInfo = mintInfo;
                 });
             } catch (e) {
                 errorConnecting = true;
@@ -1071,11 +1081,11 @@ export default class CashuStore {
                 resolve(decoded);
             });
 
-            const cashuWallet = this.cashuWallets[this.selectedMintUrl];
-
-            if (!cashuWallet.wallet) {
+            if (!this.cashuWallets[this.selectedMintUrl].wallet) {
                 await this.initializeWallet(this.selectedMintUrl, true);
             }
+            const cashuWallet = this.cashuWallets[this.selectedMintUrl];
+
             const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
                 bolt11Invoice
             );
@@ -1098,9 +1108,10 @@ export default class CashuStore {
 
             return;
         } catch (e: any) {
+            const error = e;
             runInAction(() => {
                 this.payReq = undefined;
-                this.getPayReqError = errorToUserFriendly(e);
+                this.getPayReqError = errorToUserFriendly(error);
                 this.loading = false;
             });
         }
@@ -1270,10 +1281,12 @@ export default class CashuStore {
                 this.paymentError = localeString(
                     'stores.CashuStore.alreadyPaid'
                 );
+                this.loading = false;
                 return;
             } else if (mintQuote.state == MeltQuoteState.PENDING) {
                 this.error = true;
                 this.paymentError = localeString('stores.CashuStore.pending');
+                this.loading = false;
                 return;
             }
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);

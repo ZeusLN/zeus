@@ -65,7 +65,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
         const mint = route.params?.mint;
         const lookup = route.params?.lookup;
 
-        const mintInfo = mint._mintInfo || mint;
+        const mintInfo = mint;
 
         const isselectedMint =
             selectedMintUrl &&

@@ -41,6 +41,7 @@ const LoadingNostr = () => {
         Animated.sequence([
             Animated.timing(state, {
                 toValue: 0,
+                delay: 1000,
                 duration: 500,
                 useNativeDriver: true
             }),
