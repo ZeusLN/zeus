@@ -54,7 +54,8 @@ export default class NFCButton extends React.Component<
     };
 
     startSimulation = async () => {
-        const tag = new NFCTagType4(NFCContentType.Text, this.props.value);
+        const zeusPayload = `ZEUS:${this.props.value}`;
+        const tag = new NFCTagType4(NFCContentType.Text, zeusPayload);
         this.simulation = await new HCESession(tag).start();
     };
 

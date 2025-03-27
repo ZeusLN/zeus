@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
-import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
+import NfcManager, { NfcEvents, TagEvent, Ndef } from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Tab } from 'react-native-elements';
@@ -186,7 +186,15 @@ export default class OpenChannel extends React.Component<
                     const bytes = new Uint8Array(
                         tagFound.ndefMessage[0].payload
                     );
-                    const str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+                    
+                    let str;
+                    const decoded = Ndef.text.decodePayload(bytes);
+                    if (decoded.startsWith('ZEUS:')) {
+                        // Handle Zeus-specific NFC broadcast
+                        str = decoded.substring(5); // Remove the 'ZEUS:' prefix
+                    } else {
+                        str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
+                    }
 
                     // close NFC
                     if (Platform.OS === 'android')

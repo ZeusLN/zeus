@@ -577,6 +577,9 @@ export default class Receive extends React.Component<
                     const decoded = Ndef.text.decodePayload(bytes);
                     if (decoded.match(/^(https?|lnurl)/)) {
                         str = decoded;
+                    } else if (decoded.startsWith('ZEUS:')) {
+                        // Handle Zeus-specific NFC broadcast
+                        str = decoded.substring(5); // Remove the 'ZEUS:' prefix
                     } else {
                         str = NFCUtils.nfcUtf8ArrayToStr(bytes) || '';
                     }

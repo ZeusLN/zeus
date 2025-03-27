@@ -4,7 +4,7 @@ import android.nfc.Tag;
 import android.nfc.NfcAdapter;
 import android.nfc.NdefMessage;
 import android.nfc.tech.Ndef;
-import android.nfc.NdefRecord;
+import android..NdefRecord;
 
 import java.util.Arrays;
 import java.io.UnsupportedEncodingException;
