@@ -41,7 +41,7 @@ import Lockscreen from './views/Lockscreen';
 import NostrContacts from './views/NostrContacts';
 import ContactQR from './views/ContactQR';
 
-// Settings views
+// Settings Views
 import Settings from './views/Settings/Settings';
 import WalletConfiguration from './views/Settings/WalletConfiguration';
 import Wallets from './views/Settings/Wallets';
@@ -77,7 +77,7 @@ import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetWalletPicture from './views/Settings/SetWalletPicture';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
-// Lightning address
+// Lightning Address
 import LightningAddress from './views/Settings/LightningAddress';
 import LightningAddressInfo from './views/Settings/LightningAddress/LightningAddressInfo';
 import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
@@ -112,7 +112,7 @@ import Routing from './views/Routing/Routing';
 import RoutingEvent from './views/Routing/RoutingEvent';
 import SetFees from './views/Routing/SetFees';
 
-// new views
+// New Views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
 import CoinControl from './views/UTXOs/CoinControl';
