@@ -25,30 +25,36 @@ export default class LndHub extends LND {
     };
 
     login = (data: LoginRequest) =>
-        this.postRequest('/auth?type=auth', {
-            login: data.login,
-            password: data.password
+        this.postRequest({
+            route: '/auth?type=auth',
+            data: {
+                login: data.login,
+                password: data.password
+            }
         });
 
     getPayments = () =>
-        this.getRequest('/gettxs').then((data: any) => ({
+        this.getRequest({ route: '/gettxs' }).then((data: any) => ({
             payments: data
         }));
     getLightningBalance = () =>
-        this.getRequest('/balance').then(({ BTC }: any) => ({
+        this.getRequest({ route: '/balance' }).then(({ BTC }: any) => ({
             balance: BTC.AvailableBalance
         }));
     getInvoices = () =>
-        this.getRequest('/getuserinvoices').then((data: any) => ({
+        this.getRequest({ route: '/getuserinvoices' }).then((data: any) => ({
             invoices: data
         }));
 
     createInvoice = (data: any) =>
-        this.postRequest('/addinvoice', {
-            amt: data.value,
-            memo: data.memo
+        this.postRequest({
+            route: '/addinvoice',
+            data: {
+                amt: data.value,
+                memo: data.memo
+            }
         });
-    getNewAddress = () => this.getRequest('/getbtc');
+    getNewAddress = () => this.getRequest({ route: '/getbtc' });
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() => {
             const decoded: any = bolt11.decode(
@@ -74,9 +80,12 @@ export default class LndHub extends LND {
             return decoded;
         });
     payLightningInvoice = (data: any) =>
-        this.postRequest('/payinvoice', {
-            invoice: data.payment_request,
-            amount: data.amt
+        this.postRequest({
+            route: '/payinvoice',
+            data: {
+                invoice: data.payment_request,
+                amount: data.amt
+            }
         });
     lnurlAuth = (message: string) => {
         const messageHash = new sha256Hash()

@@ -18,6 +18,8 @@ import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 const calls = new Map<string, Promise<any>>();
 
 export default class CLNRest {
+    private defaultTimeout = 30000;
+
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
@@ -77,7 +79,7 @@ export default class CLNRest {
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(
                     () => reject(new Error('Request timeout')),
-                    timeout || 30000
+                    timeout || this.defaultTimeout
                 );
             });
 
@@ -136,13 +138,19 @@ export default class CLNRest {
         return await calls.get(id);
     };
 
-    request = (
-        route: string,
-        method: string,
-        data?: any,
-        params?: any,
-        timeout?: number
-    ) => {
+    request = ({
+        route,
+        method,
+        data,
+        params,
+        timeout
+    }: {
+        route: string;
+        method: string;
+        data?: any;
+        params?: any;
+        timeout?: number;
+    }) => {
         const { host, port, rune, certVerification, enableTor } = settingsStore;
 
         if (params) {
@@ -187,24 +195,41 @@ export default class CLNRest {
         return `${baseUrl}${route}`;
     };
 
-    postRequest = (route: string, data?: any, timeout?: number) =>
-        this.request(route, 'post', data, undefined, timeout);
-
+    postRequest = ({
+        route,
+        data,
+        timeout
+    }: {
+        route: string;
+        data?: any;
+        timeout?: number;
+    }) =>
+        this.request({
+            route,
+            method: 'post',
+            data,
+            timeout
+        });
     getNode = (data: any) =>
-        this.postRequest('/v1/listnodes', { id: data.id }).then((res) => {
+        this.postRequest({
+            route: '/v1/listnodes',
+            data: { id: data.id }
+        }).then((res) => {
             return res;
         });
     getTransactions = async () => await getChainTransactions();
     getChannels = async () => {
-        const channels = await this.postRequest('/v1/listpeerchannels');
+        const channels = await this.postRequest({
+            route: '/v1/listpeerchannels'
+        });
         return await listPeers(channels);
     };
     getBlockchainBalance = () =>
-        this.postRequest('/v1/listfunds').then((res) => {
+        this.postRequest({ route: '/v1/listfunds' }).then((res) => {
             return getBalance(res);
         });
     getLightningBalance = () =>
-        this.postRequest('/v1/listfunds').then((res) => {
+        this.postRequest({ route: '/v1/listfunds' }).then((res) => {
             return getOffchainBalance(res);
         });
     sendCoins = (data: TransactionRequest) => {
@@ -223,14 +248,17 @@ export default class CLNRest {
                 satoshi: data.amount
             };
         }
-        return this.postRequest('/v1/withdraw', request);
+        return this.postRequest({ route: '/v1/withdraw', data: request });
     };
-    getMyNodeInfo = () => this.postRequest('/v1/getinfo');
+    getMyNodeInfo = () => this.postRequest({ route: '/v1/getinfo' });
     getInvoices = (data?: any) =>
-        this.postRequest('/v1/sql', {
-            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
-                data?.limit ? data.limit : 150
-            };`
+        this.postRequest({
+            route: '/v1/sql',
+            data: {
+                query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices WHERE status = 'paid' ORDER BY created_index DESC LIMIT ${
+                    data?.limit ? data.limit : 150
+                };`
+            }
         }).then((data: any) => {
             const invoiceList: any[] = [];
             data.rows.forEach((invoice: any) => {
@@ -254,17 +282,24 @@ export default class CLNRest {
             };
         });
     createInvoice = (data: any) =>
-        this.postRequest('/v1/invoice', {
-            description: data.memo,
-            label: 'zeus.' + Math.random() * 1000000,
-            amount_msat: data.value != 0 ? Number(data.value) * 1000 : 'any',
-            expiry: Number(data.expiry),
-            exposeprivatechannels: true
+        this.postRequest({
+            route: '/v1/invoice',
+            data: {
+                description: data.memo,
+                label: 'zeus.' + Math.random() * 1000000,
+                amount_msat:
+                    data.value != 0 ? Number(data.value) * 1000 : 'any',
+                expiry: Number(data.expiry),
+                exposeprivatechannels: true
+            }
         });
 
     getPayments = () =>
-        this.postRequest('/v1/sql', {
-            query: "select sp.payment_hash, sp.groupid, min(sp.status) as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status = 'complete' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
+        this.postRequest({
+            route: '/v1/sql',
+            data: {
+                query: "select sp.payment_hash, sp.groupid, min(sp.status) as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status = 'complete' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
+            }
         }).then((data: any) => {
             const paymentList: any[] = [];
             data.rows.forEach((pay: any) => {
@@ -287,7 +322,7 @@ export default class CLNRest {
                 payments: paymentList
             };
         });
-    getNewAddress = () => this.postRequest('/v1/newaddr');
+    getNewAddress = () => this.postRequest({ route: '/v1/newaddr' });
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
         const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
@@ -304,71 +339,89 @@ export default class CLNRest {
 
         if (data.utxos && data.utxos.length > 0) request.utxos = data.utxos;
 
-        return this.postRequest('/v1/fundchannel', request);
+        return this.postRequest({ route: '/v1/fundchannel', data: request });
     };
     connectPeer = (data: any) => {
         const [host, port] = data.addr.host.split(':');
 
-        return this.postRequest('/v1/connect', {
-            id: data.addr.pubkey,
-            host,
-            port
+        return this.postRequest({
+            route: '/v1/connect',
+            data: {
+                id: data.addr.pubkey,
+                host,
+                port
+            }
         });
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.postRequest('/v1/decode', {
-            string: urlParams && urlParams[0]
+        this.postRequest({
+            route: '/v1/decode',
+            data: {
+                string: urlParams && urlParams[0]
+            }
         });
 
     payLightningInvoice = (data: any) =>
-        this.postRequest(
-            '/v1/pay',
-            {
+        this.postRequest({
+            route: '/v1/pay',
+            data: {
                 bolt11: data.payment_request,
                 amount_msat: Number(data.amt && data.amt * 1000),
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },
-            data.timeout_seconds ? data.timeout_seconds * 1000 : undefined
-        );
+            timeout: (data.timeout_seconds + 1) * 1000 || undefined
+        });
     sendKeysend = (data: any) => {
-        return this.postRequest(
-            '/v1/keysend',
-            {
+        return this.postRequest({
+            route: '/v1/keysend',
+            data: {
                 destination: data.pubkey,
                 amount_msat: Number(data.amt && data.amt * 1000),
                 maxfeepercent: data.max_fee_percent,
                 retry_for: data.timeout_seconds
             },
-            data.timeout_seconds ? data.timeout_seconds * 1000 : undefined
-        );
+            timeout: (data.timeout_seconds + 1) * 1000 || undefined
+        });
     };
     closeChannel = (urlParams?: Array<string>) => {
         const request = {
             id: urlParams && urlParams[0],
             unilateraltimeout: urlParams && urlParams[1] ? 2 : 0
         };
-        return this.postRequest('/v1/close', request);
+        return this.postRequest({
+            route: '/v1/close',
+            data: request
+        });
     };
     getFees = () =>
-        this.postRequest('/v1/getinfo').then((res: any) => ({
+        this.postRequest({ route: '/v1/getinfo' }).then((res: any) => ({
             total_fee_sum: res.fees_collected_msat / 1000
         }));
     setFees = (data: any) =>
-        this.postRequest('/v1/setchannel', {
-            id: data.global ? 'all' : data.channelId,
-            feebase: data.base_fee_msat,
-            feeppm: data.fee_rate
+        this.postRequest({
+            route: '/v1/setchannel',
+            data: {
+                id: data.global ? 'all' : data.channelId,
+                feebase: data.base_fee_msat,
+                feeppm: data.fee_rate
+            }
         });
-    getUTXOs = () => this.postRequest('/v1/listfunds');
+    getUTXOs = () => this.postRequest({ route: '/v1/listfunds' });
     signMessage = (message: string) =>
-        this.postRequest('/v1/signmessage', {
-            message
+        this.postRequest({
+            route: '/v1/signmessage',
+            data: {
+                message
+            }
         });
     verifyMessage = (data: any) =>
-        this.postRequest('/v1/checkmessage', {
-            message: data.msg,
-            zbase: data.signature
+        this.postRequest({
+            route: '/v1/checkmessage',
+            data: {
+                message: data.msg,
+                zbase: data.signature
+            }
         });
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
@@ -381,7 +434,10 @@ export default class CLNRest {
 
     // BOLT 12 / Offers
     listOffers = () =>
-        this.postRequest('/v1/listoffers', { active_only: true });
+        this.postRequest({
+            route: '/v1/listoffers',
+            data: { active_only: true }
+        });
     createOffer = ({
         description,
         label,
@@ -391,19 +447,28 @@ export default class CLNRest {
         label?: string;
         singleUse?: boolean;
     }) =>
-        this.postRequest('/v1/offer', {
-            amount: 'any',
-            description,
-            label,
-            single_use: singleUse || false
+        this.postRequest({
+            route: '/v1/offer',
+            data: {
+                amount: 'any',
+                description,
+                label,
+                single_use: singleUse || false
+            }
         });
     disableOffer = ({ offer_id }: { offer_id: string }) =>
-        this.postRequest('/v1/disableoffer', { offer_id });
+        this.postRequest({
+            route: '/v1/disableoffer',
+            data: { offer_id }
+        });
     fetchInvoiceFromOffer = async (bolt12: string, amountSatoshis: string) => {
-        return await this.postRequest('/v1/fetchinvoice', {
-            offer: bolt12,
-            amount_msat: Number(amountSatoshis) * 1000,
-            timeout: 60
+        return await this.postRequest({
+            route: '/v1/fetchinvoice',
+            data: {
+                offer: bolt12,
+                amount_msat: Number(amountSatoshis) * 1000,
+                timeout: 60
+            }
         });
     };
 
@@ -441,7 +506,9 @@ export default class CLNRest {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = async () => {
-        const { configs } = await this.postRequest('/v1/listconfigs');
+        const { configs } = await this.postRequest({
+            route: '/v1/listconfigs'
+        });
 
         const supportsOffers: boolean = configs['experimental-offers']
             ? true

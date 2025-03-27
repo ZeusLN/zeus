@@ -13,23 +13,31 @@ interface Headers {
     'Grpc-Metadata-Macaroon'?: string;
     'Grpc-Metadata-macaroon'?: string;
 }
-
 // keep track of all active calls so we can cancel when appropriate
 const calls = new Map<string, Promise<any>>();
 
 export default class LND {
     torSocksPort?: number = undefined;
-
+    private defaultTimeout = 30000;
     clearCachedCalls = () => calls.clear();
 
-    restReq = async (
-        headers: Headers | any,
-        url: string,
-        method: any,
-        data?: any,
-        certVerification?: boolean,
-        useTor?: boolean
-    ) => {
+    restReq = async ({
+        headers,
+        url,
+        method,
+        data,
+        certVerification,
+        useTor,
+        timeout
+    }: {
+        headers: Headers | any;
+        url: string;
+        method: RequestMethod;
+        data?: any;
+        certVerification?: boolean;
+        useTor?: boolean;
+        timeout?: number;
+    }) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
         const id = data ? `${url}${JSON.stringify(data)}` : url;
@@ -41,19 +49,19 @@ export default class LND {
         if (useTor === true) {
             calls.set(
                 id,
-                doTorRequest(
-                    url,
-                    method as RequestMethod,
-                    JSON.stringify(data),
-                    headers
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
+                doTorRequest(url, method, JSON.stringify(data), headers).then(
+                    (response: any) => {
+                        calls.delete(id);
+                        return response;
+                    }
+                )
             );
         } else {
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Request timeout')), 30000);
+                setTimeout(
+                    () => reject(new Error('Request timeout')),
+                    timeout || this.defaultTimeout
+                );
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
@@ -196,7 +204,19 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, params?: any) => {
+    request = ({
+        route,
+        method,
+        data,
+        params,
+        timeout
+    }: {
+        route: string;
+        method: RequestMethod;
+        data?: any;
+        params?: any;
+        timeout?: number;
+    }) => {
         const {
             host,
             lndhubUrl,
@@ -217,52 +237,70 @@ export default class LND {
         const headers: any = this.getHeaders(auth);
         headers['Content-Type'] = 'application/json';
         const url = this.getURL(host || lndhubUrl, port, route);
-        return this.restReq(
+        return this.restReq({
             headers,
             url,
             method,
             data,
             certVerification,
-            enableTor
-        );
+            useTor: enableTor,
+            timeout
+        });
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
-    postRequest = (route: string, data?: any) =>
-        this.request(route, 'post', data);
-    deleteRequest = (route: string) => this.request(route, 'delete', null);
+    getRequest = ({ route, data }: { route: string; data?: any }) =>
+        this.request({ route, method: RequestMethod.GET, data });
+    postRequest = ({
+        route,
+        data,
+        timeout
+    }: {
+        route: string;
+        data?: any;
+        timeout?: number;
+    }) => this.request({ route, method: RequestMethod.POST, data, timeout });
+    deleteRequest = ({ route }: { route: string }) =>
+        this.request({ route, method: RequestMethod.DELETE });
 
     getTransactions = (data: any) =>
-        this.getRequest(
-            data && data.start_height
-                ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
-                : '/v1/transactions?end_height=-1'
-        ).then((data: any) => ({
+        this.getRequest({
+            route:
+                data && data.start_height
+                    ? `/v1/transactions?end_height=-1&start_height=${data.start_height}`
+                    : '/v1/transactions?end_height=-1'
+        }).then((data: any) => ({
             transactions: data.transactions
         }));
-    getChannels = () => this.getRequest('/v1/channels');
-    getPendingChannels = () => this.getRequest('/v1/channels/pending');
-    getClosedChannels = () => this.getRequest('/v1/channels/closed');
+    getChannels = () => this.getRequest({ route: '/v1/channels' });
+    getPendingChannels = () =>
+        this.getRequest({ route: '/v1/channels/pending' });
+    getClosedChannels = () => this.getRequest({ route: '/v1/channels/closed' });
     getChannelInfo = (chanId: string) =>
-        this.getRequest(`/v1/graph/edge/${chanId}`);
+        this.getRequest({ route: `/v1/graph/edge/${chanId}` });
     getBlockchainBalance = (data: any) =>
-        this.getRequest('/v1/balance/blockchain', data);
-    getLightningBalance = () => this.getRequest('/v1/balance/channels');
+        this.getRequest({ route: '/v1/balance/blockchain', data });
+    getLightningBalance = () =>
+        this.getRequest({ route: '/v1/balance/channels' });
     sendCoins = (data: any) =>
-        this.postRequest('/v1/transactions', {
-            addr: data.addr,
-            sat_per_vbyte: data.sat_per_vbyte,
-            amount: data.amount,
-            spend_unconfirmed: data.spend_unconfirmed,
-            send_all: data.send_all,
-            outpoints: data.outpoints
+        this.postRequest({
+            route: '/v1/transactions',
+            data: {
+                addr: data.addr,
+                sat_per_vbyte: data.sat_per_vbyte,
+                amount: data.amount,
+                spend_unconfirmed: data.spend_unconfirmed,
+                send_all: data.send_all,
+                outpoints: data.outpoints
+            }
         });
     sendCustomMessage = (data: any) =>
-        this.postRequest('/v1/custommessage', {
-            peer: Base64Utils.hexToBase64(data.peer),
-            type: data.type,
-            data: Base64Utils.hexToBase64(data.data)
+        this.postRequest({
+            route: '/v1/custommessage',
+            data: {
+                peer: Base64Utils.hexToBase64(data.peer),
+                type: data.type,
+                data: Base64Utils.hexToBase64(data.data)
+            }
         });
     subscribeCustomMessages = (onResponse: any, onError: any) => {
         const route = '/v1/custommessage/subscribe';
@@ -309,31 +347,34 @@ export default class LND {
             console.log('subscribeCustomMessages ws close');
         });
     };
-    getNetworkInfo = () => this.getRequest('/v1/graph/info');
-    getMyNodeInfo = () => this.getRequest('/v1/getinfo');
+    getNetworkInfo = () => this.getRequest({ route: '/v1/graph/info' });
+    getMyNodeInfo = () => this.getRequest({ route: '/v1/getinfo' });
     getInvoices = (
         params: { limit?: number; reversed?: boolean } = {
             limit: 500,
             reversed: true
         }
     ) =>
-        this.getRequest(
-            `/v1/invoices?reversed=${
+        this.getRequest({
+            route: `/v1/invoices?reversed=${
                 params?.reversed !== undefined ? params.reversed : true
             }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
-        );
+        });
     createInvoice = (data: any) =>
-        this.postRequest('/v1/invoices', {
-            memo: data.memo,
-            value_msat: data.value_msat || Number(data.value) * 1000,
-            expiry: data.expiry,
-            is_amp: data.is_amp,
-            is_blinded: data.is_blinded,
-            private: data.private,
-            r_preimage: data.preimage
-                ? Base64Utils.hexToBase64(data.preimage)
-                : undefined,
-            route_hints: data.route_hints
+        this.postRequest({
+            route: '/v1/invoices',
+            data: {
+                memo: data.memo,
+                value_msat: data.value_msat || Number(data.value) * 1000,
+                expiry: data.expiry,
+                is_amp: data.is_amp,
+                is_blinded: data.is_blinded,
+                private: data.private,
+                r_preimage: data.preimage
+                    ? Base64Utils.hexToBase64(data.preimage)
+                    : undefined,
+                route_hints: data.route_hints
+            }
         });
     getPayments = (
         params: { maxPayments?: number; reversed?: boolean } = {
@@ -341,17 +382,18 @@ export default class LND {
             reversed: true
         }
     ) =>
-        this.getRequest(
-            `/v1/payments?include_incomplete=true${
+        this.getRequest({
+            route: `/v1/payments?include_incomplete=true${
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
             }`
-        );
+        });
 
-    getNewAddress = (data: any) => this.getRequest('/v1/newaddress', data);
+    getNewAddress = (data: any) =>
+        this.getRequest({ route: '/v1/newaddress', data });
     getNewChangeAddress = (data: any) =>
-        this.postRequest('/v2/wallet/address/next', data);
+        this.postRequest({ route: '/v2/wallet/address/next', data });
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any = {
             private: data.privateChannel,
@@ -382,7 +424,7 @@ export default class LND {
             });
         }
 
-        return this.postRequest('/v1/channels', request);
+        return this.postRequest({ route: '/v1/channels', data: request });
     };
     openChannelStream = (data: OpenChannelRequest) => {
         // prepare request
@@ -473,9 +515,9 @@ export default class LND {
             });
         });
     };
-    connectPeer = (data: any) => this.postRequest('/v1/peers', data);
+    connectPeer = (data: any) => this.postRequest({ route: '/v1/peers', data });
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
+        this.getRequest({ route: `/v1/payreq/${urlParams && urlParams[0]}` });
     payLightningInvoice = async (data: any) => {
         if (data.pubkey) delete data.pubkey;
 
@@ -485,9 +527,13 @@ export default class LND {
         };
 
         const call = () =>
-            this.postRequest('/v2/router/send', {
-                ...data,
-                allow_self_payment: true
+            this.postRequest({
+                route: '/v2/router/send',
+                data: {
+                    ...data,
+                    allow_self_payment: true
+                },
+                timeout: (data.timeout_seconds + 1) * 1000 || undefined
             });
 
         const result: any = await Promise.race([
@@ -514,11 +560,13 @@ export default class LND {
             requestString += `&delivery_address=${urlParams && urlParams[4]}`;
         }
 
-        return this.deleteRequest(requestString);
+        return this.deleteRequest({ route: requestString });
     };
     getNodeInfo = (urlParams?: Array<string>) =>
-        this.getRequest(`/v1/graph/node/${urlParams && urlParams[0]}`);
-    getFees = () => this.getRequest('/v1/fees');
+        this.getRequest({
+            route: `/v1/graph/node/${urlParams && urlParams[0]}`
+        });
+    getFees = () => this.getRequest({ route: '/v1/fees' });
     setFees = (data: any) => {
         const {
             chan_point,
@@ -532,7 +580,32 @@ export default class LND {
         } = data;
 
         if (data.global) {
-            return this.postRequest('/v1/chanpolicy', {
+            return this.postRequest({
+                route: '/v1/chanpolicy',
+                data: {
+                    base_fee_msat,
+                    fee_rate: `${Number(fee_rate) / 100}`,
+                    ...(this.supportInboundFees() && {
+                        inboundFee: {
+                            base_fee_msat: base_fee_msat_inbound,
+                            fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+                        }
+                    }),
+                    global: true,
+                    time_lock_delta: Number(time_lock_delta),
+                    min_htlc_msat: min_htlc
+                        ? `${Number(min_htlc) * 1000}`
+                        : null,
+                    max_htlc_msat: max_htlc
+                        ? `${Number(max_htlc) * 1000}`
+                        : null,
+                    min_htlc_msat_specified: min_htlc ? true : false
+                }
+            });
+        }
+        return this.postRequest({
+            route: '/v1/chanpolicy',
+            data: {
                 base_fee_msat,
                 fee_rate: `${Number(fee_rate) / 100}`,
                 ...(this.supportInboundFees() && {
@@ -541,38 +614,23 @@ export default class LND {
                         fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
                     }
                 }),
-                global: true,
+                chan_point: {
+                    funding_txid_str: chan_point.funding_txid_str,
+                    output_index: chan_point.output_index
+                },
                 time_lock_delta: Number(time_lock_delta),
                 min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
                 max_htlc_msat: max_htlc ? `${Number(max_htlc) * 1000}` : null,
                 min_htlc_msat_specified: min_htlc ? true : false
-            });
-        }
-        return this.postRequest('/v1/chanpolicy', {
-            base_fee_msat,
-            fee_rate: `${Number(fee_rate) / 100}`,
-            ...(this.supportInboundFees() && {
-                inboundFee: {
-                    base_fee_msat: base_fee_msat_inbound,
-                    fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
-                }
-            }),
-            chan_point: {
-                funding_txid_str: chan_point.funding_txid_str,
-                output_index: chan_point.output_index
-            },
-            time_lock_delta: Number(time_lock_delta),
-            min_htlc_msat: min_htlc ? `${Number(min_htlc) * 1000}` : null,
-            max_htlc_msat: max_htlc ? `${Number(max_htlc) * 1000}` : null,
-            min_htlc_msat_specified: min_htlc ? true : false
+            }
         });
     };
     getRoutes = (urlParams?: Array<string>) =>
-        this.getRequest(
-            `/v1/graph/routes/${urlParams && urlParams[0]}/${
+        this.getRequest({
+            route: `/v1/graph/routes/${urlParams && urlParams[0]}/${
                 urlParams && urlParams[1]
             }`
-        );
+        });
     getForwardingHistory = (hours = 24) => {
         const req = {
             num_max_events: 10000000,
@@ -581,35 +639,45 @@ export default class LND {
             ).toString(),
             end_time: Math.round(new Date().getTime() / 1000).toString()
         };
-        return this.postRequest('/v1/switch', req);
+        return this.postRequest({ route: '/v1/switch', data: req });
     };
     // Coin Control
-    fundPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/fund', data);
-    signPsbt = (data: any) => this.postRequest('/v2/wallet/psbt/sign', data);
+    fundPsbt = (data: any) =>
+        this.postRequest({ route: '/v2/wallet/psbt/fund', data });
+    signPsbt = (data: any) =>
+        this.postRequest({ route: '/v2/wallet/psbt/sign', data });
     finalizePsbt = (data: any) =>
-        this.postRequest('/v2/wallet/psbt/finalize', data);
+        this.postRequest({ route: '/v2/wallet/psbt/finalize', data });
     publishTransaction = (data: any) => {
         if (data.tx_hex) data.tx_hex = Base64Utils.hexToBase64(data.tx_hex);
-        return this.postRequest('/v2/wallet/tx', data);
+        return this.postRequest({ route: '/v2/wallet/tx', data });
     };
     fundingStateStep = (data: any) =>
-        this.postRequest('/v1/funding/step', data);
-    getUTXOs = (data: any) => this.postRequest('/v2/wallet/utxos', data);
-    bumpFee = (data: any) => this.postRequest('/v2/wallet/bumpfee', data);
+        this.postRequest({ route: '/v1/funding/step', data });
+    getUTXOs = (data: any) =>
+        this.postRequest({ route: '/v2/wallet/utxos', data });
+    bumpFee = (data: any) =>
+        this.postRequest({ route: '/v2/wallet/bumpfee', data });
     bumpForceCloseFee = (data: any) =>
-        this.postRequest('/v2/wallet/BumpForceCloseFee', data);
-    listAccounts = () => this.getRequest('/v2/wallet/accounts');
-    listAddresses = () => this.getRequest('/v2/wallet/addresses');
+        this.postRequest({ route: '/v2/wallet/BumpForceCloseFee', data });
+    listAccounts = () => this.getRequest({ route: '/v2/wallet/accounts' });
+    listAddresses = () => this.getRequest({ route: '/v2/wallet/addresses' });
     importAccount = (data: any) =>
-        this.postRequest('/v2/wallet/accounts/import', data);
+        this.postRequest({ route: '/v2/wallet/accounts/import', data });
     signMessage = (message: string) =>
-        this.postRequest('/v1/signmessage', {
-            msg: Base64Utils.utf8ToBase64(message)
+        this.postRequest({
+            route: '/v1/signmessage',
+            data: {
+                msg: Base64Utils.utf8ToBase64(message)
+            }
         });
     verifyMessage = (data: any) =>
-        this.postRequest('/v1/verifymessage', {
-            msg: Base64Utils.utf8ToBase64(data.msg),
-            signature: data.signature
+        this.postRequest({
+            route: '/v1/verifymessage',
+            data: {
+                msg: Base64Utils.utf8ToBase64(data.msg),
+                signature: data.signature
+            }
         });
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
@@ -620,10 +688,11 @@ export default class LND {
         };
     };
     lookupInvoice = (data: any) =>
-        this.getRequest(`/v1/invoice/${data.r_hash}`);
+        this.getRequest({ route: `/v1/invoice/${data.r_hash}` });
     subscribeInvoice = (r_hash: string) =>
-        this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
-    subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
+        this.getRequest({ route: `/v2/invoices/subscribe/${r_hash}` });
+    subscribeTransactions = () =>
+        this.getRequest({ route: '/v1/transactions/subscribe' });
     initChanAcceptor = (data?: any) => {
         const { host, lndhubUrl, port, macaroonHex, accessToken } =
             settingsStore;
