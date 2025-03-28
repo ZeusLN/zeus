@@ -441,7 +441,8 @@ export default class LightningAddressStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature,
-                    updates
+                    updates,
+                    address_type: this.lightningAddressType
                 })
             );
 
