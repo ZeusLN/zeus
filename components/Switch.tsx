@@ -16,8 +16,8 @@ function Switch(props: SwitchProps) {
             value={value}
             onValueChange={onValueChange}
             trackColor={{
-                false: themeColor('disabled'),
-                true: trackEnabledColor || themeColor('highlight')
+                true: themeColor('disabled'),
+                false: trackEnabledColor || themeColor('highlight')
             }}
             thumbColor={
                 value ? themeColor('highlight') : themeColor('disabled')
