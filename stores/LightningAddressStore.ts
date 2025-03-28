@@ -386,7 +386,8 @@ export default class LightningAddressStore {
             await this.settingsStore.updateSettings({
                 lightningAddress: {
                     enabled: true,
-                    automaticallyAccept: true
+                    automaticallyAccept: true,
+                    allowComments: true
                 }
             });
 
