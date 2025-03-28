@@ -222,10 +222,11 @@ export default class LightningAddressStore {
             await this.status();
             return { created_at: submitData.created_at };
         } catch (error) {
+            const error_msg = error?.toString();
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
-                this.error_msg = error?.toString();
+                this.error_msg = error_msg;
             });
             throw error;
         }
@@ -455,10 +456,11 @@ export default class LightningAddressStore {
             this.loading = false;
             return { created_at };
         } catch (error) {
+            const error_msg = error?.toString();
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
-                this.error_msg = error?.toString();
+                this.error_msg = error_msg;
             });
             throw error;
         }
@@ -550,11 +552,16 @@ export default class LightningAddressStore {
                     this.lightningAddress = `${handle}@${domain}`;
                 }
 
-                if (this.lightningAddress && this.localHashes === 0) {
+                if (
+                    this.lightningAddress &&
+                    this.localHashes === 0 &&
+                    this.lightningAddressType === 'zaplocker'
+                ) {
                     this.generatePreimages(true);
                 } else if (
                     this.lightningAddress &&
-                    new BigNumber(this.availableHashes).lt(50)
+                    new BigNumber(this.availableHashes).lt(50) &&
+                    this.lightningAddressType === 'zaplocker'
                 ) {
                     this.generatePreimages();
                 }
@@ -629,10 +636,11 @@ export default class LightningAddressStore {
             await this.deleteHash(hash);
             return { success: redeemData.success };
         } catch (error) {
+            const error_msg = error?.toString();
             runInAction(() => {
                 this.redeeming = false;
                 this.error = true;
-                this.error_msg = error?.toString();
+                this.error_msg = error_msg;
             });
             throw error;
         }
@@ -733,10 +741,11 @@ export default class LightningAddressStore {
                     if (!skipStatus) this.status(true);
                     return true;
                 } catch (error) {
-                    this.error_msg = error?.toString();
+                    const error_msg = error?.toString();
                     runInAction(() => {
                         this.redeeming = false;
                         this.error = true;
+                        this.error_msg = error_msg;
                     });
                     throw error;
                 }
@@ -750,10 +759,12 @@ export default class LightningAddressStore {
                 return true;
             }
         } catch (e) {
-            this.redeeming = false;
-            this.error = true;
-            // TODO ecash
-            this.error_msg = 'Error checking for quote payment.';
+            runInAction(() => {
+                this.redeeming = false;
+                this.error = true;
+                // TODO ecash
+                this.error_msg = 'Error checking for quote payment.';
+            });
             return true;
         }
     };
