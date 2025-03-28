@@ -42,12 +42,20 @@
       "sha1": "814cb77bddb77948ae9815244ab5338dfa574484"
     },
     {
+      "path": "assets/images/AlbyHub.jpg",
+      "sha1": "317f6367937bc1aa1cc9d05ed5642bad5b30283e"
+    },
+    {
       "path": "assets/images/BTCpay.jpg",
       "sha1": "23221a4c3bdc19af2554aa5838f62f3561a4ae29"
     },
     {
       "path": "assets/images/CLN.jpg",
       "sha1": "7c83357dfe458cc7979b33c2b673e89428060dc7"
+    },
+    {
+      "path": "assets/images/Cashu.jpg",
+      "sha1": "80cae5dd5fa02d75095f02e386b3c81010848f7f"
     },
     {
       "path": "assets/images/GIF/Loading.gif",
@@ -88,6 +96,14 @@
     {
       "path": "assets/images/Mascot.png",
       "sha1": "b656e3b1c6a21d891205669f58476f2d4cdba41e"
+    },
+    {
+      "path": "assets/images/Nostr.jpg",
+      "sha1": "4c265c993eabb61f805ec17bb1b9b6ccc4dd38fa"
+    },
+    {
+      "path": "assets/images/NostrWalletConnect.jpg",
+      "sha1": "013a1350fdbe348632cc92369dc0044376b785df"
     },
     {
       "path": "assets/images/SVG/Account.svg",
@@ -183,7 +199,7 @@
     },
     {
       "path": "assets/images/SVG/Coins.svg",
-      "sha1": "3599f2b50d0191fa130242538f15d61e20ebd1e9"
+      "sha1": "6a29dd70e7b87e74dd62938990e9ca7fba29eeea"
     },
     {
       "path": "assets/images/SVG/Contact.svg",
@@ -218,6 +234,10 @@
       "sha1": "6fb8a3479c40852646ff64cebdabc3a6027dbd7d"
     },
     {
+      "path": "assets/images/SVG/DynamicSVG/EcashSvg.tsx",
+      "sha1": "05dd25b9402ff33fde9bbf30c60e3ff4b550375a"
+    },
+    {
       "path": "assets/images/SVG/DynamicSVG/LightningSvg.tsx",
       "sha1": "0ea9013e006d1d5888f47f60b2c733e0eb840e24"
     },
@@ -232,6 +252,10 @@
     {
       "path": "assets/images/SVG/DynamicSVG/UnifiedSvg.tsx",
       "sha1": "211da0280628cb9cbc2a64602ccee948c3cdc826"
+    },
+    {
+      "path": "assets/images/SVG/Ecash.svg",
+      "sha1": "5825987be1b8d1d9f7080829a0ebae26deeaff05"
     },
     {
       "path": "assets/images/SVG/Edit.svg",
@@ -311,7 +335,7 @@
     },
     {
       "path": "assets/images/SVG/Leaving.svg",
-      "sha1": "99158d62a92b691277250928c33ca045ba171c14"
+      "sha1": "c50762f0333ac1f54bbcb237b8b518b74f68c5ba"
     },
     {
       "path": "assets/images/SVG/Lightning Bolt.svg",
@@ -322,16 +346,12 @@
       "sha1": "64c7a312c6ff48ce22bdb3bb9e59609bd50ef21f"
     },
     {
-      "path": "assets/images/SVG/MailboxFlagDown.svg",
-      "sha1": "afb92e8a8a3392d3fbdf11ac8c886cc92aa21d69"
-    },
-    {
-      "path": "assets/images/SVG/MailboxFlagUp.svg",
-      "sha1": "cce08f1b6e42c0a39d9bc05deb1ff741f9dae379"
-    },
-    {
       "path": "assets/images/SVG/Menu.svg",
       "sha1": "13ca6d5588889df18644501d88e0267411f31394"
+    },
+    {
+      "path": "assets/images/SVG/Mint.svg",
+      "sha1": "2263b48aaa2a376926cad1aa84c54d55fcc042ce"
     },
     {
       "path": "assets/images/SVG/Mnemonic.svg",
@@ -532,6 +552,10 @@
     {
       "path": "assets/images/SVG/z-icon-black.svg",
       "sha1": "94a3b3cfafb26ad5eaba117ad3b1a86277cf9f2e"
+    },
+    {
+      "path": "assets/images/SVG/zeus-pay.svg",
+      "sha1": "8b09f696268e01e96281a6ee51cd510ff7732239"
     },
     {
       "path": "assets/images/Untitled.png",

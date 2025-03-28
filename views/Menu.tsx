@@ -16,7 +16,6 @@ import AddIcon from '../assets/images/SVG/Add.svg';
 import BlockIcon from '../assets/images/SVG/Block.svg';
 import Bolt12Icon from '../assets/images/SVG/AtSign.svg';
 import CoinsIcon from '../assets/images/SVG/Coins.svg';
-import EcashIcon from '../assets/images/SVG/Ecash.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import GearIcon from '../assets/images/SVG/Gear.svg';
@@ -24,12 +23,11 @@ import NodeOn from '../assets/images/SVG/Node On.svg';
 import Olympus from '../assets/images/SVG/Olympus.svg';
 import KeyIcon from '../assets/images/SVG/Key.svg';
 import NetworkIcon from '../assets/images/SVG/Network.svg';
-import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
-import MailboxFlagDown from '../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
+import ZeusPayIcon from '../assets/images/SVG/zeus-pay.svg';
 
 import Header from '../components/Header';
 import NodeIdenticon, { NodeTitle } from '../components/NodeIdenticon';
@@ -43,7 +41,6 @@ import UrlUtils from '../utils/UrlUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
-import CashuLightningAddressStore from '../stores/CashuLightningAddressStore';
 import SettingsStore, { INTERFACE_KEYS } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
@@ -53,7 +50,6 @@ interface MenuProps {
     navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     LightningAddressStore: LightningAddressStore;
-    CashuLightningAddressStore: CashuLightningAddressStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
 }
@@ -63,13 +59,7 @@ interface MenuState {
     easterEggCount: number;
 }
 
-@inject(
-    'NodeInfoStore',
-    'LightningAddressStore',
-    'CashuLightningAddressStore',
-    'SettingsStore',
-    'UnitsStore'
-)
+@inject('NodeInfoStore', 'LightningAddressStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class Menu extends React.Component<MenuProps, MenuState> {
     state = {
@@ -96,7 +86,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             navigation,
             NodeInfoStore,
             LightningAddressStore,
-            CashuLightningAddressStore,
             SettingsStore
         } = this.props;
         const { showHiddenItems, easterEggCount } = this.state;
@@ -142,7 +131,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
         }
 
         const youveGotSats = LightningAddressStore.paid?.length > 0;
-        const youveGotSatsCashu = CashuLightningAddressStore.paid?.length > 0;
         const forwardArrowColor = themeColor('secondaryText');
 
         return (
@@ -447,24 +435,22 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                     onPress={() =>
                                         navigation.navigate(
                                             'LightningAddress',
-                                            { skipStatus: youveGotSats }
+                                            {
+                                                skipStatus: youveGotSats
+                                            }
                                         )
                                     }
                                 >
                                     <View style={styles.icon}>
-                                        {youveGotSats ? (
-                                            <MailboxFlagUp
-                                                height={19.25}
-                                                width={22}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        ) : (
-                                            <MailboxFlagDown
-                                                height={19.25}
-                                                width={22}
-                                                fill={themeColor('text')}
-                                            />
-                                        )}
+                                        <ZeusPayIcon
+                                            height={19.25}
+                                            width={22}
+                                            fill={
+                                                youveGotSats
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text')
+                                            }
+                                        />
                                     </View>
                                     <Text
                                         style={{
@@ -482,71 +468,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                         />
                                     </View>
                                 </TouchableOpacity>
-
-                                {selectedNode &&
-                                    BackendUtils.supportsCashu() &&
-                                    settings?.ecash?.enableCashu &&
-                                    !NodeInfoStore.testnet && (
-                                        <>
-                                            <View
-                                                style={styles.separationLine}
-                                            />
-
-                                            <TouchableOpacity
-                                                style={styles.columnField}
-                                                onPress={() =>
-                                                    navigation.navigate(
-                                                        'CashuLightningAddress',
-                                                        {
-                                                            skipStatus:
-                                                                youveGotSatsCashu
-                                                        }
-                                                    )
-                                                }
-                                            >
-                                                <View style={styles.icon}>
-                                                    {youveGotSatsCashu ? (
-                                                        <EcashIcon
-                                                            height={19.25}
-                                                            width={22}
-                                                            fill={themeColor(
-                                                                'highlight'
-                                                            )}
-                                                        />
-                                                    ) : (
-                                                        <EcashIcon
-                                                            height={19.25}
-                                                            width={22}
-                                                            fill={themeColor(
-                                                                'text'
-                                                            )}
-                                                        />
-                                                    )}
-                                                </View>
-                                                <Text
-                                                    style={{
-                                                        ...styles.columnText,
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'cashu.lightningAddress'
-                                                    )}
-                                                </Text>
-                                                <View
-                                                    style={styles.ForwardArrow}
-                                                >
-                                                    <ForwardIcon
-                                                        stroke={
-                                                            forwardArrowColor
-                                                        }
-                                                    />
-                                                </View>
-                                            </TouchableOpacity>
-                                        </>
-                                    )}
                             </View>
                         )}
 

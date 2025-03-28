@@ -4,23 +4,23 @@ import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../../components/Button';
-import DropdownSetting from '../../../components/DropdownSetting';
-import Header from '../../../components/Header';
-import Screen from '../../../components/Screen';
-import Switch from '../../../components/Switch';
-import Text from '../../../components/Text';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Button from '../../components/Button';
+import DropdownSetting from '../../components/DropdownSetting';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore, {
     NOTIFICATIONS_PREF_KEYS,
     AUTOMATIC_ATTESTATION_KEYS
-} from '../../../stores/SettingsStore';
-import LightningAddressStore from '../../../stores/LightningAddressStore';
+} from '../../stores/SettingsStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;

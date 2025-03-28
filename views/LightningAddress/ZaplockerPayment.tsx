@@ -3,21 +3,22 @@ import { TouchableOpacity } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import moment from 'moment';
 
-import Amount from '../../../components/Amount';
-import Text from '../../../components/Text';
-import { Row } from '../../../components/layout/Row';
+import Amount from '../../components/Amount';
+import AttestationButton from '../../components/AttestationButton';
+import Text from '../../components/Text';
+import { Row } from '../../components/layout/Row';
 
-import stores from '../../../stores/Stores';
+import stores from '../../stores/Stores';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import Receive from '../../../assets/images/SVG/Receive.svg';
+import Receive from '../../assets/images/SVG/Receive.svg';
 
-export default function CashuPayment(props: any) {
-    const { item, index } = props;
+export default function ZaplockerPayment(props: any) {
+    const { item, index, navigation, isReady } = props;
     const { lightningAddressStore } = stores;
-    const { redeemCashu } = lightningAddressStore;
+    const { lookupPreimageAndRedeemZaplocker } = lightningAddressStore;
 
     const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
 
@@ -33,6 +34,13 @@ export default function CashuPayment(props: any) {
             <ListItem.Content>
                 <ListItem.Title>
                     <Amount sats={item.amount_msat / 1000} />{' '}
+                    {item.opened_channel_fee_msat && (
+                        <Amount
+                            sats={item.opened_channel_fee_msat / 1000}
+                            debit
+                            negative={true}
+                        />
+                    )}
                 </ListItem.Title>
                 {item.comment && (
                     <ListItem.Subtitle>
@@ -63,23 +71,38 @@ export default function CashuPayment(props: any) {
             </ListItem.Content>
             <ListItem.Content right>
                 <Row>
+                    <AttestationButton
+                        hash={item.hash}
+                        amount_msat={item.amount_msat}
+                        navigation={navigation}
+                    />
                     <TouchableOpacity
                         onPress={() => {
+                            if (!isReady) return;
+
                             const {
-                                quote_id,
-                                mint_url,
-                                amount_msat
+                                hash,
+                                amount_msat,
+                                comment
                             }: {
-                                quote_id: string;
-                                mint_url: string;
+                                hash: string;
                                 amount_msat: number;
+                                comment: string;
                             } = item;
 
-                            redeemCashu(quote_id, mint_url, amount_msat);
+                            lookupPreimageAndRedeemZaplocker(
+                                hash,
+                                amount_msat,
+                                comment
+                            );
                         }}
                     >
                         <Receive
-                            fill={themeColor('text')}
+                            fill={
+                                isReady
+                                    ? themeColor('text')
+                                    : themeColor('secondaryText')
+                            }
                             width={45}
                             height={45}
                         />
