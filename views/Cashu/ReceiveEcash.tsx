@@ -48,7 +48,7 @@ import ModalStore from '../../stores/ModalStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import PosStore from '../../stores/PosStore';
 import SettingsStore from '../../stores/SettingsStore';
-import CashuLightningAddressStore from '../../stores/CashuLightningAddressStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import CashuInvoice from '../../models/CashuInvoice';
@@ -69,7 +69,7 @@ interface ReceiveEcashProps {
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
-    CashuLightningAddressStore: CashuLightningAddressStore;
+    LightningAddressStore: LightningAddressStore;
     route: Route<
         'ReceiveEcash',
         {
@@ -110,7 +110,7 @@ interface ReceiveEcashState {
     'UnitsStore',
     'PosStore',
     'NodeInfoStore',
-    'CashuLightningAddressStore'
+    'LightningAddressStore'
 )
 @observer
 export default class ReceiveEcash extends React.Component<
@@ -142,19 +142,15 @@ export default class ReceiveEcash extends React.Component<
     hopPickerRef: HopPicker | null;
 
     async UNSAFE_componentWillMount() {
-        const { CashuStore, SettingsStore, CashuLightningAddressStore, route } =
+        const { CashuStore, SettingsStore, LightningAddressStore, route } =
             this.props;
         const { clearInvoice } = CashuStore;
         const { getSettings } = SettingsStore;
-        const { status, cashuLightningAddressHandle } =
-            CashuLightningAddressStore;
+        const { status, lightningAddressHandle } = LightningAddressStore;
 
         const settings = await getSettings();
 
-        if (
-            settings?.cashuLightningAddress?.enabled &&
-            !cashuLightningAddressHandle
-        ) {
+        if (settings?.lightningAddress?.enabled && !lightningAddressHandle) {
             status();
         }
 
@@ -400,7 +396,7 @@ export default class ReceiveEcash extends React.Component<
             CashuStore,
             SettingsStore,
             UnitsStore,
-            CashuLightningAddressStore,
+            LightningAddressStore,
             NodeInfoStore,
             navigation,
             route
@@ -430,8 +426,8 @@ export default class ReceiveEcash extends React.Component<
         const { posStatus, settings } = SettingsStore;
         const loading =
             SettingsStore.loading || CashuStore.loading || this.state.loading;
-        const { cashuLightningAddress } = CashuLightningAddressStore;
-        const cashuLightningAddressLoading = CashuLightningAddressStore.loading;
+        const { lightningAddress } = LightningAddressStore;
+        const lightningAddressLoading = LightningAddressStore.loading;
 
         const error_msg = CashuStore.error_msg;
 
@@ -671,8 +667,8 @@ export default class ReceiveEcash extends React.Component<
                                                     </View>
                                                 )}
                                             {selectedIndex == 1 &&
-                                                !cashuLightningAddressLoading &&
-                                                !cashuLightningAddress && (
+                                                !lightningAddressLoading &&
+                                                !lightningAddress && (
                                                     <View
                                                         style={{
                                                             marginTop: 20,
@@ -693,7 +689,7 @@ export default class ReceiveEcash extends React.Component<
                                                 )}
 
                                             {selectedIndex == 1 &&
-                                                !cashuLightningAddressLoading && (
+                                                !lightningAddressLoading && (
                                                     <Row
                                                         style={{
                                                             alignSelf: 'center',
@@ -714,18 +710,16 @@ export default class ReceiveEcash extends React.Component<
                                                                     'center'
                                                             }}
                                                         >
-                                                            {
-                                                                cashuLightningAddress
-                                                            }
+                                                            {lightningAddress}
                                                         </Text>
                                                     </Row>
                                                 )}
 
                                             {selectedIndex == 1 &&
-                                                !cashuLightningAddressLoading &&
-                                                cashuLightningAddress && (
+                                                !lightningAddressLoading &&
+                                                lightningAddress && (
                                                     <CollapsedQR
-                                                        value={`lightning:${cashuLightningAddress}`}
+                                                        value={`lightning:${lightningAddress}`}
                                                         iconOnly={true}
                                                         iconContainerStyle={{
                                                             marginRight: 40
@@ -748,7 +742,7 @@ export default class ReceiveEcash extends React.Component<
                                                 )}
 
                                             {selectedIndex == 1 &&
-                                                cashuLightningAddressLoading && (
+                                                lightningAddressLoading && (
                                                     <View
                                                         style={{ margin: 40 }}
                                                     >
@@ -785,8 +779,8 @@ export default class ReceiveEcash extends React.Component<
                                             )}
                                             {!(
                                                 selectedIndex === 1 &&
-                                                (!cashuLightningAddress ||
-                                                    cashuLightningAddressLoading)
+                                                (!lightningAddress ||
+                                                    lightningAddressLoading)
                                             ) &&
                                                 nfcSupported && (
                                                     <View

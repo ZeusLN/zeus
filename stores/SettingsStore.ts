@@ -129,12 +129,6 @@ interface LightningAddressSettings {
     notifications: number;
 }
 
-interface CashuLightningAddressSettings {
-    enabled: boolean;
-    automaticallyAccept: boolean;
-    allowComments: boolean;
-}
-
 interface Bolt12AddressSettings {
     localPart: string;
 }
@@ -201,7 +195,6 @@ export interface Settings {
     lsps1ShowPurchaseButton: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
-    cashuLightningAddress: CashuLightningAddressSettings;
     bolt12Address: Bolt12AddressSettings;
     selectNodeOnStartup: boolean;
     ecash: EcashSettings;
@@ -1226,12 +1219,6 @@ export default class SettingsStore {
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0
-        },
-        // Cashu Lightning Address
-        cashuLightningAddress: {
-            enabled: false,
-            automaticallyAccept: true,
-            allowComments: true
         },
         bolt12Address: {
             localPart: ''

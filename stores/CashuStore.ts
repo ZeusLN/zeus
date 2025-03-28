@@ -102,8 +102,9 @@ export default class CashuStore {
     @observable public mintRecommendations?: MintRecommendation[];
     @observable loadingFeeEstimate = false;
 
-    ndk: NDK;
     settingsStore: SettingsStore;
+
+    ndk: NDK;
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
@@ -169,7 +170,9 @@ export default class CashuStore {
 
     @action
     public fetchMints = async () => {
-        this.loading = true;
+        runInAction(() => {
+            this.loading = true;
+        });
         this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
         this.ndk.connect();
 
@@ -198,8 +201,10 @@ export default class CashuStore {
             };
         });
         mintUrlsCounted.sort((a, b) => b.count - a.count);
-        this.mintRecommendations = mintUrlsCounted;
-        this.loading = false;
+        runInAction(() => {
+            this.mintRecommendations = mintUrlsCounted;
+            this.loading = false;
+        });
         return mintUrlsCounted;
     };
 
