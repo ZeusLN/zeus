@@ -96,14 +96,6 @@ export default class LSPStore {
     };
 
     @action
-    public clearErrors = () => {
-        this.error = false;
-        this.error_msg = '';
-        this.flow_error = false;
-        this.flow_error_msg = '';
-    };
-
-    @action
     public resetFee = () => (this.zeroConfFee = undefined);
 
     @action
