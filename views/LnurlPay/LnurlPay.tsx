@@ -202,13 +202,10 @@ export default class LnurlPay extends React.Component<
                             pr
                         );
 
-                        return [
-                            'ChoosePaymentMethod',
-                            {
-                                lightning: CashuStore.paymentRequest,
-                                locked: true
-                            }
-                        ];
+                        navigation.navigate('ChoosePaymentMethod', {
+                            lightning: CashuStore.paymentRequest,
+                            locked: true
+                        });
                     });
                 } else {
                     InvoicesStore.getPayReq(pr).then(() => {
