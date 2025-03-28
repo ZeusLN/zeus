@@ -3066,12 +3066,13 @@ export default class Receive extends React.Component<
                                                             : '')
                                                     }
                                                     disabled={
-                                                        !satAmount ||
-                                                        satAmount === '0'
+                                                        lspIsActive &&
+                                                        (!satAmount ||
+                                                            satAmount === '0')
                                                     }
                                                     onPress={() => {
                                                         // Clear the old error messages (if present)
-                                                        LSPStore.clearErrors();
+                                                        LSPStore.reset();
                                                         // If clearButton was used in on-chain tab
                                                         // and a new invoice below dust limit is created
                                                         // reset selectedIndex to 1 (lightning)
