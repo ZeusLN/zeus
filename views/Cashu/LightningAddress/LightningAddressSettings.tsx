@@ -13,7 +13,7 @@ import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 
 import SettingsStore from '../../../stores/SettingsStore';
-import CashuLightningAddressStore from '../../../stores/CashuLightningAddressStore';
+import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -21,7 +21,7 @@ import { themeColor } from '../../../utils/ThemeUtils';
 interface CashuLightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    CashuLightningAddressStore: CashuLightningAddressStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
 interface CashuLightningAddressSettingsState {
@@ -29,7 +29,7 @@ interface CashuLightningAddressSettingsState {
     allowComments: boolean | undefined;
 }
 
-@inject('SettingsStore', 'CashuLightningAddressStore')
+@inject('SettingsStore', 'LightningAddressStore')
 @observer
 export default class CashuLightningAddressSettings extends React.Component<
     CashuLightningAddressSettingsProps,
@@ -45,11 +45,10 @@ export default class CashuLightningAddressSettings extends React.Component<
         const { settings } = SettingsStore;
 
         this.setState({
-            automaticallyAccept: settings.cashuLightningAddress
-                ?.automaticallyAccept
+            automaticallyAccept: settings.lightningAddress?.automaticallyAccept
                 ? true
                 : false,
-            allowComments: settings.cashuLightningAddress?.allowComments
+            allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false
         });
@@ -69,8 +68,8 @@ export default class CashuLightningAddressSettings extends React.Component<
                 {
                     text: localeString('general.delete'),
                     onPress: () => {
-                        const { CashuLightningAddressStore } = this.props;
-                        CashuLightningAddressStore.deleteAddress().then(() => {
+                        const { LightningAddressStore } = this.props;
+                        LightningAddressStore.deleteAddress().then(() => {
                             this.props.navigation.goBack();
                         });
                     },
@@ -81,11 +80,10 @@ export default class CashuLightningAddressSettings extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore, CashuLightningAddressStore } =
-            this.props;
+        const { navigation, SettingsStore, LightningAddressStore } = this.props;
         const { automaticallyAccept, allowComments } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
-        const { loading, update, error_msg } = CashuLightningAddressStore;
+        const { loading, update, error_msg } = LightningAddressStore;
 
         return (
             <Screen>
@@ -147,8 +145,8 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                 !automaticallyAccept
                                         });
                                         await updateSettings({
-                                            cashuLightningAddress: {
-                                                ...settings.cashuLightningAddress,
+                                            lightningAddress: {
+                                                ...settings.lightningAddress,
                                                 automaticallyAccept:
                                                     !automaticallyAccept
                                             }
@@ -194,8 +192,8 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                         !allowComments
                                                 });
                                                 await updateSettings({
-                                                    cashuLightningAddress: {
-                                                        ...settings.cashuLightningAddress,
+                                                    lightningAddress: {
+                                                        ...settings.lightningAddress,
                                                         allowComments:
                                                             !allowComments
                                                     }

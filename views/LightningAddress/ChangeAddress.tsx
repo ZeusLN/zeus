@@ -3,19 +3,19 @@ import { StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../../components/Button';
-import Screen from '../../../components/Screen';
-import Text from '../../../components/Text';
-import Header from '../../../components/Header';
-import LoadingIndicator from '../../../components/LoadingIndicator';
-import TextInput from '../../../components/TextInput';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import { Row } from '../../../components/layout/Row';
+import Button from '../../components/Button';
+import Screen from '../../components/Screen';
+import Text from '../../components/Text';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import TextInput from '../../components/TextInput';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
 
-import LightningAddressStore from '../../../stores/LightningAddressStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface ChangeAddressProps {
     navigation: StackNavigationProp<any, any>;

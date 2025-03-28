@@ -10,22 +10,22 @@ import KeyValue from '../../../components/KeyValue';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
-import CashuLightningAddressStore from '../../../stores/CashuLightningAddressStore';
+import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 interface CashuLightningAddressInfoProps {
     navigation: StackNavigationProp<any, any>;
-    CashuLightningAddressStore: CashuLightningAddressStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
-@inject('CashuLightningAddressStore')
+@inject('LightningAddressStore')
 @observer
 export default class CashuLightningAddressInfo extends React.Component<
     CashuLightningAddressInfoProps,
     {}
 > {
     render() {
-        const { navigation, CashuLightningAddressStore } = this.props;
-        const { minimumSats } = CashuLightningAddressStore;
+        const { navigation, LightningAddressStore } = this.props;
+        const { minimumSats } = LightningAddressStore;
 
         return (
             <Screen>
@@ -51,7 +51,9 @@ export default class CashuLightningAddressInfo extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 18
                                 }}
                             >
                                 {localeString(
@@ -66,7 +68,9 @@ export default class CashuLightningAddressInfo extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 18
                                 }}
                             >
                                 {localeString(

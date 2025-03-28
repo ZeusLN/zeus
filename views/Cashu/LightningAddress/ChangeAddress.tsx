@@ -12,14 +12,14 @@ import TextInput from '../../../components/TextInput';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
 
-import CashuLightningAddressStore from '../../../stores/CashuLightningAddressStore';
+import LightningAddressStore from '../../../stores/LightningAddressStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface CashuChangeAddressProps {
     navigation: StackNavigationProp<any, any>;
-    CashuLightningAddressStore: CashuLightningAddressStore;
+    LightningAddressStore: LightningAddressStore;
 }
 
 interface CashuChangeAddressState {
@@ -27,7 +27,7 @@ interface CashuChangeAddressState {
     currentLightningAddress: string;
 }
 
-@inject('CashuLightningAddressStore')
+@inject('LightningAddressStore')
 @observer
 export default class CashuChangeAddress extends React.Component<
     CashuChangeAddressProps,
@@ -39,19 +39,19 @@ export default class CashuChangeAddress extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { CashuLightningAddressStore } = this.props;
-        const { cashuLightningAddressHandle } = CashuLightningAddressStore;
+        const { LightningAddressStore } = this.props;
+        const { lightningAddressHandle } = LightningAddressStore;
 
         this.setState({
-            newLightningAddress: cashuLightningAddressHandle,
-            currentLightningAddress: cashuLightningAddressHandle
+            newLightningAddress: lightningAddressHandle,
+            currentLightningAddress: lightningAddressHandle
         });
     }
 
     render() {
-        const { navigation, CashuLightningAddressStore } = this.props;
+        const { navigation, LightningAddressStore } = this.props;
         const { newLightningAddress, currentLightningAddress } = this.state;
-        const { update, error_msg, loading } = CashuLightningAddressStore;
+        const { update, error_msg, loading } = LightningAddressStore;
 
         return (
             <Screen>
@@ -140,7 +140,7 @@ export default class CashuChangeAddress extends React.Component<
                                                         handle: newLightningAddress
                                                     }).then(() =>
                                                         navigation.popTo(
-                                                            'CashuLightningAddress'
+                                                            'LightningAddress'
                                                         )
                                                     );
                                                 } catch (e) {}

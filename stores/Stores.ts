@@ -1,6 +1,5 @@
 import AlertStore from './AlertStore';
 import CashuStore from './CashuStore';
-import CashuLightningAddressStore from './CashuLightningAddressStore';
 import ChannelsStore from './ChannelsStore';
 import InvoicesStore from './InvoicesStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -29,7 +28,6 @@ import OffersStore from './OffersStore';
 class Stores {
     public alertStore: AlertStore;
     public cashuStore: CashuStore;
-    public cashuLightningAddressStore: CashuLightningAddressStore;
     public channelsStore: ChannelsStore;
     public invoicesStore: InvoicesStore;
     public nodeInfoStore: NodeInfoStore;
@@ -74,10 +72,6 @@ class Stores {
             this.channelsStore,
             this.nodeInfoStore
         );
-        this.lightningAddressStore = new LightningAddressStore(
-            this.nodeInfoStore,
-            this.settingsStore
-        );
         this.channelBackupStore = new ChannelBackupStore(
             this.nodeInfoStore,
             this.settingsStore
@@ -110,7 +104,7 @@ class Stores {
         this.contactStore = new ContactStore();
         this.syncStore = new SyncStore(this.settingsStore);
         this.cashuStore = new CashuStore(this.settingsStore);
-        this.cashuLightningAddressStore = new CashuLightningAddressStore(
+        this.lightningAddressStore = new LightningAddressStore(
             this.cashuStore,
             this.nodeInfoStore,
             this.settingsStore

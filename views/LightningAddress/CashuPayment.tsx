@@ -3,22 +3,21 @@ import { TouchableOpacity } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import moment from 'moment';
 
-import Amount from '../../../components/Amount';
-import AttestationButton from '../../../components/AttestationButton';
-import Text from '../../../components/Text';
-import { Row } from '../../../components/layout/Row';
+import Amount from '../../components/Amount';
+import Text from '../../components/Text';
+import { Row } from '../../components/layout/Row';
 
-import stores from '../../../stores/Stores';
+import stores from '../../stores/Stores';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import Receive from '../../../assets/images/SVG/Receive.svg';
+import Receive from '../../assets/images/SVG/Receive.svg';
 
-export default function LightningAddressPayment(props: any) {
-    const { item, index, navigation, isReady } = props;
+export default function CashuPayment(props: any) {
+    const { item, index } = props;
     const { lightningAddressStore } = stores;
-    const { lookupPreimageAndRedeem } = lightningAddressStore;
+    const { redeemCashu } = lightningAddressStore;
 
     const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
 
@@ -34,13 +33,6 @@ export default function LightningAddressPayment(props: any) {
             <ListItem.Content>
                 <ListItem.Title>
                     <Amount sats={item.amount_msat / 1000} />{' '}
-                    {item.opened_channel_fee_msat && (
-                        <Amount
-                            sats={item.opened_channel_fee_msat / 1000}
-                            debit
-                            negative={true}
-                        />
-                    )}
                 </ListItem.Title>
                 {item.comment && (
                     <ListItem.Subtitle>
@@ -71,34 +63,23 @@ export default function LightningAddressPayment(props: any) {
             </ListItem.Content>
             <ListItem.Content right>
                 <Row>
-                    <AttestationButton
-                        hash={item.hash}
-                        amount_msat={item.amount_msat}
-                        navigation={navigation}
-                    />
                     <TouchableOpacity
                         onPress={() => {
-                            if (!isReady) return;
-
                             const {
-                                hash,
-                                amount_msat,
-                                comment
+                                quote_id,
+                                mint_url,
+                                amount_msat
                             }: {
-                                hash: string;
+                                quote_id: string;
+                                mint_url: string;
                                 amount_msat: number;
-                                comment: string;
                             } = item;
 
-                            lookupPreimageAndRedeem(hash, amount_msat, comment);
+                            redeemCashu(quote_id, mint_url, amount_msat);
                         }}
                     >
                         <Receive
-                            fill={
-                                isReady
-                                    ? themeColor('text')
-                                    : themeColor('secondaryText')
-                            }
+                            fill={themeColor('text')}
                             width={45}
                             height={45}
                         />

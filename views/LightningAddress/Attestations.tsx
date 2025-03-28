@@ -3,15 +3,15 @@ import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Amount from '../../../components/Amount';
-import Screen from '../../../components/Screen';
-import Header from '../../../components/Header';
-import KeyValue from '../../../components/KeyValue';
-import { Spacer } from '../../../components/layout/Spacer';
+import Amount from '../../components/Amount';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
+import { Spacer } from '../../components/layout/Spacer';
 
-import DateTimeUtils from '../../../utils/DateTimeUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface AttestationProps {
     navigation: StackNavigationProp<any, any>;

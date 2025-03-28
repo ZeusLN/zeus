@@ -4,16 +4,16 @@ import { nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Amount from '../../../components/Amount';
-import Button from '../../../components/Button';
-import Screen from '../../../components/Screen';
-import Header from '../../../components/Header';
-import KeyValue from '../../../components/KeyValue';
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
 
-import DateTimeUtils from '../../../utils/DateTimeUtils';
-import LinkingUtils from '../../../utils/LinkingUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
+import LinkingUtils from '../../utils/LinkingUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface AttestationProps {
     navigation: StackNavigationProp<any, any>;

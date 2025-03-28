@@ -78,14 +78,16 @@ import SetWalletPicture from './views/Settings/SetWalletPicture';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
 // Lightning address
-import LightningAddress from './views/Settings/LightningAddress';
-import LightningAddressInfo from './views/Settings/LightningAddress/LightningAddressInfo';
-import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
-import Attestation from './views/Settings/LightningAddress/Attestation';
-import Attestations from './views/Settings/LightningAddress/Attestations';
-import NostrKeys from './views/Settings/LightningAddress/NostrKeys';
-import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
-import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
+import LightningAddress from './views/LightningAddress';
+import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
+import ZaplockerGetChan from './views/LightningAddress/ZaplockerGetChan';
+import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
+import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
+import Attestation from './views/LightningAddress/Attestation';
+import Attestations from './views/LightningAddress/Attestations';
+import NostrKeys from './views/LightningAddress/NostrKeys';
+import NostrRelays from './views/LightningAddress/NostrRelays';
+import ChangeAddress from './views/LightningAddress/ChangeAddress';
 
 // BOLT 12
 import PayCodes from './views/PayCodes';
@@ -172,7 +174,7 @@ import CashuToken from './views/Cashu/CashuToken';
 import MintToken from './views/Cashu/MintToken';
 
 // Cashu Lightning address
-import CashuLightningAddress from './views/Cashu/LightningAddress';
+import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
 import CashuLightningAddressInfo from './views/Cashu/LightningAddress/LightningAddressInfo';
 import CashuLightningAddressSettings from './views/Cashu/LightningAddress/LightningAddressSettings';
 import CashuChangeAddress from './views/Cashu/LightningAddress/ChangeAddress';
@@ -257,7 +259,6 @@ export default class App extends React.PureComponent {
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
                 CashuStore={Stores.cashuStore}
-                CashuLightningAddressStore={Stores.cashuLightningAddressStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -767,15 +768,21 @@ export default class App extends React.PureComponent {
                                                         component={LSP}
                                                     />
                                                     <Stack.Screen
+                                                        name="ZaplockerGetChan" // @ts-ignore:next-line
+                                                        component={
+                                                            ZaplockerGetChan
+                                                        }
+                                                    />
+                                                    <Stack.Screen
                                                         name="LightningAddress" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddress
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LightningAddressInfo" // @ts-ignore:next-line
+                                                        name="ZaplockerInfo" // @ts-ignore:next-line
                                                         component={
-                                                            LightningAddressInfo
+                                                            ZaplockerInfo
                                                         }
                                                     />
                                                     <Stack.Screen
@@ -785,9 +792,15 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="CashuLightningAddress" // @ts-ignore:next-line
+                                                        name="CreateZaplockerLightningAddress" // @ts-ignore:next-line
                                                         component={
-                                                            CashuLightningAddress
+                                                            CreateZaplockerLightningAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreateCashuLightningAddress" // @ts-ignore:next-line
+                                                        component={
+                                                            CreateCashuLightningAddress
                                                         }
                                                     />
                                                     <Stack.Screen

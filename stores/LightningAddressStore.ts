@@ -16,6 +16,7 @@ const bip39 = require('bip39');
 
 import { sha256 } from 'js-sha256';
 
+import CashuStore from './CashuStore';
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 
@@ -40,7 +41,9 @@ export default class LightningAddressStore {
     @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
     @observable public lightningAddressDomain: string;
+    @observable public lightningAddressType: string;
     @observable public lightningAddressActivated: boolean = false;
+    @observable public zeusPlusExpiresAt: any;
     @observable public loading: boolean = false;
     @observable public redeeming: boolean = false;
     @observable public redeemingAll: boolean = false;
@@ -58,10 +61,16 @@ export default class LightningAddressStore {
     @observable public readyToAutomaticallyAccept: boolean = false;
     @observable public prepareToAutomaticallyAcceptStart: boolean = false;
 
+    cashuStore: CashuStore;
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
 
-    constructor(nodeInfoStore: NodeInfoStore, settingsStore: SettingsStore) {
+    constructor(
+        cashuStore: CashuStore,
+        nodeInfoStore: NodeInfoStore,
+        settingsStore: SettingsStore
+    ) {
+        this.cashuStore = cashuStore;
         this.nodeInfoStore = nodeInfoStore;
         this.settingsStore = settingsStore;
     }
@@ -223,7 +232,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public create = async (
+    public createZaplocker = async (
         handle: string,
         nostr_pk: string,
         nostrPrivateKey: string,
@@ -273,7 +282,7 @@ export default class LightningAddressStore {
                     nostr_pk,
                     relays,
                     relays_sig,
-                    request_channels: false // deprecated
+                    address_type: 'zaplocker'
                 })
             );
 
@@ -282,7 +291,7 @@ export default class LightningAddressStore {
                 throw createData.error;
             }
 
-            const { handle: responseHandle, domain, created_at } = createData;
+            const { handle: responseHandle, domain, success } = createData;
 
             if (responseHandle) {
                 this.setLightningAddress(responseHandle, domain);
@@ -307,12 +316,93 @@ export default class LightningAddressStore {
                 this.loading = false;
             });
 
-            return { created_at };
+            return { success };
         } catch (error) {
+            const error_msg = error?.toString();
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
-                this.error_msg = error?.toString();
+                this.error_msg = error_msg;
+            });
+            throw error;
+        }
+    };
+
+    @action
+    public createCashu = async (handle: string, mint_url: string) => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+
+        try {
+            const authResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/auth`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                })
+            );
+
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
+
+            const { verification } = authData;
+
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            if (!this.cashuStore.cashuWallets[mint_url].wallet)
+                await this.cashuStore.initializeWallet(mint_url, true);
+
+            const createResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/create`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    cashu_pubkey: this.cashuStore.cashuWallets[mint_url].pubkey,
+                    message: verification,
+                    signature,
+                    handle,
+                    domain: 'zeusnuts.com',
+                    mint_url,
+                    address_type: 'cashu'
+                })
+            );
+
+            const createData = createResponse.json();
+            if (createResponse.info().status !== 200 || !createData.success) {
+                throw createData.error;
+            }
+
+            const { handle: responseHandle, domain, success } = createData;
+
+            if (responseHandle) {
+                this.setLightningAddress(responseHandle, domain);
+            }
+
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    enabled: true,
+                    automaticallyAccept: true
+                }
+            });
+
+            runInAction(() => {
+                // ensure push credentials are in place
+                // right after creation
+                this.updatePushCredentials();
+                this.loading = false;
+            });
+
+            return { success };
+        } catch (error) {
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.error_msg = error_msg;
+                this.error = true;
+                this.loading = false;
             });
             throw error;
         }
@@ -428,8 +518,16 @@ export default class LightningAddressStore {
                 throw statusData.error;
             }
 
-            const { results, paid, fees, minimumSats, handle, domain } =
-                statusData;
+            const {
+                results,
+                paid,
+                fees,
+                minimumSats,
+                handle,
+                domain,
+                addressType,
+                plusExpiresAt
+            } = statusData;
 
             runInAction(() => {
                 if (!isRedeem) {
@@ -448,6 +546,8 @@ export default class LightningAddressStore {
                 this.minimumSats = minimumSats;
                 this.lightningAddressHandle = handle;
                 this.lightningAddressDomain = domain;
+                this.lightningAddressType = addressType;
+                this.zeusPlusExpiresAt = plusExpiresAt;
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;
                 }
@@ -464,17 +564,18 @@ export default class LightningAddressStore {
 
             return { results };
         } catch (error) {
+            const error_msg = error?.toString();
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
-                this.error_msg = error?.toString();
+                this.error_msg = error_msg;
             });
             throw error;
         }
     };
 
     @action
-    private redeem = async (
+    private redeemZaplocker = async (
         hash: string,
         payReq?: string,
         preimageNotFound?: boolean
@@ -536,6 +637,126 @@ export default class LightningAddressStore {
                 this.error_msg = error?.toString();
             });
             throw error;
+        }
+    };
+
+    @action
+    public redeemCashu = async (
+        quote_id: string,
+        mint_url: string,
+        amount_msat: number,
+        skipStatus?: boolean,
+        localNotification?: boolean
+    ) => {
+        this.error = false;
+        this.error_msg = '';
+        this.redeeming = true;
+
+        const fireLocalNotification = () => {
+            const value = (amount_msat / 1000).toString();
+            const value_commas = value.replace(
+                /\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g,
+                ','
+            );
+
+            const title = 'ZEUS Nuts payment received!';
+            const body = `Payment of ${value_commas} ${
+                value_commas === '1' ? 'sat' : 'sats'
+            } automatically accepted`;
+            if (Platform.OS === 'android') {
+                // @ts-ignore:next-line
+                Notifications.postLocalNotification({
+                    title,
+                    body
+                });
+            }
+
+            if (Platform.OS === 'ios') {
+                // @ts-ignore:next-line
+                Notifications.postLocalNotification({
+                    title,
+                    body,
+                    sound: 'chime.aiff'
+                });
+            }
+        };
+
+        try {
+            const response = await this.cashuStore.checkInvoicePaid(
+                quote_id,
+                mint_url,
+                true
+            );
+
+            if (response?.isPaid) {
+                try {
+                    const authResponse = await ReactNativeBlobUtil.fetch(
+                        'POST',
+                        `${LNURL_HOST}/lnurl/auth`,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({
+                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                        })
+                    );
+
+                    const authData = authResponse.json();
+                    if (authResponse.info().status !== 200)
+                        throw authData.error;
+
+                    const { verification } = authData;
+                    const signData = await BackendUtils.signMessage(
+                        verification
+                    );
+                    const signature = signData.zbase || signData.signature;
+
+                    const redeemResponse = await ReactNativeBlobUtil.fetch(
+                        'POST',
+                        `${LNURL_HOST}/lnurl/nuts/redeem`,
+                        { 'Content-Type': 'application/json' },
+                        JSON.stringify({
+                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                            message: verification,
+                            signature,
+                            quoteId: quote_id
+                        })
+                    );
+
+                    const redeemData = redeemResponse.json();
+                    if (
+                        redeemResponse.info().status !== 200 ||
+                        !redeemData.success
+                    ) {
+                        throw redeemData.error;
+                    }
+
+                    this.redeeming = false;
+
+                    if (localNotification) fireLocalNotification();
+                    if (!skipStatus) this.status(true);
+                    return true;
+                } catch (error) {
+                    this.error_msg = error?.toString();
+                    runInAction(() => {
+                        this.redeeming = false;
+                        this.error = true;
+                    });
+                    throw error;
+                }
+            } else {
+                runInAction(() => {
+                    this.redeeming = false;
+                    this.error = true;
+                    // TODO ecash
+                    this.error_msg = 'Quote not paid.';
+                });
+                return true;
+            }
+        } catch (e) {
+            this.redeeming = false;
+            this.error = true;
+            // TODO ecash
+            this.error_msg = 'Error checking for quote payment.';
+            return true;
         }
     };
 
@@ -720,7 +941,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public lookupPreimageAndRedeem = async (
+    public lookupPreimageAndRedeemZaplocker = async (
         hash: string,
         amount_msat: number,
         comment?: string,
@@ -771,11 +992,11 @@ export default class LightningAddressStore {
             })
                 .then((result: any) => {
                     if (result.payment_request) {
-                        return this.redeem(
+                        return this.redeemZaplocker(
                             hash,
                             result.payment_request,
                             preimageNotFound
-                        ).then((success) => {
+                        ).then((success: any) => {
                             if (success?.success === true && localNotification)
                                 fireLocalNotification();
                             if (!skipStatus) this.status(true);
@@ -790,11 +1011,11 @@ export default class LightningAddressStore {
                             r_hash: hash
                         }).then((result: any) => {
                             if (result.payment_request) {
-                                return this.redeem(
+                                return this.redeemZaplocker(
                                     hash,
                                     result.payment_request,
                                     preimageNotFound
-                                ).then((success) => {
+                                ).then((success: any) => {
                                     if (
                                         success?.success === true &&
                                         localNotification
@@ -807,7 +1028,7 @@ export default class LightningAddressStore {
                         });
                     } catch (e) {
                         // then, try to redeem without new pay req
-                        return this.redeem(
+                        return this.redeemZaplocker(
                             hash,
                             undefined,
                             preimageNotFound
@@ -823,7 +1044,9 @@ export default class LightningAddressStore {
     };
 
     @action
-    public redeemAllOpenPayments = async (localNotification?: boolean) => {
+    public redeemAllOpenPaymentsZaplocker = async (
+        localNotification?: boolean
+    ) => {
         this.redeemingAll = true;
         const attestationLevel = this.settingsStore?.settings?.lightningAddress
             ?.automaticallyAcceptAttestationLevel
@@ -834,7 +1057,7 @@ export default class LightningAddressStore {
         // disabled
         if (attestationLevel === 0) {
             for (const item of this.paid) {
-                await this.lookupPreimageAndRedeem(
+                await this.lookupPreimageAndRedeemZaplocker(
                     item.hash,
                     item.amount_msat,
                     item.comment,
@@ -851,7 +1074,7 @@ export default class LightningAddressStore {
                         // success only
                         if (status === 'warning' && attestationLevel === 1)
                             return;
-                        return await this.lookupPreimageAndRedeem(
+                        return await this.lookupPreimageAndRedeemZaplocker(
                             item.hash,
                             item.amount_msat,
                             item.comment,
@@ -870,7 +1093,27 @@ export default class LightningAddressStore {
         });
     };
 
-    private subscribeUpdates = () => {
+    @action
+    public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
+        this.redeemingAll = true;
+
+        for (const item of this.paid.reverse()) {
+            await this.redeemCashu(
+                item.quote_id,
+                item.mint_url,
+                item.amount_msat,
+                true,
+                localNotification
+            );
+        }
+
+        runInAction(() => {
+            this.status(true);
+            this.redeemingAll = false;
+        });
+    };
+
+    private subscribeUpdatesZaplocker = () => {
         ReactNativeBlobUtil.fetch(
             'POST',
             `${LNURL_HOST}/lnurl/auth`,
@@ -909,7 +1152,7 @@ export default class LightningAddressStore {
                             : 2;
 
                         if (attestationLevel === 0) {
-                            this.lookupPreimageAndRedeem(
+                            this.lookupPreimageAndRedeemZaplocker(
                                 hash,
                                 amount_msat,
                                 comment,
@@ -926,7 +1169,7 @@ export default class LightningAddressStore {
                                         attestationLevel === 1
                                     )
                                         return;
-                                    this.lookupPreimageAndRedeem(
+                                    this.lookupPreimageAndRedeemZaplocker(
                                         hash,
                                         amount_msat,
                                         comment,
@@ -947,7 +1190,50 @@ export default class LightningAddressStore {
         });
     };
 
-    public prepareToAutomaticallyAccept = async () => {
+    private subscribeUpdatesCashu = () => {
+        ReactNativeBlobUtil.fetch(
+            'POST',
+            `${LNURL_HOST}/lnurl/auth`,
+            {
+                'Content-Type': 'application/json'
+            },
+            JSON.stringify({
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+            })
+        ).then((response: any) => {
+            const status = response.info().status;
+            if (status == 200) {
+                const data = response.json();
+                const { verification } = data;
+
+                BackendUtils.signMessage(verification).then((data: any) => {
+                    const signature = data.zbase || data.signature;
+
+                    this.socket = io(LNURL_SOCKET_HOST, {
+                        path: LNURL_SOCKET_PATH
+                    }).connect();
+                    this.socket.emit('auth', {
+                        pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                        message: verification,
+                        signature
+                    });
+
+                    this.socket.on('paid', (data: any) => {
+                        const { quote_id, mint_url, amount_msat } = data;
+                        this.redeemCashu(
+                            quote_id,
+                            mint_url,
+                            amount_msat,
+                            false,
+                            true
+                        );
+                    });
+                });
+            }
+        });
+    };
+
+    public prepareToAutomaticallyAcceptZaplocker = async () => {
         this.readyToAutomaticallyAccept = false;
         this.prepareToAutomaticallyAcceptStart = true;
 
@@ -958,12 +1244,18 @@ export default class LightningAddressStore {
                 runInAction(() => {
                     this.readyToAutomaticallyAccept = true;
                     if (this.socket && this.socket.connected) return;
-                    this.redeemAllOpenPayments(true);
-                    this.subscribeUpdates();
+                    this.redeemAllOpenPaymentsZaplocker(true);
+                    this.subscribeUpdatesZaplocker();
                 });
             }
             await sleep(3000);
         }
+    };
+
+    public prepareToAutomaticallyAcceptCashu = () => {
+        if (this.socket && this.socket.connected) return;
+        this.redeemAllOpenPaymentsCashu(true);
+        this.subscribeUpdatesCashu();
     };
 
     @action
@@ -979,6 +1271,8 @@ export default class LightningAddressStore {
         this.lightningAddress = '';
         this.lightningAddressHandle = '';
         this.lightningAddressDomain = '';
+        this.lightningAddressType = '';
+        this.zeusPlusExpiresAt = undefined;
     };
 
     @action
