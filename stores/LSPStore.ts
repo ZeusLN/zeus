@@ -96,6 +96,14 @@ export default class LSPStore {
     };
 
     @action
+    public clearErrors = () => {
+        this.error = false;
+        this.error_msg = '';
+        this.flow_error = false;
+        this.flow_error_msg = '';
+    };
+
+    @action
     public resetFee = () => (this.zeroConfFee = undefined);
 
     @action
@@ -196,7 +204,7 @@ export default class LSPStore {
                                 true,
                                 true
                             );
-                        } catch (e) {}
+                        } catch (e) { }
                     } else {
                         runInAction(() => {
                             this.flow_error = true;
@@ -238,9 +246,9 @@ export default class LSPStore {
                 `${this.getFlowHost()}/api/v1/fee`,
                 settings.lspAccessKey
                     ? {
-                          'Content-Type': 'application/json',
-                          'x-auth-token': settings.lspAccessKey
-                      }
+                        'Content-Type': 'application/json',
+                        'x-auth-token': settings.lspAccessKey
+                    }
                     : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     amount_msat,
@@ -255,11 +263,11 @@ export default class LSPStore {
                             this.zeroConfFee =
                                 data.fee_amount_msat !== undefined
                                     ? Number.parseInt(
-                                          (
-                                              Number(data.fee_amount_msat) /
-                                              1000
-                                          ).toString()
-                                      )
+                                        (
+                                            Number(data.fee_amount_msat) /
+                                            1000
+                                        ).toString()
+                                    )
                                     : undefined;
                             this.feeId = data.id;
                             this.flow_error = false;
@@ -347,9 +355,9 @@ export default class LSPStore {
                 `${this.getFlowHost()}/api/v1/proposal`,
                 settings.lspAccessKey
                     ? {
-                          'Content-Type': 'application/json',
-                          'x-auth-token': settings.lspAccessKey
-                      }
+                        'Content-Type': 'application/json',
+                        'x-auth-token': settings.lspAccessKey
+                    }
                     : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     bolt11,
@@ -554,7 +562,7 @@ export default class LSPStore {
                             const uri = responseData.uris[0];
                             const pubkey = uri.split('@')[0];
                             this.pubkey = pubkey;
-                        } catch (e) {}
+                        } catch (e) { }
                         this.loadingLSPS1 = false;
                     } else {
                         this.error = true;
