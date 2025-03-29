@@ -19,19 +19,23 @@ export default function AttestationButton(props: any) {
 
     return (
         <TouchableOpacity
-            onPress={() => {
+            onPress={async () => {
                 if (attestationStatus === 'neutral') {
                     setLoading(true);
-                    stores.lightningAddressStore
-                        .lookupAttestations(hash, amount_msat)
-                        .then(({ attestations, status }) => {
-                            setAttestations(attestations);
-                            setAttestationStatus(status || '');
-                            setLoading(false);
-                        })
-                        .catch(() => {
-                            setLoading(false);
-                        });
+                    try {
+                        const { attestations, status } =
+                            await stores.lightningAddressStore.lookupAttestations(
+                                hash,
+                                amount_msat
+                            );
+                        setAttestations(attestations);
+                        setAttestationStatus(status || '' || 'error');
+                    } catch (error) {
+                        console.error('Error fetching attestations:', error);
+                        setAttestationStatus('error' || '');
+                    } finally {
+                        setLoading(false);
+                    }
                 } else {
                     if (attestationStatus === 'success') {
                         navigation.navigate('Attestation', {
