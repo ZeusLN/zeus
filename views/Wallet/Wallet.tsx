@@ -734,7 +734,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <LayerBalances
                                 navigation={navigation}
                                 onRefresh={() => this.getSettingsAndNavigate()}
-                                locked={isSyncing}
                                 consolidated
                             />
 
@@ -850,6 +849,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         tabBarIcon: ({ color }) => {
                                             if (
                                                 isSyncing &&
+                                                !settings?.ecash?.enableCashu &&
                                                 route.name === 'Keypad'
                                             ) {
                                                 return;
@@ -922,12 +922,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         )}
                                     {posStatus !== 'active' && (
                                         <>
-                                            {!error && !isSyncing && (
-                                                <Tab.Screen
-                                                    name="Keypad"
-                                                    component={KeypadScreen}
-                                                />
-                                            )}
+                                            {!error &&
+                                                !(
+                                                    isSyncing &&
+                                                    !settings?.ecash
+                                                        ?.enableCashu
+                                                ) && (
+                                                    <Tab.Screen
+                                                        name="Keypad"
+                                                        component={KeypadScreen}
+                                                    />
+                                                )}
                                             {BackendUtils.supportsChannelManagement() &&
                                                 !error &&
                                                 !isSyncing && (

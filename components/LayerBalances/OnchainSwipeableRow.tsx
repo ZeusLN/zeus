@@ -189,12 +189,8 @@ export default class OnchainSwipeableRow extends Component<
                             localeString('views.Wallet.waitForSync')
                         )
                     }
-                    activeOpacity={1}
-                    style={{ width: '100%' }}
                 >
-                    <View style={{ opacity: hidden ? 0.25 : 1 }}>
-                        {children}
-                    </View>
+                    <View style={{ opacity: 0.25 }}>{children}</View>
                 </TouchableOpacity>
             );
         }

@@ -26,6 +26,7 @@ import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -46,6 +47,7 @@ interface KeypadPaneProps {
     ChannelsStore?: ChannelsStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
+    SyncStore?: SyncStore;
     UnitsStore?: UnitsStore;
 }
 
@@ -63,6 +65,7 @@ interface KeypadPaneState {
     'ChannelsStore',
     'NodeInfoStore',
     'SettingsStore',
+    'SyncStore',
     'UnitsStore'
 )
 @observer
@@ -293,7 +296,7 @@ export default class KeypadPane extends React.PureComponent<
     private modalBoxRef = React.createRef<ModalBox>();
 
     render() {
-        const { CashuStore, UnitsStore, SettingsStore, navigation } =
+        const { CashuStore, UnitsStore, SettingsStore, SyncStore, navigation } =
             this.props;
         const {
             amount,
@@ -304,6 +307,7 @@ export default class KeypadPane extends React.PureComponent<
         } = this.state;
         const { units } = UnitsStore!;
         const { settings } = SettingsStore!;
+        const { isSyncing } = SyncStore!;
 
         const color = this.textAnimation.interpolate({
             inputRange: [0, 1],
@@ -551,7 +555,10 @@ export default class KeypadPane extends React.PureComponent<
                                             );
                                         }}
                                         buttonStyle={{ height: 40 }}
-                                        disabled={ecashMode && noMints}
+                                        disabled={
+                                            (ecashMode && noMints) ||
+                                            (!ecashMode && isSyncing)
+                                        }
                                     />
                                 </View>
                                 <View style={{ width: '20%' }}>
@@ -577,7 +584,10 @@ export default class KeypadPane extends React.PureComponent<
                                             );
                                         }}
                                         buttonStyle={{ height: 40 }}
-                                        disabled={ecashMode && noMints}
+                                        disabled={
+                                            (ecashMode && noMints) ||
+                                            (!ecashMode && isSyncing)
+                                        }
                                     />
                                 </View>
                                 <View style={{ width: '40%' }}>
@@ -600,7 +610,8 @@ export default class KeypadPane extends React.PureComponent<
                                         buttonStyle={{ height: 40 }}
                                         disabled={
                                             !BackendUtils.supportsLightningSends() ||
-                                            (ecashMode && noMints)
+                                            (ecashMode && noMints) ||
+                                            (!ecashMode && isSyncing)
                                         }
                                     />
                                 </View>
