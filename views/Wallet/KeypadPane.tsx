@@ -550,7 +550,11 @@ export default class KeypadPane extends React.PureComponent<
                                                     : 'Receive',
                                                 {
                                                     amount,
-                                                    autoGenerate: true
+                                                    autoGenerate:
+                                                        ecashMode &&
+                                                        amount === '0'
+                                                            ? false
+                                                            : true
                                                 }
                                             );
                                         }}

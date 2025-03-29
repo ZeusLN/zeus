@@ -927,6 +927,7 @@ export default class ReceiveEcash extends React.Component<
                                                         this.subscribeInvoice();
                                                     });
                                                 }}
+                                                disabled={satAmount == 0}
                                             />
                                         </View>
                                     </>
