@@ -249,7 +249,7 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 {localeString('views.Receive.expiration')}
                             </Text>
-                            <Row style={{ width: '100%' }}>
+                            <Row style={{ width: '100%', gap: 10 }}>
                                 <TextInput
                                     keyboardType="numeric"
                                     value={expiry}
