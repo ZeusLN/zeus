@@ -37,6 +37,11 @@ export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 export const ADDRESS_ACTIVATED_STRING = 'zeuspay-lightning-address';
 export const HASHES_STORAGE_STRING = 'zeuspay-lightning-address-hashes';
 
+interface Auth {
+    verification: string;
+    signature: string;
+}
+
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
@@ -61,6 +66,9 @@ export default class LightningAddressStore {
     @observable public serviceDeviceToken: string;
     @observable public readyToAutomaticallyAccept: boolean = false;
     @observable public prepareToAutomaticallyAcceptStart: boolean = false;
+    // Auth
+    auth: Auth;
+    authDate?: Date;
 
     cashuStore: CashuStore;
     nodeInfoStore: NodeInfoStore;
@@ -75,6 +83,35 @@ export default class LightningAddressStore {
         this.nodeInfoStore = nodeInfoStore;
         this.settingsStore = settingsStore;
     }
+
+    private getAuthData = async () => {
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+
+        if (this.authDate && this.authDate > tenMinutesAgo) {
+            return this.auth;
+        } else {
+            const authResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/auth`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
+                })
+            );
+
+            const authData = authResponse.json();
+            if (authResponse.info().status !== 200) throw authData.error;
+
+            const { verification } = authData;
+            const signData = await BackendUtils.signMessage(verification);
+            const signature = signData.zbase || signData.signature;
+
+            this.auth = { verification, signature };
+            this.authDate = new Date(Date.now());
+
+            return this.auth;
+        }
+    };
 
     public deleteAndGenerateNewPreimages = async () => {
         this.loading = true;
@@ -180,23 +217,7 @@ export default class LightningAddressStore {
         await Storage.setItem(HASHES_STORAGE_STRING, newHashes);
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                {
-                    'Content-Type': 'application/json'
-                },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
-
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
+            const { verification, signature } = await this.getAuthData();
 
             const payload = {
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
@@ -244,19 +265,8 @@ export default class LightningAddressStore {
         this.loading = true;
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
+            const { verification, signature } = await this.getAuthData();
 
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
             const relays_sig = bytesToHex(
                 schnorr.sign(
                     hashjs
@@ -266,9 +276,6 @@ export default class LightningAddressStore {
                     nostrPrivateKey
                 )
             );
-
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
 
             const createResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -335,22 +342,7 @@ export default class LightningAddressStore {
         this.loading = true;
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
-
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
-
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
+            const { verification, signature } = await this.getAuthData();
 
             if (!this.cashuStore.cashuWallets[mint_url].wallet)
                 await this.cashuStore.initializeWallet(mint_url, true);
@@ -416,21 +408,7 @@ export default class LightningAddressStore {
         this.loading = true;
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
-
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
+            const { verification, signature } = await this.getAuthData();
 
             const updateResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -489,21 +467,7 @@ export default class LightningAddressStore {
         this.loading = true;
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
-
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
+            const { verification, signature } = await this.getAuthData();
 
             const statusResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -603,21 +567,7 @@ export default class LightningAddressStore {
         this.redeeming = true;
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
-
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
+            const { verification, signature } = await this.getAuthData();
 
             const redeemResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -701,24 +651,8 @@ export default class LightningAddressStore {
 
             if (response?.isPaid) {
                 try {
-                    const authResponse = await ReactNativeBlobUtil.fetch(
-                        'POST',
-                        `${LNURL_HOST}/lnurl/auth`,
-                        { 'Content-Type': 'application/json' },
-                        JSON.stringify({
-                            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                        })
-                    );
-
-                    const authData = authResponse.json();
-                    if (authResponse.info().status !== 200)
-                        throw authData.error;
-
-                    const { verification } = authData;
-                    const signData = await BackendUtils.signMessage(
-                        verification
-                    );
-                    const signature = signData.zbase || signData.signature;
+                    const { verification, signature } =
+                        await this.getAuthData();
 
                     const redeemResponse = await ReactNativeBlobUtil.fetch(
                         'POST',
@@ -937,11 +871,16 @@ export default class LightningAddressStore {
         return attestation;
     };
 
-    public setDeviceToken = (token: string) => (this.currentDeviceToken = token);
+    public setDeviceToken = (token: string) =>
+        (this.currentDeviceToken = token);
 
     public updatePushCredentials = async () => {
         // only push update if the device token has changed
-        if (this.currentDeviceToken && (!this.serviceDeviceToken || this.currentDeviceToken !== this.serviceDeviceToken)) {
+        if (
+            this.currentDeviceToken &&
+            (!this.serviceDeviceToken ||
+                this.currentDeviceToken !== this.serviceDeviceToken)
+        ) {
             this.update({
                 device_token: this.currentDeviceToken,
                 device_platform: Platform.OS
@@ -1122,123 +1061,72 @@ export default class LightningAddressStore {
         });
     };
 
-    private subscribeUpdatesZaplocker = () => {
-        ReactNativeBlobUtil.fetch(
-            'POST',
-            `${LNURL_HOST}/lnurl/auth`,
-            {
-                'Content-Type': 'application/json'
-            },
-            JSON.stringify({
-                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-            })
-        ).then((response: any) => {
-            const status = response.info().status;
-            if (status == 200) {
-                const data = response.json();
-                const { verification } = data;
+    private subscribeUpdatesZaplocker = async () => {
+        const { verification, signature } = await this.getAuthData();
 
-                BackendUtils.signMessage(verification).then((data: any) => {
-                    const signature = data.zbase || data.signature;
+        this.socket = io(LNURL_SOCKET_HOST, {
+            path: LNURL_SOCKET_PATH
+        }).connect();
+        this.socket.emit('auth', {
+            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+            message: verification,
+            signature
+        });
 
-                    this.socket = io(LNURL_SOCKET_HOST, {
-                        path: LNURL_SOCKET_PATH
-                    }).connect();
-                    this.socket.emit('auth', {
-                        pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-                        message: verification,
-                        signature
-                    });
+        this.socket.on('paid', (data: any) => {
+            const { hash, amount_msat, comment } = data;
 
-                    this.socket.on('paid', (data: any) => {
-                        const { hash, amount_msat, comment } = data;
+            const attestationLevel = this.settingsStore?.settings
+                ?.lightningAddress?.automaticallyAcceptAttestationLevel
+                ? this.settingsStore.settings.lightningAddress
+                      .automaticallyAcceptAttestationLevel
+                : 2;
 
-                        const attestationLevel = this.settingsStore?.settings
-                            ?.lightningAddress
-                            ?.automaticallyAcceptAttestationLevel
-                            ? this.settingsStore.settings.lightningAddress
-                                  .automaticallyAcceptAttestationLevel
-                            : 2;
-
-                        if (attestationLevel === 0) {
-                            this.lookupPreimageAndRedeemZaplocker(
-                                hash,
-                                amount_msat,
-                                comment,
-                                false,
-                                true
-                            );
-                        } else {
-                            this.lookupAttestations(hash, amount_msat)
-                                .then(({ status }: { status?: string }) => {
-                                    if (status === 'error') return;
-                                    // success only
-                                    if (
-                                        status === 'warning' &&
-                                        attestationLevel === 1
-                                    )
-                                        return;
-                                    this.lookupPreimageAndRedeemZaplocker(
-                                        hash,
-                                        amount_msat,
-                                        comment,
-                                        false,
-                                        true
-                                    );
-                                })
-                                .catch((e) =>
-                                    console.log(
-                                        'Error looking up attestation',
-                                        e
-                                    )
-                                );
-                        }
-                    });
-                });
+            if (attestationLevel === 0) {
+                this.lookupPreimageAndRedeemZaplocker(
+                    hash,
+                    amount_msat,
+                    comment,
+                    false,
+                    true
+                );
+            } else {
+                this.lookupAttestations(hash, amount_msat)
+                    .then(({ status }: { status?: string }) => {
+                        if (status === 'error') return;
+                        // success only
+                        if (status === 'warning' && attestationLevel === 1)
+                            return;
+                        this.lookupPreimageAndRedeemZaplocker(
+                            hash,
+                            amount_msat,
+                            comment,
+                            false,
+                            true
+                        );
+                    })
+                    .catch((e) =>
+                        console.log('Error looking up attestation', e)
+                    );
             }
         });
     };
 
-    private subscribeUpdatesCashu = () => {
-        ReactNativeBlobUtil.fetch(
-            'POST',
-            `${LNURL_HOST}/lnurl/auth`,
-            {
-                'Content-Type': 'application/json'
-            },
-            JSON.stringify({
-                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-            })
-        ).then((response: any) => {
-            const status = response.info().status;
-            if (status == 200) {
-                const data = response.json();
-                const { verification } = data;
+    private subscribeUpdatesCashu = async () => {
+        const { verification, signature } = await this.getAuthData();
 
-                BackendUtils.signMessage(verification).then((data: any) => {
-                    const signature = data.zbase || data.signature;
+        this.socket = io(LNURL_SOCKET_HOST, {
+            path: LNURL_SOCKET_PATH
+        }).connect();
+        this.socket.emit('auth', {
+            pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+            message: verification,
+            signature
+        });
 
-                    this.socket = io(LNURL_SOCKET_HOST, {
-                        path: LNURL_SOCKET_PATH
-                    }).connect();
-                    this.socket.emit('auth', {
-                        pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
-                        message: verification,
-                        signature
-                    });
-
-                    this.socket.on('paid', (data: any) => {
-                        const { quote_id, mint_url, amount_msat } = data;
-                        this.redeemCashu(
-                            quote_id,
-                            mint_url,
-                            amount_msat,
-                            false,
-                            true
-                        );
-                    });
-                });
-            }
+        this.socket.on('paid', (data: any) => {
+            const { quote_id, mint_url, amount_msat } = data;
+            this.redeemCashu(quote_id, mint_url, amount_msat, false, true);
         });
     };
 
@@ -1291,21 +1179,7 @@ export default class LightningAddressStore {
         this.loading = true;
 
         try {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
-                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
-
-            const authData = authResponse.json();
-            if (authResponse.info().status !== 200) throw authData.error;
-
-            const { verification } = authData;
-            const signData = await BackendUtils.signMessage(verification);
-            const signature = signData.zbase || signData.signature;
+            const { verification, signature } = await this.getAuthData();
 
             const deleteResponse = await ReactNativeBlobUtil.fetch(
                 'POST',
