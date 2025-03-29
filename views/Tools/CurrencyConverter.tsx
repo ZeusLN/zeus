@@ -84,6 +84,13 @@ export default class CurrencyConverter extends React.Component<
         };
     }
 
+    fetchFiatRates = () => {
+        const { FiatStore } = this.props;
+        FiatStore?.getFiatRates().catch(() => {
+            console.log('Initial fiat rates fetch failed');
+        });
+    };
+
     componentDidMount() {
         this.retrieveInputValues();
         this.addDefaultCurrenciesToStorage();
@@ -91,6 +98,8 @@ export default class CurrencyConverter extends React.Component<
         if (selectedCurrency) {
             this.handleCurrencySelect(selectedCurrency);
         }
+
+        this.fetchFiatRates();
     }
 
     componentDidUpdate(prevProps: CurrencyConverterProps) {
