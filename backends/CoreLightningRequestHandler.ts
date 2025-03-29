@@ -135,10 +135,11 @@ export const listPeers = async (data: any) => {
 export const getChainTransactions = async () => {
     const sqlQuery =
         "SELECT account, tag, outpoint, credit_msat, debit_msat, timestamp, blockheight FROM bkpr_accountevents WHERE (tag='deposit' OR tag='to_them' OR tag='channel_open' OR tag='channel_close') ORDER BY timestamp DESC LIMIT 150";
+
     const results = await Promise.allSettled([
-        api.postRequest({ route: '/v1/sql', data: { query: sqlQuery.trim() } }),
-        api.postRequest({ route: '/v1/listtransactions' }),
-        api.postRequest({ route: '/v1/getinfo' })
+        api.postRequest('/v1/sql', { query: sqlQuery.trim() }),
+        api.postRequest('/v1/listtransactions'),
+        api.postRequest('/v1/getinfo')
     ]);
     const [sqlResult, listTxsResult, getinfoResult]: any = results;
 
