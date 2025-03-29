@@ -57,7 +57,8 @@ export default class LightningAddressStore {
     @observable public minimumSats: number;
     @observable public socket: any;
     // Push
-    @observable public deviceToken: string;
+    @observable public currentDeviceToken: string;
+    @observable public serviceDeviceToken: string;
     @observable public readyToAutomaticallyAccept: boolean = false;
     @observable public prepareToAutomaticallyAcceptStart: boolean = false;
 
@@ -530,7 +531,8 @@ export default class LightningAddressStore {
                 handle,
                 domain,
                 addressType,
-                plusExpiresAt
+                plusExpiresAt,
+                deviceToken
             } = statusData;
 
             runInAction(() => {
@@ -552,6 +554,7 @@ export default class LightningAddressStore {
                 this.lightningAddressDomain = domain;
                 this.lightningAddressType = addressType;
                 this.zeusPlusExpiresAt = plusExpiresAt;
+                this.serviceDeviceToken = deviceToken;
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;
                 }
@@ -936,19 +939,14 @@ export default class LightningAddressStore {
         return attestation;
     };
 
-    public setDeviceToken = (token: string) => (this.deviceToken = token);
+    public setDeviceToken = (token: string) => (this.currentDeviceToken = token);
 
     public updatePushCredentials = async () => {
-        const DEVICE_TOKEN_KEY = 'zeus-notification-device-token';
-        const token = await Storage.getItem(DEVICE_TOKEN_KEY);
-
         // only push update if the device token has changed
-        if (this.deviceToken && (!token || this.deviceToken !== token)) {
+        if (this.currentDeviceToken && (!this.serviceDeviceToken || this.currentDeviceToken !== this.serviceDeviceToken)) {
             this.update({
-                device_token: this.deviceToken,
+                device_token: this.currentDeviceToken,
                 device_platform: Platform.OS
-            }).then(async () => {
-                await Storage.setItem(DEVICE_TOKEN_KEY, this.deviceToken);
             });
         }
     };
