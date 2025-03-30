@@ -127,6 +127,7 @@ interface LightningAddressSettings {
     nostrPrivateKey: string;
     nostrRelays: Array<string>;
     notifications: number;
+    mintUrl: string; // Cashu
 }
 
 interface Bolt12AddressSettings {
@@ -1218,7 +1219,8 @@ export default class SettingsStore {
             allowComments: true,
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
-            notifications: 0
+            notifications: 0,
+            mintUrl: ''
         },
         bolt12Address: {
             localPart: ''
