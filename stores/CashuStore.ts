@@ -1,5 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
-import { Alert } from 'react-native';
+import { Alert, InteractionManager } from 'react-native';
 import bolt11 from 'bolt11';
 import url from 'url';
 import querystring from 'querystring-es3';
@@ -173,39 +173,42 @@ export default class CashuStore {
         runInAction(() => {
             this.loading = true;
         });
+
         this.ndk = new NDK({ explicitRelayUrls: DEFAULT_NOSTR_RELAYS });
-        this.ndk.connect();
+        await this.ndk.connect(); // Ensure connection is established before fetching
 
         const filter: NDKFilter = { kinds: [38000 as NDKKind], limit: 2000 };
         const events = await this.ndk.fetchEvents(filter);
-        let mintUrls: string[] = [];
-        events.forEach((event: any) => {
-            if (event.tagValue('k') == '38172' && event.tagValue('u')) {
-                const mintUrl = event.tagValue('u');
-                if (
-                    typeof mintUrl === 'string' &&
-                    mintUrl.length > 0 &&
-                    mintUrl.startsWith('https://')
-                ) {
-                    mintUrls.push(mintUrl);
+
+        InteractionManager.runAfterInteractions(() => {
+            const mintCounts = new Map<string, number>();
+
+            for (const event of events) {
+                if (event.tagValue('k') === '38172' && event.tagValue('u')) {
+                    const mintUrl = event.tagValue('u');
+                    if (
+                        typeof mintUrl === 'string' &&
+                        mintUrl.startsWith('https://')
+                    ) {
+                        mintCounts.set(
+                            mintUrl,
+                            (mintCounts.get(mintUrl) || 0) + 1
+                        );
+                    }
                 }
             }
+
+            const mintUrlsCounted = Array.from(mintCounts.entries())
+                .map(([url, count]) => ({ url, count }))
+                .sort((a, b) => b.count - a.count);
+
+            runInAction(() => {
+                this.mintRecommendations = mintUrlsCounted;
+                this.loading = false;
+            });
+
+            return mintUrlsCounted;
         });
-        // Count the number of times each mint URL appears
-        const mintUrlsSet = new Set(mintUrls);
-        const mintUrlsArray = Array.from(mintUrlsSet);
-        const mintUrlsCounted = mintUrlsArray.map((url) => {
-            return {
-                url,
-                count: mintUrls.filter((u) => u === url).length
-            };
-        });
-        mintUrlsCounted.sort((a, b) => b.count - a.count);
-        runInAction(() => {
-            this.mintRecommendations = mintUrlsCounted;
-            this.loading = false;
-        });
-        return mintUrlsCounted;
     };
 
     @action

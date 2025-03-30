@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Animated, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -20,8 +20,6 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import CashuStore from '../../stores/CashuStore';
 
-import Nostr from '../../assets/images/SVG/Nostrich.svg';
-
 interface AddMintProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
@@ -34,37 +32,6 @@ interface AddMintState {
     showDiscoverMints: boolean;
     error: boolean;
 }
-
-const LoadingNostr = () => {
-    let state = new Animated.Value(1);
-    Animated.loop(
-        Animated.sequence([
-            Animated.timing(state, {
-                toValue: 0,
-                delay: 1000,
-                duration: 500,
-                useNativeDriver: true
-            }),
-            Animated.timing(state, {
-                toValue: 1,
-                duration: 500,
-                useNativeDriver: true
-            })
-        ])
-    ).start();
-
-    return (
-        <Animated.View
-            style={{
-                alignSelf: 'center',
-                opacity: state,
-                marginTop: 30
-            }}
-        >
-            <Nostr fill={themeColor('highlight')} width={40} height={40} />
-        </Animated.View>
-    );
-};
 
 @inject('CashuStore')
 @observer
@@ -200,10 +167,10 @@ export default class AddMint extends React.Component<
                                         'views.Cashu.AddMint.discover'
                                     )}
                                     onPress={() => {
-                                        CashuStore.fetchMints();
                                         this.setState({
                                             showDiscoverMints: true
                                         });
+                                        CashuStore.fetchMints();
                                     }}
                                     disabled={loading}
                                     tertiary
@@ -234,7 +201,7 @@ export default class AddMint extends React.Component<
                                     )}
                                 </Text>
 
-                                {CashuStore.loading && <LoadingNostr />}
+                                {CashuStore.loading && <LoadingIndicator />}
 
                                 {!CashuStore.loading && (
                                     <FlatList
