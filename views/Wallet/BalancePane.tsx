@@ -86,7 +86,7 @@ export default class BalancePane extends React.PureComponent<
             pendingOpenBalance
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
-        const { implementation } = SettingsStore;
+        const { implementation, settings } = SettingsStore;
         const {
             currentBlockHeight,
             bestBlockHeight,
@@ -101,7 +101,7 @@ export default class BalancePane extends React.PureComponent<
             .toFixed(3);
         const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
             .plus(lightningBalance)
-            .plus(cashuBalance)
+            .plus(settings?.ecash?.enableCashu ? cashuBalance : 0)
             .toNumber()
             .toFixed(3);
 
