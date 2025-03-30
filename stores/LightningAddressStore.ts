@@ -692,8 +692,9 @@ export default class LightningAddressStore {
                 runInAction(() => {
                     this.redeeming = false;
                     this.error = true;
-                    // TODO ecash
-                    this.error_msg = 'Quote not paid.';
+                    this.error_msg = localeString(
+                        'stores.LightningAddressStore.Cashu.quoteNotPaid'
+                    );
                 });
                 return true;
             }
@@ -701,8 +702,9 @@ export default class LightningAddressStore {
             runInAction(() => {
                 this.redeeming = false;
                 this.error = true;
-                // TODO ecash
-                this.error_msg = 'Error checking for quote payment.';
+                this.error_msg = localeString(
+                    'stores.LightningAddressStore.Cashu.quotePaymentErr'
+                );
             });
             return true;
         }

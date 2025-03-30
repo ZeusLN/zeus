@@ -1174,6 +1174,8 @@
     "stores.LSPStore.error": "LSP error",
     "stores.LSPStore.connectionError": "Could not connect to LSP. Please check your LSP settings or try again later.",
     "stores.LightningAddressStore.preimageNotFound": "Pre-image not found on your device. Did you recently change devices?",
+    "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote not paid",
+    "stores.LightningAddressStore.Cashu.quotePaymentErr": "Error checking for quote payment",
     "error.connectionRefused": "Host unreachable. Try restarting your node or its Tor process.",
     "error.hostUnreachable": "Host unreachable. Try restarting your node or its Tor process.",
     "error.nodeConnectError": "Unable to connect to node. Please verify the host and port are correct and the service is running.",

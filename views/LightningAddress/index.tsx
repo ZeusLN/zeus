@@ -1115,11 +1115,9 @@ export default class LightningAddress extends React.Component<
                                                                           'zeuspay.getChannel'
                                                                       )
                                                             }
-                                                            // TODO ecash
                                                             onPress={() =>
                                                                 navigation.navigate(
-                                                                    true ||
-                                                                        hasZeusLspChannel
+                                                                    hasZeusLspChannel
                                                                         ? 'CreateZaplockerLightningAddress'
                                                                         : 'ZaplockerGetChan'
                                                                 )
