@@ -723,4 +723,18 @@ export default class LND {
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
+    supportsPeerManagement = () => true;
+
+    listPeers = () =>
+        this.getRequest('/v1/peers').then(
+            (response: any) => response.data.peers || []
+        );
+
+    disconnectPeer = (pubkey: string) =>
+        this.deleteRequest(`/v1/peers/${pubkey}`)
+            .then(() => true)
+            .catch((error) => {
+                console.error(`Error disconnecting peer ${pubkey}:`, error);
+                return false;
+            });
 }

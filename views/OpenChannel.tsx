@@ -60,7 +60,10 @@ interface OpenChannelProps {
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     UTXOsStore: UTXOsStore;
-    route: Route<'OpenChannel', { node_pubkey_string: string; host: string }>;
+    route: Route<
+        'OpenChannel',
+        { node_pubkey_string: string; host: string; connectPeerOnly?: boolean }
+    >;
 }
 
 interface OpenChannelState {
@@ -220,6 +223,7 @@ export default class OpenChannel extends React.Component<
 
         const node_pubkey_string = route.params?.node_pubkey_string ?? '';
         const host = route.params?.host ?? '';
+        const connectPeerOnly = route.params?.connectPeerOnly ?? false;
 
         let olympusPubkey, olympusHost;
         if (NodeInfoStore.nodeInfo.isTestNet) {
@@ -239,7 +243,8 @@ export default class OpenChannel extends React.Component<
             node_pubkey_string: node_pubkey_string
                 ? node_pubkey_string
                 : olympusPubkey,
-            host: node_pubkey_string ? host : olympusHost
+            host: node_pubkey_string ? host : olympusHost,
+            connectPeerOnly
         });
     }
 

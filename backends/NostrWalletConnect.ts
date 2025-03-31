@@ -118,5 +118,6 @@ export default class NostrWalletConnect {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     isLNDBased = () => false;
+    supportsPeerManagement = () => false;
     supportInboundFees = () => false;
 }

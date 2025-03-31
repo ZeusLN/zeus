@@ -23,6 +23,7 @@ import LightningAddressStore from './LightningAddressStore';
 import ChannelBackupStore from './ChannelBackupStore';
 import InventoryStore from './InventoryStore';
 import OffersStore from './OffersStore';
+import PeersStore from './PeersStore';
 
 class Stores {
     public alertStore: AlertStore;
@@ -50,6 +51,7 @@ class Stores {
     public channelBackupStore: ChannelBackupStore;
     public inventoryStore: InventoryStore;
     public offersStore: OffersStore;
+    public peersStore: PeersStore;
 
     constructor() {
         this.settingsStore = new SettingsStore();
@@ -113,6 +115,7 @@ class Stores {
         );
         this.posStore = new PosStore(this.settingsStore, this.fiatStore);
         this.inventoryStore = new InventoryStore();
+        this.peersStore = new PeersStore();
     }
 }
 
