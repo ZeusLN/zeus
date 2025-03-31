@@ -111,6 +111,7 @@ import LNDLogs from './views/Settings/EmbeddedNode/LNDLogs';
 import Peers from './views/Settings/EmbeddedNode/Peers';
 import NeutrinoPeers from './views/Settings/EmbeddedNode/Peers/NeutrinoPeers';
 import ZeroConfPeers from './views/Settings/EmbeddedNode/Peers/ZeroConfPeers';
+import PeersList from './views/Peers/PeersView';
 import Advanced from './views/Settings/EmbeddedNode/Advanced';
 import AdvancedRescan from './views/Settings/EmbeddedNode/AdvancedRescan';
 import Troubleshooting from './views/Settings/EmbeddedNode/Troubleshooting';
@@ -265,6 +266,7 @@ export default class App extends React.PureComponent {
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
                 CashuStore={Stores.cashuStore}
+                PeersStore={Stores.peersStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -284,7 +286,7 @@ export default class App extends React.PureComponent {
                                                 ref={(nav) => {
                                                     if (nav != null) {
                                                         NavigationService.setTopLevelNavigator(
-                                                            nav
+                                                            nav as any
                                                         );
                                                     }
                                                 }}
@@ -1088,6 +1090,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NWCAddressSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="PeersList" // @ts-ignore:next-line
+                                                        component={PeersList}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

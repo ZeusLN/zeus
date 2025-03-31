@@ -160,4 +160,14 @@ export default class Contact extends BaseModel {
         }
         return this.banner || '';
     }
+
+    @computed public get hasPayableAddress(): boolean {
+        return (
+            this.hasLnAddress ||
+            this.hasBolt12Address ||
+            this.hasBolt12Offer ||
+            this.hasOnchainAddress ||
+            this.hasPubkey
+        );
+    }
 }

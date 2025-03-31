@@ -606,5 +606,20 @@ const styles = StyleSheet.create({
     lurkerField: {
         paddingTop: 15,
         paddingLeft: 10
+    },
+    settingContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 10
+    },
+    settingItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1
+    },
+    settingText: {
+        marginLeft: 10,
+        fontSize: 16,
+        fontFamily: 'PPNeueMontreal-Book'
     }
 });

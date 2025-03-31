@@ -569,6 +569,21 @@ export default class LightningNodeConnect {
     supportsBolt11BlindedRoutes = () => this.supports('v0.18.3');
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
+    supportsPeerManagement = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
+
+    listPeers = async (latestError: boolean = false) =>
+        await this.lnc.lnd.lightning
+            .listPeers({ latest_error: latestError })
+            .then((data: lnrpc.ListPeersResponse) => snakeize(data));
+
+    disconnectPeer = async (pubKey: string) =>
+        await this.lnc.lnd.lightning
+            .disconnectPeer({ pub_key: pubKey })
+            .then(() => true)
+            .catch((error: Error) => {
+                console.error('Failed to disconnect peer:', error);
+                return false;
+            });
 }

@@ -741,4 +741,18 @@ export default class LND {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
+    supportsPeerManagement = () => true;
+
+    listPeers = () =>
+        this.getRequest('/v1/peers').then(
+            (response: any) => response.data.peers || []
+        );
+
+    disconnectPeer = (pubkey: string) =>
+        this.deleteRequest(`/v1/peers/${pubkey}`)
+            .then(() => true)
+            .catch((error) => {
+                console.error(`Error disconnecting peer ${pubkey}:`, error);
+                return false;
+            });
 }

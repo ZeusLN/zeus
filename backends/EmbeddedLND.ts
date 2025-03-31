@@ -26,7 +26,9 @@ const {
     lookupInvoice,
     fundingStateStep,
     sendCustomMessage,
-    subscribeCustomMessages
+    subscribeCustomMessages,
+    listPeers,
+    disconnectPeer
 } = lndMobile.index;
 const {
     channelBalance,
@@ -328,4 +330,44 @@ export default class EmbeddedLND extends LND {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => true;
+    supportsPeerManagement = () => true;
+
+    listPeers = async () => {
+        try {
+            const response = await listPeers();
+
+            const peers = (response.peers || []).map((peer) => {
+                const formattedPeer = {
+                    pub_key: peer.pub_key || '',
+                    address: peer.address || '',
+                    bytes_sent: peer.bytes_sent?.toString() || '0',
+                    bytes_recv: peer.bytes_recv?.toString() || '0',
+                    sat_sent: peer.sat_sent?.toString() || '0',
+                    sat_recv: peer.sat_recv?.toString() || '0',
+                    inbound: peer.inbound || false,
+                    ping_time: peer.ping_time?.toString() || '0',
+                    sync_type:
+                        typeof peer.sync_type === 'string'
+                            ? peer.sync_type
+                            : peer.sync_type?.toString() || ''
+                };
+                return formattedPeer;
+            });
+
+            return peers;
+        } catch (error) {
+            console.error('Error fetching peers:', error);
+            throw error;
+        }
+    };
+
+    disconnectPeer = async (pubKey: string) => {
+        try {
+            await disconnectPeer(pubKey);
+            return true;
+        } catch (error) {
+            console.error(`Error disconnecting peer ${pubKey}:`, error);
+            return false;
+        }
+    };
 }
