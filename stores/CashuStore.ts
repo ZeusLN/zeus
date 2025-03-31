@@ -727,7 +727,11 @@ export default class CashuStore {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
 
         if (!this.cashuWallets[mintUrl].wallet) {
-            await this.initializeWallet(mintUrl, true);
+            if (!this.mintUrls.includes(mintUrl)) {
+                await this.addMint(mintUrl, true);
+            } else {
+                await this.initializeWallet(mintUrl, true);
+            }
         }
 
         const invoiceQuoteId: string = quoteId || this.quoteId || '';
