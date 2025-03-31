@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, TouchableOpacity, ScrollView, View } from 'react-native';
+import {
+    StyleSheet,
+    TouchableOpacity,
+    ScrollView,
+    View,
+    Platform
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import _map from 'lodash/map';
@@ -303,7 +309,7 @@ export default class InvoicesSettings extends React.Component<
                                 <View
                                     style={{
                                         flex: 2,
-                                        top: -14
+                                        top: Platform.OS === 'ios' ? -12 : -14
                                     }}
                                 >
                                     <DropdownSetting
