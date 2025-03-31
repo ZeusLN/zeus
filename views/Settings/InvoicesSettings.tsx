@@ -249,12 +249,21 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 {localeString('views.Receive.expiration')}
                             </Text>
-                            <Row style={{ width: '100%', gap: 10 }}>
+                            <Row
+                                style={{
+                                    width: '100%',
+                                    gap: 20,
+                                    alignItems: 'flex-start',
+                                    justifyContent: 'center'
+                                }}
+                            >
                                 <TextInput
                                     keyboardType="numeric"
                                     value={expiry}
                                     style={{
-                                        width: '58%'
+                                        flex: 3,
+                                        borderColor: themeColor('secondary'),
+                                        paddingHorizontal: 10
                                     }}
                                     onChangeText={async (text: string) => {
                                         let expirySeconds = '3600';
@@ -293,9 +302,8 @@ export default class InvoicesSettings extends React.Component<
                                 />
                                 <View
                                     style={{
-                                        flex: 1,
-                                        // TODO
-                                        top: -5
+                                        flex: 2,
+                                        top: -14
                                     }}
                                 >
                                     <DropdownSetting
@@ -363,7 +371,7 @@ export default class InvoicesSettings extends React.Component<
                         <View
                             style={{
                                 flexDirection: 'row',
-                                marginTop: 20
+                                marginTop: 10
                             }}
                         >
                             <View style={{ flex: 1 }}>
