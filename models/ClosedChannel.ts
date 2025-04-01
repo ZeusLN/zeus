@@ -11,11 +11,22 @@ export default class ClosedChannel extends Channel {
 
     @computed
     public get localBalance(): string {
+        if (this.implementation === 'cln-rest') {
+            return (Number(this.to_us_msat) / 1000).toString();
+        }
+
         return this.settled_balance;
     }
 
     @computed
     public get remoteBalance(): string {
+        if (this.implementation === 'cln-rest') {
+            return (
+                (Number(this.total_msat) - Number(this.to_us_msat)) /
+                1000
+            ).toString();
+        }
+
         return `${Number(this.capacity) - Number(this.settled_balance || 0)}`;
     }
 
@@ -29,5 +40,13 @@ export default class ClosedChannel extends Channel {
         return typeof this.close_type === 'number'
             ? lnrpc.ChannelCloseSummary.ClosureType[this.close_type]
             : this.close_type || '';
+    }
+
+    @computed
+    public get clnRemoteBalance(): string {
+        return (
+            (Number(this.total_msat) - Number(this.to_us_msat)) /
+            1000
+        ).toString();
     }
 }

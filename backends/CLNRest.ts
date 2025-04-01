@@ -190,8 +190,8 @@ export default class CLNRest {
         return await listPeers(channels);
     };
     getClosedChannels = async () => {
-        const data = await this.postRequest('/v1/listclosedchannels');
-        return listClosedChannels(data);
+        const channels = await this.postRequest('/v1/listclosedchannels');
+        return listClosedChannels(channels);
     };
     getBlockchainBalance = () =>
         this.postRequest('/v1/listfunds').then((res) => {
@@ -401,6 +401,7 @@ export default class CLNRest {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;
+    supportsClosedChannels = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => true;

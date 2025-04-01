@@ -135,21 +135,17 @@ export const listPeers = async (data: any) => {
 export const listClosedChannels = (data: any) => {
     const formattedClosedChannels = data.closedchannels.map((channel: any) => ({
         peer_id: channel.peer_id,
+        capacity: Number(channel.total_msat / 1000).toString(),
         channel_id: channel.channel_id,
         short_channel_id: channel.short_channel_id,
-        alias: {
-            local: channel.alias?.local || '',
-            remote: channel.alias?.remote || ''
-        },
+        alias: channel.alias?.local || '',
         opener: channel.opener,
         closer: channel.closer,
         private: channel.private,
         channel_type: channel.channel_type?.names || [],
         funding_txid: channel.funding_txid,
-        total_satoshis: Number(channel.total_msat / 1000).toString(),
-        final_to_us_satoshis: Number(
-            channel.final_to_us_msat / 1000
-        ).toString(),
+        total_msat: channel.total_msat.toString(),
+        to_us_msat: channel.final_to_us_msat.toString(),
         min_to_us_satoshis: Number(channel.min_to_us_msat / 1000).toString(),
         max_to_us_satoshis: Number(channel.max_to_us_msat / 1000).toString(),
         total_htlcs_sent: channel.total_htlcs_sent.toString(),
@@ -160,7 +156,7 @@ export const listClosedChannels = (data: any) => {
         last_stable_connection: channel.last_stable_connection
     }));
 
-    return { closed_channels: formattedClosedChannels };
+    return { channels: formattedClosedChannels };
 };
 
 // Get all chain transactions from your core-lightnig node
