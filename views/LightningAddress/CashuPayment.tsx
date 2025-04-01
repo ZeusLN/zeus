@@ -16,7 +16,7 @@ import Receive from '../../assets/images/SVG/Receive.svg';
 
 export default function CashuPayment(props: any) {
     const { item, index } = props;
-    const { lightningAddressStore } = stores;
+    const { cashuStore, lightningAddressStore } = stores;
     const { redeemCashu } = lightningAddressStore;
 
     const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
@@ -50,14 +50,23 @@ export default function CashuPayment(props: any) {
                 <ListItem.Subtitle>
                     <Text
                         style={{
+                            color: cashuStore.cashuWallets[item.mint_url]
+                                ?.errorConnecting
+                                ? themeColor('warning')
+                                : themeColor('secondaryText')
+                        }}
+                    >
+                        {cashuStore.cashuWallets[item.mint_url]?.mintInfo
+                            ?.name || item.mint_url}
+                    </Text>
+                </ListItem.Subtitle>
+                <ListItem.Subtitle>
+                    <Text
+                        style={{
                             color: themeColor('secondaryText')
                         }}
                     >
-                        {item.fee
-                            ? `${localeString('models.Payment.fee')}: ${
-                                  item.fee
-                              } ${localeString('general.sats')} | ${date}`
-                            : date}
+                        {date}
                     </Text>
                 </ListItem.Subtitle>
             </ListItem.Content>
