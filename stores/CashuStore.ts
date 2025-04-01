@@ -484,7 +484,6 @@ export default class CashuStore {
         const storedPubkey = await Storage.getItem(`${walletId}-pubkey`);
         const pubkey: string = storedPubkey ? storedPubkey : '';
 
-        let errorConnecting = false;
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
                 pubkey,
@@ -493,7 +492,7 @@ export default class CashuStore {
                 counter,
                 proofs,
                 balanceSats,
-                errorConnecting
+                errorConnecting: false
             };
             this.loadingMsg = `${localeString(
                 'stores.CashuStore.startingWallet'
@@ -522,12 +521,16 @@ export default class CashuStore {
                     this.cashuWallets[mintUrl].mintInfo = mintInfo;
                 });
             } catch (e) {
-                errorConnecting = true;
+                runInAction(() => {
+                    this.cashuWallets[mintUrl].errorConnecting = true;
+                    this.loadingMsg = undefined;
+                    this.loading = false;
+                });
+                throw e;
             }
         }
 
         runInAction(() => {
-            this.cashuWallets[mintUrl].errorConnecting = errorConnecting;
             this.loadingMsg = undefined;
             this.loading = false;
         });
@@ -621,11 +624,11 @@ export default class CashuStore {
         this.creatingInvoiceError = false;
         this.error_msg = undefined;
 
-        if (!this.cashuWallets[this.selectedMintUrl].wallet) {
-            await this.initializeWallet(this.selectedMintUrl, true);
-        }
-
         try {
+            if (!this.cashuWallets[this.selectedMintUrl].wallet) {
+                await this.initializeWallet(this.selectedMintUrl, true);
+            }
+
             const mintQuote = await this.cashuWallets[
                 this.selectedMintUrl
             ].wallet!!.createMintQuote(value ? Number(value) : 0, memo);
@@ -702,12 +705,13 @@ export default class CashuStore {
             };
         } catch (e: any) {
             console.log('Cashu createInvoice err', e);
+            const error_msg = e?.toString();
             runInAction(() => {
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = localeString(
+                this.error_msg = `${localeString(
                     'stores.InvoicesStore.errorCreatingInvoice'
-                );
+                )}: ${error_msg}`;
             });
         }
     };
