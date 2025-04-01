@@ -20,6 +20,7 @@ import SettingsStore, {
 import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LightningAddressSettingsProps {
@@ -183,6 +184,7 @@ export default class LightningAddressSettings extends React.Component<
                                                     !automaticallyAccept
                                             }
                                         });
+                                        restartNeeded();
                                     }}
                                 />
                             </View>
@@ -207,6 +209,7 @@ export default class LightningAddressSettings extends React.Component<
                                                 value
                                         }
                                     });
+                                    restartNeeded();
                                 }}
                                 values={AUTOMATIC_ATTESTATION_KEYS}
                                 disabled={

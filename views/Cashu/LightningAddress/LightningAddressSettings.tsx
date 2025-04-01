@@ -18,6 +18,7 @@ import LightningAddressStore from '../../../stores/LightningAddressStore';
 import CashuStore from '../../../stores/CashuStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
+import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 interface CashuLightningAddressSettingsProps {
@@ -185,6 +186,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                                     !automaticallyAccept
                                             }
                                         });
+                                        restartNeeded();
                                     }}
                                 />
                             </View>
