@@ -749,9 +749,9 @@ export default class CashuStore {
 
         const paymentRequest = this.invoice || '';
         if (quote?.state === 'PAID') {
-            // try up to 3 counters in case we get out of sync (DEBUG)
+            // try up to 21 counters in case we get out of sync (DEBUG)
             let attempts = 0;
-            let retries = 3;
+            let retries = 21;
             let success = false;
 
             while (attempts < retries && !success) {
