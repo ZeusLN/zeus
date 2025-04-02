@@ -134,7 +134,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsCashu() && selectedNode && (
+                    {BackendUtils.supportsCashuWallet() && selectedNode && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

@@ -180,7 +180,7 @@ export default class ActivityStore {
             additions = additions.concat(transactions);
         }
 
-        if (BackendUtils.supportsCashu()) {
+        if (BackendUtils.supportsCashuWallet()) {
             additions = additions
                 .concat(cashuInvoices)
                 .concat(cashuPayments)

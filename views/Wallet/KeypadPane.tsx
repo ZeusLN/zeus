@@ -85,7 +85,7 @@ export default class KeypadPane extends React.PureComponent<
     };
 
     async UNSAFE_componentWillMount() {
-        if (BackendUtils.supportsCashu()) {
+        if (BackendUtils.supportsCashuWallet()) {
             const { SettingsStore } = this.props;
             const { settings } = SettingsStore!;
 
@@ -410,7 +410,7 @@ export default class KeypadPane extends React.PureComponent<
                                 width: '85%'
                             }}
                         >
-                            {BackendUtils.supportsCashu() &&
+                            {BackendUtils.supportsCashuWallet() &&
                                 settings?.ecash?.enableCashu && (
                                     <>
                                         <EcashToggle

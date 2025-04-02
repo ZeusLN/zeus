@@ -194,7 +194,7 @@ export default class ActivityFilter extends React.Component<
                 value: cashu,
                 var: 'cashu',
                 type: 'Toggle',
-                condition: BackendUtils.supportsCashu()
+                condition: BackendUtils.supportsCashuWallet()
             },
             {
                 label: localeString('general.sent'),

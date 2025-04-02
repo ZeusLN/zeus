@@ -21,6 +21,7 @@ import {
 
 import CashuToken from '../../models/CashuToken';
 
+import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -239,27 +240,63 @@ export default class CashuTokenView extends React.Component<
                 </ScrollView>
                 {!received && !sent && (
                     <View style={{ bottom: 15 }}>
-                        {!haveMint && (
-                            <Button
-                                title={localeString(
-                                    'views.Cashu.AddMint.title'
+                        {BackendUtils.supportsCashuWallet() && (
+                            <>
+                                <Button
+                                    title={localeString(
+                                        'views.OpenChannel.import'
+                                    )}
+                                    onPress={async () => {
+                                        this.setState({
+                                            errorMessage: ''
+                                        });
+
+                                        const { success, errorMessage } =
+                                            await claimToken(token!!, decoded);
+                                        if (errorMessage) {
+                                            this.setState({
+                                                errorMessage
+                                            });
+                                        } else if (success) {
+                                            this.setState({
+                                                success
+                                            });
+                                        }
+                                    }}
+                                    containerStyle={{ marginTop: 15 }}
+                                    disabled={
+                                        !haveMint ||
+                                        errorAddingMint ||
+                                        !isSupported ||
+                                        loading ||
+                                        success
+                                    }
+                                />
+                                {!haveMint && (
+                                    <Button
+                                        title={localeString(
+                                            'views.Cashu.AddMint.title'
+                                        )}
+                                        onPress={() => addMint(mint)}
+                                        containerStyle={{ marginTop: 15 }}
+                                        disabled={!isSupported || loading}
+                                        tertiary
+                                    />
                                 )}
-                                onPress={() => addMint(mint)}
-                                containerStyle={{ marginTop: 15 }}
-                                noUppercase
-                                disabled={!isSupported || loading}
-                                tertiary
-                            />
+                            </>
                         )}
+                        {/* TODO ecash add check for open channels? */}
                         <Button
-                            title={localeString('views.OpenChannel.import')}
+                            title={localeString(
+                                'views.Cashu.CashuToken.meltTokenSelfCustody'
+                            )}
                             onPress={async () => {
                                 this.setState({
                                     errorMessage: ''
                                 });
 
                                 const { success, errorMessage } =
-                                    await claimToken(token!!, decoded);
+                                    await claimToken(token!!, decoded, true);
                                 if (errorMessage) {
                                     this.setState({
                                         errorMessage
@@ -271,14 +308,8 @@ export default class CashuTokenView extends React.Component<
                                 }
                             }}
                             containerStyle={{ marginTop: 15 }}
-                            noUppercase
-                            disabled={
-                                !haveMint ||
-                                errorAddingMint ||
-                                !isSupported ||
-                                loading ||
-                                success
-                            }
+                            disabled={!isSupported || loading || success}
+                            secondary
                         />
                     </View>
                 )}

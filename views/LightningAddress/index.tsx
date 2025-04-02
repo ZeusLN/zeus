@@ -657,7 +657,7 @@ export default class LightningAddress extends React.Component<
                                                 )}
                                             </Text>
 
-                                            {BackendUtils.supportsCashu() && (
+                                            {BackendUtils.supportsCashuWallet() && (
                                                 <View
                                                     style={styles.optionBlock}
                                                 >
