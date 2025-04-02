@@ -31,10 +31,12 @@
     "fetch-libraries": "bash fetch-libraries.sh"
   },
   "dependencies": {
+    "@bitcoinerlab/secp256k1": "1.1.1",
     "@getalby/sdk": "3.9.0",
     "@keystonehq/bc-ur-registry": "0.7.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.12",
+    "@nicolasflamel/secp256k1-zkp-react": "0.0.13",
     "@noble/secp256k1": "1.6.3",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-clipboard/clipboard": "1.14.3",
@@ -49,6 +51,7 @@
     "@types/humanize-duration": "3.27.1",
     "aez": "1.0.1",
     "assert": "1.5.0",
+    "asyncstorage-down": "4.2.0",
     "bech32": "2.0.0",
     "bignumber.js": "9.0.2",
     "bip32": "3.0.1",
@@ -66,7 +69,7 @@
     "dateformat": "5.0.3",
     "dns.js": "1.0.1",
     "domain-browser": "1.2.0",
-    "ecpair": "2.0.1",
+    "ecpair": "3.0.0-rc.0",
     "elliptic": "6.6.1",
     "events": "1.1.1",
     "fast-crc32c": "2.0.0",
@@ -170,7 +173,7 @@
     "@types/sha.js": "2.4.1",
     "@types/uuid": "9.0.7",
     "@typescript-eslint/eslint-plugin": "6.13.1",
-    "@typescript-eslint/parser": "6.13.1",
+    "@typescript-eslint/parser": "8.20.0",
     "babel-jest": "29.7.0",
     "compressing": "1.10.0",
     "concurrently": "9.1.2",
@@ -191,7 +194,7 @@
     "react-native-url-polyfill": "2.0.0",
     "react-test-renderer": "18.2.0",
     "rn-nodeify": "10.3.0",
-    "typescript": "4.8.4"
+    "typescript": "5.7.3"
   },
   "resolutions": {
     "@types/react": "18.3.11",

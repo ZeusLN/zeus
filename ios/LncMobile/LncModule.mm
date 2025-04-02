@@ -242,6 +242,80 @@ RCT_EXPORT_METHOD(sweepRemoteClosed:(NSString *)seedPhrase
     }
 }
 
+// Swaps
+
+RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 transactionHash:(NSString *)transactionHash
+                 pubNonce:(NSString *)pubNonce
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    LndmobileCreateClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce, &error);
+    if (error) {
+        NSLog(@"createClaimTransaction error   %@",   error);
+        reject(@"createClaimTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(@"Success");
+    }
+}
+
+RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 preimageHex:(NSString *)preimageHex
+                 transactionHex:(NSString *)transactionHex
+                 lockupAddress:(NSString *)lockupAddress
+                 destinationAddress:(NSString *)destinationAddress
+                 feeRate:(NSInteger)feeRate
+                 isTestnet:(BOOL)isTestnet
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    LndmobileCreateReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet, &error);
+    if (error) {
+        NSLog(@"createReverseClaimTransaction error   %@",   error);
+        reject(@"createReverseClaimTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(@"Success");
+    }
+}
+
+RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 transactionHex:(NSString *)transactionHex
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 feeRate:(NSInteger)feeRate
+                 timeoutBlockHeight:(NSInteger)timeoutBlockHeight
+                 destinationAddress:(NSString *)destinationAddress
+                 lockupAddress:(NSString *)lockupAddress
+                 cooperative:(BOOL)cooperative
+                 isTestnet:(BOOL)isTestnet
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    NSString *txid = LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, isTestnet, &error);
+    if (error) {
+        NSLog(@"createRefundTransaction error   %@",   error);
+        reject(@"createRefundTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(txid); 
+    }
+}
+
 // Don't compile this code when we build for the old architecture.
 #ifdef RCT_NEW_ARCH_ENABLED
 - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:
