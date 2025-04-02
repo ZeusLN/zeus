@@ -3,19 +3,22 @@ import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import stores from '../stores/Stores';
-import { doTorRequest, RequestMethod } from './TorUtils';
+
 import AddressUtils from './AddressUtils';
+import BackendUtils from './BackendUtils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
-import NodeUriUtils from './NodeUriUtils';
+import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
-import BackendUtils from './BackendUtils';
+import NodeUriUtils from './NodeUriUtils';
+import { doTorRequest, RequestMethod } from './TorUtils';
+
+import CashuToken from '../models/CashuToken';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
-import ContactUtils from './ContactUtils';
 
 const { nodeInfoStore, invoicesStore, unitsStore, settingsStore } = stores;
 
@@ -729,7 +732,8 @@ const handleAnything = async (
             }
         ];
     } else if (CashuUtils.isValidCashuToken(value)) {
-        const decoded = CashuUtils.decodeCashuToken(value);
+        const tokenObj = CashuUtils.decodeCashuToken(value);
+        const decoded = new CashuToken(tokenObj);
         return [
             'CashuToken',
             {

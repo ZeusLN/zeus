@@ -28,7 +28,8 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import stores from './Stores';
+import ActivityStore from './ActivityStore';
+import InvoicesStore from './InvoicesStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
 
 import Base64Utils from '../utils/Base64Utils';
@@ -104,11 +105,19 @@ export default class CashuStore {
     @observable loadingFeeEstimate = false;
 
     settingsStore: SettingsStore;
+    activityStore: ActivityStore;
+    invoicesStore: InvoicesStore;
 
     ndk: NDK;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        activityStore: ActivityStore,
+        invoicesStore: InvoicesStore
+    ) {
         this.settingsStore = settingsStore;
+        this.activityStore = activityStore;
+        this.invoicesStore = invoicesStore;
     }
 
     @action
@@ -818,7 +827,7 @@ export default class CashuStore {
                     );
 
                     // update Activity list
-                    stores.activityStore.getSortedActivity();
+                    this.activityStore.getSortedActivity();
 
                     return {
                         isPaid: true,
@@ -1408,7 +1417,7 @@ export default class CashuStore {
                     noLsp: true
                 };
 
-                let invoice = await stores.invoicesStore.createInvoice({
+                let invoice = await this.invoicesStore.createInvoice({
                     ...invoiceParams,
                     memo,
                     value: String(tokenAmt)
@@ -1431,7 +1440,7 @@ export default class CashuStore {
                         };
                     }
 
-                    invoice = await stores.invoicesStore.createInvoice({
+                    invoice = await this.invoicesStore.createInvoice({
                         ...invoiceParams,
                         memo: `${memo} [${localeString(
                             'views.Cashu.CashuToken.feeAdjusted'
