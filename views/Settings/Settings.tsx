@@ -153,8 +153,8 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                                 <View style={styles.icon}>
                                     <EcashIcon
                                         fill={themeColor('text')}
-                                        width={25}
-                                        height={25}
+                                        width={20}
+                                        height={20}
                                     />
                                 </View>
                                 <Text
