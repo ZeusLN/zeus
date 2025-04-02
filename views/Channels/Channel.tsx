@@ -564,14 +564,16 @@ export default class ChannelView extends React.Component<
                                     <TouchableOpacity
                                         style={{ width: '50%' }}
                                         onPress={() => {
-                                            ModalStore.toggleInfoModal([
-                                                localeString(
-                                                    'views.Channel.lease.lspDiscretion.explainer1'
-                                                ),
-                                                localeString(
-                                                    'views.Channel.lease.lspDiscretion.explainer2'
-                                                )
-                                            ]);
+                                            ModalStore.toggleInfoModal({
+                                                text: [
+                                                    localeString(
+                                                        'views.Channel.lease.lspDiscretion.explainer1'
+                                                    ),
+                                                    localeString(
+                                                        'views.Channel.lease.lspDiscretion.explainer2'
+                                                    )
+                                                ]
+                                            });
                                         }}
                                     >
                                         <Text

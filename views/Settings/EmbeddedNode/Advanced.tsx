@@ -21,7 +21,7 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { sleep } from '../../../utils/SleepUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
-
+import { checkAndRequestNotificationPermissions } from '../../../utils/NotificationUtils';
 import { stopLnd } from '../../../utils/LndMobileUtils';
 
 interface EmbeddedNodeAdvancedSettingsProps {
@@ -274,6 +274,15 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                         <Switch
                                             value={persistentMode}
                                             onValueChange={async () => {
+                                                if (!persistentMode) {
+                                                    const permissionGranted =
+                                                        await checkAndRequestNotificationPermissions();
+
+                                                    // Enabling persistent mode only works if notification permission is granted
+                                                    if (!permissionGranted)
+                                                        return;
+                                                }
+
                                                 this.setState({
                                                     persistentMode:
                                                         !persistentMode

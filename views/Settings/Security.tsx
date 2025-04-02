@@ -159,12 +159,11 @@ export default class Security extends React.Component<
         const { pin, passphrase } = SettingsStore.settings;
 
         if (value && !pin && !passphrase) {
-            ModalStore.toggleInfoModal(
-                localeString(
+            ModalStore.toggleInfoModal({
+                text: localeString(
                     'views.Settings.Security.BiometryRequiresPinOrPassword'
                 ),
-                undefined,
-                [
+                buttons: [
                     {
                         title: localeString(
                             'views.Settings.createYourPassword'
@@ -182,7 +181,7 @@ export default class Security extends React.Component<
                             })
                     }
                 ]
-            );
+            });
             return;
         }
 
@@ -215,15 +214,14 @@ export default class Security extends React.Component<
         if (!(settings.passphrase || settings.pin)) {
             navigation.navigate(item.screen);
         } else if (item.action === 'DeletePin' && isBiometryEnabled) {
-            ModalStore.toggleInfoModal(
-                [
+            ModalStore.toggleInfoModal({
+                text: [
                     localeString(
                         'views.Settings.Security.biometricsWillBeDisabled'
                     ),
                     localeString('general.continueQuestion')
                 ],
-                undefined,
-                [
+                buttons: [
                     {
                         title: localeString('general.ok'),
                         callback: () =>
@@ -232,7 +230,7 @@ export default class Security extends React.Component<
                             })
                     }
                 ]
-            );
+            });
         } else if (item.action === 'DeletePin') {
             navigation.navigate('Lockscreen', {
                 deletePin: true
