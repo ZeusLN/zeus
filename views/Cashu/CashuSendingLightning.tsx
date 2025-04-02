@@ -103,11 +103,11 @@ export default class CashuSendingLightning extends React.Component<
         const { CashuStore, LnurlPayStore, navigation } = this.props;
         const {
             loading,
-            error,
+            paymentError,
             error_msg,
             payReq,
             paymentPreimage,
-            paymentError,
+            paymentErrorMsg,
             noteKey
         } = CashuStore;
         const payment_hash = payReq && payReq.payment_hash;
@@ -149,14 +149,14 @@ export default class CashuSendingLightning extends React.Component<
                                 paddingTop: windowSize.height * 0.05
                             }}
                         >
-                            {!!success && !error && (
+                            {!!success && !paymentError && (
                                 <Wordmark
                                     height={windowSize.width * 0.25}
                                     width={windowSize.width}
                                     fill={themeColor('highlight')}
                                 />
                             )}
-                            {!!success && !error && (
+                            {!!success && !paymentError && (
                                 <>
                                     <PaidIndicator />
                                     <View style={{ alignItems: 'center' }}>
@@ -182,7 +182,7 @@ export default class CashuSendingLightning extends React.Component<
                                 </>
                             )}
                             {LnurlPayStore.isZaplocker &&
-                                (!success || !!error) && (
+                                (!success || !!paymentError) && (
                                     <View
                                         style={{
                                             padding: 20,
@@ -216,7 +216,7 @@ export default class CashuSendingLightning extends React.Component<
                                         </Text>
                                     </View>
                                 )}
-                            {(!!error || !!paymentError) &&
+                            {(!!paymentError || !!paymentErrorMsg) &&
                                 !LnurlPayStore.isZaplocker && (
                                     <View style={{ alignItems: 'center' }}>
                                         <ErrorIcon
@@ -235,7 +235,7 @@ export default class CashuSendingLightning extends React.Component<
                                         >
                                             {localeString('general.error')}
                                         </Text>
-                                        {(paymentError || error_msg) && (
+                                        {(paymentErrorMsg || error_msg) && (
                                             <Text
                                                 style={{
                                                     color: themeColor('text'),
@@ -252,13 +252,13 @@ export default class CashuSendingLightning extends React.Component<
                                                     padding: 5
                                                 }}
                                             >
-                                                {paymentError || error_msg}
+                                                {paymentErrorMsg || error_msg}
                                             </Text>
                                         )}
                                     </View>
                                 )}
                             {!!success &&
-                                !error &&
+                                !paymentError &&
                                 !!paymentPreimage &&
                                 payment_hash === LnurlPayStore.paymentHash &&
                                 LnurlPayStore.successAction && (
@@ -275,22 +275,24 @@ export default class CashuSendingLightning extends React.Component<
                                         />
                                     </View>
                                 )}
-                            {!!paymentPreimage && !error && !paymentError && (
-                                <View style={{ width: '90%' }}>
-                                    <CopyBox
-                                        heading={localeString(
-                                            'views.Payment.paymentPreimage'
-                                        )}
-                                        headingCopied={`${localeString(
-                                            'views.Payment.paymentPreimage'
-                                        )} ${localeString(
-                                            'components.ExternalLinkModal.copied'
-                                        )}`}
-                                        theme="dark"
-                                        URL={paymentPreimage}
-                                    />
-                                </View>
-                            )}
+                            {!!paymentPreimage &&
+                                !paymentError &&
+                                !paymentErrorMsg && (
+                                    <View style={{ width: '90%' }}>
+                                        <CopyBox
+                                            heading={localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )}
+                                            headingCopied={`${localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )} ${localeString(
+                                                'components.ExternalLinkModal.copied'
+                                            )}`}
+                                            theme="dark"
+                                            URL={paymentPreimage}
+                                        />
+                                    </View>
+                                )}
                         </View>
 
                         <Row
@@ -300,7 +302,7 @@ export default class CashuSendingLightning extends React.Component<
                                 alignSelf: 'center'
                             }}
                         >
-                            {noteKey && !error && !paymentError && (
+                            {noteKey && !paymentError && !paymentErrorMsg && (
                                 <Button
                                     title={
                                         storedNotes
@@ -332,8 +334,8 @@ export default class CashuSendingLightning extends React.Component<
                                 !noteKey && { marginTop: 14 }
                             ]}
                         >
-                            {(paymentError == 'FAILURE_REASON_NO_ROUTE' ||
-                                paymentError ==
+                            {(paymentErrorMsg == 'FAILURE_REASON_NO_ROUTE' ||
+                                paymentErrorMsg ==
                                     localeString(
                                         'error.failureReasonNoRoute'
                                     )) && (
@@ -351,7 +353,7 @@ export default class CashuSendingLightning extends React.Component<
                                     )}
                                 </Text>
                             )}
-                            {(!!paymentError || !!error) && (
+                            {(!!paymentErrorMsg || !!paymentError) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.tryAgain'
@@ -373,7 +375,9 @@ export default class CashuSendingLightning extends React.Component<
                                 />
                             )}
 
-                            {(!!error || !!paymentError || !!success) && (
+                            {(!!paymentError ||
+                                !!paymentErrorMsg ||
+                                !!success) && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.goToWallet'
