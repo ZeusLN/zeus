@@ -389,7 +389,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 <TextInput
                                     ref={this.textInput}
                                     onFocus={() => {
-                                        if (selectedText.length === 0) {
+                                        if (selectedText?.length === 0) {
                                             this.setState({
                                                 showSuggestions: true
                                             });
