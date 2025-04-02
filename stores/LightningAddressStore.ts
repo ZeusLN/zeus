@@ -1051,7 +1051,7 @@ export default class LightningAddressStore {
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
         this.redeemingAll = true;
 
-        for (const item of this.paid.reverse()) {
+        for (const item of this.paid.slice().reverse()) {
             await this.redeemCashu(
                 item.quote_id,
                 item.mint_url,

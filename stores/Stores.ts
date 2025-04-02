@@ -103,7 +103,11 @@ class Stores {
         this.notesStore = new NotesStore();
         this.contactStore = new ContactStore();
         this.syncStore = new SyncStore(this.settingsStore);
-        this.cashuStore = new CashuStore(this.settingsStore);
+        this.cashuStore = new CashuStore(
+            this.settingsStore,
+            this.activityStore,
+            this.invoicesStore
+        );
         this.lightningAddressStore = new LightningAddressStore(
             this.cashuStore,
             this.nodeInfoStore,

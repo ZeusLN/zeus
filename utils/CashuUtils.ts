@@ -1,7 +1,5 @@
 import { getDecodedToken } from '@cashu/cashu-ts';
 
-import CashuToken from '../models/CashuToken';
-
 export const cashuTokenPrefixes = [
     'https://wallet.nutstash.app/#',
     'https://wallet.cashu.me/?token=',
@@ -41,10 +39,7 @@ class CashuUtils {
             return r + c.amount;
         }, 0);
     };
-    decodeCashuToken = (token: string) => {
-        const decoded = getDecodedToken(token.trim());
-        return new CashuToken(decoded);
-    };
+    decodeCashuToken = (token: string) => getDecodedToken(token.trim());
 }
 
 const cashuUtils = new CashuUtils();
