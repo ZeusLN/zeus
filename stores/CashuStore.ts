@@ -93,7 +93,8 @@ export default class CashuStore {
     @observable public paymentRequest?: string; // bolt11 invoice
     @observable public paymentPreimage?: string;
     @observable public getPayReqError?: string;
-    @observable public paymentError?: string;
+    @observable public paymentError?: boolean;
+    @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
     @observable public proofsToUse?: Proof[];
     @observable public meltQuote?: MeltQuoteResponse;
@@ -147,7 +148,8 @@ export default class CashuStore {
         this.meltQuote = undefined;
         this.noteKey = undefined;
         this.error = false;
-        this.paymentError = undefined;
+        this.paymentError = false;
+        this.paymentErrorMsg = undefined;
     };
 
     getLndDir = () => {
@@ -1203,8 +1205,8 @@ export default class CashuStore {
 
         try {
             if (totalProofsValue < amountToPay) {
-                this.error = true;
-                this.paymentError = localeString(
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
                     'stores.CashuStore.notEnoughFunds'
                 );
                 this.loading = false;
@@ -1300,22 +1302,24 @@ export default class CashuStore {
                 this.meltQuote!!.quote
             );
             if (mintQuote.state == MeltQuoteState.PAID) {
-                this.error = true;
-                this.paymentError = localeString(
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
                     'stores.CashuStore.alreadyPaid'
                 );
                 this.loading = false;
                 return;
             } else if (mintQuote.state == MeltQuoteState.PENDING) {
-                this.error = true;
-                this.paymentError = localeString('stores.CashuStore.pending');
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.pending'
+                );
                 this.loading = false;
                 return;
             }
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);
             await this.addMintProofs(mintUrl, proofs!!);
-            this.error = true;
-            this.paymentError = String(err.message);
+            this.paymentError = true;
+            this.paymentErrorMsg = String(err.message);
             this.loading = false;
             return;
         }
