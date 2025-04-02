@@ -107,7 +107,7 @@ const handleAnything = async (
 
     // ecash mode
     const ecash =
-        BackendUtils.supportsCashu() &&
+        BackendUtils.supportsCashuWallet() &&
         settingsStore?.settings?.ecash?.enableCashu;
 
     let lnurl;
@@ -728,7 +728,7 @@ const handleAnything = async (
                 extended_public_key: value
             }
         ];
-    } else if (ecash && CashuUtils.isValidCashuToken(value)) {
+    } else if (CashuUtils.isValidCashuToken(value)) {
         const decoded = CashuUtils.decodeCashuToken(value);
         return [
             'CashuToken',

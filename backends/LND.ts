@@ -723,5 +723,5 @@ export default class LND {
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
-    supportsCashu = () => false;
+    supportsCashuWallet = () => false;
 }

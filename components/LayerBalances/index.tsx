@@ -356,7 +356,10 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         }
 
         // Only show on-chain balance for non-Lnbank accounts
-        if (BackendUtils.supportsCashu() && settings?.ecash?.enableCashu) {
+        if (
+            BackendUtils.supportsCashuWallet() &&
+            settings?.ecash?.enableCashu
+        ) {
             DATA.push({
                 layer: 'Ecash',
                 custodial: true,

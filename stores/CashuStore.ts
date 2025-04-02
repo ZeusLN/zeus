@@ -1368,8 +1368,11 @@ export default class CashuStore {
     @action
     public claimToken = async (
         encodedToken: string,
-        decoded: CashuToken
+        decoded: CashuToken,
+        toSelfCustody?: boolean
     ): Promise<ClaimTokenResponse> => {
+        this.loading = true;
+
         const mintUrl = decoded.mint;
 
         if (!this.cashuWallets[mintUrl].wallet) {
@@ -1385,56 +1388,129 @@ export default class CashuStore {
                 };
             }
 
-            const wallet = this.cashuWallets[mintUrl].wallet;
-            const counter =
-                this.cashuWallets[mintUrl].counter + decoded.proofs.length;
+            const wallet = this.cashuWallets[mintUrl].wallet!!;
 
-            const newProofs = await wallet!!.receive(encodedToken, { counter });
-            const amtSat = CashuUtils.sumProofsValue(newProofs);
+            if (toSelfCustody) {
+                const tokenAmt = decoded.getAmount;
+                const initialAssumedFeeSat = 0;
 
-            const totalBalanceSats = new BigNumber(this.totalBalanceSats || 0)
-                .plus(amtSat || 0)
-                .toNumber();
-            const balanceSats = new BigNumber(
-                this.cashuWallets[mintUrl].balanceSats || 0
-            )
-                .plus(amtSat || 0)
-                .toNumber();
-            const newCounter = new BigNumber(counter || 0)
-                .plus(newProofs.length)
-                .toNumber();
+                const memo = `${localeString(
+                    'views.Cashu.CashuToken.tokenSweep'
+                )}${decoded.memo ? `: ${decoded.memo}` : ''}`;
 
-            // update proofs, counter, balance
-            this.cashuWallets[mintUrl].proofs.push(...newProofs);
-            await this.setMintProofs(
-                mintUrl,
-                this.cashuWallets[mintUrl].proofs
-            );
+                const invoiceParams = {
+                    expiry: '3600',
+                    routeHints: true,
+                    noLsp: true
+                };
 
-            // record received token activity
-            this.receivedTokens?.push(
-                new CashuToken({
-                    ...decoded,
-                    received: true,
-                    encodedToken,
-                    received_at: Date.now() / 1000
-                })
-            );
-            await Storage.setItem(
-                `${this.getLndDir()}-cashu-received-tokens`,
-                this.receivedTokens
-            );
+                let invoice = await stores.invoicesStore.createInvoice({
+                    ...invoiceParams,
+                    memo,
+                    value: String(tokenAmt)
+                });
 
-            await this.setMintCounter(mintUrl, newCounter);
-            await this.setMintBalance(mintUrl, balanceSats);
-            await this.setTotalBalance(totalBalanceSats);
+                let meltQuote = await wallet.createMeltQuote(
+                    invoice.paymentRequest
+                );
+                if (initialAssumedFeeSat !== meltQuote.fee_reserve) {
+                    const receiveAmtSat: number =
+                        tokenAmt - meltQuote.fee_reserve;
+
+                    if (receiveAmtSat <= 0) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.CashuStore.feeExceedsAmt'
+                            )
+                        };
+                    }
+
+                    invoice = await stores.invoicesStore.createInvoice({
+                        ...invoiceParams,
+                        memo: `${memo} [${localeString(
+                            'views.Cashu.CashuToken.feeAdjusted'
+                        )}]`,
+                        value: receiveAmtSat.toString()
+                    });
+
+                    meltQuote = await wallet.createMeltQuote(
+                        invoice.paymentRequest
+                    );
+                }
+
+                const amountToSend = meltQuote.amount + meltQuote.fee_reserve;
+
+                const { send: proofsToSend } = await wallet.send(
+                    amountToSend,
+                    decoded.proofs,
+                    {
+                        includeFees: true
+                    }
+                );
+
+                await wallet.meltProofs(meltQuote, proofsToSend);
+            } else {
+                const counter =
+                    this.cashuWallets[mintUrl].counter + decoded.proofs.length;
+
+                const newProofs = await wallet!!.receive(encodedToken, {
+                    counter
+                });
+                const amtSat = CashuUtils.sumProofsValue(newProofs);
+
+                const totalBalanceSats = new BigNumber(
+                    this.totalBalanceSats || 0
+                )
+                    .plus(amtSat || 0)
+                    .toNumber();
+                const balanceSats = new BigNumber(
+                    this.cashuWallets[mintUrl].balanceSats || 0
+                )
+                    .plus(amtSat || 0)
+                    .toNumber();
+                const newCounter = new BigNumber(counter || 0)
+                    .plus(newProofs.length)
+                    .toNumber();
+
+                // update proofs, counter, balance
+                this.cashuWallets[mintUrl].proofs.push(...newProofs);
+                await this.setMintProofs(
+                    mintUrl,
+                    this.cashuWallets[mintUrl].proofs
+                );
+
+                // record received token activity
+                this.receivedTokens?.push(
+                    new CashuToken({
+                        ...decoded,
+                        received: true,
+                        encodedToken,
+                        received_at: Date.now() / 1000
+                    })
+                );
+                await Storage.setItem(
+                    `${this.getLndDir()}-cashu-received-tokens`,
+                    this.receivedTokens
+                );
+
+                await this.setMintCounter(mintUrl, newCounter);
+                await this.setMintBalance(mintUrl, balanceSats);
+                await this.setTotalBalance(totalBalanceSats);
+            }
+
+            this.loading = false;
 
             return { success: true, errorMessage: '' };
         } catch (e) {
             console.log('claimToken error', { e });
+            const error_msg = e?.toString();
+            this.loading = false;
             return {
                 success: false,
-                errorMessage: localeString('stores.CashuStore.claimError')
+                errorMessage:
+                    error_msg || localeString('stores.CashuStore.claimError')
             };
         }
     };

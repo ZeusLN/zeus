@@ -198,7 +198,7 @@ export default class PaymentMethodList extends Component<
 
         if (
             lightning &&
-            BackendUtils.supportsCashu() &&
+            BackendUtils.supportsCashuWallet() &&
             stores?.settingsStore?.settings?.ecash?.enableCashu
         ) {
             DATA.push({
