@@ -119,9 +119,12 @@ export default class LightningAddressStore {
         this.generatePreimages(true);
     };
 
-    public DEV_deleteLocalHashes = async () => {
+    @action
+    public deleteLocalHashes = async () => {
         this.loading = true;
         await Storage.setItem(HASHES_STORAGE_STRING, '');
+        this.preimageMap = {};
+        this.localHashes = 0;
         await this.status();
         this.loading = false;
     };
@@ -378,7 +381,8 @@ export default class LightningAddressStore {
                 lightningAddress: {
                     enabled: true,
                     automaticallyAccept: true,
-                    allowComments: true
+                    allowComments: true,
+                    mintUrl: mint_url
                 }
             });
 
@@ -428,14 +432,14 @@ export default class LightningAddressStore {
                 throw updateData.error;
             }
 
-            const { handle, domain, created_at } = updateData;
+            const { handle, domain, success } = updateData;
 
             if (handle) {
                 this.setLightningAddress(handle, domain || 'zeuspay.com');
             }
 
             this.loading = false;
-            return { created_at };
+            return { success };
         } catch (error) {
             const error_msg = error?.toString();
             runInAction(() => {

@@ -194,7 +194,7 @@ export default class LightningAddress extends React.Component<
             status,
             redeemAllOpenPaymentsZaplocker,
             redeemAllOpenPaymentsCashu,
-            DEV_deleteLocalHashes,
+            deleteLocalHashes,
             lightningAddressHandle,
             lightningAddressDomain,
             lightningAddressType,
@@ -1534,7 +1534,7 @@ export default class LightningAddress extends React.Component<
                                                             'Clear local hashes'
                                                         }
                                                         onPress={() =>
-                                                            DEV_deleteLocalHashes()
+                                                            deleteLocalHashes()
                                                         }
                                                         secondary
                                                     />

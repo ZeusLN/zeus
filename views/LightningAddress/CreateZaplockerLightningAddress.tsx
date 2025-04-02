@@ -6,6 +6,9 @@ import { inject, observer } from 'mobx-react';
 import { generatePrivateKey, getPublicKey, nip19 } from 'nostr-tools';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { schnorr } from '@noble/curves/secp256k1';
+import { bytesToHex } from '@noble/hashes/utils';
+import hashjs from 'hash.js';
 
 import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
@@ -18,7 +21,9 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
 import LightningAddressStore from '../../stores/LightningAddressStore';
-import { DEFAULT_NOSTR_RELAYS } from '../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_NOSTR_RELAYS
+} from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -28,9 +33,10 @@ import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 interface CreateZaplockerLightningAddressProps {
     navigation: StackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
+    SettingsStore: SettingsStore;
     route: Route<
         'CreateZaplockerLightningAddress',
-        { relays: string[]; nostrPrivateKey: string }
+        { relays: string[]; nostrPrivateKey: string; switchTo: boolean }
     >;
 }
 
@@ -40,9 +46,10 @@ interface CreateZaplockerLightningAddressState {
     nostrPublicKey: string;
     nostrNpub: string;
     nostrRelays: Array<string>;
+    loading: boolean;
 }
 
-@inject('LightningAddressStore')
+@inject('LightningAddressStore', 'SettingsStore')
 @observer
 export default class CreateZaplockerLightningAddress extends React.Component<
     CreateZaplockerLightningAddressProps,
@@ -55,7 +62,8 @@ export default class CreateZaplockerLightningAddress extends React.Component<
         nostrPrivateKey: '',
         nostrPublicKey: '',
         nostrNpub: '',
-        nostrRelays: DEFAULT_NOSTR_RELAYS
+        nostrRelays: DEFAULT_NOSTR_RELAYS,
+        loading: false
     };
 
     generateNostrKeys = () => {
@@ -101,7 +109,8 @@ export default class CreateZaplockerLightningAddress extends React.Component<
     };
 
     render() {
-        const { navigation, LightningAddressStore } = this.props;
+        const { navigation, LightningAddressStore, SettingsStore, route } =
+            this.props;
         const {
             newLightningAddress,
             nostrPrivateKey,
@@ -109,8 +118,12 @@ export default class CreateZaplockerLightningAddress extends React.Component<
             nostrNpub,
             nostrRelays
         } = this.state;
-        const { createZaplocker, fees, error_msg, loading } =
+        const { createZaplocker, update, fees, error_msg } =
             LightningAddressStore;
+        const { updateSettings, settings }: any = SettingsStore;
+        const switchTo = route.params?.switchTo;
+
+        const loading = this.state.loading || LightningAddressStore.loading;
 
         const InfoButton = () => (
             <View>
@@ -307,22 +320,74 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                 </View>
                                 <View style={{ bottom: 15, margin: 10 }}>
                                     <Button
-                                        title={localeString(
-                                            'views.Settings.LightningAddress.create'
-                                        )}
-                                        onPress={() =>
-                                            createZaplocker(
-                                                nostrPublicKey,
-                                                nostrPrivateKey,
-                                                nostrRelays
-                                            ).then((response) => {
-                                                if (response.success) {
-                                                    navigation.popTo(
-                                                        'LightningAddress'
-                                                    );
-                                                }
-                                            })
+                                        title={
+                                            switchTo
+                                                ? localeString(
+                                                      'views.Settings.LightningAddress.switchToZaplocker'
+                                                  )
+                                                : localeString(
+                                                      'views.Settings.LightningAddress.create'
+                                                  )
                                         }
+                                        onPress={async () => {
+                                            if (switchTo) {
+                                                this.setState({
+                                                    loading: true
+                                                });
+
+                                                const relays_sig = bytesToHex(
+                                                    schnorr.sign(
+                                                        hashjs
+                                                            .sha256()
+                                                            .update(
+                                                                JSON.stringify(
+                                                                    nostrRelays
+                                                                )
+                                                            )
+                                                            .digest('hex'),
+                                                        nostrPrivateKey
+                                                    )
+                                                );
+
+                                                await update({
+                                                    nostr_pk: nostrPublicKey,
+                                                    relays: nostrRelays,
+                                                    relays_sig,
+                                                    address_type: 'zaplocker',
+                                                    domain: 'zeuspay.com'
+                                                }).then(async (response) => {
+                                                    if (response.success) {
+                                                        await updateSettings({
+                                                            lightningAddress: {
+                                                                ...settings.lightningAddress,
+                                                                nostrPrivateKey,
+                                                                nostrRelays
+                                                            }
+                                                        });
+                                                        navigation.popTo(
+                                                            'LightningAddress'
+                                                        );
+                                                    } else {
+                                                        this.setState({
+                                                            loading: false
+                                                        });
+                                                    }
+                                                });
+                                            } else {
+                                                createZaplocker(
+                                                    newLightningAddress,
+                                                    nostrPublicKey,
+                                                    nostrPrivateKey,
+                                                    nostrRelays
+                                                ).then((response) => {
+                                                    if (response.success) {
+                                                        navigation.popTo(
+                                                            'LightningAddress'
+                                                        );
+                                                    }
+                                                });
+                                            }
+                                        }}
                                         disabled={
                                             !nostrPublicKey ||
                                             !nostrNpub ||

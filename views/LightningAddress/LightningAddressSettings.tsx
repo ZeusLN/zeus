@@ -417,6 +417,37 @@ export default class LightningAddressSettings extends React.Component<
                                 color={themeColor('secondaryText')}
                             />
                         </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 20,
+                                marginBottom: 20
+                            }}
+                            onPress={() =>
+                                navigation.navigate(
+                                    'CreateCashuLightningAddress',
+                                    { switchTo: true }
+                                )
+                            }
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddress.switchToCashu'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
                         <View style={{ marginTop: 20, marginBottom: 20 }}>
                             <Button
                                 title={localeString(

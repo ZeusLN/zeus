@@ -17,7 +17,7 @@ import { Row } from '../../../components/layout/Row';
 
 import CashuStore from '../../../stores/CashuStore';
 import LightningAddressStore from '../../../stores/LightningAddressStore';
-import UnitsStore from '../../../stores/UnitsStore';
+import SettingsStore from '../../../stores/SettingsStore';
 
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -28,8 +28,8 @@ interface CreateCashuLightningAddressProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     LightningAddressStore: LightningAddressStore;
-    UnitsStore: UnitsStore;
-    route: Route<'CreateCashuLightningAddress', { nostrPrivateKey: string }>;
+    SettingsStore: SettingsStore;
+    route: Route<'CreateCashuLightningAddress', { switchTo: boolean }>;
 }
 
 interface MintItem {
@@ -41,9 +41,10 @@ interface CreateCashuLightningAddressState {
     newLightningAddress: string;
     mintList: Array<MintItem>;
     mintUrl: string;
+    loading: boolean;
 }
 
-@inject('CashuStore', 'LightningAddressStore', 'UnitsStore')
+@inject('CashuStore', 'LightningAddressStore', 'SettingsStore')
 @observer
 export default class CreateCashuLightningAddress extends React.Component<
     CreateCashuLightningAddressProps,
@@ -54,7 +55,8 @@ export default class CreateCashuLightningAddress extends React.Component<
     state = {
         newLightningAddress: '',
         mintList: [],
-        mintUrl: ''
+        mintUrl: '',
+        loading: false
     };
 
     async componentDidMount() {
@@ -94,12 +96,17 @@ export default class CreateCashuLightningAddress extends React.Component<
     };
 
     render() {
-        const { navigation, LightningAddressStore } = this.props;
+        const { navigation, LightningAddressStore, SettingsStore, route } =
+            this.props;
         const { newLightningAddress, mintUrl, mintList } = this.state;
-        const { createCashu, lightningAddressHandle, error_msg, loading } =
+        const { createCashu, update, deleteLocalHashes, error_msg } =
             LightningAddressStore;
+        const { updateSettings, settings }: any = SettingsStore;
+        const switchTo = route.params?.switchTo;
 
         const mintsNotConfigured = mintList.length === 0;
+
+        const loading = this.state.loading || LightningAddressStore.loading;
 
         const InfoButton = () => (
             <View>
@@ -141,7 +148,7 @@ export default class CreateCashuLightningAddress extends React.Component<
                         {!loading && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        {!loading && !lightningAddressHandle && (
+                        {!loading && (
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
@@ -232,21 +239,55 @@ export default class CreateCashuLightningAddress extends React.Component<
                                 </View>
                                 <View style={{ bottom: 15, margin: 10 }}>
                                     <Button
-                                        title={localeString(
-                                            'views.Settings.LightningAddress.create'
-                                        )}
-                                        onPress={() =>
-                                            createCashu(
-                                                newLightningAddress,
-                                                mintUrl
-                                            ).then((response) => {
-                                                if (response.success) {
-                                                    navigation.popTo(
-                                                        'LightningAddress'
-                                                    );
-                                                }
-                                            })
+                                        title={
+                                            switchTo
+                                                ? localeString(
+                                                      'views.Settings.LightningAddress.switchToCashu'
+                                                  )
+                                                : localeString(
+                                                      'views.Settings.LightningAddress.create'
+                                                  )
                                         }
+                                        onPress={async () => {
+                                            if (switchTo) {
+                                                this.setState({
+                                                    loading: true
+                                                });
+                                                await update({
+                                                    mint_url: mintUrl,
+                                                    address_type: 'cashu',
+                                                    domain: 'zeusnuts.com'
+                                                }).then(async (response) => {
+                                                    if (response.success) {
+                                                        await deleteLocalHashes();
+                                                        await updateSettings({
+                                                            lightningAddress: {
+                                                                ...settings.lightningAddress,
+                                                                mintUrl
+                                                            }
+                                                        });
+                                                        navigation.popTo(
+                                                            'LightningAddress'
+                                                        );
+                                                    } else {
+                                                        this.setState({
+                                                            loading: false
+                                                        });
+                                                    }
+                                                });
+                                            } else {
+                                                createCashu(
+                                                    newLightningAddress,
+                                                    mintUrl
+                                                ).then((response) => {
+                                                    if (response.success) {
+                                                        navigation.popTo(
+                                                            'LightningAddress'
+                                                        );
+                                                    }
+                                                });
+                                            }
+                                        }}
                                         disabled={mintsNotConfigured}
                                     />
                                 </View>
