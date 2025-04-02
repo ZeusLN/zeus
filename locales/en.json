@@ -1231,6 +1231,8 @@
     "views.Settings.LightningAddress.statusExplainer2": "More payment hashes will be sent to the server automatically when required, so that you can continue to receive payments.",
     "views.Settings.LightningAddress.generatingPreimages": "Generating preimages",
     "views.Settings.LightningAddress.ChangeAddress": "Change address",
+    "views.Settings.LightningAddress.switchToCashu": "Switch to Cashu Lightning address",
+    "views.Settings.LightningAddress.switchToZaplocker": "Switch to Zaplocker Lightning address",
     "views.Settings.LightningAddress.nostrKeys.changeWarning": "Warning: changing your Nostr keys will delete your pending payments. Please redeem your pending payments before submitting new keys.",
     "views.Settings.LightningAddress.explainer1": "To get started with a lightning address you must first have a lightning channel from the ZEUS LSP with inbound liquidity.",
     "views.Settings.LightningAddress.explainer2": "The easiest way to do so is to purchase a 0-conf channel. Just generate an invoice and pay yourself from another lightning wallet.",
