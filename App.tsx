@@ -203,6 +203,7 @@ import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
 import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
+import CashuTools from './views/Tools/CashuTools';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -1050,6 +1051,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="AddMint" // @ts-ignore:next-line
                                                         component={AddMint}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuTools" // @ts-ignore:next-line
+                                                        component={CashuTools}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
