@@ -122,7 +122,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             setInitialStart,
             implementation,
             embeddedLndStarted
-        }: any = SettingsStore;
+        } = SettingsStore;
 
         const implementationDisplayValue: { [key: string]: string } = {};
 
