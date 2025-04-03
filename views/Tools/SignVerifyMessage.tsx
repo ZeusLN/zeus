@@ -15,7 +15,6 @@ import {
     ErrorMessage
 } from '../../components/SuccessErrorMessage';
 import TextInput from '../../components/TextInput';
-// import DropdownInput from '../../components/DropdownInput';
 import DropdownSetting from '../../components/DropdownSetting';
 
 import { themeColor } from '../../utils/ThemeUtils';
@@ -39,6 +38,7 @@ interface SignVerifyMessageState {
     verifyingAddress: string;
     signingMode: string;
     signingAddressLocal: string;
+    supportsAddressMessageSigning: boolean;
 }
 
 interface Address {
@@ -63,7 +63,8 @@ export default class SignVerifyMessage extends React.Component<
         signingMethodIndex: 0,
         verifyingAddress: '',
         signingMode: 'lightning',
-        signingAddressLocal: ''
+        signingAddressLocal: '',
+        supportsAddressMessageSigning: false
     };
 
     componentDidMount = () => {
@@ -71,18 +72,21 @@ export default class SignVerifyMessage extends React.Component<
         MessageSignStore.reset();
 
         // Load addresses right away and also when the screen comes into focus
-        MessageSignStore.loadAddresses();
+        if (backendUtils.supportsAddressMessageSigning()) {
+            this.setState({ supportsAddressMessageSigning: true });
+            MessageSignStore.loadAddresses();
 
-        // Also reload addresses whenever the screen comes into focus
-        this.navigationFocusListener = this.props.navigation.addListener(
-            'focus',
-            () => {
-                console.log(
-                    'SignVerifyMessage screen focused - reloading addresses'
-                );
-                MessageSignStore.loadAddresses();
-            }
-        );
+            // Also reload addresses whenever the screen comes into focus
+            this.navigationFocusListener = this.props.navigation.addListener(
+                'focus',
+                () => {
+                    console.log(
+                        'SignVerifyMessage screen focused - reloading addresses'
+                    );
+                    MessageSignStore.loadAddresses();
+                }
+            );
+        }
 
         // If we have a message to verify from navigation, set it
         if (this.props.route.params?.message) {
@@ -178,46 +182,15 @@ export default class SignVerifyMessage extends React.Component<
         MessageSignStore.reset();
     };
 
-    getAddressCompatibilityInfo = (addressType: string): string => {
-        if (addressType.includes('P2PKH') || addressType.includes('Legacy')) {
-            return 'Fully compatible with signing (Legacy Address)';
-        } else if (
-            addressType.includes('P2WPKH') ||
-            addressType.includes('Segwit')
-        ) {
-            return 'Fully compatible with signing (Segwit Address)';
-        } else if (
-            addressType.includes('NP2WKH') ||
-            addressType.includes('Nested')
-        ) {
-            return 'Fully compatible with signing (Nested Segwit Address)';
-        } else if (
-            addressType.includes('P2TR') ||
-            addressType.includes('Taproot')
-        ) {
-            return 'Compatible with signing (Taproot uses ECDSA for compact signatures)';
-        } else {
-            return 'Compatibility unknown - may not support signing';
-        }
-    };
-
     renderSigningMethodSelector = () => {
         const { signingMethodIndex } = this.state;
         const { MessageSignStore } = this.props;
         const { addresses, selectedAddress } = MessageSignStore;
 
-        const supportsAddressMessageSigning =
-            backendUtils.supportsAddressMessageSigning();
+        const { supportsAddressMessageSigning } = this.state;
 
         if (!supportsAddressMessageSigning) {
-            return (
-                <View style={styles.form}>
-                    <Text style={{ color: themeColor('secondaryText') }}>
-                        Only Lightning Node message signing is available in this
-                        implementation.
-                    </Text>
-                </View>
-            );
+            return null;
         }
 
         const lightningButton = () => (
@@ -230,7 +203,7 @@ export default class SignVerifyMessage extends React.Component<
                                 : themeColor('text')
                     }}
                 >
-                    Lightning Node
+                    {localeString('views.Settings.SignMessage.lightningNode')}
                 </Text>
             </React.Fragment>
         );
@@ -245,7 +218,7 @@ export default class SignVerifyMessage extends React.Component<
                                 : themeColor('text')
                     }}
                 >
-                    On-Chain Address
+                    {localeString('views.Settings.SignMessage.onChainAddress')}
                 </Text>
             </React.Fragment>
         );
@@ -259,14 +232,14 @@ export default class SignVerifyMessage extends React.Component<
         return (
             <View style={styles.form}>
                 <Text style={{ color: themeColor('secondaryText') }}>
-                    Signing Method
+                    {localeString('views.Settings.SignMessage.signingMethod')}
                 </Text>
                 <ButtonGroup
                     onPress={this.updateSigningMethod}
                     selectedIndex={signingMethodIndex}
                     buttons={buttonElements}
                     selectedButtonStyle={{
-                        backgroundColor: themeColor('text'),
+                        backgroundColor: themeColor('highlight'),
                         borderRadius: 12
                     }}
                     containerStyle={{
@@ -289,7 +262,9 @@ export default class SignVerifyMessage extends React.Component<
                                 marginBottom: 5
                             }}
                         >
-                            Select Address for Signing
+                            {localeString(
+                                'views.Settings.SignMessage.selectAddressSigning'
+                            )}
                         </Text>
 
                         {addresses.length === 0 && (
@@ -304,7 +279,9 @@ export default class SignVerifyMessage extends React.Component<
                                 ]}
                             >
                                 <Text style={{ color: themeColor('text') }}>
-                                    Loading addresses...
+                                    {localeString(
+                                        'views.Settings.SignMessage.loadingAddresses'
+                                    )}
                                 </Text>
                             </View>
                         )}
@@ -370,7 +347,9 @@ export default class SignVerifyMessage extends React.Component<
                                             fontSize: 12
                                         }}
                                     >
-                                        Full Address:
+                                        {localeString(
+                                            'views.Settings.SignMessage.fullAddress'
+                                        )}
                                     </Text>
                                     <View
                                         style={{
@@ -417,7 +396,9 @@ export default class SignVerifyMessage extends React.Component<
                                                     marginTop: 10
                                                 }}
                                             >
-                                                Account:
+                                                {localeString(
+                                                    'views.Settings.SignMessage.account'
+                                                )}
                                             </Text>
                                             <Text
                                                 style={{
@@ -444,7 +425,9 @@ export default class SignVerifyMessage extends React.Component<
                                             marginTop: 10
                                         }}
                                     >
-                                        Address Type:
+                                        {localeString(
+                                            'views.Settings.SignMessage.addressType'
+                                        )}
                                     </Text>
                                     <Text
                                         style={{
@@ -461,33 +444,6 @@ export default class SignVerifyMessage extends React.Component<
                                                     selectedAddress)
                                         )?.type || 'Unknown'}
                                     </Text>
-
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontSize: 12,
-                                            marginTop: 10
-                                        }}
-                                    >
-                                        Signing Compatibility:
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 12,
-                                            marginTop: 3
-                                        }}
-                                    >
-                                        {this.getAddressCompatibilityInfo(
-                                            addresses.find(
-                                                (addr: Address) =>
-                                                    addr.address ===
-                                                    (this.state
-                                                        .signingAddressLocal ||
-                                                        selectedAddress)
-                                            )?.type || ''
-                                        )}
-                                    </Text>
                                 </View>
                             </View>
                         ) : (
@@ -503,9 +459,9 @@ export default class SignVerifyMessage extends React.Component<
                                 ]}
                             >
                                 <Text style={{ color: themeColor('error') }}>
-                                    No on-chain addresses available. Please
-                                    ensure your node supports address
-                                    management.
+                                    {localeString(
+                                        'views.Settings.SignMessage.noAddressesAvailable'
+                                    )}
                                 </Text>
                             </View>
                         )}
@@ -528,9 +484,7 @@ export default class SignVerifyMessage extends React.Component<
         const { loading, signMessage, pubkey, valid, signature, addresses } =
             MessageSignStore;
 
-        const supportsAddressMessageSigning =
-            backendUtils.supportsAddressMessageSigning();
-
+        const { supportsAddressMessageSigning } = this.state;
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -651,7 +605,9 @@ export default class SignVerifyMessage extends React.Component<
                                         ) {
                                             // Don't attempt to sign empty messages
                                             Alert.alert(
-                                                'Please enter a message to sign'
+                                                localeString(
+                                                    'views.Settings.SignMessage.pleaseEnterMessage'
+                                                )
                                             );
                                             return;
                                         }
@@ -695,16 +651,20 @@ export default class SignVerifyMessage extends React.Component<
                     {selectedIndex === 1 && (
                         <View>
                             <View style={styles.form}>
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    Signature Type
-                                </Text>
                                 {supportsAddressMessageSigning ? (
                                     <View style={{ marginBottom: 15 }}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.SignMessage.signatureType'
+                                            )}
+                                        </Text>
                                         <ButtonGroup
                                             onPress={(index: number) => {
                                                 if (index === 0) {
@@ -729,44 +689,39 @@ export default class SignVerifyMessage extends React.Component<
                                                     : 1
                                             }
                                             buttons={[
-                                                'Lightning Node',
-                                                'On-chain Address'
+                                                localeString(
+                                                    'views.Settings.SignMessage.lightningNode'
+                                                ),
+                                                localeString(
+                                                    'views.Settings.SignMessage.onChainAddress'
+                                                )
                                             ]}
-                                            containerStyle={{
-                                                height: 30,
-                                                borderRadius: 10,
-                                                borderColor:
-                                                    themeColor('secondary'),
-                                                backgroundColor: 'transparent'
-                                            }}
                                             selectedButtonStyle={{
                                                 backgroundColor:
-                                                    themeColor('highlight')
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
                                             }}
-                                            selectedTextStyle={{
-                                                color: themeColor('text'),
-                                                fontWeight: 'bold'
+                                            containerStyle={{
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary'),
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
                                             }}
                                             textStyle={{
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize: 14,
                                                 color: themeColor('text')
+                                            }}
+                                            selectedTextStyle={{
+                                                color: themeColor('secondary')
                                             }}
                                         />
                                     </View>
-                                ) : (
-                                    <View style={{ marginBottom: 15 }}>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            Only Lightning Node verification is
-                                            available in this implementation.
-                                        </Text>
-                                    </View>
-                                )}
+                                ) : null}
 
                                 {supportsAddressMessageSigning &&
                                     signingMode === 'onchain' && (
@@ -779,8 +734,9 @@ export default class SignVerifyMessage extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                Address (required for on-chain
-                                                verification)
+                                                {localeString(
+                                                    'views.Settings.SignMessage.addressRequired'
+                                                )}
                                             </Text>
                                             {addresses.length === 0 && (
                                                 <Text
@@ -790,7 +746,9 @@ export default class SignVerifyMessage extends React.Component<
                                                         )
                                                     }}
                                                 >
-                                                    Loading addresses...
+                                                    {localeString(
+                                                        'views.Settings.SignMessage.loadingAddresses'
+                                                    )}
                                                 </Text>
                                             )}
                                             {addresses.length > 0 ? (
@@ -864,7 +822,9 @@ export default class SignVerifyMessage extends React.Component<
                                                                 fontSize: 12
                                                             }}
                                                         >
-                                                            Full Address:
+                                                            {localeString(
+                                                                'views.Settings.SignMessage.fullAddress'
+                                                            )}
                                                         </Text>
                                                         <View
                                                             style={{
@@ -906,7 +866,9 @@ export default class SignVerifyMessage extends React.Component<
                                                                 marginTop: 10
                                                             }}
                                                         >
-                                                            Address Type:
+                                                            {localeString(
+                                                                'views.Settings.SignMessage.addressType'
+                                                            )}
                                                         </Text>
                                                         <Text
                                                             style={{
@@ -951,32 +913,14 @@ export default class SignVerifyMessage extends React.Component<
                                                             )
                                                         }}
                                                     >
-                                                        No on-chain addresses
-                                                        available. Please ensure
-                                                        your node supports
-                                                        address management.
+                                                        {localeString(
+                                                            'views.Settings.SignMessage.noAddressesAvailable'
+                                                        )}
                                                     </Text>
                                                 </View>
                                             )}
                                         </View>
                                     )}
-
-                                {(signingMode === 'lightning' ||
-                                    !supportsAddressMessageSigning) && (
-                                    <View>
-                                        <Text
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontSize: 12
-                                            }}
-                                        >
-                                            Lightning node verification
-                                            selected. No address needed.
-                                        </Text>
-                                    </View>
-                                )}
                             </View>
 
                             <View style={styles.form}>
@@ -1105,17 +1049,22 @@ export default class SignVerifyMessage extends React.Component<
 
         // Validation
         if (!messageToVerify || messageToVerify.trim() === '') {
-            Alert.alert('Please enter a message to verify');
+            Alert.alert(
+                localeString(
+                    'views.Settings.SignMessage.pleaseEnterMessageVerify'
+                )
+            );
             return;
         }
 
         if (!signatureToVerify || signatureToVerify.trim() === '') {
-            Alert.alert('Please enter a signature to verify');
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseEnterSignature')
+            );
             return;
         }
 
-        const supportsAddressMessageSigning =
-            backendUtils.supportsAddressMessageSigning();
+        const { supportsAddressMessageSigning } = this.state;
 
         if (
             supportsAddressMessageSigning &&
@@ -1123,7 +1072,7 @@ export default class SignVerifyMessage extends React.Component<
             (!verifyingAddress || verifyingAddress.trim() === '')
         ) {
             Alert.alert(
-                'Please select a Bitcoin address for on-chain verification'
+                localeString('views.Settings.SignMessage.pleaseSelectAddress')
             );
             console.log(
                 '[SignVerifyMessage] Verification aborted: no address provided for on-chain verification'
