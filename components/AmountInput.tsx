@@ -173,13 +173,22 @@ export default class AmountInput extends React.Component<
                         placeholder={'0'}
                         value={amount}
                         onChangeText={(text: string) => {
-                            // remove spaces and non-numeric chars
-                            const formatted = text.replace(/[^\d.,-]/g, '');
-                            const satAmount = getSatAmount(
-                                formatted,
-                                forceUnit
-                            );
-                            onAmountChange(formatted, satAmount);
+                        // Allow only numbers and a single decimal point
+                        let formatted = text.replace(/[^0-9.]/g, '').replace(/,/g, '');
+
+                        // Prevent multiple decimal points
+                        let validInput = formatted.split('.').length > 2
+                            ? formatted.substring(0, formatted.lastIndexOf('.'))
+                            : formatted;
+
+                        // Limit decimal places to 2 (for fiat)
+                        if (validInput.includes('.')) {
+                            const parts = validInput.split('.');
+                            validInput = parts[0] + '.' + parts[1].slice(0, 2);
+                        }
+
+                        const satAmount = getSatAmount(validInput, forceUnit);
+                        onAmountChange(validInput, satAmount);
                             this.setState({ satAmount });
                         }}
                         locked={locked}
