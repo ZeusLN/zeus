@@ -16,7 +16,6 @@ import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import TextInput from '../../components/TextInput';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
@@ -41,7 +40,6 @@ interface CreateZaplockerLightningAddressProps {
 }
 
 interface CreateZaplockerLightningAddressState {
-    newLightningAddress: string;
     nostrPrivateKey: string;
     nostrPublicKey: string;
     nostrNpub: string;
@@ -58,7 +56,6 @@ export default class CreateZaplockerLightningAddress extends React.Component<
     isInitialFocus = true;
 
     state = {
-        newLightningAddress: '',
         nostrPrivateKey: '',
         nostrPublicKey: '',
         nostrNpub: '',
@@ -80,10 +77,6 @@ export default class CreateZaplockerLightningAddress extends React.Component<
 
     async componentDidMount() {
         this.generateNostrKeys();
-
-        this.setState({
-            newLightningAddress: ''
-        });
     }
 
     UNSAFE_componentWillReceiveProps = (
@@ -111,13 +104,8 @@ export default class CreateZaplockerLightningAddress extends React.Component<
     render() {
         const { navigation, LightningAddressStore, SettingsStore, route } =
             this.props;
-        const {
-            newLightningAddress,
-            nostrPrivateKey,
-            nostrPublicKey,
-            nostrNpub,
-            nostrRelays
-        } = this.state;
+        const { nostrPrivateKey, nostrPublicKey, nostrNpub, nostrRelays } =
+            this.state;
         const { createZaplocker, update, fees, error_msg } =
             LightningAddressStore;
         const { updateSettings, settings }: any = SettingsStore;
@@ -166,57 +154,6 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                         {!loading && (
                             <>
                                 <View style={{ flex: 1 }}>
-                                    <View style={styles.wrapper}>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.chooseHandle'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'row'
-                                            }}
-                                        >
-                                            <TextInput
-                                                value={newLightningAddress}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        newLightningAddress:
-                                                            text
-                                                    });
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
-                                                }}
-                                            />
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontSize: 20,
-                                                        marginLeft: 5
-                                                    }}
-                                                >
-                                                    @zeuspay.com
-                                                </Text>
-                                            </Row>
-                                        </View>
-                                    </View>
-
                                     <>
                                         <View style={styles.wrapper}>
                                             <Text
@@ -353,8 +290,7 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                     nostr_pk: nostrPublicKey,
                                                     relays: nostrRelays,
                                                     relays_sig,
-                                                    address_type: 'zaplocker',
-                                                    domain: 'zeuspay.com'
+                                                    address_type: 'zaplocker'
                                                 }).then(async (response) => {
                                                     if (response.success) {
                                                         await updateSettings({
@@ -375,7 +311,6 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                 });
                                             } else {
                                                 createZaplocker(
-                                                    newLightningAddress,
                                                     nostrPublicKey,
                                                     nostrPrivateKey,
                                                     nostrRelays

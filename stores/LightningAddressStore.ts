@@ -299,7 +299,6 @@ export default class LightningAddressStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature,
-                    domain: 'zeuspay.com',
                     nostr_pk,
                     relays,
                     relays_sig,
@@ -350,7 +349,7 @@ export default class LightningAddressStore {
     };
 
     @action
-    public createCashu = async (handle: string, mint_url: string) => {
+    public createCashu = async (mint_url: string) => {
         this.error = false;
         this.error_msg = '';
         this.loading = true;
@@ -370,8 +369,6 @@ export default class LightningAddressStore {
                     cashu_pubkey: this.cashuStore.cashuWallets[mint_url].pubkey,
                     message: verification,
                     signature,
-                    handle,
-                    domain: 'zeusnuts.com',
                     mint_url,
                     address_type: 'cashu'
                 })

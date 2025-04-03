@@ -37,7 +37,9 @@ export default class ZeusPayPlusSettings extends React.Component<
                     width={100}
                     height={30}
                 />
-            ) : undefined;
+            ) : (
+                <></>
+            );
         const PlusPillLocked = () => (
             <Pill
                 title="ZEUS Pay+"

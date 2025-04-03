@@ -8,10 +8,8 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../../components/Button';
 import DropdownSetting from '../../../components/DropdownSetting';
 import Screen from '../../../components/Screen';
-import Text from '../../../components/Text';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
-import TextInput from '../../../components/TextInput';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
 
@@ -38,7 +36,6 @@ interface MintItem {
 }
 
 interface CreateCashuLightningAddressState {
-    newLightningAddress: string;
     mintList: Array<MintItem>;
     mintUrl: string;
     loading: boolean;
@@ -53,7 +50,6 @@ export default class CreateCashuLightningAddress extends React.Component<
     isInitialFocus = true;
 
     state = {
-        newLightningAddress: '',
         mintList: [],
         mintUrl: '',
         loading: false
@@ -98,7 +94,7 @@ export default class CreateCashuLightningAddress extends React.Component<
     render() {
         const { navigation, LightningAddressStore, SettingsStore, route } =
             this.props;
-        const { newLightningAddress, mintUrl, mintList } = this.state;
+        const { mintUrl, mintList } = this.state;
         const { createCashu, update, deleteLocalHashes, error_msg } =
             LightningAddressStore;
         const { updateSettings, settings }: any = SettingsStore;
@@ -152,55 +148,6 @@ export default class CreateCashuLightningAddress extends React.Component<
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.chooseHandle'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'row'
-                                            }}
-                                        >
-                                            <TextInput
-                                                value={newLightningAddress}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        newLightningAddress:
-                                                            text
-                                                    });
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
-                                                }}
-                                                locked={mintsNotConfigured}
-                                            />
-                                            <Row>
-                                                <Text
-                                                    style={{
-                                                        ...styles.text,
-                                                        color: themeColor(
-                                                            'text'
-                                                        ),
-                                                        fontSize: 20,
-                                                        marginLeft: 5
-                                                    }}
-                                                >
-                                                    @zeusnuts.com
-                                                </Text>
-                                            </Row>
-                                        </View>
                                         {mintsNotConfigured ? (
                                             <View style={{ marginTop: 20 }}>
                                                 <Button
@@ -255,8 +202,7 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                 });
                                                 await update({
                                                     mint_url: mintUrl,
-                                                    address_type: 'cashu',
-                                                    domain: 'zeusnuts.com'
+                                                    address_type: 'cashu'
                                                 }).then(async (response) => {
                                                     if (response.success) {
                                                         await deleteLocalHashes();
@@ -276,16 +222,15 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                     }
                                                 });
                                             } else {
-                                                createCashu(
-                                                    newLightningAddress,
-                                                    mintUrl
-                                                ).then((response) => {
-                                                    if (response.success) {
-                                                        navigation.popTo(
-                                                            'LightningAddress'
-                                                        );
+                                                createCashu(mintUrl).then(
+                                                    (response) => {
+                                                        if (response.success) {
+                                                            navigation.popTo(
+                                                                'LightningAddress'
+                                                            );
+                                                        }
                                                     }
-                                                });
+                                                );
                                             }
                                         }}
                                         disabled={mintsNotConfigured}
