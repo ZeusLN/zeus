@@ -1,9 +1,10 @@
 import BigNumber from 'bignumber.js';
-import { observable, computed } from 'mobx';
+import { observable, computed, action } from 'mobx';
 const { chanFormat } = require('bolt07');
 
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
+import { Implementations } from '../stores/SettingsStore';
 
 interface HTLC {
     hash_lock: string;
@@ -63,6 +64,7 @@ export default class Channel extends BaseModel {
     total: string;
     to_us: string;
     short_channel_id: string; // CLN
+    close_cause: string;
 
     channel_id?: string;
     alias?: string;
@@ -71,6 +73,13 @@ export default class Channel extends BaseModel {
 
     // enrichments
     displayName?: string;
+
+    @observable implementation: Implementations;
+
+    @action
+    public setImplementation(value: Implementations) {
+        this.implementation = value;
+    }
 
     @computed
     public get isActive(): boolean {

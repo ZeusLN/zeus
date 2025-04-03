@@ -441,6 +441,17 @@ export default class ChannelsStore {
             })
         ];
 
+        if (BackendUtils.supportsClosedChannels()) {
+            loadPromises.push(
+                BackendUtils.getClosedChannels().then((data: any) => {
+                    const closedChannels = data.channels.map(
+                        (channel: any) => new ClosedChannel(channel)
+                    );
+                    this.closedChannels = closedChannels;
+                })
+            );
+        }
+
         if (BackendUtils.supportsPendingChannels()) {
             loadPromises.push(
                 BackendUtils.getPendingChannels().then((data: any) => {

@@ -91,6 +91,7 @@ export default class NostrWalletConnect {
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsPendingChannels = () => false;
+    supportsClosedChannels = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;

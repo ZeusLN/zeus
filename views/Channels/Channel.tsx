@@ -172,6 +172,14 @@ export default class ChannelView extends React.Component<
         }
     }
 
+    componentDidMount() {
+        const { channel } = this.state;
+
+        if (channel instanceof ClosedChannel) {
+            channel.setImplementation(this.props.SettingsStore.implementation);
+        }
+    }
+
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
@@ -359,7 +367,8 @@ export default class ChannelView extends React.Component<
             zero_conf,
             getCommitmentType,
             pending_htlcs,
-            blocks_til_maturity
+            blocks_til_maturity,
+            close_cause
         } = channel as ClosedChannel;
 
         const privateChannel = channel.private;
@@ -1105,7 +1114,8 @@ export default class ChannelView extends React.Component<
                     {!closeHeight &&
                         !closing_txid &&
                         !pendingClose &&
-                        !closing && (
+                        !closing &&
+                        !close_cause && (
                             <View
                                 style={{
                                     ...styles.button,
