@@ -36,6 +36,7 @@ export default class FiatStore {
 
     constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
+        this.getFiatRates();
     }
 
     // Resource below may be helpful for formatting
