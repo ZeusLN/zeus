@@ -14,6 +14,7 @@ import { localeString } from './../utils/LocaleUtils';
 
 interface DropdownSettingProps {
     title?: string;
+    titleColor?: string;
     selectedValue: string | number;
     onValueChange: (value: any) => void;
     values: Array<any>;
@@ -25,8 +26,14 @@ export default class DropdownSetting extends React.Component<
     {}
 > {
     render() {
-        const { title, selectedValue, onValueChange, values, disabled } =
-            this.props;
+        const {
+            title,
+            titleColor,
+            selectedValue,
+            onValueChange,
+            values,
+            disabled
+        } = this.props;
 
         const pickerValuesAndroid: Array<any> = [];
         const pickerValuesIOS: Array<string> = ['Cancel'];
@@ -60,7 +67,9 @@ export default class DropdownSetting extends React.Component<
                             <Text
                                 style={{
                                     ...styles.secondaryText,
-                                    color: themeColor('secondaryText')
+                                    color:
+                                        titleColor ||
+                                        themeColor('secondaryText')
                                 }}
                             >
                                 {title}
@@ -91,7 +100,9 @@ export default class DropdownSetting extends React.Component<
                             <Text
                                 style={{
                                     ...styles.secondaryText,
-                                    color: themeColor('secondaryText')
+                                    color:
+                                        titleColor ||
+                                        themeColor('secondaryText')
                                 }}
                             >
                                 {title}
@@ -156,6 +167,8 @@ const styles = StyleSheet.create({
         fontSize: 20,
         height: 60,
         width: '100%',
+        top: 10,
+        bottom: 10,
         borderRadius: 6,
         borderBottomWidth: 20,
         paddingLeft: 10,

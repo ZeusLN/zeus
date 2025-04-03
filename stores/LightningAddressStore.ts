@@ -37,6 +37,17 @@ export const LEGACY_HASHES_STORAGE_STRING = 'olympus-lightning-address-hashes';
 export const ADDRESS_ACTIVATED_STRING = 'zeuspay-lightning-address';
 export const HASHES_STORAGE_STRING = 'zeuspay-lightning-address-hashes';
 
+export const ZEUS_PAY_DOMAIN_KEYS = [
+    {
+        key: 'zeuspay.com',
+        value: 'zeuspay.com'
+    },
+    {
+        key: 'zeusnuts.com',
+        value: 'zeusnuts.com'
+    }
+];
+
 interface Auth {
     verification: string;
     signature: string;

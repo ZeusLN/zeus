@@ -4,15 +4,18 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
-import Screen from '../../components/Screen';
-import Text from '../../components/Text';
+import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
-import LightningAddressStore from '../../stores/LightningAddressStore';
+import LightningAddressStore, {
+    ZEUS_PAY_DOMAIN_KEYS
+} from '../../stores/LightningAddressStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -25,6 +28,8 @@ interface ChangeAddressProps {
 interface ChangeAddressState {
     newLightningAddress: string;
     currentLightningAddress: string;
+    newLightningDomain: string;
+    currentLightningDomain: string;
 }
 
 @inject('LightningAddressStore')
@@ -35,22 +40,32 @@ export default class ChangeAddress extends React.Component<
 > {
     state = {
         newLightningAddress: '',
-        currentLightningAddress: ''
+        currentLightningAddress: '',
+        newLightningDomain: '',
+        currentLightningDomain: ''
     };
 
     async UNSAFE_componentWillMount() {
         const { LightningAddressStore } = this.props;
-        const { lightningAddressHandle } = LightningAddressStore;
+        const { lightningAddressHandle, lightningAddressDomain } =
+            LightningAddressStore;
 
         this.setState({
             newLightningAddress: lightningAddressHandle,
-            currentLightningAddress: lightningAddressHandle
+            currentLightningAddress: lightningAddressHandle,
+            newLightningDomain: lightningAddressDomain,
+            currentLightningDomain: lightningAddressDomain
         });
     }
 
     render() {
         const { navigation, LightningAddressStore } = this.props;
-        const { newLightningAddress, currentLightningAddress } = this.state;
+        const {
+            newLightningAddress,
+            currentLightningAddress,
+            newLightningDomain,
+            currentLightningDomain
+        } = this.state;
         const { update, error_msg, loading } = LightningAddressStore;
 
         return (
@@ -78,54 +93,89 @@ export default class ChangeAddress extends React.Component<
                             <>
                                 <View style={{ flex: 1 }}>
                                     <View style={styles.wrapper}>
-                                        <Text
+                                        <Row
                                             style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
+                                                width: '100%',
+                                                gap: 5,
+                                                alignItems: 'flex-start',
+                                                justifyContent: 'center'
                                             }}
                                         >
-                                            {localeString(
-                                                'views.Settings.LightningAddress.chooseHandle'
-                                            )}
-                                        </Text>
-                                        <View
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'row'
-                                            }}
-                                        >
-                                            <TextInput
-                                                value={newLightningAddress}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    this.setState({
-                                                        newLightningAddress:
-                                                            text
-                                                    });
-                                                }}
-                                                autoCapitalize="none"
-                                                autoCorrect={false}
-                                                style={{
-                                                    flex: 1,
-                                                    flexDirection: 'row'
-                                                }}
-                                            />
-                                            <Row>
+                                            <View style={{ width: '46%' }}>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'text'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.LightningAddress.chooseHandle'
+                                                    )}
+                                                </Text>
+                                                <View
+                                                    style={{
+                                                        display: 'flex',
+                                                        flexDirection: 'row'
+                                                    }}
+                                                >
+                                                    <TextInput
+                                                        value={
+                                                            newLightningAddress
+                                                        }
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) => {
+                                                            this.setState({
+                                                                newLightningAddress:
+                                                                    text
+                                                            });
+                                                        }}
+                                                        autoCapitalize="none"
+                                                        autoCorrect={false}
+                                                        style={{
+                                                            flex: 1,
+                                                            flexDirection: 'row'
+                                                        }}
+                                                    />
+                                                </View>
+                                            </View>
+                                            <View style={{ width: '8%' }}>
                                                 <Text
                                                     style={{
                                                         ...styles.text,
                                                         color: themeColor(
                                                             'text'
                                                         ),
-                                                        fontSize: 20,
-                                                        marginLeft: 5
+                                                        top: 38,
+                                                        fontSize: 30
                                                     }}
                                                 >
-                                                    @zeuspay.com
+                                                    @
                                                 </Text>
-                                            </Row>
-                                        </View>
+                                            </View>
+                                            <View style={{ width: '46%' }}>
+                                                <DropdownSetting
+                                                    title="Domain"
+                                                    titleColor={themeColor(
+                                                        'text'
+                                                    )}
+                                                    selectedValue={
+                                                        newLightningDomain
+                                                    }
+                                                    values={
+                                                        ZEUS_PAY_DOMAIN_KEYS
+                                                    }
+                                                    onValueChange={(value) => {
+                                                        this.setState({
+                                                            newLightningDomain:
+                                                                value
+                                                        });
+                                                    }}
+                                                />
+                                            </View>
+                                        </Row>
                                     </View>
                                 </View>
                                 <View>
@@ -137,7 +187,8 @@ export default class ChangeAddress extends React.Component<
                                             onPress={() => {
                                                 try {
                                                     update({
-                                                        handle: newLightningAddress
+                                                        handle: newLightningAddress,
+                                                        domain: newLightningDomain
                                                     }).then(() =>
                                                         navigation.popTo(
                                                             'LightningAddress'
@@ -147,8 +198,10 @@ export default class ChangeAddress extends React.Component<
                                             }}
                                             disabled={
                                                 !newLightningAddress ||
-                                                newLightningAddress ===
-                                                    currentLightningAddress
+                                                (newLightningAddress ===
+                                                    currentLightningAddress &&
+                                                    newLightningDomain ===
+                                                        currentLightningDomain)
                                             }
                                         />
                                     </View>

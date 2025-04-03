@@ -23,6 +23,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+import ZeusPayPlusSettings from '../../views/LightningAddress/ZeusPayPlusSettings';
+
 interface LightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
@@ -154,7 +156,7 @@ export default class LightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontSize: 17,
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
@@ -194,6 +196,7 @@ export default class LightningAddressSettings extends React.Component<
                                 title={localeString(
                                     'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel'
                                 )}
+                                titleColor={themeColor('text')}
                                 selectedValue={
                                     automaticallyAcceptAttestationLevel
                                 }
@@ -227,7 +230,7 @@ export default class LightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
@@ -274,7 +277,7 @@ export default class LightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
@@ -319,6 +322,7 @@ export default class LightningAddressSettings extends React.Component<
                                 title={localeString(
                                     'views.Settings.LightningAddressSettings.notifications'
                                 )}
+                                titleColor={themeColor('text')}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
                                     try {
@@ -354,7 +358,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -363,7 +367,7 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
                         <ListItem
@@ -377,7 +381,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -388,35 +392,10 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20,
-                                marginBottom: 20
-                            }}
-                            onPress={() => navigation.navigate('ChangeAddress')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.ChangeAddress'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
+                        <ZeusPayPlusSettings navigation={navigation} />
                         <ListItem
                             containerStyle={{
                                 backgroundColor: 'transparent',
@@ -434,7 +413,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -445,7 +424,7 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
                         <View style={{ marginTop: 20, marginBottom: 20 }}>
