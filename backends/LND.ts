@@ -611,6 +611,22 @@ export default class LND {
             msg: Base64Utils.utf8ToBase64(data.msg),
             signature: data.signature
         });
+    supportsAddressMessageSigning = () => true;
+    signMessageWithAddr = async (message: string, address: string) =>
+        this.postRequest('/v2/wallet/address/signmessage', {
+            msg: Base64Utils.utf8ToBase64(message),
+            addr: address
+        });
+    verifyMessageWithAddr = async (
+        message: string,
+        signature: string,
+        address: string
+    ) =>
+        this.postRequest('/v2/wallet/address/verifymessage', {
+            msg: Base64Utils.utf8ToBase64(message),
+            signature,
+            addr: address
+        });
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {

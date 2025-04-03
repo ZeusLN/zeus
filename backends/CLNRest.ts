@@ -389,6 +389,7 @@ export default class CLNRest {
     };
 
     supportsMessageSigning = () => true;
+    supportsAddressMessageSigning = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
