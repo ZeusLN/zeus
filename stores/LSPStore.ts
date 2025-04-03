@@ -83,16 +83,18 @@ export default class LSPStore {
     }
 
     @action
-    public reset = () => {
-        this.info = {};
-        this.resetFee();
+    public reset = (errorsOnly = false) => {
+        if (!errorsOnly) {
+            this.info = {};
+            this.resetFee();
+            this.showLspSettings = false;
+            this.channelAcceptor = undefined;
+            this.customMessagesSubscriber = undefined;
+        }
         this.error = false;
         this.error_msg = '';
         this.flow_error = false;
         this.flow_error_msg = '';
-        this.showLspSettings = false;
-        this.channelAcceptor = undefined;
-        this.customMessagesSubscriber = undefined;
     };
 
     @action
