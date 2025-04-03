@@ -89,6 +89,7 @@ import NostrKeys from './views/LightningAddress/NostrKeys';
 import NostrRelays from './views/LightningAddress/NostrRelays';
 import ChangeAddress from './views/LightningAddress/ChangeAddress';
 import ZeusPayPlus from './views/LightningAddress/ZeusPayPlus';
+import WebPortalPOS from './views/LightningAddress/WebPortalPOS';
 
 // BOLT 12
 import PayCodes from './views/PayCodes';
@@ -1053,6 +1054,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="ZeusPayPlus" // @ts-ignore:next-line
                                                         component={ZeusPayPlus}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WebPortalPOS" // @ts-ignore:next-line
+                                                        component={WebPortalPOS}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
