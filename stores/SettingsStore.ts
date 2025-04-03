@@ -128,6 +128,7 @@ interface LightningAddressSettings {
     nostrRelays: Array<string>;
     notifications: number;
     mintUrl: string; // Cashu
+    posEnabled?: boolean; // ZEUS Pay+
 }
 
 interface Bolt12AddressSettings {
@@ -1220,7 +1221,8 @@ export default class SettingsStore {
             nostrPrivateKey: '',
             nostrRelays: DEFAULT_NOSTR_RELAYS,
             notifications: 0,
-            mintUrl: ''
+            mintUrl: '',
+            posEnabled: false // ZEUS Pay+
         },
         bolt12Address: {
             localPart: ''

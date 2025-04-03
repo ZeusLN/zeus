@@ -80,6 +80,32 @@ export default class ZeusPayPlusSettings extends React.Component<
                                 color={themeColor('text')}
                             />
                         </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 20
+                            }}
+                            onPress={() => navigation.navigate('WebPortalPOS')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddress.webPoralPos'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <PlusPill />
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('text')}
+                            />
+                        </ListItem>
                     </>
                 ) : (
                     <>
@@ -99,6 +125,31 @@ export default class ZeusPayPlusSettings extends React.Component<
                                 >
                                     {localeString(
                                         'views.Settings.LightningAddress.ChangeAddress'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <PlusPillLocked />
+                            <Icon
+                                name="lock"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 20
+                            }}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddress.webPoralPos'
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>
