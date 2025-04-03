@@ -21,6 +21,8 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { restartNeeded } from '../../../utils/RestartUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
+import ZeusPayPlusSettings from '../../../views/LightningAddress/ZeusPayPlusSettings';
+
 interface CashuLightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
@@ -156,7 +158,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontSize: 17,
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
@@ -200,7 +202,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
@@ -252,6 +254,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                             <View style={{ marginTop: 10 }}>
                                 <DropdownSetting
                                     title={localeString('cashu.mint')}
+                                    titleColor={themeColor('text')}
                                     selectedValue={
                                         CashuStore?.cashuWallets[mintUrl]
                                             ?.mintInfo?.name || ''
@@ -275,34 +278,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 />
                             </View>
                         )}
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20,
-                                marginBottom: 20
-                            }}
-                            onPress={() =>
-                                navigation.navigate('CashuChangeAddress')
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.ChangeAddress'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
+                        <ZeusPayPlusSettings navigation={navigation} />
                         <ListItem
                             containerStyle={{
                                 backgroundColor: 'transparent',
@@ -320,7 +296,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -331,7 +307,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
                         <View style={{ marginTop: 20, marginBottom: 20 }}>

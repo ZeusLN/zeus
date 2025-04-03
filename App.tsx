@@ -88,6 +88,7 @@ import Attestations from './views/LightningAddress/Attestations';
 import NostrKeys from './views/LightningAddress/NostrKeys';
 import NostrRelays from './views/LightningAddress/NostrRelays';
 import ChangeAddress from './views/LightningAddress/ChangeAddress';
+import ZeusPayPlus from './views/LightningAddress/ZeusPayPlus';
 
 // BOLT 12
 import PayCodes from './views/PayCodes';
@@ -177,7 +178,6 @@ import MintToken from './views/Cashu/MintToken';
 import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
 import CashuLightningAddressInfo from './views/Cashu/LightningAddress/LightningAddressInfo';
 import CashuLightningAddressSettings from './views/Cashu/LightningAddress/LightningAddressSettings';
-import CashuChangeAddress from './views/Cashu/LightningAddress/ChangeAddress';
 
 // Chantools
 import Chantools from './views/Settings/EmbeddedNode/Chantools';
@@ -817,12 +817,6 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="CashuChangeAddress" // @ts-ignore:next-line
-                                                        component={
-                                                            CashuChangeAddress
-                                                        }
-                                                    />
-                                                    <Stack.Screen
                                                         name="Attestations" // @ts-ignore:next-line
                                                         component={Attestations}
                                                     />
@@ -1055,6 +1049,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="CashuTools" // @ts-ignore:next-line
                                                         component={CashuTools}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ZeusPayPlus" // @ts-ignore:next-line
+                                                        component={ZeusPayPlus}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
