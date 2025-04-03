@@ -1,5 +1,6 @@
 import { action, observable } from 'mobx';
 import BackendUtils from './../utils/BackendUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 interface VerificationRequest {
     msg: string;
@@ -9,7 +10,8 @@ interface VerificationRequest {
 
 export default class MessageSignStore {
     @observable public loading = false;
-    @observable public error: boolean | string = false;
+    @observable public error = false;
+    @observable public errorMessage = '';
     @observable public signature: string | null;
     @observable public verification: string | null;
     @observable public pubkey: string | null;
@@ -29,6 +31,7 @@ export default class MessageSignStore {
         this.pubkey = null;
         this.valid = null;
         this.error = false;
+        this.errorMessage = '';
     }
 
     @action
@@ -118,6 +121,7 @@ export default class MessageSignStore {
             .catch((error: any) => {
                 console.log('Error loading addresses:', error);
                 this.error = true;
+                this.errorMessage = error.toString();
             })
             .finally(() => {
                 this.loading = false;
@@ -145,10 +149,6 @@ export default class MessageSignStore {
     public signMessage = (text: string) => {
         this.loading = true;
 
-        if (text === undefined || text === null) {
-            text = '';
-        }
-
         try {
             const signOperation =
                 this.signingMode === 'lightning'
@@ -165,15 +165,19 @@ export default class MessageSignStore {
                         if (data) {
                             this.signature = data.zbase || data.signature;
                             this.error = false;
+                            this.errorMessage = '';
                         } else {
                             throw new Error(
-                                'No data received from sign operation'
+                                localeString(
+                                    'views.Settings.SignMessage.noDataReceived'
+                                )
                             );
                         }
                     })
                     .catch((error: any) => {
                         console.error('Error in sign operation:', error);
-                        this.error = error.toString();
+                        this.error = true;
+                        this.errorMessage = error.toString();
                         this.reset();
                     })
                     .finally(() => {
@@ -181,12 +185,16 @@ export default class MessageSignStore {
                     });
             } else {
                 console.error('Sign operation did not return a valid Promise');
-                this.error = 'Sign operation not supported by this backend';
+                this.error = true;
+                this.errorMessage = localeString(
+                    'views.Settings.SignMessage.signOperationFailed'
+                );
                 this.loading = false;
             }
         } catch (error: any) {
             console.error('Exception in signMessage:', error);
-            this.error = error.toString();
+            this.error = true;
+            this.errorMessage = error.toString();
             this.loading = false;
         }
     };
@@ -200,7 +208,10 @@ export default class MessageSignStore {
             this.signingMode === 'onchain' &&
             (!data.addr || data.addr.trim() === '')
         ) {
-            this.error = 'No address provided for on-chain verification';
+            this.error = true;
+            this.errorMessage = localeString(
+                'views.Settings.SignMessage.noAddressForVerification'
+            );
             this.loading = false;
             return;
         }
@@ -230,10 +241,12 @@ export default class MessageSignStore {
                         this.valid = result.valid || result.verified || false;
                         this.pubkey = result.pubkey || result.publicKey;
                         this.error = false;
+                        this.errorMessage = '';
                     })
                     .catch((error: any) => {
                         console.error('Error in verify operation:', error);
-                        this.error = error.toString();
+                        this.error = true;
+                        this.errorMessage = error.toString();
                     })
                     .finally(() => {
                         this.loading = false;
@@ -242,13 +255,16 @@ export default class MessageSignStore {
                 console.error(
                     'Verify operation did not return a valid Promise'
                 );
-                this.error =
-                    'Verification operation not supported by this backend';
+                this.error = true;
+                this.errorMessage = localeString(
+                    'views.Settings.SignMessage.verificationOperationFailed'
+                );
                 this.loading = false;
             }
         } catch (error: any) {
             console.error('Exception in verifyMessage:', error);
-            this.error = error.toString();
+            this.error = true;
+            this.errorMessage = error.toString();
             this.loading = false;
         }
     };
