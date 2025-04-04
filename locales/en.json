@@ -1274,6 +1274,8 @@
     "views.Settings.LightningAddressInfo.invalidAttestationDetails": "Invalid or conflicting attestations. Press to see details.",
     "views.Settings.LightningAddressInfo.noAttestationDetails": "No Nostr attestations found. Sender's wallet likely doesn't support it yet.",
     "views.Settings.LightningAddressInfo.learnAboutZaplocker": "Learn more about Zaplocker",
+    "views.LightningAddress.ZeusPayPlus.subscribe": "Purchase annual subscription",
+    "views.LightningAddress.ZeusPayPlus.extend": "Extend subscription",
     "views.LightningAddress.ZeusPayPlus.subActive": "Subscription Active",
     "views.LightningAddress.ZeusPayPlus.noActiveSub": "No active subscription",
     "views.Settings.Attestations.title": "Attestations",
