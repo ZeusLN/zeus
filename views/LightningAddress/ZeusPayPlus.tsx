@@ -5,6 +5,8 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import Amount from '../../components/Amount';
+import Button from '../../components/Button';
 import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
@@ -15,12 +17,13 @@ import { Row } from '../../components/layout/Row';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import SettingsStore from '../../stores/SettingsStore';
 
+import handleAnything from '../../utils/handleAnything';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Gear from '../../assets/images/SVG/Gear.svg';
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
-import DateTimeUtils from '../../utils/DateTimeUtils';
 
 import ZeusPayPlusSettings from './ZeusPayPlusSettings';
 
@@ -36,8 +39,12 @@ interface ZeusPayPlusProps {
 export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
     render() {
         const { navigation, LightningAddressStore } = this.props;
-        const { lightningAddressType, zeusPlusExpiresAt, loading } =
-            LightningAddressStore;
+        const {
+            createZeusPayPlusOrder,
+            lightningAddressType,
+            zeusPlusExpiresAt,
+            loading
+        } = LightningAddressStore;
 
         const zeusPayPlus = !!zeusPlusExpiresAt;
 
@@ -83,19 +90,15 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
             },
             {
                 title: 'Web portal point of sale features',
-                active: false
+                active: true
             },
             {
                 title: 'LSP channel lease discounts',
-                active: false
+                active: true
             },
             {
                 title: 'Exclusive merch',
                 active: false
-            },
-            {
-                title: 'Support free and open source software',
-                active: true
             }
         ];
 
@@ -113,7 +116,7 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                         }
                         rightComponent={
                             <Row>
-                                {loading && <LoadingIndicator size={30} />}
+                                {loading && <LoadingIndicator size={35} />}
                                 {!loading && <InfoButton />}
                                 {!loading && <SettingsButton />}
                             </Row>
@@ -189,40 +192,77 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                             </>
                         ) : (
                             <ScrollView style={{ margin: 10 }}>
-                                {perks.map((perk) => (
+                                {perks.map((perk, index) => (
                                     <View
+                                        key={`perk-${index}`}
                                         style={{
                                             marginTop: 10,
                                             marginBottom: 10
                                         }}
                                     >
-                                        <Text
-                                            style={{
-                                                ...styles.perk,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {`• ${perk.title}`}
-                                        </Text>
-                                        {!perk.active && (
+                                        <Row justify="space-between">
                                             <Text
                                                 style={{
-                                                    ...styles.comingSoon,
-                                                    color: themeColor(
-                                                        'highlight'
-                                                    ),
-                                                    textAlign: 'right'
+                                                    ...styles.perk,
+                                                    color: themeColor('text')
                                                 }}
                                             >
-                                                {localeString(
-                                                    'general.comingSoon'
-                                                )}
+                                                {`• ${perk.title}`}
                                             </Text>
-                                        )}
+                                            {!perk.active && (
+                                                <Text
+                                                    style={{
+                                                        ...styles.comingSoon,
+                                                        color: themeColor(
+                                                            'highlight'
+                                                        ),
+                                                        textAlign: 'right'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'general.comingSoon'
+                                                    )}
+                                                </Text>
+                                            )}
+                                        </Row>
                                     </View>
                                 ))}
                             </ScrollView>
                         )}
+                    </View>
+                    <View style={{ bottom: 15 }}>
+                        <Row style={{ alignSelf: 'center', margin: 25 }}>
+                            <Amount jumboText sats={100000} toggleable />
+                        </Row>
+                        <Button
+                            title={
+                                zeusPayPlus
+                                    ? localeString(
+                                          'views.LightningAddress.ZeusPayPlus.extend'
+                                      )
+                                    : localeString(
+                                          'views.LightningAddress.ZeusPayPlus.subscribe'
+                                      )
+                            }
+                            onPress={() => {
+                                createZeusPayPlusOrder().then(
+                                    (response: any) => {
+                                        if (response.bolt11) {
+                                            handleAnything(
+                                                response.bolt11
+                                            ).then(([route, props]) => {
+                                                navigation.navigate(
+                                                    route,
+                                                    props
+                                                );
+                                            });
+                                        }
+                                    }
+                                );
+                            }}
+                            disabled={loading}
+                            tertiary={!zeusPayPlus}
+                        />
                     </View>
                 </View>
             </Screen>
@@ -242,40 +282,5 @@ const styles = StyleSheet.create({
     comingSoon: {
         fontFamily: 'MarlideDisplay_Bold',
         fontSize: 20
-    },
-    // column: {
-    //     alignItems: 'flex-start',
-    //     flexDirection: 'column',
-    //     width: '47%',
-    //     height: '100%'
-    // },
-    explainer: {
-        fontSize: 18,
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    wrapper: {
-        paddingTop: 5,
-        paddingBottom: 5,
-        paddingLeft: 15,
-        paddingRight: 15
-    },
-    optionBlock: {
-        marginTop: 10,
-        marginBottom: 12
-    },
-    prosConsToggle: {
-        marginBottom: 8
-    },
-    prosCons: {
-        alignSelf: 'center',
-        marginTop: 15,
-        marginBottom: 40
-    },
-    prosConsColumn: {
-        alignItems: 'flex-start',
-        flexDirection: 'column',
-        width: '47%',
-        height: '100%'
     }
 });

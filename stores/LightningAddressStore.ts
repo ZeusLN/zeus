@@ -1220,10 +1220,49 @@ export default class LightningAddressStore {
 
             return true;
         } catch (error) {
+            const error_msg = error?.toString();
             runInAction(() => {
                 this.error = true;
-                this.error_msg =
-                    error?.toString() || 'Failed to delete account';
+                this.error_msg = error_msg || 'Failed to delete account';
+                this.loading = false;
+            });
+            throw error;
+        }
+    };
+
+    @action
+    public createZeusPayPlusOrder = async () => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+
+        try {
+            const { verification, signature } = await this.getAuthData();
+
+            const orderResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/plus/order`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature
+                })
+            );
+
+            const orderData = orderResponse.json();
+            if (orderResponse.info().status !== 200) throw orderData.error;
+
+            runInAction(() => {
+                this.loading = false;
+            });
+
+            return orderData;
+        } catch (error) {
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.error = true;
+                this.error_msg = error_msg || 'Failed to create order';
                 this.loading = false;
             });
             throw error;
