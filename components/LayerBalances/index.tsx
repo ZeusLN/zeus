@@ -151,7 +151,6 @@ const Row = ({ item }: { item: DataRow }) => {
                                         'general.custodialWallet'
                                     ).toUpperCase()}
                                     textColor={themeColor('highlight')}
-                                    borderColor={themeColor('highlight')}
                                     width={160}
                                     height={25}
                                 />

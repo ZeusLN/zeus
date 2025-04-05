@@ -99,6 +99,11 @@ export default class LightningAddress extends React.Component<
         navigation.addListener('focus', this.handleFocus);
     }
 
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('focus', this.handleFocus);
+    }
+
     handleFocus = () => {
         if (this.isInitialFocus) {
             this.isInitialFocus = false;
@@ -320,7 +325,7 @@ export default class LightningAddress extends React.Component<
                                         <Row
                                             style={{
                                                 alignSelf: 'center',
-                                                marginTop: 7
+                                                marginTop: 15
                                             }}
                                         >
                                             {!zeusPlus && (
@@ -330,8 +335,11 @@ export default class LightningAddress extends React.Component<
                                                     )}
                                                     width={200}
                                                     height={30}
-                                                    borderColor={themeColor(
+                                                    backgroundColor={themeColor(
                                                         'highlight'
+                                                    )}
+                                                    textColor={themeColor(
+                                                        'background'
                                                     )}
                                                     borderWidth={1}
                                                 />
@@ -416,7 +424,8 @@ export default class LightningAddress extends React.Component<
                                     )}
                                     <Row
                                         style={{
-                                            alignSelf: 'center'
+                                            alignSelf: 'center',
+                                            marginTop: 5
                                         }}
                                     >
                                         <QRButton />
