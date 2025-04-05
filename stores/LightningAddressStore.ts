@@ -661,7 +661,10 @@ export default class LightningAddressStore {
                 true
             );
 
-            if (response?.isPaid) {
+            if (
+                response?.isPaid ||
+                response?.updatedInvoice?.state === 'ISSUED'
+            ) {
                 try {
                     const { verification, signature } =
                         await this.getAuthData();
