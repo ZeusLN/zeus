@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import cloneDeep from 'lodash/cloneDeep';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -93,8 +94,10 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                                         key
                                                     ];
 
-                                                const newCount =
-                                                    wallet.counter + 10;
+                                                const oldCount = cloneDeep(
+                                                    wallet.counter
+                                                );
+                                                const newCount = oldCount + 10;
 
                                                 await setMintCounter(
                                                     key,
@@ -102,7 +105,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                                 );
 
                                                 message += `\n${wallet.mintInfo.name}
-${wallet.counter} -> ${newCount}
+${oldCount} -> ${newCount}
 `;
                                             })
                                         );
