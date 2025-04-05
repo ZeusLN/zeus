@@ -97,6 +97,10 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                 active: true
             },
             {
+                title: 'Early access to new features',
+                active: true
+            },
+            {
                 title: 'Exclusive merch',
                 active: false
             }
@@ -231,9 +235,11 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                         )}
                     </View>
                     <View style={{ bottom: 15 }}>
-                        <Row style={{ alignSelf: 'center', margin: 25 }}>
-                            <Amount jumboText sats={100000} toggleable />
-                        </Row>
+                        {!zeusPayPlus && (
+                            <Row style={{ alignSelf: 'center', margin: 25 }}>
+                                <Amount jumboText sats={100000} toggleable />
+                            </Row>
+                        )}
                         <Button
                             title={
                                 zeusPayPlus
