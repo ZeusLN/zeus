@@ -28,7 +28,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import ActivityStore from './ActivityStore';
+import stores from './Stores';
 import InvoicesStore from './InvoicesStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
 
@@ -105,18 +105,12 @@ export default class CashuStore {
     @observable loadingFeeEstimate = false;
 
     settingsStore: SettingsStore;
-    activityStore: ActivityStore;
     invoicesStore: InvoicesStore;
 
     ndk: NDK;
 
-    constructor(
-        settingsStore: SettingsStore,
-        activityStore: ActivityStore,
-        invoicesStore: InvoicesStore
-    ) {
+    constructor(settingsStore: SettingsStore, invoicesStore: InvoicesStore) {
         this.settingsStore = settingsStore;
-        this.activityStore = activityStore;
         this.invoicesStore = invoicesStore;
     }
 
@@ -827,7 +821,7 @@ export default class CashuStore {
                     );
 
                     // update Activity list
-                    this.activityStore.getSortedActivity();
+                    stores.activityStore.getSortedActivity();
 
                     return {
                         isPaid: true,

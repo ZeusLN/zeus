@@ -105,13 +105,7 @@ class Stores {
         this.syncStore = new SyncStore(this.settingsStore);
         this.cashuStore = new CashuStore(
             this.settingsStore,
-            this.activityStore,
             this.invoicesStore
-        );
-        this.lightningAddressStore = new LightningAddressStore(
-            this.cashuStore,
-            this.nodeInfoStore,
-            this.settingsStore
         );
         this.activityStore = new ActivityStore(
             this.settingsStore,
@@ -119,6 +113,11 @@ class Stores {
             this.invoicesStore,
             this.transactionsStore,
             this.cashuStore
+        );
+        this.lightningAddressStore = new LightningAddressStore(
+            this.cashuStore,
+            this.nodeInfoStore,
+            this.settingsStore
         );
         this.posStore = new PosStore(this.settingsStore, this.fiatStore);
         this.inventoryStore = new InventoryStore();
