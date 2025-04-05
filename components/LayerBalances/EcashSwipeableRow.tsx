@@ -22,7 +22,7 @@ import stores from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 const { cashuStore } = stores;
 
-import Coins from '../../assets/images/SVG/Coins.svg';
+import MintToken from '../../assets/images/SVG/MintToken.svg';
 import Mint from '../../assets/images/SVG/Mint.svg';
 import Receive from '../../assets/images/SVG/Receive.svg';
 import Send from '../../assets/images/SVG/Send.svg';
@@ -68,8 +68,8 @@ export default class EcashSwipeableRow extends Component<
                 navigation.navigate('ReceiveEcash');
             } else if (text === localeString('cashu.mints')) {
                 navigation.navigate('Mints', { account });
-            } else if (text === localeString('cashu.proofs')) {
-                navigation.navigate('Proofs');
+            } else if (text === localeString('cashu.mintToken')) {
+                navigation.navigate('MintToken');
             } else if (text === localeString('general.send')) {
                 navigation.navigate('Send');
             }
@@ -99,10 +99,9 @@ export default class EcashSwipeableRow extends Component<
                                 height={30}
                             />
                         )}
-                        {text === localeString('cashu.proofs') && (
-                            <Coins
-                                fill="none"
-                                stroke={
+                        {text === localeString('cashu.mintToken') && (
+                            <MintToken
+                                fill={
                                     themeColor('action') ||
                                     themeColor('highlight')
                                 }
@@ -159,7 +158,7 @@ export default class EcashSwipeableRow extends Component<
                 BackendUtils.supportsCoinControl() ? 210 : 140,
                 progress
             )}
-            {this.renderAction(localeString('cashu.proofs'), 200, progress)}
+            {this.renderAction(localeString('cashu.mintToken'), 200, progress)}
             {this.renderAction(localeString('cashu.mints'), 200, progress)}
             {this.renderAction(
                 localeString('general.send'),
