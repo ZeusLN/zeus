@@ -162,6 +162,7 @@ export default class LndHub extends LND {
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => false;
     isLNDBased = () => false;
+    supportsPeerManagement = () => true;
     supportInboundFees = () => false;
     supportsDevTools = () => true;
 }
