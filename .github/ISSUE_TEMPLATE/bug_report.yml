@@ -29,6 +29,7 @@ body:
       label: ZEUS version
       description: What version of ZEUS were you running when the bug occurred?
       options:
+        - v0.11.0
         - v0.10.1
         - v0.10.0
         - v0.9.7

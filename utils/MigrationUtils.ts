@@ -108,7 +108,8 @@ class MigrationsUtils {
                 allowComments: true,
                 nostrPrivateKey: '',
                 nostrRelays: DEFAULT_NOSTR_RELAYS,
-                notifications: 0
+                notifications: 0,
+                mintUrl: '' // Cashu
             };
         }
 

@@ -56,6 +56,7 @@ import Storage from '../../storage';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
+import CashuStore from '../../stores/CashuStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
@@ -92,6 +93,7 @@ interface WalletProps {
     navigation: StackNavigationProp<any, any>;
     AlertStore: AlertStore;
     BalanceStore: BalanceStore;
+    CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     NodeInfoStore: NodeInfoStore;
@@ -118,6 +120,7 @@ interface WalletState {
 @inject(
     'AlertStore',
     'BalanceStore',
+    'CashuStore',
     'ChannelsStore',
     'TransactionsStore',
     'NodeInfoStore',
@@ -327,6 +330,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             AlertStore,
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             ChannelsStore,
             TransactionsStore,
             UTXOsStore,
@@ -391,6 +395,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
+            CashuStore.reset();
         }
 
         LnurlPayStore.reset();
@@ -427,6 +432,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         initialLoad: false
                     });
                 } else {
+                    if (settings?.ecash?.enableCashu)
+                        CashuStore.initializeWallets();
+
                     if (expressGraphSyncEnabled) {
                         await expressGraphSync();
                         if (settings.resetExpressGraphSyncOnStartup) {
@@ -546,8 +554,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 try {
                     await LightningAddressStore.status();
 
-                    if (lightningAddress.automaticallyAccept) {
-                        LightningAddressStore.prepareToAutomaticallyAccept();
+                    if (settings?.lightningAddress?.automaticallyAccept) {
+                        if (
+                            LightningAddressStore.lightningAddressType ===
+                            'zaplocker'
+                        ) {
+                            LightningAddressStore.prepareToAutomaticallyAcceptZaplocker();
+                        } else if (
+                            LightningAddressStore.lightningAddressType ===
+                            'cashu'
+                        ) {
+                            LightningAddressStore.prepareToAutomaticallyAcceptCashu();
+                        }
                     }
 
                     if (
@@ -615,6 +633,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const {
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             SettingsStore,
             SyncStore,
             navigation
@@ -660,6 +679,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
                         BalanceStore={BalanceStore}
+                        CashuStore={CashuStore}
                         SettingsStore={SettingsStore}
                         SyncStore={SyncStore}
                     />
@@ -717,7 +737,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <LayerBalances
                                 navigation={navigation}
                                 onRefresh={() => this.getSettingsAndNavigate()}
-                                locked={isSyncing}
                                 consolidated
                             />
 
@@ -833,6 +852,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         tabBarIcon: ({ color }) => {
                                             if (
                                                 isSyncing &&
+                                                !settings?.ecash?.enableCashu &&
                                                 route.name === 'Keypad'
                                             ) {
                                                 return;
@@ -905,12 +925,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         )}
                                     {posStatus !== 'active' && (
                                         <>
-                                            {!error && !isSyncing && (
-                                                <Tab.Screen
-                                                    name="Keypad"
-                                                    component={KeypadScreen}
-                                                />
-                                            )}
+                                            {!error &&
+                                                !(
+                                                    isSyncing &&
+                                                    !settings?.ecash
+                                                        ?.enableCashu
+                                                ) && (
+                                                    <Tab.Screen
+                                                        name="Keypad"
+                                                        component={KeypadScreen}
+                                                    />
+                                                )}
                                             {BackendUtils.supportsChannelManagement() &&
                                                 !error &&
                                                 !isSyncing && (

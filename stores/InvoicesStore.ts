@@ -199,7 +199,7 @@ export default class InvoicesStore {
     };
 
     @action
-    private createInvoice = async ({
+    public createInvoice = async ({
         memo,
         value,
         expiry = '3600',
@@ -255,11 +255,12 @@ export default class InvoicesStore {
                                 )
                             );
                         } catch (error: any) {
+                            const error_msg = error?.toString();
                             runInAction(() => {
                                 this.creatingInvoiceError = true;
                                 this.creatingInvoice = false;
                                 this.error_msg =
-                                    error.toString() ||
+                                    error_msg ||
                                     localeString(
                                         'stores.InvoicesStore.errorCreatingInvoice'
                                     );
@@ -340,11 +341,12 @@ export default class InvoicesStore {
         return BackendUtils.createInvoice(req)
             .then(async (data: any) => {
                 if (data.error) {
+                    const data_message = data.message?.toString();
+                    const data_error = data.error.toString();
                     runInAction(() => {
                         this.creatingInvoiceError = true;
                         if (!unified) this.creatingInvoice = false;
-                        const errString =
-                            data.message.toString() || data.error.toString();
+                        const errString = data_message || data_error;
                         this.error_msg =
                             errString === 'Bad arguments' &&
                             this.settingsStore.implementation === 'lndhub' &&
@@ -431,11 +433,12 @@ export default class InvoicesStore {
                 };
             })
             .catch((error: any) => {
+                const error_msg = error?.toString();
                 runInAction(() => {
                     this.creatingInvoiceError = true;
                     this.creatingInvoice = false;
                     this.error_msg =
-                        error.toString() ||
+                        error_msg ||
                         localeString(
                             'stores.InvoicesStore.errorCreatingInvoice'
                         );
@@ -472,9 +475,10 @@ export default class InvoicesStore {
                 return address;
             })
             .catch((error: any) => {
+                const error_msg = error.toString();
                 runInAction(() => {
                     this.error_msg =
-                        error.toString() ||
+                        error_msg ||
                         localeString(
                             'stores.InvoicesStore.errorGeneratingAddress'
                         );
@@ -503,9 +507,10 @@ export default class InvoicesStore {
                 return address;
             })
             .catch((error: any) => {
+                const error_msg = error?.toString();
                 runInAction(() => {
                     this.error_msg =
-                        error.toString() ||
+                        error_msg ||
                         localeString(
                             'stores.InvoicesStore.errorGeneratingAddress'
                         );
@@ -549,9 +554,10 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
+                const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.pay_req = null;
-                    this.getPayReqError = errorToUserFriendly(error);
+                    this.getPayReqError = error_friendly;
                     this.loading = false;
                 });
             });

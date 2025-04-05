@@ -45,7 +45,7 @@ import POS from '../assets/images/SVG/POS.svg';
 import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
 import Sync from '../assets/images/SVG/Sync.svg';
-import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
+import ZeusPaySVG from '../assets/images/SVG/zeus-pay.svg';
 
 import stores from '../stores/Stores';
 
@@ -54,11 +54,11 @@ import { Row } from '../components/layout/Row';
 
 const TorIcon = require('../assets/images/tor.png');
 
-const Mailbox = () => (
-    <MailboxFlagUp fill={themeColor('highlight')} width={34.29} height={30} />
+const ZeusPay = () => (
+    <ZeusPaySVG fill={themeColor('highlight')} width={34.29} height={30} />
 );
 
-const MailboxAnimated = () => {
+const ZeusPayAnimated = () => {
     let state = new Animated.Value(1);
     Animated.loop(
         Animated.sequence([
@@ -83,7 +83,7 @@ const MailboxAnimated = () => {
                 opacity: state
             }}
         >
-            <Mailbox />
+            <ZeusPay />
         </Animated.View>
     );
 };
@@ -499,12 +499,12 @@ export default class WalletHeader extends React.Component<
                                             { skipStatus: true }
                                         )
                                     }
-                                    style={{ left: 20 }}
+                                    style={{ marginLeft: 20 }}
                                 >
                                     {redeemingAll ? (
-                                        <MailboxAnimated />
+                                        <ZeusPayAnimated />
                                     ) : (
-                                        <Mailbox />
+                                        <ZeusPay />
                                     )}
                                 </TouchableOpacity>
                             )}

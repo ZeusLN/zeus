@@ -27,7 +27,8 @@ jest.mock('./AddressUtils', () => ({
 jest.mock('./TorUtils', () => ({}));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
-    supportsAccounts: () => false
+    supportsAccounts: () => false,
+    supportsCashuWallet: () => false
 }));
 jest.mock('../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },

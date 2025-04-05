@@ -4,33 +4,33 @@ import { Divider, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../../components/Button';
-import { Row } from '../../../components/layout/Row';
-import Screen from '../../../components/Screen';
-import Header from '../../../components/Header';
-import KeyValue from '../../../components/KeyValue';
+import Button from '../../components/Button';
+import { Row } from '../../components/layout/Row';
+import Screen from '../../components/Screen';
+import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
-import UrlUtils from '../../../utils/UrlUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
-import LightningAddressStore from '../../../stores/LightningAddressStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
-import NostrichNotLoaded from '../../../assets/images/SVG/Nostrich_not-loaded.svg';
-import NostrichValid from '../../../assets/images/SVG/Nostrich_valid.svg';
-import NostrichInvalid from '../../../assets/images/SVG/Nostrich_invalid.svg';
-import NostrichNotFound from '../../../assets/images/SVG/Nostrich_not-found.svg';
-import Receive from '../../../assets/images/SVG/Receive.svg';
+import NostrichNotLoaded from '../../assets/images/SVG/Nostrich_not-loaded.svg';
+import NostrichValid from '../../assets/images/SVG/Nostrich_valid.svg';
+import NostrichInvalid from '../../assets/images/SVG/Nostrich_invalid.svg';
+import NostrichNotFound from '../../assets/images/SVG/Nostrich_not-found.svg';
+import Receive from '../../assets/images/SVG/Receive.svg';
 
-interface LightningAddressInfoProps {
+interface ZaplockerInfoProps {
     navigation: StackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
 }
 
 @inject('LightningAddressStore')
 @observer
-export default class LightningAddressInfo extends React.Component<
-    LightningAddressInfoProps,
+export default class ZaplockerInfo extends React.Component<
+    ZaplockerInfoProps,
     {}
 > {
     render() {
@@ -73,12 +73,18 @@ export default class LightningAddressInfo extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString(
                                     'views.Settings.LightningAddressInfo.explainer1'
-                                ).replace('OLYMPUS by ZEUS', 'Olympus by ZEUS')}
+                                )
+                                    .replace(
+                                        'OLYMPUS by ZEUS',
+                                        'Olympus by ZEUS'
+                                    )
+                                    .replace('lightning', 'Lightning')}
                             </Text>
                         </View>
                         <View
@@ -88,7 +94,8 @@ export default class LightningAddressInfo extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: themeColor('text')
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
                                 }}
                             >
                                 {localeString(
@@ -167,7 +174,9 @@ export default class LightningAddressInfo extends React.Component<
                                     <ListItem.Title>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -180,7 +189,9 @@ export default class LightningAddressInfo extends React.Component<
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -207,7 +218,9 @@ export default class LightningAddressInfo extends React.Component<
                                     <ListItem.Title>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -220,7 +233,9 @@ export default class LightningAddressInfo extends React.Component<
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -247,7 +262,9 @@ export default class LightningAddressInfo extends React.Component<
                                     <ListItem.Title>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -260,7 +277,9 @@ export default class LightningAddressInfo extends React.Component<
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -287,7 +306,9 @@ export default class LightningAddressInfo extends React.Component<
                                     <ListItem.Title>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -300,7 +321,9 @@ export default class LightningAddressInfo extends React.Component<
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -327,7 +350,9 @@ export default class LightningAddressInfo extends React.Component<
                                     <ListItem.Title>
                                         <Text
                                             style={{
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(
@@ -340,7 +365,9 @@ export default class LightningAddressInfo extends React.Component<
                                             style={{
                                                 color: themeColor(
                                                     'secondaryText'
-                                                )
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
                                             }}
                                         >
                                             {localeString(

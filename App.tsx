@@ -78,14 +78,18 @@ import SetWalletPicture from './views/Settings/SetWalletPicture';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 
 // Lightning address
-import LightningAddress from './views/Settings/LightningAddress';
-import LightningAddressInfo from './views/Settings/LightningAddress/LightningAddressInfo';
-import LightningAddressSettings from './views/Settings/LightningAddress/LightningAddressSettings';
-import Attestation from './views/Settings/LightningAddress/Attestation';
-import Attestations from './views/Settings/LightningAddress/Attestations';
-import NostrKeys from './views/Settings/LightningAddress/NostrKeys';
-import NostrRelays from './views/Settings/LightningAddress/NostrRelays';
-import ChangeAddress from './views/Settings/LightningAddress/ChangeAddress';
+import LightningAddress from './views/LightningAddress';
+import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
+import ZaplockerGetChan from './views/LightningAddress/ZaplockerGetChan';
+import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
+import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
+import Attestation from './views/LightningAddress/Attestation';
+import Attestations from './views/LightningAddress/Attestations';
+import NostrKeys from './views/LightningAddress/NostrKeys';
+import NostrRelays from './views/LightningAddress/NostrRelays';
+import ChangeAddress from './views/LightningAddress/ChangeAddress';
+import ZeusPayPlus from './views/LightningAddress/ZeusPayPlus';
+import WebPortalPOS from './views/LightningAddress/WebPortalPOS';
 
 // BOLT 12
 import PayCodes from './views/PayCodes';
@@ -93,7 +97,7 @@ import PayCode from './views/PayCode';
 import CreatePayCode from './views/PayCodeCreate';
 import Bolt12Address from './views/Settings/Bolt12Address';
 
-//Embedded Node
+// Embedded Node
 import EmbeddedNode from './views/Settings/EmbeddedNode';
 import DisasterRecovery from './views/Settings/EmbeddedNode/DisasterRecovery';
 import DisasterRecoveryAdvanced from './views/Settings/EmbeddedNode/DisasterRecoveryAdvanced';
@@ -157,6 +161,24 @@ import LSPS1Order from './views/LSPS1/Order';
 import LSPS7 from './views/LSPS7/index';
 import LSPS7Order from './views/LSPS7/Order';
 
+// Cashu Ecash
+import EcashSettings from './views/Settings/EcashSettings';
+import ReceiveEcash from './views/Cashu/ReceiveEcash';
+import CashuInvoice from './views/Cashu/CashuInvoice';
+import CashuPayment from './views/Cashu/CashuPayment';
+import CashuPaymentRequest from './views/Cashu/CashuPaymentRequest';
+import CashuSendingLightning from './views/Cashu/CashuSendingLightning';
+import Mint from './views/Cashu/Mint';
+import Mints from './views/Cashu/Mints';
+import AddMint from './views/Cashu/AddMint';
+import CashuToken from './views/Cashu/CashuToken';
+import MintToken from './views/Cashu/MintToken';
+
+// Cashu Lightning address
+import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
+import CashuLightningAddressInfo from './views/Cashu/LightningAddress/LightningAddressInfo';
+import CashuLightningAddressSettings from './views/Cashu/LightningAddress/LightningAddressSettings';
+
 // Chantools
 import Chantools from './views/Settings/EmbeddedNode/Chantools';
 import Sweepremoteclosed from './views/Settings/EmbeddedNode/Chantools/Sweepremoteclosed';
@@ -181,6 +203,7 @@ import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
 import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
+import CashuTools from './views/Tools/CashuTools';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -236,6 +259,7 @@ export default class App extends React.PureComponent {
                 LightningAddressStore={Stores.lightningAddressStore}
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
+                CashuStore={Stores.cashuStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -745,21 +769,51 @@ export default class App extends React.PureComponent {
                                                         component={LSP}
                                                     />
                                                     <Stack.Screen
+                                                        name="ZaplockerGetChan" // @ts-ignore:next-line
+                                                        component={
+                                                            ZaplockerGetChan
+                                                        }
+                                                    />
+                                                    <Stack.Screen
                                                         name="LightningAddress" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddress
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="LightningAddressInfo" // @ts-ignore:next-line
+                                                        name="ZaplockerInfo" // @ts-ignore:next-line
                                                         component={
-                                                            LightningAddressInfo
+                                                            ZaplockerInfo
                                                         }
                                                     />
                                                     <Stack.Screen
                                                         name="LightningAddressSettings" // @ts-ignore:next-line
                                                         component={
                                                             LightningAddressSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreateZaplockerLightningAddress" // @ts-ignore:next-line
+                                                        component={
+                                                            CreateZaplockerLightningAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreateCashuLightningAddress" // @ts-ignore:next-line
+                                                        component={
+                                                            CreateCashuLightningAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuLightningAddressInfo" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuLightningAddressInfo
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuLightningAddressSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuLightningAddressSettings
                                                         }
                                                     />
                                                     <Stack.Screen
@@ -937,6 +991,68 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             ActivityExport
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="EcashSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            EcashSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ReceiveEcash" // @ts-ignore:next-line
+                                                        component={ReceiveEcash}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuInvoice" // @ts-ignore:next-line
+                                                        component={CashuInvoice}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuPayment" // @ts-ignore:next-line
+                                                        component={CashuPayment}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuToken" // @ts-ignore:next-line
+                                                        component={CashuToken}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="MintToken" // @ts-ignore:next-line
+                                                        component={MintToken}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuPaymentRequest" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuPaymentRequest
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuSendingLightning" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuSendingLightning
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Mint" // @ts-ignore:next-line
+                                                        component={Mint}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Mints" // @ts-ignore:next-line
+                                                        component={Mints}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AddMint" // @ts-ignore:next-line
+                                                        component={AddMint}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuTools" // @ts-ignore:next-line
+                                                        component={CashuTools}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ZeusPayPlus" // @ts-ignore:next-line
+                                                        component={ZeusPayPlus}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WebPortalPOS" // @ts-ignore:next-line
+                                                        component={WebPortalPOS}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

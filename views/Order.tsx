@@ -908,27 +908,32 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             title={localeString('general.pay')}
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
-                                navigation.navigate('Receive', {
-                                    amount:
-                                        units === 'sats'
-                                            ? totalSats
-                                            : units === 'BTC'
-                                            ? new BigNumber(totalSats)
-                                                  .div(SATS_PER_BTC)
-                                                  .toFixed(8)
-                                            : totalFiat,
-                                    autoGenerate: true,
-                                    memo,
-                                    // For displaying paid orders
-                                    orderId: order.id,
-                                    // sats
-                                    orderTip: tipSats,
-                                    orderTotal: totalSats,
-                                    // formatted string rate
-                                    exchangeRate,
-                                    // numerical rate
-                                    rate
-                                })
+                                navigation.navigate(
+                                    settings?.ecash?.enableCashu
+                                        ? 'ReceiveEcash'
+                                        : 'Receive',
+                                    {
+                                        amount:
+                                            units === 'sats'
+                                                ? totalSats
+                                                : units === 'BTC'
+                                                ? new BigNumber(totalSats)
+                                                      .div(SATS_PER_BTC)
+                                                      .toFixed(8)
+                                                : totalFiat,
+                                        autoGenerate: true,
+                                        memo,
+                                        // For displaying paid orders
+                                        orderId: order.id,
+                                        // sats
+                                        orderTip: tipSats,
+                                        orderTotal: totalSats,
+                                        // formatted string rate
+                                        exchangeRate,
+                                        // numerical rate
+                                        rate
+                                    }
+                                )
                             }
                             disabled={isNaN(Number(totalSats))}
                         />
