@@ -92,8 +92,13 @@ export default class CreateCashuLightningAddress extends React.Component<
     };
 
     render() {
-        const { navigation, LightningAddressStore, SettingsStore, route } =
-            this.props;
+        const {
+            navigation,
+            LightningAddressStore,
+            CashuStore,
+            SettingsStore,
+            route
+        } = this.props;
         const { mintUrl, mintList } = this.state;
         const { createCashu, update, deleteLocalHashes, error_msg } =
             LightningAddressStore;
@@ -202,6 +207,10 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                 });
                                                 await update({
                                                     mint_url: mintUrl,
+                                                    cashu_pubkey:
+                                                        CashuStore.cashuWallets[
+                                                            mintUrl
+                                                        ].pubkey,
                                                     address_type: 'cashu'
                                                 }).then(async (response) => {
                                                     if (response.success) {
