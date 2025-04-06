@@ -97,7 +97,8 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                                 color: themeColor('text'),
                                 fontFamily: 'PPNeueMontreal-Book',
                                 fontSize: 26 / fontScale,
-                                marginBottom: 20
+                                marginBottom: 20,
+                                textAlign: 'center'
                             }}
                         >
                             {label || value}
