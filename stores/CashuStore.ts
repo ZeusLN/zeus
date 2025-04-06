@@ -1562,7 +1562,7 @@ export default class CashuStore {
 
             await this.setMintCounter(mintUrl, newCounterValue + 1);
 
-            await this.removeMintProofs(mintUrl, proofsToSend);
+            await this.removeMintProofs(mintUrl, proofsToUse);
 
             // update balances
             await this.setTotalBalance(this.totalBalanceSats - Number(value));
