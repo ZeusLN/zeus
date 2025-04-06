@@ -245,6 +245,27 @@ export default class PaymentPath extends React.Component<
         };
     }
 
+    componentDidMount() {
+        this.prefetchAliases(this.props.enhancedPath);
+    }
+
+    componentDidUpdate(prevProps: PaymentPathProps) {
+        if (prevProps.enhancedPath !== this.props.enhancedPath) {
+            this.prefetchAliases(this.props.enhancedPath);
+        }
+    }
+
+    prefetchAliases(paths: any[]) {
+        paths.forEach((path) => {
+            path.forEach((hop: any) => {
+                const aliasMap = stores.channelsStore.aliasMap;
+                if (hop?.pubKey && !hop.alias && !aliasMap.get(hop.pubKey)) {
+                    stores.channelsStore.getNodeInfo(hop.pubKey);
+                }
+            });
+        });
+    }
+
     render() {
         const { enhancedPath } = this.props;
         const { expanded } = this.state;
@@ -300,13 +321,7 @@ export default class PaymentPath extends React.Component<
                 );
             }
             path.forEach((hop: any, pathIndex: number) => {
-                let loading = false;
-                if (!hop.alias && !aliasMap.get(hop.pubKey)) {
-                    loading = true;
-                    stores.channelsStore.getNodeInfo(hop.pubKey).finally(() => {
-                        loading = false;
-                    });
-                }
+                const loading = !hop.alias && !aliasMap.get(hop.pubKey);
                 (expanded.get(index) || enhancedPath.length === 1) &&
                     hops.push(
                         <ExpandedHop

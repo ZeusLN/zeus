@@ -91,7 +91,7 @@ export default class ChannelsStore {
     };
     @observable public showSearch: boolean = false;
     // aliasMap
-    @observable public aliasMap: any = observable.map({});
+    @observable public aliasMap = observable.map({});
     // external account funding
     @observable public funded_psbt: string = '';
     @observable public pending_chan_ids: Array<string>;
