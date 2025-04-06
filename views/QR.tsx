@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, View } from 'react-native';
+import { Dimensions, ScrollView } from 'react-native';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
@@ -86,10 +86,9 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                     }}
                     navigation={navigation}
                 />
-                <View
+                <ScrollView
                     style={{
-                        paddingHorizontal: 15,
-                        alignItems: 'center'
+                        paddingHorizontal: 15
                     }}
                 >
                     {jumboLabel && (
@@ -109,6 +108,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         copyValue={copyValue || value}
                         expanded
                         textBottom
+                        truncateLongValue
                         hideText={hideText}
                         logo={logo}
                         satAmount={satAmount}
@@ -119,7 +119,7 @@ export default class QR extends React.PureComponent<QRProps, QRState> {
                         showShare={true}
                         iconOnly={true}
                     />
-                </View>
+                </ScrollView>
             </Screen>
         );
     }

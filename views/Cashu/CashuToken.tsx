@@ -65,6 +65,8 @@ export default class CashuTokenView extends React.Component<
         const decoded = route.params?.decoded;
         const { spent, mint } = decoded;
 
+        console.log('!DECODED!', decoded);
+
         if (!spent) {
             console.log('token not spent last time checked, checking...', {
                 decoded
