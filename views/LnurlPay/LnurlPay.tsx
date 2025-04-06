@@ -76,15 +76,27 @@ export default class LnurlPay extends React.Component<
 
     stateFromProps(props: LnurlPayProps) {
         const { route, UnitsStore } = props;
+        const { resetUnits, getUnformattedAmount, units } = UnitsStore;
         const { lnurlParams: lnurl, amount, satAmount } = route.params ?? {};
+
+        // if requested amount is fixed,
+        // convert units to sats so conversion rate doesn't make things unpayable
+        if (lnurl.minSendable === lnurl.maxSendable) {
+            resetUnits();
+        }
 
         const minSendableSats = Math.floor(lnurl.minSendable / 1000);
 
         const { amount: unformattedAmount } =
-            UnitsStore.getUnformattedAmount(minSendableSats);
+            getUnformattedAmount(minSendableSats);
+
+        // if amount to pay hasn't been previously specified by the user,
+        // fall back to the min sat amount
+        const unspecifiedDefault =
+            units === 'sats' ? minSendableSats.toString() : unformattedAmount;
 
         return {
-            amount: amount && amount != 0 ? amount : unformattedAmount,
+            amount: amount && amount != 0 ? amount : unspecifiedDefault,
             satAmount: satAmount ? satAmount : minSendableSats,
             domain: lnurl.domain,
             comment: ''
