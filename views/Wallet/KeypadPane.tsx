@@ -39,7 +39,7 @@ import {
 } from '../../utils/UnitsUtils';
 
 import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
-import Coins from './../../assets/images/SVG/Coins.svg';
+import MintToken from './../../assets/images/SVG/MintToken.svg';
 
 interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -696,7 +696,7 @@ export default class KeypadPane extends React.PureComponent<
                         >
                             <Row>
                                 <View style={{ marginRight: 15 }}>
-                                    <Coins
+                                    <MintToken
                                         fill={
                                             themeColor('action') ||
                                             themeColor('highlight')
