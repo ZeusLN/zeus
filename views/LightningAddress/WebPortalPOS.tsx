@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -12,6 +12,8 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -33,6 +35,9 @@ interface WebPortalPOSState {
     posEnabled: boolean | undefined;
     fiatEnabled: boolean | undefined;
     selectedCurrency: string | undefined;
+    merchantName: string;
+    taxPercentage: string;
+    disableTips: boolean;
 }
 
 @inject('SettingsStore', 'LightningAddressStore', 'UnitsStore')
@@ -44,7 +49,10 @@ export default class WebPortalPOS extends React.Component<
     state = {
         posEnabled: false,
         fiatEnabled: false,
-        selectedCurrency: ''
+        selectedCurrency: '',
+        merchantName: '',
+        taxPercentage: '',
+        disableTips: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -54,7 +62,10 @@ export default class WebPortalPOS extends React.Component<
         this.setState({
             posEnabled: settings.lightningAddress?.posEnabled,
             fiatEnabled: settings.fiatEnabled,
-            selectedCurrency: settings.fiat
+            selectedCurrency: settings.fiat,
+            merchantName: settings?.pos?.merchantName || '',
+            taxPercentage: settings?.pos?.taxPercentage || '',
+            disableTips: settings?.pos?.disableTips || false
         });
     }
 
@@ -83,8 +94,16 @@ export default class WebPortalPOS extends React.Component<
     render() {
         const { navigation, SettingsStore, LightningAddressStore, UnitsStore } =
             this.props;
-        const { posEnabled, fiatEnabled, selectedCurrency } = this.state;
-        const { updateSettings, settings }: any = SettingsStore;
+        const {
+            posEnabled,
+            fiatEnabled,
+            selectedCurrency,
+            merchantName,
+            taxPercentage,
+            disableTips
+        } = this.state;
+        const { updateSettings, settingsUpdateInProgress, settings }: any =
+            SettingsStore;
         const { update, loading, error_msg } = LightningAddressStore;
 
         const LIST_ITEMS = [
@@ -144,6 +163,7 @@ export default class WebPortalPOS extends React.Component<
                         >
                             <Switch
                                 value={posEnabled}
+                                disabled={settingsUpdateInProgress}
                                 onValueChange={async () => {
                                     this.setState({
                                         posEnabled: !posEnabled
@@ -213,6 +233,7 @@ export default class WebPortalPOS extends React.Component<
                                 >
                                     <Switch
                                         value={fiatEnabled}
+                                        disabled={settingsUpdateInProgress}
                                         onValueChange={async () => {
                                             const newFiatEnabled = !fiatEnabled;
                                             this.setState({
@@ -264,6 +285,104 @@ export default class WebPortalPOS extends React.Component<
                                     </ListItem>
                                 </>
                             )}
+                            <View style={styles.textInput}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.merchantName'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={merchantName}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            merchantName: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                ...settings.pos,
+                                                merchantName: text
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                            <View style={styles.textInput}>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.taxPercentage'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    placeholder={'0'}
+                                    value={taxPercentage}
+                                    keyboardType="numeric"
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            taxPercentage: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                ...settings.pos,
+                                                taxPercentage: text
+                                            }
+                                        });
+                                    }}
+                                    suffix="%"
+                                    right={20}
+                                />
+                            </View>
+                            <ListItem
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: 'transparent'
+                                }}
+                            >
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.disableTips'
+                                    )}
+                                </ListItem.Title>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                >
+                                    <Switch
+                                        value={disableTips}
+                                        disabled={settingsUpdateInProgress}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                disableTips: !disableTips
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    ...settings.pos,
+                                                    disableTips: !disableTips
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </ListItem>
                         </>
                     )}
                 </ScrollView>
@@ -290,15 +409,22 @@ export default class WebPortalPOS extends React.Component<
                                         ? settings.fiat
                                         : '',
                                 pos_categories: posEnabled ? categories : [],
-                                pos_products: posEnabled ? products : []
+                                pos_products: posEnabled ? products : [],
+                                pos_merchant_name: merchantName,
+                                pos_tax_percentage: taxPercentage,
+                                pos_disable_tips: disableTips
                             }).then(() => {
                                 navigation.goBack();
                             });
                         }}
-                        disabled={loading}
+                        disabled={loading || settingsUpdateInProgress}
                     />
                 </View>
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    textInput: { marginTop: 10, marginLeft: 15, marginRight: 15 }
+});
