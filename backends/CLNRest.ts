@@ -372,13 +372,14 @@ export default class CLNRest {
         amount,
         description
     }: {
-        amount: string,
-        description: string
+        amount: string;
+        description: string;
     }) => {
-        return this.postRequest('/v1/invoicerequest', { 
-            amount: Number(amount), description 
+        return this.postRequest('/v1/invoicerequest', {
+            amount: Number(amount),
+            description
         });
-    }
+    };
     createOffer = ({
         description,
         label,

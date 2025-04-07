@@ -406,7 +406,9 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                             color: themeColor('text')
                                         }}
                                     >
-                                        {localeString('views.Tools.withdrawal.title')}
+                                        {localeString(
+                                            'views.Tools.withdrawal.title'
+                                        )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon

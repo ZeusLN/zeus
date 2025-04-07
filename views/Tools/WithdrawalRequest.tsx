@@ -14,7 +14,7 @@ const ZIconWhite = require('../../assets/images/icon-white.png');
 const ZIcon = require('../../assets/images/icon-black.png');
 
 import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from '../../utils/LocaleUtils'
+import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import InvoicesStore from '../../stores/InvoicesStore';
 import BalanceStore from '../../stores/BalanceStore';
@@ -34,14 +34,14 @@ interface WithdrawalRequestState {
     bolt12: string;
     showQR: boolean;
     loading: boolean;
-    error_msg: string | null
+    error_msg: string | null;
 }
 
 @inject('InvoicesStore', 'BalanceStore')
 @observer
 export default class WithdrawalRequest extends Component<
-  WithdrawalRequestProps, 
-  WithdrawalRequestState
+    WithdrawalRequestProps,
+    WithdrawalRequestState
 > {
     constructor(props: WithdrawalRequestProps) {
         super(props);
@@ -63,20 +63,23 @@ export default class WithdrawalRequest extends Component<
         this.setState((prevState) => ({
             ...prevState,
             [key]: value,
-            satsAmount: isBTC ? getSatAmount(value).toString() : value,
+            satsAmount: isBTC ? getSatAmount(value).toString() : value
         }));
 
         if (key === 'description') {
             this.props.InvoicesStore.clearUnified();
         }
-    };    
+    };
 
     generateInvoice = async () => {
         const { description, satsAmount } = this.state;
         this.setState({ loading: true, error_msg: null });
-      
+
         try {
-            const response = await BackendUtils.invoicerequest({ amount: satsAmount, description });
+            const response = await BackendUtils.invoicerequest({
+                amount: satsAmount,
+                description
+            });
             if (response && response.bolt12) {
                 this.setState({
                     bolt12: response.bolt12,
@@ -85,13 +88,15 @@ export default class WithdrawalRequest extends Component<
                     description: ''
                 });
             } else {
-                this.setState({ error_msg: localeString('views.withdrawal.errorCreate') });
+                this.setState({
+                    error_msg: localeString('views.withdrawal.errorCreate')
+                });
             }
         } catch (error: any) {
             this.setState({
-                error_msg: error.toString() || localeString(
-                    'stores.InvoicesStore.errorCreatingInvoice'
-                ),
+                error_msg:
+                    error.toString() ||
+                    localeString('stores.InvoicesStore.errorCreatingInvoice'),
                 showQR: false
             });
         } finally {
@@ -102,77 +107,111 @@ export default class WithdrawalRequest extends Component<
     render() {
         const { navigation, BalanceStore } = this.props;
         const { amount, description, bolt12, showQR, satsAmount } = this.state;
-        const hasBalance = Number(BalanceStore.confirmedBlockchainBalance) > 0 || Number(BalanceStore.unconfirmedBlockchainBalance) > 0;
+        const hasBalance =
+            Number(BalanceStore.confirmedBlockchainBalance) > 0 ||
+            Number(BalanceStore.unconfirmedBlockchainBalance) > 0;
         const disabled = !description || !amount || !hasBalance;
 
         return (
             <Screen style={styles.screen}>
-              <Header
-                leftComponent="Back"
-                centerComponent={{ text: localeString('views.Tools.withdrawal.title'), style: styles.headerText }}
-                navigation={navigation}
-              />
-          
-              {this.state.loading ? (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                  <LoadingIndicator />
-                </View>
-              ) : (
-                <>
-                  {this.state.error_msg ? <ErrorMessage message={this.state.error_msg} /> : null}
-          
-                  <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
-                    <Text style={styles.secondaryText}>
-                      {localeString('views.Tools.withdrawal.description')}
-                    </Text>
-          
-                    <TextInput
-                      placeholder={localeString('views.Tools.withdrawal.descriptionPlaceholder')}
-                      value={description}
-                      onChangeText={(text: string) => this.handleInputChange('description', text)}
-                    />
-          
-                    <View style={{ paddingBottom: 15 }}>
-                      <Text style={styles.secondaryText}>
-                        {localeString('views.Tools.withdrawal.amount')}
-                      </Text>
-                      <AmountInput amount={amount} onAmountChange={(value) => this.handleInputChange('amount', value)} />
+                <Header
+                    leftComponent="Back"
+                    centerComponent={{
+                        text: localeString('views.Tools.withdrawal.title'),
+                        style: styles.headerText
+                    }}
+                    navigation={navigation}
+                />
+
+                {this.state.loading ? (
+                    <View
+                        style={{
+                            flex: 1,
+                            justifyContent: 'center',
+                            alignItems: 'center'
+                        }}
+                    >
+                        <LoadingIndicator />
                     </View>
-          
-                    <View style={styles.buttonContainer}>
-                      <Button
-                        title={localeString('views.Tools.withdrawal.createWithdrawalRequest')}
-                        onPress={this.generateInvoice}
-                        disabled={disabled}
-                      />
-                    </View>
-          
-                    {showQR && bolt12 ? (
-                      <View style={{ paddingTop: 20 }}>
-                        <CollapsedQR
-                          value={bolt12 || ''}
-                          iconOnly={true}
-                          iconContainerStyle={{ marginRight: 20 }}
-                          showShare={true}
-                          expanded
-                          textBottom
-                          truncateLongValue
-                          logo={themeColor('invertQrIcons') ? ZIconWhite : ZIcon}
-                          satAmount={satsAmount}
-                        />
-                      </View>
-                    ) : null}
-                  </ScrollView>
-                </>
-              )}
+                ) : (
+                    <>
+                        {this.state.error_msg ? (
+                            <ErrorMessage message={this.state.error_msg} />
+                        ) : null}
+                        <ScrollView
+                            style={styles.content}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            <Text style={styles.secondaryText}>
+                                {localeString(
+                                    'views.Tools.withdrawal.description'
+                                )}
+                            </Text>
+
+                            <TextInput
+                                placeholder={localeString(
+                                    'views.Tools.withdrawal.descriptionPlaceholder'
+                                )}
+                                value={description}
+                                onChangeText={(text: string) =>
+                                    this.handleInputChange('description', text)
+                                }
+                            />
+
+                            <View style={{ paddingBottom: 15 }}>
+                                <Text style={styles.secondaryText}>
+                                    {localeString(
+                                        'views.Tools.withdrawal.amount'
+                                    )}
+                                </Text>
+                                <AmountInput
+                                    amount={amount}
+                                    onAmountChange={(value) =>
+                                        this.handleInputChange('amount', value)
+                                    }
+                                />
+                            </View>
+
+                            <View style={styles.buttonContainer}>
+                                <Button
+                                    title={localeString(
+                                        'views.Tools.withdrawal.createWithdrawalRequest'
+                                    )}
+                                    onPress={this.generateInvoice}
+                                    disabled={disabled}
+                                />
+                            </View>
+
+                            {showQR && bolt12 ? (
+                                <View style={{ paddingTop: 20 }}>
+                                    <CollapsedQR
+                                        value={bolt12 || ''}
+                                        iconOnly={true}
+                                        iconContainerStyle={{ marginRight: 20 }}
+                                        showShare={true}
+                                        expanded
+                                        textBottom
+                                        truncateLongValue
+                                        logo={
+                                            themeColor('invertQrIcons')
+                                                ? ZIconWhite
+                                                : ZIcon
+                                        }
+                                        satAmount={satsAmount}
+                                    />
+                                </View>
+                            ) : null}
+                        </ScrollView>
+                    </>
+                )}
             </Screen>
-        );          
+        );
     }
 }
 
 const styles = StyleSheet.create({
     screen: {
-        backgroundColor: '#121212',
+        backgroundColor: '#121212'
     },
     headerText: {
         color: '#fff',
@@ -187,6 +226,6 @@ const styles = StyleSheet.create({
     },
     buttonContainer: {
         alignItems: 'center',
-        paddingTop: 10,
-    },
+        paddingTop: 10
+    }
 });
