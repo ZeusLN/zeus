@@ -80,9 +80,12 @@ import ChoosePaymentMethod from './views/ChoosePaymentMethod';
 // Lightning address
 import LightningAddress from './views/LightningAddress';
 import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
+import CreateNWCLightningAddress from './views/LightningAddress/CreateNWCLightningAddress';
 import ZaplockerGetChan from './views/LightningAddress/ZaplockerGetChan';
 import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
+import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
+import NWCAddressSettings from './views/LightningAddress/NWCAddressSettings';
 import Attestation from './views/LightningAddress/Attestation';
 import Attestations from './views/LightningAddress/Attestations';
 import NostrKeys from './views/LightningAddress/NostrKeys';
@@ -1053,6 +1056,24 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="WebPortalPOS" // @ts-ignore:next-line
                                                         component={WebPortalPOS}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreateNWCLightningAddress" // @ts-ignore:next-line
+                                                        component={
+                                                            CreateNWCLightningAddress
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCAddressInfo" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCAddressInfo
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCAddressSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCAddressSettings
+                                                        }
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

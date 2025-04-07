@@ -14,47 +14,37 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore, {
-    NOTIFICATIONS_PREF_KEYS,
-    AUTOMATIC_ATTESTATION_KEYS
+    NOTIFICATIONS_PREF_KEYS
 } from '../../stores/SettingsStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ZeusPayPlusSettings from '../../views/LightningAddress/ZeusPayPlusSettings';
 
-interface LightningAddressSettingsProps {
+interface NWCAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     LightningAddressStore: LightningAddressStore;
 }
 
-interface LightningAddressSettingsState {
-    automaticallyAccept: boolean | undefined;
-    automaticallyAcceptAttestationLevel: number;
+interface NWCAddressSettingsState {
     routeHints: boolean | undefined;
     allowComments: boolean | undefined;
-    nostrPrivateKey: string;
-    nostrRelays: Array<string>;
     notifications: number;
 }
 
 @inject('SettingsStore', 'LightningAddressStore')
 @observer
-export default class LightningAddressSettings extends React.Component<
-    LightningAddressSettingsProps,
-    LightningAddressSettingsState
+export default class NWCAddressSettings extends React.Component<
+    NWCAddressSettingsProps,
+    NWCAddressSettingsState
 > {
     state = {
-        automaticallyAccept: true,
-        automaticallyAcceptAttestationLevel: 2,
         routeHints: false,
         allowComments: true,
-        nostrPrivateKey: '',
-        nostrRelays: [],
         notifications: 1
     };
 
@@ -63,19 +53,10 @@ export default class LightningAddressSettings extends React.Component<
         const { settings } = SettingsStore;
 
         this.setState({
-            automaticallyAccept: settings.lightningAddress?.automaticallyAccept
-                ? true
-                : false,
-            automaticallyAcceptAttestationLevel: settings.lightningAddress
-                ?.automaticallyAcceptAttestationLevel
-                ? settings.lightningAddress.automaticallyAcceptAttestationLevel
-                : 2,
             routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,
-            nostrPrivateKey: settings.lightningAddress?.nostrPrivateKey || '',
-            nostrRelays: settings.lightningAddress?.nostrRelays || [],
             notifications:
                 settings.lightningAddress?.notifications !== undefined
                     ? settings.lightningAddress.notifications
@@ -110,14 +91,7 @@ export default class LightningAddressSettings extends React.Component<
 
     render() {
         const { navigation, SettingsStore, LightningAddressStore } = this.props;
-        const {
-            automaticallyAccept,
-            automaticallyAcceptAttestationLevel,
-            routeHints,
-            allowComments,
-            nostrRelays,
-            notifications
-        } = this.state;
+        const { allowComments, notifications } = this.state;
         const { updateSettings, settings }: any = SettingsStore;
         const { loading, update, error_msg } = LightningAddressStore;
 
@@ -148,127 +122,6 @@ export default class LightningAddressSettings extends React.Component<
                         {error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontSize: 17,
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddressSettings.automaticallyAccept'
-                                    )}
-                                </Text>
-                            </View>
-                            <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
-                            >
-                                <Switch
-                                    value={automaticallyAccept}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
-                                        this.setState({
-                                            automaticallyAccept:
-                                                !automaticallyAccept
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                automaticallyAccept:
-                                                    !automaticallyAccept
-                                            }
-                                        });
-                                        restartNeeded();
-                                    }}
-                                />
-                            </View>
-                        </View>
-                        <View style={{ marginTop: 20 }}>
-                            <DropdownSetting
-                                title={localeString(
-                                    'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel'
-                                )}
-                                titleColor={themeColor('text')}
-                                selectedValue={
-                                    automaticallyAcceptAttestationLevel
-                                }
-                                onValueChange={async (value: number) => {
-                                    this.setState({
-                                        automaticallyAcceptAttestationLevel:
-                                            value
-                                    });
-                                    await updateSettings({
-                                        lightningAddress: {
-                                            ...settings.lightningAddress,
-                                            automaticallyAcceptAttestationLevel:
-                                                value
-                                        }
-                                    });
-                                    restartNeeded();
-                                }}
-                                values={AUTOMATIC_ATTESTATION_KEYS}
-                                disabled={
-                                    !automaticallyAccept ||
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                            />
-                        </View>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                marginTop: 20
-                            }}
-                        >
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 17
-                                    }}
-                                    infoModalText={[
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.routeHintsExplainer1'
-                                        ),
-                                        localeString(
-                                            'views.Settings.LightningAddressSettings.routeHintsExplainer2'
-                                        )
-                                    ]}
-                                >
-                                    {localeString('views.Receive.routeHints')}
-                                </Text>
-                            </View>
-                            <View
-                                style={{ alignSelf: 'center', marginLeft: 5 }}
-                            >
-                                <Switch
-                                    value={routeHints}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
-                                        this.setState({
-                                            routeHints: !routeHints
-                                        });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
-                                                routeHints: !routeHints
-                                            }
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </View>
                         <View
                             style={{
                                 flexDirection: 'row',
@@ -352,9 +205,14 @@ export default class LightningAddressSettings extends React.Component<
                             containerStyle={{
                                 backgroundColor: 'transparent',
                                 padding: 0,
-                                marginTop: 20
+                                marginTop: 30
                             }}
-                            onPress={() => navigation.navigate('NostrKeys')}
+                            onPress={() =>
+                                navigation.navigate(
+                                    'CreateNWCLightningAddress',
+                                    { updateConnection: true }
+                                )
+                            }
                         >
                             <ListItem.Content>
                                 <ListItem.Title
@@ -363,32 +221,9 @@ export default class LightningAddressSettings extends React.Component<
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
-                                    {localeString('nostr.keys')}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
-                            }}
-                            onPress={() => navigation.navigate('NostrRelays')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {`${localeString(
-                                        'views.Settings.Nostr.relays'
-                                    )} (${nostrRelays?.length || 0})`}
+                                    {localeString(
+                                        'views.Settings.LightningAddress.changeConnectionString'
+                                    )}
                                 </ListItem.Title>
                             </ListItem.Content>
                             <Icon
@@ -397,6 +232,36 @@ export default class LightningAddressSettings extends React.Component<
                             />
                         </ListItem>
                         <ZeusPayPlusSettings navigation={navigation} />
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                padding: 0,
+                                marginTop: 30
+                            }}
+                            onPress={() =>
+                                navigation.navigate(
+                                    'CreateZaplockerLightningAddress',
+                                    { switchTo: true }
+                                )
+                            }
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.LightningAddress.switchToZaplocker'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('text')}
+                            />
+                        </ListItem>
                         {BackendUtils.supportsCashuWallet() &&
                             settings?.ecash?.enableCashu && (
                                 <ListItem
@@ -431,36 +296,6 @@ export default class LightningAddressSettings extends React.Component<
                                     />
                                 </ListItem>
                             )}
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 30
-                            }}
-                            onPress={() =>
-                                navigation.navigate(
-                                    'CreateNWCLightningAddress',
-                                    { switchTo: true }
-                                )
-                            }
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.switchToNWC'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
                         <View style={{ marginTop: 40, marginBottom: 20 }}>
                             <Button
                                 title={localeString(

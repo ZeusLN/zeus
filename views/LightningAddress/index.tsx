@@ -1,7 +1,10 @@
 import * as React from 'react';
 import {
+    Animated,
     Dimensions,
     FlatList,
+    PanResponder,
+    PanResponderInstance,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
@@ -37,6 +40,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import CaretUp from '../../assets/images/SVG/Caret Up.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -67,14 +71,37 @@ export default class LightningAddress extends React.Component<
     LightningAddressProps,
     LightningAddressState
 > {
+    private pan: Animated.ValueXY;
+    private panResponder: PanResponderInstance;
+
     isInitialFocus = true;
 
-    state = {
-        hasZeusLspChannel: false,
-        prosConsCashu: false,
-        prosConsZaplocker: false,
-        prosConsRemote: false
-    };
+    constructor(props: LightningAddressProps) {
+        super(props);
+        this.state = {
+            hasZeusLspChannel: false,
+            prosConsCashu: false,
+            prosConsZaplocker: false,
+            prosConsRemote: false
+        };
+        this.pan = new Animated.ValueXY();
+        this.panResponder = PanResponder.create({
+            onMoveShouldSetPanResponder: () => true,
+            onPanResponderMove: Animated.event(
+                [null, { dx: this.pan.x, dy: this.pan.y }],
+                { useNativeDriver: false }
+            ),
+            onPanResponderRelease: () => {
+                Animated.spring(this.pan, {
+                    toValue: { x: 0, y: 0 },
+                    useNativeDriver: false
+                }).start();
+                props.navigation.navigate('Activity', {
+                    animation: 'slide_from_bottom'
+                });
+            }
+        });
+    }
 
     async componentDidMount() {
         const { ChannelsStore, LightningAddressStore, navigation, route } =
@@ -163,6 +190,8 @@ export default class LightningAddress extends React.Component<
                             navigation.navigate('ZaplockerInfo');
                         } else if (lightningAddressType === 'cashu') {
                             navigation.navigate('CashuLightningAddressInfo');
+                        } else if (lightningAddressType === 'nwc') {
+                            navigation.navigate('NWCAddressInfo');
                         }
                     }}
                     color={themeColor('text')}
@@ -179,6 +208,8 @@ export default class LightningAddress extends React.Component<
                         navigation.navigate('LightningAddressSettings');
                     } else if (lightningAddressType === 'cashu') {
                         navigation.navigate('CashuLightningAddressSettings');
+                    } else if (lightningAddressType === 'nwc') {
+                        navigation.navigate('NWCAddressSettings');
                     }
                 }}
             >
@@ -318,9 +349,6 @@ export default class LightningAddress extends React.Component<
                                             >
                                                 {`${lightningAddressHandle}@${lightningAddressDomain}`}
                                             </Text>
-                                            {false && zeusPlus && (
-                                                <Pill title="+" width={15} />
-                                            )}
                                         </Row>
                                         <Row
                                             style={{
@@ -1106,18 +1134,6 @@ export default class LightningAddress extends React.Component<
                                                                             'zeuspay.intro.prosAndCons.remotePlusNwc'
                                                                         )}`}
                                                                     </Text>
-                                                                    <Text
-                                                                        style={{
-                                                                            ...styles.explainer,
-                                                                            color: themeColor(
-                                                                                'text'
-                                                                            )
-                                                                        }}
-                                                                    >
-                                                                        {`🔴 ${localeString(
-                                                                            'zeuspay.intro.prosAndCons.payPlusSubscription'
-                                                                        )}`}
-                                                                    </Text>
                                                                 </View>
                                                             </Row>
                                                         </View>
@@ -1132,9 +1148,13 @@ export default class LightningAddress extends React.Component<
                                                         >
                                                             <Button
                                                                 title={localeString(
-                                                                    'general.comingSoon'
+                                                                    'general.getStarted'
                                                                 )}
-                                                                disabled
+                                                                onPress={() =>
+                                                                    navigation.navigate(
+                                                                        'CreateNWCLightningAddress'
+                                                                    )
+                                                                }
                                                             />
                                                         </View>
                                                     </Row>
@@ -1185,7 +1205,7 @@ export default class LightningAddress extends React.Component<
                                     paid.length === 0 && (
                                         <TouchableOpacity
                                             style={{
-                                                marginTop: 15,
+                                                margin: 15,
                                                 alignItems: 'center'
                                             }}
                                             onPress={() => status()}
@@ -1197,9 +1217,13 @@ export default class LightningAddress extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.noPaymentsToRedeem'
-                                                )}
+                                                {lightningAddressType === 'nwc'
+                                                    ? localeString(
+                                                          'views.Settings.LightningAddress.noNeedToRedeem'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.LightningAddress.noPaymentsToRedeem'
+                                                      )}
                                             </Text>
                                         </TouchableOpacity>
                                     )}
@@ -1274,6 +1298,50 @@ export default class LightningAddress extends React.Component<
                                                 }}
                                                 disabled={!isReady}
                                             />
+                                        )}
+                                        {lightningAddressType === 'nwc' && (
+                                            <Animated.View
+                                                style={{
+                                                    flex: 1,
+                                                    maxHeight: 80,
+                                                    justifyContent: 'flex-end',
+                                                    alignSelf: 'center',
+                                                    bottom: 10,
+                                                    paddingTop: 40,
+                                                    paddingBottom: 35,
+                                                    width: '100%',
+                                                    transform: [
+                                                        {
+                                                            translateY:
+                                                                this.pan.y
+                                                        }
+                                                    ],
+                                                    alignItems: 'center'
+                                                }}
+                                                {...this.panResponder
+                                                    .panHandlers}
+                                            >
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        this.props.navigation.navigate(
+                                                            'Activity',
+                                                            {
+                                                                animation:
+                                                                    'slide_from_bottom'
+                                                            }
+                                                        )
+                                                    }
+                                                    accessibilityLabel={localeString(
+                                                        'general.activity'
+                                                    )}
+                                                >
+                                                    <CaretUp
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                    />
+                                                </TouchableOpacity>
+                                            </Animated.View>
                                         )}
                                         {__DEV__ &&
                                             lightningAddressType ===
