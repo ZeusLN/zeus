@@ -126,6 +126,7 @@ class BackendUtils {
     disableOffer = (...args: any[]) => this.call('disableOffer', args);
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
+    invoicerequest = (...args: any[]) => this.call('invoicerequest', args);
 
     // lndhub
     login = (...args: any[]) => this.call('login', args);
@@ -162,6 +163,7 @@ class BackendUtils {
         this.call('supportsSimpleTaprootChannels');
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
+    supportsInvoiceRequest = () => this.call('supportsInvoiceRequest');
     supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');

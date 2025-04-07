@@ -181,6 +181,7 @@ import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
 import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
+import WithdrawalRequest from './views/Tools/WithdrawalRequest';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -936,6 +937,12 @@ export default class App extends React.PureComponent {
                                                         name="ActivityExport" // @ts-ignore:next-line
                                                         component={
                                                             ActivityExport
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WithdrawalRequest" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalRequest
                                                         }
                                                     />
                                                 </Stack.Navigator>
