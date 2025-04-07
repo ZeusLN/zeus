@@ -104,7 +104,7 @@ export default class WebPortalPOS extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Settings.LightningAddress.webPoralPos'
+                            'views.Settings.LightningAddress.webPortalPos'
                         ),
                         style: {
                             color: themeColor('text'),
@@ -201,7 +201,7 @@ export default class WebPortalPOS extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.LightningAddress.webPoralPos.enableFiat'
+                                        'views.Settings.LightningAddress.webPortalPos.enableFiat'
                                     )}
                                 </ListItem.Title>
                                 <View
@@ -270,7 +270,7 @@ export default class WebPortalPOS extends React.Component<
                 <View style={{ bottom: 15 }}>
                     <Button
                         title={localeString(
-                            'views.Settings.LightningAddress.webPoralPos.syncSettings'
+                            'views.Settings.LightningAddress.webPortalPos.syncSettings'
                         )}
                         onPress={async () => {
                             const categoriesString = await Storage.getItem(

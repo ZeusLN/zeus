@@ -96,7 +96,7 @@ export default class ZeusPayPlusSettings extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.LightningAddress.webPoralPos'
+                                        'views.Settings.LightningAddress.webPortalPos'
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>
@@ -149,7 +149,7 @@ export default class ZeusPayPlusSettings extends React.Component<
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.LightningAddress.webPoralPos'
+                                        'views.Settings.LightningAddress.webPortalPos'
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>

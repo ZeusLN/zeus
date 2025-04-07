@@ -414,6 +414,109 @@ export default class LightningAddressStore {
     };
 
     @action
+    public createNWC = async (nwc_string: string) => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+
+        try {
+            const { verification, signature } = await this.getAuthData();
+
+            const createResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/create`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                    message: verification,
+                    signature,
+                    nwc_string,
+                    address_type: 'nwc'
+                })
+            );
+
+            const createData = createResponse.json();
+            if (createResponse.info().status !== 200 || !createData.success) {
+                throw createData.error;
+            }
+
+            const { handle: responseHandle, domain, success } = createData;
+
+            if (responseHandle) {
+                this.setLightningAddress(responseHandle, domain);
+            }
+
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    enabled: true,
+                    automaticallyAccept: true,
+                    allowComments: true
+                }
+            });
+
+            runInAction(() => {
+                // ensure push credentials are in place
+                // right after creation
+                this.updatePushCredentials();
+                this.loading = false;
+            });
+
+            return { success };
+        } catch (error) {
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.error_msg = error_msg;
+                this.error = true;
+                this.loading = false;
+            });
+            throw error;
+        }
+    };
+
+    @action
+    public testNWCConnectionString = async (nwc_string: string) => {
+        this.error = false;
+        this.error_msg = '';
+        this.loading = true;
+
+        try {
+            const createResponse = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/nwc/test`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({
+                    nwc_string
+                })
+            );
+
+            const createData = createResponse.json();
+            if (createResponse.info().status !== 200 || !createData.success) {
+                throw createData.error;
+            }
+
+            const { success, error } = createData;
+
+            runInAction(() => {
+                if (error) {
+                    this.error = true;
+                    this.error_msg = error;
+                }
+                this.loading = false;
+            });
+
+            return { success };
+        } catch (error) {
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.error_msg = error_msg;
+                this.error = true;
+                this.loading = false;
+            });
+            throw error;
+        }
+    };
+
+    @action
     public update = async (updates: any) => {
         this.error = false;
         this.error_msg = '';
