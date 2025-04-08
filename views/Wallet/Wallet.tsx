@@ -432,9 +432,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         initialLoad: false
                     });
                 } else {
-                    if (settings?.ecash?.enableCashu)
-                        CashuStore.initializeWallets();
-
                     if (expressGraphSyncEnabled) {
                         await expressGraphSync();
                         if (settings.resetExpressGraphSyncOnStartup) {
@@ -451,6 +448,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     isTorEnabled: embeddedTor,
                     isTestnet: embeddedLndNetwork === 'Testnet'
                 });
+
+                if (settings?.ecash?.enableCashu)
+                    await CashuStore.initializeWallets();
             }
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
