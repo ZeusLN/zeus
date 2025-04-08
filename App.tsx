@@ -43,6 +43,7 @@ import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
 import InfoModal from './components/Modals/InfoModal';
 import ShareModal from './components/Modals/ShareModal';
+import AddressPicker from './components/AddressPicker';
 
 // Views
 import Transaction from './views/Transaction';
@@ -515,6 +516,12 @@ export default class App extends React.PureComponent {
                                                         name="SignVerifyMessage" // @ts-ignore:next-line
                                                         component={
                                                             SignVerifyMessage
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AddressPicker" // @ts-ignore:next-line
+                                                        component={
+                                                            AddressPicker
                                                         }
                                                     />
                                                     <Stack.Screen
