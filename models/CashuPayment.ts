@@ -15,6 +15,6 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get model(): string {
-        return localeString('views.CashuPayment.title');
+        return localeString('views.Cashu.CashuPayment.title');
     }
 }

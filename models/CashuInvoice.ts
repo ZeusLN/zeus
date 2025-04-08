@@ -36,7 +36,7 @@ export default class CashuInvoice extends BaseModel {
     }
 
     @computed public get model(): string {
-        return localeString('views.CashuInvoice.title');
+        return localeString('views.Cashu.CashuInvoice.title');
     }
 
     @computed public get getTimestamp(): string | number {
