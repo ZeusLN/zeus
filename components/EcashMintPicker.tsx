@@ -73,7 +73,9 @@ export default class EcashMintPicker extends React.Component<
                         <Text
                             style={{
                                 ...styles.text,
-                                color: themeColor('text'),
+                                color: mints[selectedMintUrl]?.errorConnecting
+                                    ? themeColor('warning')
+                                    : themeColor('text'),
                                 marginRight: 10
                             }}
                         >
