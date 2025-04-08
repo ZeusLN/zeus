@@ -30,6 +30,7 @@ export interface Filter {
     isFailed: boolean;
     unconfirmed: boolean;
     zeusPay: boolean;
+    keysend: boolean;
     minimumAmount: number;
     maximumAmount?: number;
     startDate?: Date;
@@ -49,6 +50,7 @@ export const DEFAULT_FILTERS = {
     standardInvoices: true,
     ampInvoices: true,
     zeusPay: true,
+    keysend: true,
     minimumAmount: 0,
     maximumAmount: undefined,
     startDate: undefined,
@@ -97,6 +99,7 @@ export default class ActivityStore {
             isFailed: false,
             unconfirmed: true,
             zeusPay: true,
+            keysend: true,
             minimumAmount: 0,
             maximumAmount: undefined,
             startDate: undefined,
@@ -109,6 +112,12 @@ export default class ActivityStore {
     @action
     public setAmountFilter = (filter: any) => {
         this.filters.minimumAmount = filter;
+        this.setFilters(this.filters);
+    };
+
+    @action
+    public setKeysendFilter = (filter: any) => {
+        this.filters.keysend = filter;
         this.setFilters(this.filters);
     };
 

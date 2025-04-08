@@ -245,6 +245,58 @@ describe('ActivityFilterUtils', () => {
         expect(filteredActivities[0].getNote).toBe('Payment for invoice');
     });
 
+    // Test case for Keysend Filter
+    it('supports filtering by keysend', () => {
+        const activities: any[] = [
+            new Payment({
+                value: '100',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        route: {
+                            hops: [
+                                {
+                                    custom_records: {
+                                        '34349334': 'Keysend payment'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }),
+            new Payment({
+                value: '200',
+                creation_date: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                htlcs: []
+            }),
+            new Invoice({
+                value: '300',
+                creation_date: (
+                    new Date(2000, 1, 3, 3, 4, 4).getTime() / 1000
+                ).toString()
+            })
+        ];
+
+        const filter = getDefaultFilter();
+        filter.keysend = false;
+
+        const filteredActivities = ActivityFilterUtils.filterActivities(
+            activities,
+            filter
+        );
+
+        expect(filteredActivities.length).toBe(2);
+        expect(filteredActivities.map((a) => a.getAmount)).toEqual([
+            '200',
+            300
+        ]);
+    });
+
     const getDefaultFilter = () =>
         ({
             lightning: true,
@@ -254,6 +306,7 @@ describe('ActivityFilterUtils', () => {
             unpaid: true,
             unconfirmed: true,
             minimumAmount: 0,
-            memo: ''
+            memo: '',
+            keysend: true
         } as Filter);
 });

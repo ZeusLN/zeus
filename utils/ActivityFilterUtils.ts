@@ -96,6 +96,13 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.keysend == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity: any) =>
+                    !(activity instanceof Payment && activity.getKeysendMessage)
+            );
+        }
+
         if (filter.minimumAmount > 0) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
