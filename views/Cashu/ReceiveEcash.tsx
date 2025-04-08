@@ -533,6 +533,7 @@ export default class ReceiveEcash extends React.Component<
                     }}
                     rightComponent={
                         loading ||
+                        creatingInvoice ||
                         watchedInvoicePaid ||
                         posStatus === 'active' ||
                         hideRightHeaderComponent ? undefined : haveInvoice ? (
