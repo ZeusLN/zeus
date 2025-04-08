@@ -1,5 +1,12 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView, Alert } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    View,
+    ScrollView,
+    Alert,
+    TouchableOpacity
+} from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -15,11 +22,10 @@ import {
     ErrorMessage
 } from '../../components/SuccessErrorMessage';
 import TextInput from '../../components/TextInput';
-import DropdownSetting from '../../components/DropdownSetting';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import backendUtils from '../../utils/BackendUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 import MessageSignStore from '../../stores/MessageSignStore';
 
@@ -39,12 +45,7 @@ interface SignVerifyMessageState {
     signingMode: string;
     signingAddressLocal: string;
     supportsAddressMessageSigning: boolean;
-}
-
-interface Address {
-    address: string;
-    type: string;
-    accountName?: string;
+    loading: boolean;
 }
 
 @inject('SettingsStore', 'MessageSignStore')
@@ -64,42 +65,128 @@ export default class SignVerifyMessage extends React.Component<
         verifyingAddress: '',
         signingMode: 'lightning',
         signingAddressLocal: '',
-        supportsAddressMessageSigning: false
+        supportsAddressMessageSigning: false,
+        loading: false
     };
 
     componentDidMount = () => {
-        const { MessageSignStore } = this.props;
+        const { MessageSignStore, navigation, route } = this.props;
         MessageSignStore.reset();
 
         // Load addresses right away and also when the screen comes into focus
-        if (backendUtils.supportsAddressMessageSigning()) {
+        if (BackendUtils.supportsAddressMessageSigning()) {
             this.setState({ supportsAddressMessageSigning: true });
             MessageSignStore.loadAddresses();
 
             // Also reload addresses whenever the screen comes into focus
-            this.navigationFocusListener = this.props.navigation.addListener(
+            this.navigationFocusListener = navigation.addListener(
                 'focus',
                 () => {
-                    console.log(
-                        'SignVerifyMessage screen focused - reloading addresses'
-                    );
                     MessageSignStore.loadAddresses();
+
+                    this.checkForAddressSelection();
                 }
             );
         }
 
-        // If we have a message to verify from navigation, set it
-        if (this.props.route.params?.message) {
+        const params = route?.params || {};
+
+        if (params.selectedIndex !== undefined) {
+            this.setState({ selectedIndex: params.selectedIndex });
+        }
+
+        if (params.message) {
             this.setState({
-                messageToVerify: this.props.route.params.message,
-                selectedIndex: 1 // Switch to Verify tab
+                messageToVerify: params.message,
+                selectedIndex: 1
             });
         }
 
-        // If we have an address to verify from navigation, set it
-        if (this.props.route.params?.address) {
+        if (params.address) {
             this.setState({
-                verifyingAddress: this.props.route.params.address
+                verifyingAddress: params.address
+            });
+        }
+
+        this.checkForAddressSelection();
+    };
+
+    componentWillUnmount() {
+        if (this.navigationFocusListener) {
+            this.navigationFocusListener();
+        }
+    }
+
+    checkForAddressSelection = () => {
+        const { route, MessageSignStore } = this.props;
+        const { params } = route || {};
+
+        if (params?.preserveMode === 'onchain') {
+            this.setState({ signingMode: 'onchain' });
+            MessageSignStore.setSigningMode('onchain');
+        }
+
+        if (params?.selectedAddress) {
+            const selectedAddress = params.selectedAddress;
+            const mode = params.mode;
+
+            if (mode === 'sign') {
+                this.setState({
+                    signingAddressLocal: selectedAddress,
+                    signingMethodIndex: 1
+                });
+                MessageSignStore.setSigningMode('onchain');
+                MessageSignStore.setSelectedAddress(selectedAddress);
+            } else if (mode === 'verify') {
+                this.setState({
+                    verifyingAddress: selectedAddress,
+                    signingMode: 'onchain'
+                });
+                MessageSignStore.setSigningMode('onchain');
+            }
+        }
+
+        if (params?.selectedIndex !== undefined) {
+            const selectedIndex = params.selectedIndex;
+            this.setState({ selectedIndex });
+        }
+
+        if (params?.signingMode) {
+            this.setState({ signingMode: params.signingMode });
+            MessageSignStore.setSigningMode(params.signingMode);
+        }
+
+        if (params?.messageToSign !== undefined) {
+            this.setState({ messageToSign: params.messageToSign });
+        }
+
+        if (params?.messageToVerify !== undefined) {
+            this.setState({ messageToVerify: params.messageToVerify });
+        }
+
+        if (params?.signatureToVerify !== undefined) {
+            this.setState({ signatureToVerify: params.signatureToVerify });
+        }
+
+        if (
+            params?.selectedAddress ||
+            params?.selectedIndex !== undefined ||
+            params?.signingMode ||
+            params?.preserveMode ||
+            params?.messageToSign !== undefined ||
+            params?.messageToVerify !== undefined ||
+            params?.signatureToVerify !== undefined
+        ) {
+            this.props.navigation.setParams({
+                selectedAddress: undefined,
+                mode: undefined,
+                selectedIndex: undefined,
+                signingMode: undefined,
+                preserveMode: undefined,
+                messageToSign: undefined,
+                messageToVerify: undefined,
+                signatureToVerify: undefined,
+                timestamp: undefined
             });
         }
     };
@@ -147,46 +234,241 @@ export default class SignVerifyMessage extends React.Component<
     };
 
     updateIndex = (selectedIndex: number) => {
-        const { MessageSignStore } = this.props;
-
-        this.setState({
+        // Clear all fields when switching between sign and verify tabs
+        const newState: Partial<SignVerifyMessageState> = {
             selectedIndex,
             messageToSign: '',
             messageToVerify: '',
             signatureToVerify: '',
-            verifyingAddress: '',
-            signingMode: 'lightning',
-            signingAddressLocal: ''
-        });
+            signingAddressLocal: '',
+            verifyingAddress: ''
+        };
 
+        if (selectedIndex === 0) {
+            newState.signingMethodIndex = 0;
+            newState.signingMode = 'lightning';
+        }
+
+        this.setState(newState as SignVerifyMessageState);
+
+        const { MessageSignStore } = this.props;
         MessageSignStore.reset();
+
+        if (selectedIndex === 0) {
+            MessageSignStore.setSigningMode('lightning');
+        }
     };
 
     updateSigningMethod = (signingMethodIndex: number) => {
         const { MessageSignStore } = this.props;
+        const signingMode = signingMethodIndex === 0 ? 'lightning' : 'onchain';
 
         this.setState({
+            signingAddressLocal: '',
             signingMethodIndex,
-            messageToSign: '',
-            messageToVerify: '',
-            signatureToVerify: '',
-            verifyingAddress: '',
-            signingMode: signingMethodIndex === 0 ? 'lightning' : 'onchain',
-            signingAddressLocal: ''
+            signingMode,
+            messageToSign: ''
         });
 
-        // Set the signing mode in the store based on the index
-        MessageSignStore.setSigningMode(
-            signingMethodIndex === 0 ? 'lightning' : 'onchain'
+        MessageSignStore.setSigningMode(signingMode);
+        MessageSignStore.setSelectedAddress('');
+    };
+
+    setSelectedAddress = (mode: 'sign' | 'verify', address: string) => {
+        const { MessageSignStore } = this.props;
+
+        if (mode === 'sign') {
+            this.setState({
+                signingAddressLocal: address,
+                signingMethodIndex: 1
+            });
+            MessageSignStore.setSigningMode('onchain');
+            MessageSignStore.setSelectedAddress(address);
+        } else if (mode === 'verify') {
+            this.setState({
+                verifyingAddress: address,
+                signingMode: 'onchain'
+            });
+            MessageSignStore.setSigningMode('onchain');
+        }
+    };
+
+    navigateToAddressPicker = (mode: 'sign' | 'verify') => {
+        const { navigation } = this.props;
+        const { signingAddressLocal, verifyingAddress } = this.state;
+
+        // callback function to handle address selection
+        const handleAddressSelected = (address: string) => {
+            this.setSelectedAddress(mode, address);
+        };
+
+        navigation.navigate('AddressPicker', {
+            selectedAddress:
+                mode === 'sign' ? signingAddressLocal : verifyingAddress,
+            onAddressSelected: handleAddressSelected
+        });
+    };
+
+    clearSelectedAddress = (mode: 'sign' | 'verify') => {
+        const { MessageSignStore } = this.props;
+
+        if (mode === 'sign') {
+            this.setState({ signingAddressLocal: '' });
+            MessageSignStore.setSelectedAddress('');
+        } else {
+            this.setState({ verifyingAddress: '' });
+        }
+    };
+
+    renderAddressSelector = (mode: 'sign' | 'verify') => {
+        const { MessageSignStore } = this.props;
+        const { addresses } = MessageSignStore;
+        const { signingAddressLocal, verifyingAddress } = this.state;
+
+        const currentAddress =
+            mode === 'sign' ? signingAddressLocal : verifyingAddress;
+
+        const currentAddressDetails = addresses.find(
+            (addr) => addr.address === currentAddress
         );
-        MessageSignStore.reset();
+        const displayLabel = currentAddress;
+
+        return (
+            <View style={styles.addressSelector}>
+                <Text style={{ color: themeColor('secondaryText') }}>
+                    {localeString(
+                        'views.Settings.SignMessage.selectAddressSigning'
+                    )}
+                </Text>
+
+                <TouchableOpacity
+                    style={[
+                        styles.addressButton,
+                        {
+                            backgroundColor: themeColor('secondary'),
+                            ...(currentAddress
+                                ? {
+                                      borderColor: themeColor('highlight'),
+                                      borderWidth: 1
+                                  }
+                                : {
+                                      borderColor: themeColor('secondaryText'),
+                                      borderWidth: 1,
+                                      borderStyle: 'dashed'
+                                  })
+                        }
+                    ]}
+                    onPress={() => this.navigateToAddressPicker(mode)}
+                >
+                    {!currentAddress && (
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    textAlign: 'center',
+                                    marginRight: 5
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SignMessage.tapToSelectAddress'
+                                )}
+                            </Text>
+                        </View>
+                    )}
+
+                    {currentAddress && (
+                        <Text
+                            style={{
+                                color: themeColor('highlight'),
+                                textAlign: 'center'
+                            }}
+                        >
+                            {displayLabel}
+                        </Text>
+                    )}
+                </TouchableOpacity>
+
+                {currentAddress && (
+                    <View
+                        style={[
+                            styles.addressInfoBox,
+                            {
+                                backgroundColor: themeColor('secondary'),
+                                borderColor: themeColor('secondary')
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontSize: 12
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.SignMessage.fullAddress'
+                            )}
+                            :
+                        </Text>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                marginTop: 3
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 12,
+                                    flex: 1
+                                }}
+                            >
+                                {currentAddress}
+                            </Text>
+                            <CopyButton
+                                copyValue={currentAddress}
+                                iconOnly={true}
+                                iconSize={16}
+                            />
+                        </View>
+
+                        {/* Show account info if available */}
+                        {currentAddressDetails?.accountName && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 12,
+                                        marginTop: 10
+                                    }}
+                                >
+                                    {localeString('general.accountName')}:
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 12,
+                                        marginTop: 3
+                                    }}
+                                >
+                                    {currentAddressDetails.accountName}
+                                </Text>
+                            </>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
     };
 
     renderSigningMethodSelector = () => {
         const { signingMethodIndex } = this.state;
-        const { MessageSignStore } = this.props;
-        const { addresses, selectedAddress } = MessageSignStore;
-
         const { supportsAddressMessageSigning } = this.state;
 
         if (!supportsAddressMessageSigning) {
@@ -203,7 +485,7 @@ export default class SignVerifyMessage extends React.Component<
                                 : themeColor('text')
                     }}
                 >
-                    {localeString('views.Settings.SignMessage.lightningNode')}
+                    {localeString('general.defaultNodeNickname')}
                 </Text>
             </React.Fragment>
         );
@@ -218,7 +500,7 @@ export default class SignVerifyMessage extends React.Component<
                                 : themeColor('text')
                     }}
                 >
-                    {localeString('views.Settings.SignMessage.onChainAddress')}
+                    {localeString('general.onchain')}
                 </Text>
             </React.Fragment>
         );
@@ -254,219 +536,7 @@ export default class SignVerifyMessage extends React.Component<
                     }}
                 />
 
-                {signingMethodIndex === 1 && (
-                    <View style={{ marginTop: 10 }}>
-                        <Text
-                            style={{
-                                color: themeColor('secondaryText'),
-                                marginBottom: 5
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.SignMessage.selectAddressSigning'
-                            )}
-                        </Text>
-
-                        {addresses.length === 0 && (
-                            <View
-                                style={[
-                                    styles.infoBox,
-                                    {
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderColor: themeColor('secondary')
-                                    }
-                                ]}
-                            >
-                                <Text style={{ color: themeColor('text') }}>
-                                    {localeString(
-                                        'views.Settings.SignMessage.loadingAddresses'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
-
-                        {addresses.length > 0 ? (
-                            <View>
-                                <DropdownSetting
-                                    selectedValue={
-                                        this.state.signingAddressLocal ||
-                                        selectedAddress
-                                    }
-                                    values={addresses.map((addr: Address) => ({
-                                        key: addr.accountName
-                                            ? `${addr.address.substring(
-                                                  0,
-                                                  5
-                                              )}...${addr.address.substring(
-                                                  addr.address.length - 5
-                                              )} (${addr.type}) - ${
-                                                  addr.accountName
-                                              }`
-                                            : `${addr.address.substring(
-                                                  0,
-                                                  5
-                                              )}...${addr.address.substring(
-                                                  addr.address.length - 5
-                                              )} (${addr.type})`,
-                                        value: addr.address
-                                    }))}
-                                    onValueChange={(value: string) => {
-                                        console.log(
-                                            'Selected address changed to:',
-                                            value
-                                        );
-                                        this.setState({
-                                            signingAddressLocal: value
-                                        });
-                                        // Explicitly call store method and make sure it updates
-                                        MessageSignStore.setSelectedAddress(
-                                            value
-                                        );
-                                        // Adding console log to debug
-                                        console.log(
-                                            'After setting store address, selectedAddress is now:',
-                                            MessageSignStore.selectedAddress
-                                        );
-                                    }}
-                                />
-
-                                <View
-                                    style={[
-                                        styles.addressInfoBox,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderColor: themeColor('secondary')
-                                        }
-                                    ]}
-                                >
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontSize: 12
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.SignMessage.fullAddress'
-                                        )}
-                                    </Text>
-                                    <View
-                                        style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            marginTop: 3
-                                        }}
-                                    >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 12,
-                                                flex: 1
-                                            }}
-                                        >
-                                            {this.state.signingAddressLocal ||
-                                                selectedAddress}
-                                        </Text>
-                                        <CopyButton
-                                            copyValue={
-                                                this.state
-                                                    .signingAddressLocal ||
-                                                selectedAddress
-                                            }
-                                            iconOnly={true}
-                                            iconSize={16}
-                                        />
-                                    </View>
-
-                                    {/* Show account info if available */}
-                                    {addresses.find(
-                                        (addr: Address) =>
-                                            addr.address ===
-                                            (this.state.signingAddressLocal ||
-                                                selectedAddress)
-                                    )?.accountName && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    fontSize: 12,
-                                                    marginTop: 10
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.SignMessage.account'
-                                                )}
-                                            </Text>
-                                            <Text
-                                                style={{
-                                                    color: themeColor('text'),
-                                                    fontSize: 12,
-                                                    marginTop: 3
-                                                }}
-                                            >
-                                                {addresses.find(
-                                                    (addr: Address) =>
-                                                        addr.address ===
-                                                        (this.state
-                                                            .signingAddressLocal ||
-                                                            selectedAddress)
-                                                )?.accountName || 'Default'}
-                                            </Text>
-                                        </>
-                                    )}
-
-                                    <Text
-                                        style={{
-                                            color: themeColor('secondaryText'),
-                                            fontSize: 12,
-                                            marginTop: 10
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Settings.SignMessage.addressType'
-                                        )}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 12,
-                                            marginTop: 3
-                                        }}
-                                    >
-                                        {addresses.find(
-                                            (addr: Address) =>
-                                                addr.address ===
-                                                (this.state
-                                                    .signingAddressLocal ||
-                                                    selectedAddress)
-                                        )?.type || 'Unknown'}
-                                    </Text>
-                                </View>
-                            </View>
-                        ) : (
-                            <View
-                                style={[
-                                    styles.errorBox,
-                                    {
-                                        backgroundColor:
-                                            themeColor('errorBackground'),
-                                        borderColor:
-                                            themeColor('errorBackground')
-                                    }
-                                ]}
-                            >
-                                <Text style={{ color: themeColor('error') }}>
-                                    {localeString(
-                                        'views.Settings.SignMessage.noAddressesAvailable'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                )}
+                {signingMethodIndex === 1 && this.renderAddressSelector('sign')}
             </View>
         );
     };
@@ -478,11 +548,10 @@ export default class SignVerifyMessage extends React.Component<
             messageToVerify,
             signatureToVerify,
             selectedIndex,
-            verifyingAddress,
-            signingMode
+            signingMode,
+            loading
         } = this.state;
-        const { loading, signMessage, pubkey, valid, signature, addresses } =
-            MessageSignStore;
+        const { signMessage, pubkey, valid, signature } = MessageSignStore;
 
         const { supportsAddressMessageSigning } = this.state;
         const signButton = () => (
@@ -522,7 +591,13 @@ export default class SignVerifyMessage extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent="Back"
+                    leftComponent={{
+                        icon: 'arrow-back',
+                        color: themeColor('text'),
+                        onPress: () => {
+                            navigation.goBack();
+                        }
+                    }}
                     centerComponent={{
                         text: localeString('views.Settings.SignMessage.title'),
                         style: {
@@ -530,6 +605,19 @@ export default class SignVerifyMessage extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        loading ? (
+                            <View
+                                style={{
+                                    width: 24,
+                                    height: 24,
+                                    marginRight: 10
+                                }}
+                            >
+                                <LoadingIndicator size={24} />
+                            </View>
+                        ) : undefined
+                    }
                     navigation={navigation}
                 />
 
@@ -554,8 +642,6 @@ export default class SignVerifyMessage extends React.Component<
                             color: themeColor('secondary')
                         }}
                     />
-
-                    {loading && <LoadingIndicator />}
 
                     {selectedIndex === 0 && this.renderSigningMethodSelector()}
 
@@ -600,10 +686,24 @@ export default class SignVerifyMessage extends React.Component<
                                     }}
                                     onPress={() => {
                                         if (
+                                            this.state.signingMode === 'onchain'
+                                        ) {
+                                            if (
+                                                !this.state.signingAddressLocal
+                                            ) {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'views.Settings.SignMessage.pleaseSelectAddress'
+                                                    )
+                                                );
+                                                return;
+                                            }
+                                        }
+
+                                        if (
                                             !messageToSign ||
                                             messageToSign.trim() === ''
                                         ) {
-                                            // Don't attempt to sign empty messages
                                             Alert.alert(
                                                 localeString(
                                                     'views.Settings.SignMessage.pleaseEnterMessage'
@@ -667,20 +767,19 @@ export default class SignVerifyMessage extends React.Component<
                                         </Text>
                                         <ButtonGroup
                                             onPress={(index: number) => {
-                                                if (index === 0) {
-                                                    MessageSignStore.setSigningMode(
-                                                        'lightning'
-                                                    );
-                                                } else {
-                                                    MessageSignStore.setSigningMode(
-                                                        'onchain'
-                                                    );
-                                                }
+                                                const newSigningMode =
+                                                    index === 0
+                                                        ? 'lightning'
+                                                        : 'onchain';
+                                                MessageSignStore.setSigningMode(
+                                                    newSigningMode
+                                                );
+
                                                 this.setState({
-                                                    signingMode:
-                                                        index === 0
-                                                            ? 'lightning'
-                                                            : 'onchain'
+                                                    signingMode: newSigningMode,
+                                                    messageToVerify: '',
+                                                    signatureToVerify: '',
+                                                    verifyingAddress: ''
                                                 });
                                             }}
                                             selectedIndex={
@@ -690,11 +789,9 @@ export default class SignVerifyMessage extends React.Component<
                                             }
                                             buttons={[
                                                 localeString(
-                                                    'views.Settings.SignMessage.lightningNode'
+                                                    'general.defaultNodeNickname'
                                                 ),
-                                                localeString(
-                                                    'views.Settings.SignMessage.onChainAddress'
-                                                )
+                                                localeString('general.onchain')
                                             ]}
                                             selectedButtonStyle={{
                                                 backgroundColor:
@@ -724,203 +821,8 @@ export default class SignVerifyMessage extends React.Component<
                                 ) : null}
 
                                 {supportsAddressMessageSigning &&
-                                    signingMode === 'onchain' && (
-                                        <View style={styles.form}>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.SignMessage.addressRequired'
-                                                )}
-                                            </Text>
-                                            {addresses.length === 0 && (
-                                                <Text
-                                                    style={{
-                                                        color: themeColor(
-                                                            'text'
-                                                        )
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.Settings.SignMessage.loadingAddresses'
-                                                    )}
-                                                </Text>
-                                            )}
-                                            {addresses.length > 0 ? (
-                                                <View>
-                                                    <DropdownSetting
-                                                        selectedValue={
-                                                            verifyingAddress
-                                                        }
-                                                        values={addresses.map(
-                                                            (
-                                                                addr: Address
-                                                            ) => ({
-                                                                key: addr.accountName
-                                                                    ? `${addr.address.substring(
-                                                                          0,
-                                                                          5
-                                                                      )}...${addr.address.substring(
-                                                                          addr
-                                                                              .address
-                                                                              .length -
-                                                                              5
-                                                                      )} (${
-                                                                          addr.type
-                                                                      }) - ${
-                                                                          addr.accountName
-                                                                      }`
-                                                                    : `${addr.address.substring(
-                                                                          0,
-                                                                          5
-                                                                      )}...${addr.address.substring(
-                                                                          addr
-                                                                              .address
-                                                                              .length -
-                                                                              5
-                                                                      )} (${
-                                                                          addr.type
-                                                                      })`,
-                                                                value: addr.address
-                                                            })
-                                                        )}
-                                                        onValueChange={(
-                                                            value: string
-                                                        ) =>
-                                                            this.setState({
-                                                                verifyingAddress:
-                                                                    value
-                                                            })
-                                                        }
-                                                    />
-
-                                                    <View
-                                                        style={[
-                                                            styles.addressInfoBox,
-                                                            {
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'secondary'
-                                                                    ),
-                                                                borderColor:
-                                                                    themeColor(
-                                                                        'secondary'
-                                                                    )
-                                                            }
-                                                        ]}
-                                                    >
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 12
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'views.Settings.SignMessage.fullAddress'
-                                                            )}
-                                                        </Text>
-                                                        <View
-                                                            style={{
-                                                                flexDirection:
-                                                                    'row',
-                                                                alignItems:
-                                                                    'center',
-                                                                marginTop: 3
-                                                            }}
-                                                        >
-                                                            <Text
-                                                                style={{
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    ),
-                                                                    fontSize: 12,
-                                                                    flex: 1
-                                                                }}
-                                                            >
-                                                                {
-                                                                    verifyingAddress
-                                                                }
-                                                            </Text>
-                                                            <CopyButton
-                                                                copyValue={
-                                                                    verifyingAddress
-                                                                }
-                                                                iconOnly={true}
-                                                                iconSize={16}
-                                                            />
-                                                        </View>
-
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 12,
-                                                                marginTop: 10
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'views.Settings.SignMessage.addressType'
-                                                            )}
-                                                        </Text>
-                                                        <Text
-                                                            style={{
-                                                                color: themeColor(
-                                                                    'text'
-                                                                ),
-                                                                fontSize: 12,
-                                                                marginTop: 3
-                                                            }}
-                                                        >
-                                                            {addresses.find(
-                                                                (
-                                                                    addr: Address
-                                                                ) =>
-                                                                    addr.address ===
-                                                                    verifyingAddress
-                                                            )?.type ||
-                                                                'Unknown'}
-                                                        </Text>
-                                                    </View>
-                                                </View>
-                                            ) : (
-                                                <View
-                                                    style={[
-                                                        styles.errorBox,
-                                                        {
-                                                            backgroundColor:
-                                                                themeColor(
-                                                                    'errorBackground'
-                                                                ),
-                                                            borderColor:
-                                                                themeColor(
-                                                                    'errorBackground'
-                                                                )
-                                                        }
-                                                    ]}
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            color: themeColor(
-                                                                'error'
-                                                            )
-                                                        }}
-                                                    >
-                                                        {localeString(
-                                                            'views.Settings.SignMessage.noAddressesAvailable'
-                                                        )}
-                                                    </Text>
-                                                </View>
-                                            )}
-                                        </View>
-                                    )}
+                                    signingMode === 'onchain' &&
+                                    this.renderAddressSelector('verify')}
                             </View>
 
                             <View style={styles.form}>
@@ -1047,7 +949,6 @@ export default class SignVerifyMessage extends React.Component<
             signingMode
         } = this.state;
 
-        // Validation
         if (!messageToVerify || messageToVerify.trim() === '') {
             Alert.alert(
                 localeString(
@@ -1133,6 +1034,14 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 6,
         borderWidth: 1,
+        marginTop: 10
+    },
+    addressSelector: {
+        marginTop: 10
+    },
+    addressButton: {
+        padding: 10,
+        borderRadius: 6,
         marginTop: 10
     }
 });
