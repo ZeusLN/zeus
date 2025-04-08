@@ -159,7 +159,7 @@ const ActivityListItem = React.memo(
                 <Text>
                     {item.isPaid
                         ? localeString('general.cashu')
-                        : localeString('views.CashuInvoice.title')}
+                        : localeString('views.Cashu.CashuInvoice.title')}
                     {memo ? ': ' : ''}
                     {memo ? (
                         <Text style={{ fontStyle: 'italic' }}>
@@ -468,7 +468,7 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.Payment.title'))
             return 'warning';
 
-        if (item.model === localeString('views.CashuPayment.title'))
+        if (item.model === localeString('views.Cashu.CashuPayment.title'))
             return 'warning';
 
         if (item.model === localeString('cashu.token')) {
@@ -487,7 +487,7 @@ export default class Activity extends React.PureComponent<
             }
         }
 
-        if (item.model === localeString('views.CashuInvoice.title')) {
+        if (item.model === localeString('views.Cashu.CashuInvoice.title')) {
             if (item.isExpired && !item.isPaid) {
                 return 'text';
             } else if (!item.isPaid) {
@@ -516,10 +516,10 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.Invoice.title')) {
             navigation.navigate('Invoice', { invoice: item });
         }
-        if (item.model === localeString('views.CashuInvoice.title')) {
+        if (item.model === localeString('views.Cashu.CashuInvoice.title')) {
             navigation.navigate('CashuInvoice', { invoice: item });
         }
-        if (item.model === localeString('views.CashuPayment.title')) {
+        if (item.model === localeString('views.Cashu.CashuPayment.title')) {
             navigation.navigate('CashuPayment', { payment: item });
         }
         if (item.model === localeString('cashu.token')) {

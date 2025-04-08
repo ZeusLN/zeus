@@ -1,10 +1,11 @@
 import * as React from 'react';
 import {
     Dimensions,
+    Platform,
     ScrollView,
     StyleSheet,
-    View,
-    Platform
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Icon } from 'react-native-elements';
@@ -16,6 +17,7 @@ import NfcManager, {
 } from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import handleAnything from '../../utils/handleAnything';
 
@@ -59,6 +61,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import AddressSvg from '../../assets/images/SVG/DynamicSVG/AddressSvg';
+import ScanSvg from '../../assets/images/SVG/Scan.svg';
 
 interface ReceiveEcashProps {
     exitSetup: any;
@@ -503,6 +506,14 @@ export default class ReceiveEcash extends React.Component<
 
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
+        const ScanButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('HandleAnythingQRScanner')}
+            >
+                <ScanSvg fill={themeColor('text')} width={30} height={30} />
+            </TouchableOpacity>
+        );
+
         return (
             <Screen>
                 <Header
@@ -512,7 +523,9 @@ export default class ReceiveEcash extends React.Component<
                         text:
                             posStatus === 'active'
                                 ? localeString('general.pay')
-                                : localeString('views.ReceiveEcash.title'),
+                                : localeString(
+                                      'views.Cashu.ReceiveEcash.title'
+                                  ),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -524,7 +537,9 @@ export default class ReceiveEcash extends React.Component<
                         posStatus === 'active' ||
                         hideRightHeaderComponent ? undefined : haveInvoice ? (
                             <ClearButton />
-                        ) : undefined
+                        ) : (
+                            <ScanButton />
+                        )
                     }
                     navigation={navigation}
                 />
@@ -930,6 +945,29 @@ export default class ReceiveEcash extends React.Component<
                                                 disabled={satAmount == 0}
                                             />
                                         </View>
+
+                                        <View style={styles.button}>
+                                            <Button
+                                                title={localeString(
+                                                    'views.Cashu.ReceiveEcash.readTokenFromClipboard'
+                                                )}
+                                                onPress={async () => {
+                                                    const clipboard =
+                                                        await Clipboard.getString();
+                                                    const response =
+                                                        await handleAnything(
+                                                            clipboard
+                                                        );
+                                                    const [route, props] =
+                                                        response;
+                                                    navigation.navigate(
+                                                        route,
+                                                        props
+                                                    );
+                                                }}
+                                                secondary
+                                            />
+                                        </View>
                                     </>
                                 )}
                             </View>
@@ -971,8 +1009,7 @@ const styles = StyleSheet.create({
         paddingRight: 20
     },
     button: {
-        paddingTop: 25,
-        paddingBottom: 15
+        paddingTop: 20
     },
     text: {
         fontFamily: 'PPNeueMontreal-Book'
