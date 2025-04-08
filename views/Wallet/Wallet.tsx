@@ -418,6 +418,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                 if (!recovery) await stopLnd();
 
+                if (settings?.ecash?.enableCashu)
+                    await CashuStore.initializeWallets();
+
                 console.log('lndDir', lndDir);
                 await initializeLnd({
                     lndDir: lndDir || 'lnd',
@@ -448,9 +451,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     isTorEnabled: embeddedTor,
                     isTestnet: embeddedLndNetwork === 'Testnet'
                 });
-
-                if (settings?.ecash?.enableCashu)
-                    await CashuStore.initializeWallets();
             }
             if (implementation === 'embedded-lnd')
                 SyncStore.checkRecoveryStatus();
@@ -1003,9 +1003,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             padding: 8
                                         }}
                                     >
-                                        {settings.nodes &&
-                                        loggedIn &&
-                                        implementation
+                                        {CashuStore.initializing
+                                            ? CashuStore.loadingMsg
+                                            : settings.nodes &&
+                                              loggedIn &&
+                                              implementation
                                             ? implementation === 'embedded-lnd'
                                                 ? isInExpressGraphSync
                                                     ? localeString(
@@ -1058,38 +1060,40 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     />
                                 </View>
                             )}
-                            <View
-                                style={{
-                                    bottom: 15,
-                                    position: 'absolute',
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                <Button
-                                    title={
-                                        settings.nodes
-                                            ? localeString(
-                                                  'views.Settings.title'
-                                              )
-                                            : null
-                                    }
-                                    containerStyle={{
-                                        width: 320
+                            {!CashuStore.initializing && (
+                                <View
+                                    style={{
+                                        bottom: 15,
+                                        position: 'absolute',
+                                        alignSelf: 'center'
                                     }}
-                                    titleStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    onPress={() => {
-                                        if (settings.nodes)
-                                            protectedNavigation(
-                                                navigation,
-                                                'Menu'
-                                            );
-                                    }}
-                                    adaptiveWidth
-                                    iconOnly
-                                />
-                            </View>
+                                >
+                                    <Button
+                                        title={
+                                            settings.nodes
+                                                ? localeString(
+                                                      'views.Settings.title'
+                                                  )
+                                                : null
+                                        }
+                                        containerStyle={{
+                                            width: 320
+                                        }}
+                                        titleStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        onPress={() => {
+                                            if (settings.nodes)
+                                                protectedNavigation(
+                                                    navigation,
+                                                    'Menu'
+                                                );
+                                        }}
+                                        adaptiveWidth
+                                        iconOnly
+                                    />
+                                </View>
+                            )}
                         </Screen>
                     )}
             </View>
