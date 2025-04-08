@@ -995,7 +995,6 @@
     "views.ActivityFilter.isFailed": "Failed payments",
     "views.ActivityFilter.standardInvoices": "Standard invoices",
     "views.ActivityFilter.ampInvoices": "AMP invoices",
-    "views.ActivityFilter.keysend": "Keysend",
     "views.ActivityToCsv.title": "Download Activity",
     "views.ActivityToCsv.csvDownloaded": "CSV file has been downloaded",
     "views.ActivityToCsv.textInputPlaceholder": "File name (optional)",

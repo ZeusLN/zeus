@@ -1024,7 +1024,6 @@
     "views.ActivityFilter.isFailed": "विफल भुगतान",
     "views.ActivityFilter.standardInvoices": "मानक इनवॉइस",
     "views.ActivityFilter.ampInvoices": "AMP इनवॉइस",
-    "views.ActivityFilter.keysend": "कीसेंड",
     "views.ActivityToCsv.title": "गतिविधि डाउनलोड करें",
     "views.ActivityToCsv.csvDownloaded": "CSV फ़ाइल डाउनलोड हो गई है",
     "views.ActivityToCsv.csvDownloadFailed": "CSV फ़ाइल डाउनलोड करने में विफल",

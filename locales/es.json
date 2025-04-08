@@ -1024,7 +1024,6 @@
     "views.ActivityFilter.isFailed": "Pagos fallidos",
     "views.ActivityFilter.standardInvoices": "Facturas estándar",
     "views.ActivityFilter.ampInvoices": "Facturas AMP",
-    "views.ActivityFilter.keysend": "Envío de claves",
     "views.ActivityToCsv.title": "Descargar Actividad",
     "views.ActivityToCsv.csvDownloaded": "Se ha descargado el archivo CSV",
     "views.ActivityToCsv.csvDownloadFailed": "No se pudo descargar el archivo CSV",

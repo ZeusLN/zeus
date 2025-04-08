@@ -1024,7 +1024,6 @@
     "views.ActivityFilter.isFailed": "실패한 결제",
     "views.ActivityFilter.standardInvoices": "표준 인보이스",
     "views.ActivityFilter.ampInvoices": "AMP 인보이스",
-    "views.ActivityFilter.keysend": "키센드",
     "views.ActivityToCsv.title": "활동 다운로드",
     "views.ActivityToCsv.csvDownloaded": "CSV 파일 다운로드 완료",
     "views.ActivityToCsv.csvDownloadFailed": "CSV 파일 다운로드 실패",
