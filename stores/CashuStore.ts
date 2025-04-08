@@ -77,6 +77,7 @@ export default class CashuStore {
     @observable public quoteId?: string;
 
     @observable public loading = false;
+    @observable public initializing = false;
     @observable public creatingInvoice = false;
     @observable public creatingInvoiceError = false;
     @observable public mintingToken = false;
@@ -460,34 +461,107 @@ export default class CashuStore {
     };
 
     @action
+    public initializeWallets = async () => {
+        runInAction(() => {
+            this.initializing = true;
+            this.loadingMsg = localeString(
+                'stores.CashuStore.initializingWallet'
+            );
+        });
+        const lndDir = this.getLndDir();
+
+        const [
+            storedMintUrls,
+            storedselectedMintUrl,
+            storedTotalBalanceSats,
+            storedInvoices,
+            storedPayments,
+            storedReceivedTokens,
+            storedSentTokens
+        ] = await Promise.all([
+            Storage.getItem(`${lndDir}-cashu-mintUrls`),
+            Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
+            Storage.getItem(`${lndDir}-cashu-totalBalanceSats`),
+            Storage.getItem(`${lndDir}-cashu-invoices`),
+            Storage.getItem(`${lndDir}-cashu-payments`),
+            Storage.getItem(`${lndDir}-cashu-received-tokens`),
+            Storage.getItem(`${lndDir}-cashu-sent-tokens`)
+        ]);
+
+        this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
+        this.selectedMintUrl = storedselectedMintUrl || '';
+        this.totalBalanceSats = storedTotalBalanceSats
+            ? JSON.parse(storedTotalBalanceSats)
+            : 0;
+        this.invoices = storedInvoices
+            ? JSON.parse(storedInvoices).map(
+                  (invoice: any) => new CashuInvoice(invoice)
+              )
+            : [];
+        this.payments = storedPayments
+            ? JSON.parse(storedPayments).map(
+                  (payment: any) => new CashuPayment(payment)
+              )
+            : [];
+        this.receivedTokens = storedReceivedTokens
+            ? JSON.parse(storedReceivedTokens).map(
+                  (token: any) => new CashuToken(token)
+              )
+            : [];
+        this.sentTokens = storedSentTokens
+            ? JSON.parse(storedSentTokens).map(
+                  (token: any) => new CashuToken(token)
+              )
+            : [];
+
+        // Non-blocking parallel wallet initialization
+        await Promise.all(
+            this.mintUrls.map((mintUrl) => this.initializeWallet(mintUrl))
+        );
+
+        runInAction(() => {
+            this.loadingMsg = undefined;
+            this.initializing = false;
+        });
+    };
+
+    @action
     public initializeWallet = async (
         mintUrl: string,
         startWallet?: boolean
     ): Promise<Wallet> => {
         runInAction(() => {
             this.loading = true;
+            this.loadingMsg = `${localeString(
+                'stores.CashuStore.startingWallet'
+            )}: ${mintUrl}`;
         });
 
         console.log('initializing wallet for URL', mintUrl);
 
         const walletId = `${this.getLndDir()}==${mintUrl}`;
 
-        const storedMintInfo = await Storage.getItem(`${walletId}-mintInfo`);
+        const [
+            storedMintInfo,
+            storedCounter,
+            storedProofs,
+            storedBalanceSats,
+            storedPubkey
+        ] = await Promise.all([
+            Storage.getItem(`${walletId}-mintInfo`),
+            Storage.getItem(`${walletId}-counter`),
+            Storage.getItem(`${walletId}-proofs`),
+            Storage.getItem(`${walletId}-balance`),
+            Storage.getItem(`${walletId}-pubkey`)
+        ]);
+
         const mintInfo = storedMintInfo ? JSON.parse(storedMintInfo) : [];
-
-        const storedCounter = await Storage.getItem(`${walletId}-counter`);
         const counter = storedCounter ? JSON.parse(storedCounter) : 0;
-
-        const storedProofs = await Storage.getItem(`${walletId}-proofs`);
         const proofs = storedProofs ? JSON.parse(storedProofs) : [];
-
-        const storedBalanceSats = await Storage.getItem(`${walletId}-balance`);
         const balanceSats = storedBalanceSats
             ? JSON.parse(storedBalanceSats)
             : 0;
-
-        const storedPubkey = await Storage.getItem(`${walletId}-pubkey`);
-        const pubkey: string = storedPubkey ? storedPubkey : '';
+        const pubkey: string = storedPubkey || '';
 
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
@@ -499,9 +573,6 @@ export default class CashuStore {
                 balanceSats,
                 errorConnecting: false
             };
-            this.loadingMsg = `${localeString(
-                'stores.CashuStore.startingWallet'
-            )}: ${mintUrl}`;
         });
 
         if (startWallet) {
@@ -510,6 +581,7 @@ export default class CashuStore {
                     'stores.CashuStore.startingWallet'
                 )}: ${mintUrl}`;
             });
+
             try {
                 const {
                     wallet,
@@ -520,6 +592,7 @@ export default class CashuStore {
                     pubkey: string;
                     mintInfo: GetInfoResponse;
                 } = await this.startWallet(mintUrl);
+
                 runInAction(() => {
                     this.cashuWallets[mintUrl].wallet = wallet;
                     this.cashuWallets[mintUrl].pubkey = pubkey;
@@ -541,77 +614,6 @@ export default class CashuStore {
         });
 
         return this.cashuWallets[mintUrl];
-    };
-
-    @action
-    public initializeWallets = async () => {
-        const lndDir = this.getLndDir();
-
-        const storedMintUrls = await Storage.getItem(
-            `${lndDir}-cashu-mintUrls`
-        );
-        this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
-
-        const storedselectedMintUrl = await Storage.getItem(
-            `${lndDir}-cashu-selectedMintUrl`
-        );
-        this.selectedMintUrl = storedselectedMintUrl
-            ? storedselectedMintUrl
-            : '';
-
-        const storedTotalBalanceSats = await Storage.getItem(
-            `${lndDir}-cashu-totalBalanceSats`
-        );
-        this.totalBalanceSats = storedTotalBalanceSats
-            ? JSON.parse(storedTotalBalanceSats)
-            : 0;
-
-        const storedInvoices = await Storage.getItem(
-            `${lndDir}-cashu-invoices`
-        );
-        this.invoices = storedInvoices
-            ? JSON.parse(storedInvoices).map(
-                  (invoice: any) => new CashuInvoice(invoice)
-              )
-            : [];
-        const storedPayments = await Storage.getItem(
-            `${lndDir}-cashu-payments`
-        );
-        this.payments = storedPayments
-            ? JSON.parse(storedPayments).map(
-                  (payment: any) => new CashuPayment(payment)
-              )
-            : [];
-
-        const storedReceivedTokens = await Storage.getItem(
-            `${lndDir}-cashu-received-tokens`
-        );
-        this.receivedTokens = storedReceivedTokens
-            ? JSON.parse(storedReceivedTokens).map(
-                  (token: any) => new CashuToken(token)
-              )
-            : [];
-
-        const storedSentTokens = await Storage.getItem(
-            `${lndDir}-cashu-sent-tokens`
-        );
-        this.sentTokens = storedSentTokens
-            ? JSON.parse(storedSentTokens).map(
-                  (token: any) => new CashuToken(token)
-              )
-            : [];
-
-        for (let i = 0; i < this.mintUrls.length; i++) {
-            const mintUrl = this.mintUrls[i];
-            await new Promise(async (resolve) => {
-                const wallet = await this.initializeWallet(mintUrl);
-                resolve(wallet);
-            });
-        }
-
-        runInAction(() => {
-            this.loadingMsg = undefined;
-        });
     };
 
     @action

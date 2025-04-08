@@ -1470,6 +1470,7 @@
     "views.Cashu.LightningAddressInfo.explainer2": "It leverages NUT-20 to lock all incoming payments to your Cashu wallet's pubkey. There is no time period in which you must redeem the funds; they are available for you to pull into your Cashu wallet indefinitely.",
     "views.LightningAddress.NWC.explainer1": "This is a self-custodial Lightning address that connects to a remote node using Nostr Wallet Connect (NWC).",
     "views.LightningAddress.NWC.explainer2": "Invoices are created directly on your node. There is no need to redeem the funds; they are available on your remote node immediately.",
+    "stores.CashuStore.initializingWallet": "Initializing ecash wallet",
     "stores.CashuStore.startingWallet": "Starting ecash wallet",
     "stores.CashuStore.alreadyPaid": "Invoice has already been paid.",
     "stores.CashuStore.alreadySpent": "Token has already been spent.",
