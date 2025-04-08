@@ -1024,6 +1024,7 @@
     "views.ActivityFilter.isFailed": "Epäonnistuneet maksut",
     "views.ActivityFilter.standardInvoices": "Normaalit laskut",
     "views.ActivityFilter.ampInvoices": "AMP-laskut",
+    "views.ActivityFilter.keysend": "Keysend",
     "views.ActivityToCsv.title": "Lataa Aktiviteetti",
     "views.ActivityToCsv.csvDownloaded": "CSV-tiedosto on ladattu",
     "views.ActivityToCsv.csvDownloadFailed": "CSV-tiedoston lataaminen epäonnistui",

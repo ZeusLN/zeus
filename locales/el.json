@@ -1024,6 +1024,7 @@
     "views.ActivityFilter.isFailed": "Αποτυχημένες πληρωμές",
     "views.ActivityFilter.standardInvoices": "Τυποποιημένα τιμολόγια",
     "views.ActivityFilter.ampInvoices": "Τιμολόγια AMP",
+    "views.ActivityFilter.keysend": "ΑποστολήΚλειδιού",
     "views.ActivityToCsv.title": "Download Activity",
     "views.ActivityToCsv.csvDownloaded": "CSV file has been downloaded",
     "views.ActivityToCsv.csvDownloadFailed": "Failed to download CSV file",

@@ -1024,6 +1024,7 @@
     "views.ActivityFilter.isFailed": "Neúspěšné platby",
     "views.ActivityFilter.standardInvoices": "Standardní faktury",
     "views.ActivityFilter.ampInvoices": "AMP faktury",
+    "views.ActivityFilter.keysend": "Keysend",
     "views.ActivityToCsv.title": "Stáhnout aktivitu",
     "views.ActivityToCsv.csvDownloaded": "Soubor CSV byl stažen",
     "views.ActivityToCsv.csvDownloadFailed": "Stažení souboru CSV se nezdařilo",

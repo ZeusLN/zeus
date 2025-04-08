@@ -1024,6 +1024,7 @@
     "views.ActivityFilter.isFailed": "Plăți eșuate",
     "views.ActivityFilter.standardInvoices": "Facturi standard",
     "views.ActivityFilter.ampInvoices": "Facturi AMP",
+    "views.ActivityFilter.keysend": "Keysend",
     "views.ActivityToCsv.title": "Descărcare activitate",
     "views.ActivityToCsv.csvDownloaded": "Fișierul CSV a fost descărcat",
     "views.ActivityToCsv.csvDownloadFailed": "Nu s-a putut descărca fișierul CSV",

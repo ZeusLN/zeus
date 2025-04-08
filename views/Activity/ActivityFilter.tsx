@@ -91,7 +91,8 @@ export default class ActivityFilter extends React.Component<
             maximumAmount,
             startDate,
             endDate,
-            memo
+            memo,
+            keysend
         } = filters;
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
@@ -240,6 +241,13 @@ export default class ActivityFilter extends React.Component<
                 var: 'zeusPay',
                 type: 'Toggle',
                 condition: SettingsStore.settings.lightningAddress.enabled
+            },
+            {
+                label: localeString('views.ActivityFilter.keysend'),
+                value: keysend,
+                var: 'keysend',
+                type: 'Toggle',
+                condition: BackendUtils.supportsKeysend()
             },
             {
                 label: localeString('general.unconfirmed'),
