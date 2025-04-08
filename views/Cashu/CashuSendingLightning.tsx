@@ -149,14 +149,14 @@ export default class CashuSendingLightning extends React.Component<
                                 paddingTop: windowSize.height * 0.05
                             }}
                         >
-                            {!!success && !paymentError && (
+                            {!paymentError && (
                                 <Wordmark
                                     height={windowSize.width * 0.25}
                                     width={windowSize.width}
                                     fill={themeColor('highlight')}
                                 />
                             )}
-                            {!!success && !paymentError && (
+                            {!paymentError && (
                                 <>
                                     <PaidIndicator />
                                     <View style={{ alignItems: 'center' }}>
@@ -257,8 +257,7 @@ export default class CashuSendingLightning extends React.Component<
                                         )}
                                     </View>
                                 )}
-                            {!!success &&
-                                !paymentError &&
+                            {!paymentError &&
                                 !!paymentPreimage &&
                                 payment_hash === LnurlPayStore.paymentHash &&
                                 LnurlPayStore.successAction && (
@@ -375,28 +374,24 @@ export default class CashuSendingLightning extends React.Component<
                                 />
                             )}
 
-                            {(!!paymentError ||
-                                !!paymentErrorMsg ||
-                                !!success) && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingLightning.goToWallet'
-                                    )}
-                                    icon={{
-                                        name: 'list',
-                                        size: 25,
-                                        color: themeColor('background')
-                                    }}
-                                    onPress={() => {
-                                        navigation.popTo('Wallet');
-                                    }}
-                                    buttonStyle={{ height: 40 }}
-                                    titleStyle={{
-                                        color: themeColor('background')
-                                    }}
-                                    containerStyle={{ width: '100%' }}
-                                />
-                            )}
+                            <Button
+                                title={localeString(
+                                    'views.SendingLightning.goToWallet'
+                                )}
+                                icon={{
+                                    name: 'list',
+                                    size: 25,
+                                    color: themeColor('background')
+                                }}
+                                onPress={() => {
+                                    navigation.popTo('Wallet');
+                                }}
+                                buttonStyle={{ height: 40 }}
+                                titleStyle={{
+                                    color: themeColor('background')
+                                }}
+                                containerStyle={{ width: '100%' }}
+                            />
                         </View>
                     </>
                 )}
