@@ -707,6 +707,7 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid(
                                     Number(invoice.amt_paid_sat)
                                 );
+                                SettingsStore.triggerBalanceUpdate = true;
 
                                 PosStore.recordPayment({
                                     orderId,
@@ -766,6 +767,8 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid(
                                     Number(transaction.amount)
                                 );
+                                SettingsStore.triggerBalanceUpdate = true;
+
                                 if (orderId)
                                     PosStore.recordPayment({
                                         orderId,
@@ -816,6 +819,8 @@ export default class Receive extends React.Component<
                                 }
                                 if (result.settled) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
+                                    SettingsStore.triggerBalanceUpdate = true;
+
                                     if (orderId)
                                         PosStore.recordPayment({
                                             orderId,
@@ -869,6 +874,8 @@ export default class Receive extends React.Component<
                                     Number(result.amount) >= Number(value)
                                 ) {
                                     setWatchedInvoicePaid(result.amount);
+                                    SettingsStore.triggerBalanceUpdate = true;
+
                                     if (orderId)
                                         PosStore.recordPayment({
                                             orderId,
@@ -909,6 +916,8 @@ export default class Receive extends React.Component<
                                     Number(result.amt_paid_sat) !== 0
                                 ) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
+                                    SettingsStore.triggerBalanceUpdate = true;
+
                                     if (orderId)
                                         PosStore.recordPayment({
                                             orderId,
@@ -962,6 +971,9 @@ export default class Receive extends React.Component<
                                         output.address === onChainAddress
                                     ) {
                                         setWatchedInvoicePaid(output.amount);
+                                        SettingsStore.triggerBalanceUpdate =
+                                            true;
+
                                         if (orderId)
                                             PosStore.recordPayment({
                                                 orderId,
