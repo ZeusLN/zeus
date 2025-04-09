@@ -20,6 +20,7 @@ import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
 
+import BalanceStore from '../stores/BalanceStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -37,6 +38,7 @@ import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
+    BalanceStore: BalanceStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
@@ -49,7 +51,13 @@ interface SendingLightningState {
     currentPayment: any;
 }
 
-@inject('LnurlPayStore', 'PaymentsStore', 'SettingsStore', 'TransactionsStore')
+@inject(
+    'BalanceStore',
+    'LnurlPayStore',
+    'PaymentsStore',
+    'SettingsStore',
+    'TransactionsStore'
+)
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
@@ -90,12 +98,13 @@ export default class SendingLightning extends React.Component<
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
-        const { TransactionsStore } = this.props;
+        const { TransactionsStore, BalanceStore } = this.props;
         const wasSuccessful = this.successfullySent(TransactionsStore);
 
         if (wasSuccessful && !this.state.wasSuccessful) {
             this.fetchPayments();
             this.setState({ wasSuccessful: true }); // Update success state
+            BalanceStore.getCombinedBalance();
         } else if (!wasSuccessful && this.state.wasSuccessful) {
             this.setState({ wasSuccessful: false }); // Reset success state if needed
         }
