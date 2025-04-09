@@ -236,21 +236,21 @@ export default class KeypadPane extends React.PureComponent<
         switch (amount.length + getDecimalPlaceholder(amount, units).count) {
             case 1:
             case 2:
-                return needInbound ? 70 : 80;
             case 3:
             case 4:
-                return needInbound ? 55 : 65;
+                return needInbound ? 70 : 80;
             case 5:
+                return needInbound ? 65 : 75;
             case 6:
-                return needInbound ? 45 : 55;
+                return needInbound ? 60 : 65;
             case 7:
-                return needInbound ? 40 : 50;
+                return needInbound ? 55 : 60;
             case 8:
-                return needInbound ? 35 : 45;
+                return needInbound ? 50 : 55;
             case 9:
-                return needInbound ? 25 : 35;
+                return needInbound ? 45 : 50;
             default:
-                return needInbound ? 20 : 30;
+                return needInbound ? 40 : 45;
         }
     };
 
@@ -370,78 +370,94 @@ export default class KeypadPane extends React.PureComponent<
                         </TouchableOpacity>
                     )}
 
-                    <Animated.View
+                    <View
                         style={{
                             flex: 1,
-                            flexDirection: 'column',
-                            alignSelf: 'center',
-                            justifyContent: 'center',
-                            zIndex: 10,
-                            transform: [{ translateX: this.shakeAnimation }],
-                            bottom: 15
+                            alignItems: 'center'
                         }}
                     >
-                        <Animated.Text
+                        <Animated.View
                             style={{
-                                color:
-                                    amount === '0'
-                                        ? themeColor('secondaryText')
-                                        : color,
-                                fontSize: this.amountSize(),
-                                textAlign: 'center',
-                                fontFamily: 'PPNeueMontreal-Medium',
-                                height: 95
+                                flex: 1,
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                zIndex: 10,
+                                transform: [
+                                    { translateX: this.shakeAnimation }
+                                ],
+                                height: 50
                             }}
                         >
-                            {units === 'BTC'
-                                ? formatBitcoinWithSpaces(amount)
-                                : numberWithCommas(amount)}
-                            <Text
-                                style={{ color: themeColor('secondaryText') }}
+                            <Animated.Text
+                                style={{
+                                    color:
+                                        amount === '0'
+                                            ? themeColor('secondaryText')
+                                            : color,
+                                    fontSize: this.amountSize(),
+                                    textAlign: 'center',
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    lineHeight: 80
+                                }}
                             >
-                                {getDecimalPlaceholder(amount, units).string}
-                            </Text>
-                        </Animated.Text>
+                                {units === 'BTC'
+                                    ? formatBitcoinWithSpaces(amount)
+                                    : numberWithCommas(amount)}
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {
+                                        getDecimalPlaceholder(amount, units)
+                                            .string
+                                    }
+                                </Text>
+                            </Animated.Text>
 
-                        <Row
-                            style={{
-                                alignSelf: 'center',
-                                padding: 10,
-                                width: '85%'
-                            }}
-                        >
-                            {BackendUtils.supportsCashuWallet() &&
-                                settings?.ecash?.enableCashu && (
-                                    <>
-                                        <EcashToggle
-                                            ecashMode={ecashMode}
-                                            onToggle={() => {
-                                                this.setState({
-                                                    ecashMode: !ecashMode
-                                                });
-                                            }}
-                                        />
-                                        <Spacer width={10} />
-                                        {ecashMode && (
-                                            <>
-                                                <EcashMintPicker
-                                                    hideAmount
-                                                    navigation={navigation}
-                                                />
-                                                <Spacer width={10} />
-                                            </>
-                                        )}
-                                    </>
-                                )}
-                            <UnitToggle onToggle={this.clearValue} />
-                        </Row>
-
-                        {amount !== '0' && (
-                            <View style={{ top: 10, alignItems: 'center' }}>
+                            <View
+                                style={{
+                                    marginBottom: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
                                 <Conversion amount={amount} />
                             </View>
-                        )}
-                    </Animated.View>
+
+                            <Row
+                                style={{
+                                    alignSelf: 'center',
+                                    padding: 10,
+                                    width: '85%'
+                                }}
+                            >
+                                {BackendUtils.supportsCashuWallet() &&
+                                    settings?.ecash?.enableCashu && (
+                                        <>
+                                            <EcashToggle
+                                                ecashMode={ecashMode}
+                                                onToggle={() => {
+                                                    this.setState({
+                                                        ecashMode: !ecashMode
+                                                    });
+                                                }}
+                                            />
+                                            <Spacer width={10} />
+                                            {ecashMode && (
+                                                <>
+                                                    <EcashMintPicker
+                                                        hideAmount
+                                                        navigation={navigation}
+                                                    />
+                                                    <Spacer width={10} />
+                                                </>
+                                            )}
+                                        </>
+                                    )}
+                                <UnitToggle onToggle={this.clearValue} />
+                            </Row>
+                        </Animated.View>
+                    </View>
 
                     <View>
                         <View style={{ marginTop: 30, bottom: '10%' }}>
