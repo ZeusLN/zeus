@@ -9,10 +9,12 @@ ZEUS is built on TypeScript and React Native. It runs on both Android and iOS.
 
 Read more on our [documentation site](https://docs.zeusln.app/).
 
+
 ### App Store links
 * [Google Play](https://play.google.com/store/apps/details?id=app.zeusln.zeus)
 * [Apple App Store](https://apps.apple.com/us/app/zeus-ln/id1456038895)
 * [F-Droid](https://zeusln.com/download)
+
 
 ### Get in touch with us
 * Come chat with us on
@@ -25,6 +27,7 @@ and
 [Nostr](https://iris.to/npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5)
 * Open a channel with
 [our node](https://amboss.space/node/031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581)
+
 
 ## Features
 
@@ -70,12 +73,14 @@ and
 - [x] [Lightning Node Connect](https://docs.lightning.engineering/lightning-network-tools/lightning-terminal/lightning-node-connect)
 - [x] [Self-custodial lightning address (ZEUS Pay)](https://docs.zeusln.app/lightning-address/intro)
 
+
 ## Connecting ZEUS to your node
 
 You can connect ZEUS to a remote Bitcoin Lightning node running [Lightning Network Daemon (lnd)](https://github.com/LightningNetwork/lnd) or [Core Lightning](https://github.com/ElementsProject/lightning).
 
 You must provide ZEUS with your node's hostname, port number, and the macaroon you choose to use in **hex format**. If you need help converting your macaroon to hex format we wrote up a Node.js script that can use
 [here](https://github.com/ZeusLN/lnd-hex-macaroon-generator/). Alternatively, if you're running a Unix-based operating system (eg. macOS, Linux) you can run `xxd -ps -u -c 1000 /path/to/admin.macaroon` to generate your macaroon in hex format.
+
 
 ### Tor Connection Guides
 
@@ -86,6 +91,7 @@ ZEUS has support for connecting to you node entirely over the Tor network. You c
 * [ZEUS over Tor guide for FreeNAS by Seth586](https://github.com/seth586/guides/blob/master/FreeNAS/wallets/zeusln.md)
 * [ZEUS over Tor guide for RaspiBlitz by openoms](https://github.com/openoms/bitcoin-tutorials/blob/master/Zeus_to_RaspiBlitz_through_Tor.md)
 * [Tor-Only Bitcoin & Lightning Guide by Lopp](https://blog.lopp.net/tor-only-bitcoin-lightning-guide/)
+
 
 ## Integrations
 
@@ -109,6 +115,7 @@ ZEUS is proud to be integrated on the following platforms:
 ### Prerequisites
 - Node.js (minimum version: 18.18)
 
+
 ### Android
 1. install and setup react-native and its related dependencies under **"Building Projects with Native Code"** on
 [react-native's Getting Started page](https://reactnative.dev/docs/environment-setup)
@@ -126,6 +133,7 @@ ZEUS is proud to be integrated on the following platforms:
 3. `cd ios && pod install`
 4. open `ios/zeus.xcworkspace` in Xcode and hit Run.
 
+
 ## Contributing
 
 Please be sure to run `yarn run tsc` to check for type errors, `yarn run test` to run all tests, and `yarn run prettier` to run the prettier
@@ -136,13 +144,16 @@ If you're looking for a quick way to get a lightning development environment run
 
 NOTE: When configuring a new node on Android in dev, the `Host` field must be `10.0.2.2` - `127.0.0.1` or `localhost` won't work.
 
+
 ## Reproducible builds
 
 Read our docs on reproducible builds [here](https://github.com/ZeusLN/zeus/blob/master/docs/ReproducibleBuilds.md).
 
+
 ## Translations
 
 Do not directly modify the files in `/locales` unless you are adding new copy to the app in English. Instead, translators and reviewers should visit out [Transifex page](https://app.transifex.com/ZeusLN/zeus/) and request a role on the language you'd like to contribute to.
+
 
 ## Release + Commit Verification
 
@@ -152,12 +163,15 @@ All releases and all maintainer commits as of October 20, 2021 are signed by key
 ### Past Keys
 `989CC718EBA8BB68` (January 24, 2020 - October 19, 2021)
 
+
 ## Donations
 
 If you'd like to help us with the cost of running Zeus project (iOS developer account, Google Play developer account, hosting) you can send a payment to us via our [BTCPayServer portal](https://pay.zeusln.app/), via Lightning Address (tips@pay.zeusln.app), or via PayNym ([+holymorning7d1](http://my.paynym.is/+holymorning7d1)). You can also become a [community sponsor](https://zeusln.com/about#communitySponsors) and have your Twitter or Nostr avatar displayed on our website and in-app.
 
 Thank you.
 
+
 ## License
 
-Distributed under the GNU Affero General Public License (AGPL v3). See [LICENSE file](LICENSE).
+Distributed under the GNU Affero General Public License (AGPL v3). 
+See [LICENSE file](LICENSE).
