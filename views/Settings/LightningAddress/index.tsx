@@ -23,7 +23,6 @@ import Text from '../../../components/Text';
 import Header from '../../../components/Header';
 import LightningLoadingPattern from '../../../components/LightningLoadingPattern';
 import LoadingIndicator from '../../../components/LoadingIndicator';
-import TextInput from '../../../components/TextInput';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 import { Row } from '../../../components/layout/Row';
 import { Spacer } from '../../../components/layout/Spacer';
@@ -59,7 +58,6 @@ interface LightningAddressProps {
 }
 
 interface LightningAddressState {
-    newLightningAddress: string;
     nostrPrivateKey: string;
     nostrPublicKey: string;
     nostrNpub: string;
@@ -82,7 +80,6 @@ export default class LightningAddress extends React.Component<
     isInitialFocus = true;
 
     state = {
-        newLightningAddress: '',
         nostrPrivateKey: '',
         nostrPublicKey: '',
         nostrNpub: '',
@@ -110,10 +107,6 @@ export default class LightningAddress extends React.Component<
         const skipStatus = route.params?.skipStatus;
 
         this.generateNostrKeys();
-
-        this.setState({
-            newLightningAddress: ''
-        });
 
         if (!skipStatus) status();
 
@@ -168,7 +161,6 @@ export default class LightningAddress extends React.Component<
             UnitsStore
         } = this.props;
         const {
-            newLightningAddress,
             nostrPrivateKey,
             nostrPublicKey,
             nostrNpub,
@@ -407,57 +399,6 @@ export default class LightningAddress extends React.Component<
                             hasZeusLspChannel && (
                                 <>
                                     <View style={{ flex: 1 }}>
-                                        <View style={styles.wrapper}>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.Settings.LightningAddress.chooseHandle'
-                                                )}
-                                            </Text>
-                                            <View
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'row'
-                                                }}
-                                            >
-                                                <TextInput
-                                                    value={newLightningAddress}
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) => {
-                                                        this.setState({
-                                                            newLightningAddress:
-                                                                text
-                                                        });
-                                                    }}
-                                                    autoCapitalize="none"
-                                                    autoCorrect={false}
-                                                    style={{
-                                                        flex: 1,
-                                                        flexDirection: 'row'
-                                                    }}
-                                                />
-                                                <Row>
-                                                    <Text
-                                                        style={{
-                                                            ...styles.text,
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontSize: 20,
-                                                            marginLeft: 5
-                                                        }}
-                                                    >
-                                                        @zeuspay.com
-                                                    </Text>
-                                                </Row>
-                                            </View>
-                                        </View>
-
                                         <>
                                             <View style={styles.wrapper}>
                                                 <Text
@@ -571,7 +512,6 @@ export default class LightningAddress extends React.Component<
                                             )}
                                             onPress={() =>
                                                 create(
-                                                    newLightningAddress,
                                                     nostrPublicKey,
                                                     nostrPrivateKey,
                                                     nostrRelays

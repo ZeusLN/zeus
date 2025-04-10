@@ -224,7 +224,6 @@ export default class LightningAddressStore {
 
     @action
     public create = async (
-        handle: string,
         nostr_pk: string,
         nostrPrivateKey: string,
         relays: Array<string>
@@ -268,7 +267,6 @@ export default class LightningAddressStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
                     message: verification,
                     signature,
-                    handle,
                     domain: 'zeuspay.com',
                     nostr_pk,
                     relays,
