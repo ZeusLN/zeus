@@ -425,7 +425,10 @@ export default class WalletConfiguration extends React.Component<
         }
     }
 
-    saveWalletConfiguration = (recoveryCipherSeed?: string) => {
+    saveWalletConfiguration = (
+        recoveryCipherSeed?: string,
+        newEmbeddedLndWallet?: boolean
+    ) => {
         const { SettingsStore, navigation } = this.props;
         const {
             nickname,
@@ -502,7 +505,19 @@ export default class WalletConfiguration extends React.Component<
             nodes = [node];
         }
 
-        updateSettings({ nodes }).then(async () => {
+        let update;
+        if (newEmbeddedLndWallet) {
+            update = {
+                nodes,
+                selectedNode: nodes.length - 1
+            };
+        } else {
+            update = {
+                nodes
+            };
+        }
+
+        updateSettings(update).then(async () => {
             if (recoveryCipherSeed) {
                 await updateSettings({
                     recovery: true
@@ -537,7 +552,11 @@ export default class WalletConfiguration extends React.Component<
                 setConnectingStatus(true);
                 navigation.popTo('Wallet');
             } else {
-                navigation.goBack();
+                if (newEmbeddedLndWallet) {
+                    navigation.popTo('Wallet');
+                } else {
+                    navigation.goBack();
+                }
             }
         });
     };
@@ -715,7 +734,7 @@ export default class WalletConfiguration extends React.Component<
                 creatingWallet: false
             });
 
-            this.saveWalletConfiguration(recoveryCipherSeed);
+            this.saveWalletConfiguration(recoveryCipherSeed, true);
         } else {
             this.setState({
                 creatingWallet: false,
