@@ -98,8 +98,9 @@ export default class CurrencyConverter extends React.Component<
         const prevSelectedCurrency = prevProps.route.params?.selectedCurrency;
 
         // Check if the selected currency prop has changed
-        if (selectedCurrency !== prevSelectedCurrency) {
+        if (selectedCurrency && selectedCurrency !== prevSelectedCurrency) {
             this.handleCurrencySelect(selectedCurrency);
+            this.props.navigation.setParams({ selectedCurrency: null });
         }
     }
 
