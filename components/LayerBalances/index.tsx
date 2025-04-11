@@ -10,6 +10,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { RectButton } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
+import BigNumber from 'bignumber.js';
 
 import { inject, observer } from 'mobx-react';
 import Amount from '../Amount';
@@ -31,7 +32,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { blendHexColors, themeColor } from '../../utils/ThemeUtils';
 
 import EyeClosed from '../../assets/images/SVG/eye_closed.svg';
 import EyeOpened from '../../assets/images/SVG/eye_opened.svg';
@@ -74,14 +75,33 @@ type DataRow = {
     hidden?: boolean;
 };
 
+const getEcashRowColors = () => {
+    const balanceSats = new BigNumber(stores.cashuStore.totalBalanceSats);
+    const ratio = balanceSats.div(100_000).toNumber();
+    const blend = blendHexColors(
+        themeColor('buttonBackground'),
+        themeColor('warning'),
+        ratio
+    );
+
+    if (balanceSats.gte(10_000)) {
+        return [blend, themeColor('error')];
+    } else {
+        return false;
+    }
+};
+
 const Row = ({ item }: { item: DataRow }) => {
     const moreAccounts =
         item.layer === localeString('components.LayerBalances.moreAccounts');
+    const ecashRowColors = getEcashRowColors();
     return (
         <RectButton>
             <LinearGradient
                 colors={
-                    themeColor('buttonGradient')
+                    item.layer === 'Ecash' && ecashRowColors
+                        ? ecashRowColors
+                        : themeColor('buttonGradient')
                         ? themeColor('buttonGradient')
                         : themeColor('buttonBackground')
                         ? [
