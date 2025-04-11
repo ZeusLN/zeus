@@ -34,6 +34,7 @@ import FiatStore from '../../stores/FiatStore';
 import { CURRENCY_KEYS, CURRENCY_CODES_KEY } from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
+import Checkmark from '../../assets/images/SVG/Checkmark.svg';
 import Edit from '../../assets/images/SVG/Pen.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
 import BitcoinIcon from '../../assets/images/SVG/bitcoin-icon.svg';
@@ -394,14 +395,26 @@ export default class CurrencyConverter extends React.Component<
 
         const EditButton = () => (
             <TouchableOpacity onPress={this.toggleEditMode}>
-                <Edit
-                    fill={themeColor('text')}
-                    style={{
-                        alignSelf: 'center',
-                        marginTop: -4,
-                        marginRight: 4
-                    }}
-                />
+                {editMode ? (
+                    <Checkmark
+                        width={30}
+                        height={30}
+                        style={{
+                            alignSelf: 'center',
+                            marginTop: -4,
+                            marginRight: 4
+                        }}
+                    />
+                ) : (
+                    <Edit
+                        fill={themeColor('text')}
+                        style={{
+                            alignSelf: 'center',
+                            marginTop: -4,
+                            marginRight: 4
+                        }}
+                    />
+                )}
             </TouchableOpacity>
         );
 
