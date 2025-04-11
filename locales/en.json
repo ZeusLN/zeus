@@ -18,6 +18,8 @@
     "general.continueQuestion": "Continue?",
     "general.readOnlyWallet": "Read-only wallet",
     "general.custodialWallet": "Custodial wallet",
+    "general.connectionLost": "Connection lost",
+    "general.nodeNotSynced": "Node not synced",
     "general.show": "Show",
     "general.close": "Close",
     "general.hide": "Hide",
