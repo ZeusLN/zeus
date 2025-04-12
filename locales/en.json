@@ -1482,7 +1482,7 @@
     "cashu.upgradePrompt.title": "Upgrade to Self-Custody?",
     "cashu.upgradePrompt.messageGeneral": "Your ecash balance is growing! Consider upgrading to a self-custodial Lightning wallet for better security and control over your funds.",
     "cashu.upgradePrompt.message10k": "You now have enough sats to purchase your first Lightning channel! Upgrade to self-custody to truly own your bitcoin.",
-    "cashu.upgradePrompt.message25k": "Your ecash balance is growing! For better security, consider upgrading to a self-custodial Lightning wallet.",
+    "cashu.upgradePrompt.message25k": "Your ecash balance is growing! To ensure you can't lose your funds, consider upgrading to a self-custodial Lightning wallet.",
     "cashu.upgradePrompt.message50k": "With this balance, it's strongly recommended to move to a self-custodial Lightning wallet. Don't trust, verify!",
     "cashu.upgradePrompt.message100k": "High balance detected! It's crucial to upgrade to a self-custodial Lightning wallet now to secure your funds.",
     "cashu.upgradePrompt.purchaseChannel": "Purchase Channel",
