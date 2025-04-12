@@ -11,7 +11,8 @@ import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/storeInstances';
 
-const keySendMessageType = '34349334';
+const keySendMessageType = '34349334' as const;
+const keySendPreimageType = '5482373484' as const;
 
 interface preimageBuffer {
     data: Array<number>;
@@ -95,6 +96,20 @@ export default class Payment extends BaseModel {
             );
         }
         return undefined;
+    }
+
+    @computed public get isKeysend(): boolean {
+        if (
+            this.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
+                keySendMessageType
+            ] ||
+            this.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
+                keySendPreimageType
+            ]
+        ) {
+            return true;
+        }
+        return false;
     }
 
     @computed public get getMemo(): string | undefined {
