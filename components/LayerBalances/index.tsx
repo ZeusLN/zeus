@@ -101,7 +101,10 @@ const getEcashRowColors = () => {
         }
 
         const ratio = balanceSats.div(100_000).toNumber();
-        const buttonBg = themeColor('buttonBackground');
+        const buttonBg =
+            themeColor('buttonBackground') ||
+            themeColor('buttonGradient') ||
+            themeColor('secondary');
         const warningColor = themeColor('warning');
         const errorColor = themeColor('error');
 
