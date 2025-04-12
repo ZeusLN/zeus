@@ -459,7 +459,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
-                ChannelsStore.getChannels();
+                await ChannelsStore.getChannels();
             if (rescan) {
                 await updateSettings({
                     rescan: false
@@ -601,6 +601,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 LSPStore.subscribeCustomMessages();
             }
             LSPStore.initChannelAcceptor();
+        }
+
+        // Check Cashu balance for upgrade prompts
+        if (implementation === 'embedded-lnd' && settings?.ecash?.enableCashu) {
+            CashuStore.checkAndShowUpgradeModal(
+                0,
+                CashuStore.totalBalanceSats || 0
+            );
         }
 
         // only navigate to initial url after connection and main calls are made

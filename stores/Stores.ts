@@ -105,7 +105,9 @@ class Stores {
         this.syncStore = new SyncStore(this.settingsStore);
         this.cashuStore = new CashuStore(
             this.settingsStore,
-            this.invoicesStore
+            this.invoicesStore,
+            this.channelsStore,
+            this.modalStore
         );
         this.activityStore = new ActivityStore(
             this.settingsStore,

@@ -185,9 +185,9 @@ export default class OnchainSwipeableRow extends Component<
             return (
                 <TouchableOpacity
                     onPress={() =>
-                        stores.modalStore.toggleInfoModal(
-                            localeString('views.Wallet.waitForSync')
-                        )
+                        stores.modalStore.toggleInfoModal({
+                            text: localeString('views.Wallet.waitForSync')
+                        })
                     }
                     style={{ width: '100%' }}
                 >
