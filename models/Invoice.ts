@@ -28,8 +28,8 @@ interface CustomRecords {
     [key: number]: string;
 }
 
-const keySendMessageType = '34349334' as const;
-const keySendPreimageType = '5482373484' as const;
+const keySendMessageType = '34349334';
+const keySendPreimageType = '5482373484';
 
 export default class Invoice extends BaseModel {
     public route_hints: Array<RouteHint>;
