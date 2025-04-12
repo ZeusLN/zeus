@@ -493,6 +493,8 @@ export default class CashuStore {
         currentBalance: number
     ) => {
         for (const threshold of UPGRADE_THRESHOLDS.reverse()) {
+            // TODO ecash add checks for on-chain rates to determine
+            // if amounts are sufficient for channels
             if (
                 previousBalance < threshold &&
                 currentBalance >= threshold &&
@@ -525,7 +527,7 @@ export default class CashuStore {
                             callback: () => {
                                 this.modalStore.toggleInfoModal({}); // Close current modal first
                                 UrlUtils.goToUrl(
-                                    'https://docs.zeusln.app/category/self-custody'
+                                    'https://docs.zeusln.app/self-custody'
                                 );
                             }
                         }
