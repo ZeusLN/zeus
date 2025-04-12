@@ -30,18 +30,30 @@ import Storage from '../storage';
 
 import stores from './Stores';
 import InvoicesStore from './InvoicesStore';
+import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
+import ModalStore from './ModalStore';
 
 import Base64Utils from '../utils/Base64Utils';
 import CashuUtils from '../utils/CashuUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import UrlUtils from '../utils/UrlUtils';
+import NavigationService from '../NavigationService';
 
 const bip39 = require('bip39');
 
 const BATCH_SIZE = 100;
 const MAX_GAP = 3;
 const RESTORE_PROOFS_EVENT_NAME = 'RESTORING_PROOF_EVENT';
+
+const UPGRADE_THRESHOLDS = [10000, 25000, 50000, 100000];
+const UPGRADE_MESSAGES: { [key: number]: string } = {
+    10000: 'cashu.upgradePrompt.message10k',
+    25000: 'cashu.upgradePrompt.message25k',
+    50000: 'cashu.upgradePrompt.message50k',
+    100000: 'cashu.upgradePrompt.message100k'
+};
 
 interface Wallet {
     wallet?: CashuWallet;
@@ -104,15 +116,25 @@ export default class CashuStore {
 
     @observable public mintRecommendations?: MintRecommendation[];
     @observable loadingFeeEstimate = false;
+    @observable shownThresholdModals: number[] = [];
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
+    channelsStore: ChannelsStore;
+    modalStore: ModalStore;
 
     ndk: NDK;
 
-    constructor(settingsStore: SettingsStore, invoicesStore: InvoicesStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        invoicesStore: InvoicesStore,
+        channelsStore: ChannelsStore,
+        modalStore: ModalStore
+    ) {
         this.settingsStore = settingsStore;
         this.invoicesStore = invoicesStore;
+        this.channelsStore = channelsStore;
+        this.modalStore = modalStore;
     }
 
     @action
@@ -123,6 +145,7 @@ export default class CashuStore {
         this.selectedMintUrl = '';
         this.clearInvoice();
         this.clearPayReq();
+        this.shownThresholdModals = [];
     };
 
     @action
@@ -447,17 +470,75 @@ export default class CashuStore {
         return balanceSats;
     };
 
-    setTotalBalance = async (totalBalanceSats: number) => {
+    setTotalBalance = async (newTotalBalanceSats: number) => {
+        const previousBalance = this.totalBalanceSats || 0;
         await Storage.setItem(
             `${this.getLndDir()}-cashu-totalBalanceSats`,
-            totalBalanceSats
+            newTotalBalanceSats
         );
 
         runInAction(() => {
-            this.totalBalanceSats = totalBalanceSats;
+            this.totalBalanceSats = newTotalBalanceSats;
         });
 
-        return totalBalanceSats;
+        // Check thresholds after balance update
+        this.checkAndShowUpgradeModal(previousBalance, newTotalBalanceSats);
+
+        return newTotalBalanceSats;
+    };
+
+    @action
+    public checkAndShowUpgradeModal = (
+        previousBalance: number,
+        currentBalance: number
+    ) => {
+        for (const threshold of UPGRADE_THRESHOLDS.reverse()) {
+            if (
+                previousBalance < threshold &&
+                currentBalance >= threshold &&
+                !this.shownThresholdModals.includes(threshold) &&
+                this.channelsStore.channels.length === 0
+            ) {
+                const messageKey =
+                    UPGRADE_MESSAGES[threshold] ||
+                    'cashu.upgradePrompt.messageGeneral'; // Fallback message
+                const message = localeString(messageKey);
+                const title = localeString('cashu.upgradePrompt.title');
+
+                this.modalStore.toggleInfoModal({
+                    title,
+                    text: message,
+                    buttons: [
+                        {
+                            title: localeString(
+                                'cashu.upgradePrompt.purchaseChannel'
+                            ),
+                            callback: () => {
+                                this.modalStore.toggleInfoModal({}); // Close current modal first
+                                NavigationService.navigate('LSPS1');
+                            }
+                        },
+                        {
+                            title: localeString(
+                                'cashu.upgradePrompt.learnMore'
+                            ),
+                            callback: () => {
+                                this.modalStore.toggleInfoModal({}); // Close current modal first
+                                UrlUtils.goToUrl(
+                                    'https://docs.zeusln.app/category/self-custody'
+                                );
+                            }
+                        }
+                    ]
+                });
+
+                // Mark this threshold modal as shown for the current session
+                runInAction(() => {
+                    this.shownThresholdModals.push(threshold);
+                });
+                break; // Show only one modal per balance update
+            }
+        }
     };
 
     @action
