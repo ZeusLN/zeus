@@ -97,10 +97,14 @@ class ActivityFilterUtils {
         }
 
         if (filter.keysend == false) {
-            filteredActivity = filteredActivity.filter(
-                (activity: any) =>
-                    !(activity instanceof Payment && activity.getKeysendMessage)
-            );
+            filteredActivity = filteredActivity.filter((activity: any) => {
+                const isPayment = activity instanceof Payment;
+                const isInvoice = activity instanceof Invoice;
+                return (
+                    !(isPayment && activity.isKeysend) &&
+                    !(isInvoice && activity.isKeysend)
+                );
+            });
         }
 
         if (filter.minimumAmount > 0) {
