@@ -76,18 +76,51 @@ type DataRow = {
 };
 
 const getEcashRowColors = () => {
-    const balanceSats = new BigNumber(stores.cashuStore.totalBalanceSats);
-    const ratio = balanceSats.div(100_000).toNumber();
-    const blend = blendHexColors(
-        themeColor('buttonBackground'),
-        themeColor('warning'),
-        ratio
-    );
+    try {
+        // Ensure cashuStore and totalBalanceSats are available
+        if (
+            !stores.cashuStore ||
+            stores.cashuStore.totalBalanceSats === undefined ||
+            stores.cashuStore.totalBalanceSats === null
+        ) {
+            console.warn(
+                'getEcashRowColors: Cashu store or totalBalanceSats not available.'
+            );
+            return false;
+        }
 
-    if (balanceSats.gte(10_000)) {
-        return [blend, themeColor('error')];
-    } else {
-        return false;
+        const balanceSats = new BigNumber(stores.cashuStore.totalBalanceSats);
+
+        // Check if balanceSats is a valid number
+        if (balanceSats.isNaN()) {
+            console.warn(
+                'getEcashRowColors: Invalid balanceSats value:',
+                stores.cashuStore.totalBalanceSats
+            );
+            return false;
+        }
+
+        const ratio = balanceSats.div(100_000).toNumber();
+        const buttonBg = themeColor('buttonBackground');
+        const warningColor = themeColor('warning');
+        const errorColor = themeColor('error');
+
+        // Ensure theme colors are valid
+        if (!buttonBg || !warningColor || !errorColor) {
+            console.warn('getEcashRowColors: Theme color missing.');
+            return false;
+        }
+
+        const blend = blendHexColors(buttonBg, warningColor, ratio);
+
+        if (balanceSats.gte(10_000)) {
+            return [blend, errorColor];
+        } else {
+            return false;
+        }
+    } catch (error) {
+        console.error('Error calculating Ecash row colors:', error);
+        return false; // Return default value in case of any error
     }
 };
 
