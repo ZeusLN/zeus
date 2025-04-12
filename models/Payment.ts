@@ -11,8 +11,8 @@ import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/storeInstances';
 
-const keySendMessageType = '34349334' as const;
-const keySendPreimageType = '5482373484' as const;
+const keySendMessageType = '34349334';
+const keySendPreimageType = '5482373484';
 
 interface preimageBuffer {
     data: Array<number>;
