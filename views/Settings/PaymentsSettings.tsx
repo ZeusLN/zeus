@@ -302,6 +302,7 @@ export default class PaymentsSettings extends React.Component<
                         }}
                         hideConversion={true}
                         hideUnitChangeButton={true}
+                        forceUnit="sats"
                     />
 
                     {(BackendUtils.isLNDBased() ||
