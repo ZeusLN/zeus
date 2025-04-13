@@ -232,7 +232,7 @@ export default class LnurlPay extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            {loading && <LoadingIndicator size={35} />}
+                            {loading && <LoadingIndicator size={30} />}
                         </View>
                     }
                     navigation={navigation}
