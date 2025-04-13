@@ -13,6 +13,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
+import { Spacer } from '../../components/layout/Spacer';
 
 import SettingsStore, { TIME_PERIOD_KEYS } from '../../stores/SettingsStore';
 
@@ -291,11 +292,10 @@ export default class InvoicesSettings extends React.Component<
                                         });
                                     }}
                                 />
+                                <Spacer width={4} />
                                 <View
                                     style={{
-                                        flex: 1,
-                                        // TODO
-                                        top: -5
+                                        flex: 1
                                     }}
                                 >
                                     <DropdownSetting

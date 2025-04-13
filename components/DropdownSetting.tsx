@@ -56,14 +56,16 @@ export default class DropdownSetting extends React.Component<
             <React.Fragment>
                 {Platform.OS === 'android' && (
                     <View>
-                        <Text
-                            style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title}
-                        </Text>
+                        {title && (
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {title}
+                            </Text>
+                        )}
                         <Picker
                             selectedValue={selectedValue}
                             onValueChange={(itemValue: string | number) =>
@@ -73,9 +75,7 @@ export default class DropdownSetting extends React.Component<
                                 color: themeColor('text'),
                                 backgroundColor: themeColor('secondary'),
                                 ...styles.field,
-                                opacity: disabled ? 0.25 : 1,
-                                top: 5,
-                                height: 60
+                                opacity: disabled ? 0.25 : 1
                             }}
                             dropdownIconColor={themeColor('text')}
                             enabled={!disabled}
@@ -87,14 +87,16 @@ export default class DropdownSetting extends React.Component<
 
                 {Platform.OS === 'ios' && (
                     <View>
-                        <Text
-                            style={{
-                                ...styles.secondaryText,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title}
-                        </Text>
+                        {title && (
+                            <Text
+                                style={{
+                                    ...styles.secondaryText,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {title}
+                            </Text>
+                        )}
                         <TouchableOpacity
                             onPress={() =>
                                 !disabled &&
@@ -112,7 +114,10 @@ export default class DropdownSetting extends React.Component<
                                     }
                                 )
                             }
-                            style={{ opacity: disabled ? 0.25 : 1 }}
+                            style={{
+                                opacity: disabled ? 0.25 : 1,
+                                justifyContent: 'center'
+                            }}
                         >
                             <Text
                                 style={{
@@ -126,8 +131,7 @@ export default class DropdownSetting extends React.Component<
                             <View
                                 style={{
                                     position: 'absolute',
-                                    right: 10,
-                                    top: '30%'
+                                    right: 10
                                 }}
                             >
                                 <CaretDown
@@ -145,18 +149,18 @@ export default class DropdownSetting extends React.Component<
 
 const styles = StyleSheet.create({
     secondaryText: {
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'PPNeueMontreal-Book',
+        marginBottom: 10
     },
     field: {
         fontSize: 20,
+        height: 60,
         width: '100%',
-        top: 8,
         borderRadius: 6,
-        marginBottom: 20,
-        paddingTop: 15,
         borderBottomWidth: 20,
         paddingLeft: 10,
         overflow: 'hidden',
-        fontFamily: 'PPNeueMontreal-Book'
+        fontFamily: 'PPNeueMontreal-Book',
+        ...Platform.select({ ios: { paddingTop: 18 }, android: {} })
     }
 });
