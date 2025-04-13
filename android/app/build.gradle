@@ -100,8 +100,8 @@ android {
         applicationId "app.zeusln.zeus"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 103
-        versionName "0.10.2-rc2"
+        versionCode 104
+        versionName "0.10.2"
         multiDexEnabled true
     }
     signingConfigs {
