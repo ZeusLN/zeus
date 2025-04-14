@@ -544,6 +544,72 @@ export default class CashuStore {
     };
 
     @action
+    public checkPendingItems = async () => {
+        console.log('CashuStore: Checking pending invoices and tokens...');
+        InteractionManager.runAfterInteractions(async () => {
+            // Check pending invoices
+            const pendingInvoices = this.invoices?.filter(
+                (invoice) => !invoice.isPaid && !invoice.isExpired
+            );
+            if (pendingInvoices && pendingInvoices.length > 0) {
+                console.log(
+                    `CashuStore: Found ${pendingInvoices.length} pending invoices to check.`
+                );
+                for (const invoice of pendingInvoices) {
+                    try {
+                        console.log(
+                            `CashuStore: Checking invoice ${invoice.quote}`
+                        );
+                        await this.checkInvoicePaid(
+                            invoice.quote,
+                            invoice.mintUrl
+                        );
+                    } catch (e) {
+                        console.error(
+                            `CashuStore: Error checking invoice ${invoice.quote}:`,
+                            e
+                        );
+                    }
+                }
+            } else {
+                console.log('CashuStore: No pending invoices to check.');
+            }
+
+            // Check unspent sent tokens
+            const unspentSentTokens = this.sentTokens?.filter(
+                (token) => !token.spent
+            );
+            if (unspentSentTokens && unspentSentTokens.length > 0) {
+                console.log(
+                    `CashuStore: Found ${unspentSentTokens.length} unspent sent tokens to check.`
+                );
+                for (const token of unspentSentTokens) {
+                    try {
+                        console.log(
+                            `CashuStore: Checking token from mint ${token.mint}`
+                        );
+                        const isSpent = await this.checkTokenSpent(token);
+                        if (isSpent) {
+                            console.log(
+                                `CashuStore: Marking token from mint ${token.mint} as spent.`
+                            );
+                            await this.markTokenSpent(token);
+                        }
+                    } catch (e) {
+                        console.error(
+                            `CashuStore: Error checking token from mint ${token.mint}:`,
+                            e
+                        );
+                    }
+                }
+            } else {
+                console.log('CashuStore: No unspent sent tokens to check.');
+            }
+            console.log('CashuStore: Finished checking pending items.');
+        });
+    };
+
+    @action
     public initializeWallets = async () => {
         runInAction(() => {
             this.initializing = true;
@@ -606,6 +672,9 @@ export default class CashuStore {
             this.loadingMsg = undefined;
             this.initializing = false;
         });
+
+        // Check status of pending items after initialization
+        await this.checkPendingItems();
     };
 
     @action
@@ -894,12 +963,15 @@ export default class CashuStore {
                     await this.setMintBalance(mintUrl, balanceSats);
                     await this.setTotalBalance(totalBalanceSats);
 
-                    // delete old instance of invoice
-                    this.invoices = this.invoices?.filter(
-                        (item) => item.quote !== quote.quote
+                    // Update or add the invoice in the store
+                    const invoiceIndex = this.invoices?.findIndex(
+                        (item) => item.quote === quote.quote
                     );
-                    // save new instance of invoice
-                    this.invoices?.push(updatedInvoice);
+                    if (invoiceIndex !== undefined && invoiceIndex > -1) {
+                        this.invoices[invoiceIndex] = updatedInvoice;
+                    } else {
+                        this.invoices?.push(updatedInvoice);
+                    }
                     await Storage.setItem(
                         `${this.getLndDir()}-cashu-invoices`,
                         this.invoices
