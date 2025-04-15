@@ -194,7 +194,6 @@ class BackendUtils {
     initNWC = (...args: any[]) => this.call('initNWC', args);
 
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
-
 }
 
 const backendUtils = new BackendUtils();
