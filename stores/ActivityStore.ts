@@ -1,4 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
+import { AbortSignal } from 'abort-controller';
 
 // LN
 import Payment from './../models/Payment';
@@ -169,11 +170,11 @@ export default class ActivityStore {
         return sortedActivity;
     };
 
-    private getActivity = async () => {
+    private getActivity = async (abortSignal: AbortSignal) => {
         this.activity = [];
-        await this.paymentsStore.getPayments();
+        await this.paymentsStore.getPayments(abortSignal);
         if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
+            await this.transactionsStore.getTransactions(abortSignal);
         await this.invoicesStore.getInvoices();
 
         runInAction(() => {
@@ -190,9 +191,12 @@ export default class ActivityStore {
         });
     };
 
-    public updateTransactions = async (locale: string | undefined) => {
+    public updateTransactions = async (
+        abortSignal: AbortSignal,
+        locale: string | undefined
+    ) => {
         if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
+            await this.transactionsStore.getTransactions(abortSignal);
         await runInAction(async () => {
             this.activity = this.getSortedActivity();
             await this.setFilters(this.filters, locale);
@@ -236,10 +240,11 @@ export default class ActivityStore {
     };
 
     public getActivityAndFilter = async (
+        abortSignal: AbortSignal,
         locale: string | undefined,
         filters: Filter = this.filters
     ) => {
-        await this.getActivity();
+        await this.getActivity(abortSignal);
         await this.setFilters(filters, locale);
     };
 }
