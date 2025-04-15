@@ -128,6 +128,10 @@ class BackendUtils {
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
 
+    //Peers
+    listPeers = (...args: any[]) => this.call('listPeers', args);
+    disconnectPeer = (...args: any[]) => this.call('disconnectPeer', args);
+
     // lndhub
     login = (...args: any[]) => this.call('login', args);
 
@@ -191,8 +195,6 @@ class BackendUtils {
 
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 
-    listPeers = (...args: any[]) => this.call('listPeers', args);
-    disconnectPeer = (...args: any[]) => this.call('disconnectPeer', args);
 }
 
 const backendUtils = new BackendUtils();

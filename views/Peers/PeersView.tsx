@@ -128,7 +128,7 @@ class PeersView extends React.Component<InjectedProps> {
                     onPress={() => this.handleDisconnect(item.pub_key)}
                 >
                     <Icon
-                        name="disconnect"
+                        name="lan-disconnect"
                         type="material-community"
                         size={24}
                         color={themeColor('error')}
