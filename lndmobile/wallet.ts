@@ -507,6 +507,120 @@ export const signMessage = async (
     return response;
 };
 
+/**
+ * Create a cryptographic signature for a message using blockchain address.
+ *
+ * Generates a compact signature (encoded in base64) using the private key
+ * associated with the provided address. Only works with addresses that are
+ * based purely on public key locks without complex scripts.
+ *
+ * Compatible with: P2PKH, P2WKH, NP2WKH, and P2TR address formats.
+ *
+ * @param msg - The data to be signed
+ * @param addr - The blockchain address used for signing
+ * @throws Error when address isn't in wallet or signature generation fails
+ * @returns Promise containing the signature response
+ */
+export const signMessageWithAddr = async (
+    msg: Uint8Array,
+    addr: string
+): Promise<walletrpc.SignMessageWithAddrResponse> => {
+    try {
+        console.log(
+            `lndmobile/wallet.ts: signMessageWithAddr invoked for address: ${addr}`
+        );
+
+        const response = await sendCommand<
+            walletrpc.ISignMessageWithAddrRequest,
+            walletrpc.SignMessageWithAddrRequest,
+            walletrpc.SignMessageWithAddrResponse
+        >({
+            request: walletrpc.SignMessageWithAddrRequest,
+            response: walletrpc.SignMessageWithAddrResponse,
+            method: 'WalletKitSignMessageWithAddr',
+            options: {
+                msg,
+                addr
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error('Error encountered during signMessageWithAddr:', error);
+        throw error;
+    }
+};
+
+/**
+ * Validate a message signature against a blockchain address.
+ *
+ * Checks if the provided compact signature (base64 encoded) is valid and
+ * confirms that the recovered public key matches the specified address.
+ *
+ * Compatible with: P2PKH, P2WKH, NP2WKH, and P2TR address formats.
+ *
+ * @param msg - The original message that was signed
+ * @param signature - The signature to validate (base64 encoded)
+ * @param addr - The address to check against
+ * @throws Error if validation process fails
+ * @returns Promise with validation outcome (validity status and recovered pubkey)
+ */
+export const verifyMessageWithAddr = async (
+    msg: Uint8Array,
+    signature: string,
+    addr: string
+): Promise<walletrpc.VerifyMessageWithAddrResponse> => {
+    try {
+        if (!addr || addr.trim() === '') {
+            throw new Error('Valid address must be provided for verification');
+        }
+
+        if (!signature || signature.trim() === '') {
+            throw new Error(
+                'Valid signature is required for verification process'
+            );
+        }
+
+        if (!msg || msg.length === 0) {
+            console.error(
+                '[lndmobile/wallet.ts] verifyMessageWithAddr: Error - empty message provided'
+            );
+            throw new Error('Non-empty message required for verification');
+        }
+
+        const msgBase64 = Base64Utils.bytesToBase64(msg);
+        console.log(
+            `[lndmobile/wallet.ts] verifyMessageWithAddr: message encoded as base64, length: ${msgBase64.length}`
+        );
+
+        // Diagnostic information for signature
+        let signatureToUse = signature;
+
+        const response = await sendCommand<
+            walletrpc.IVerifyMessageWithAddrRequest,
+            walletrpc.VerifyMessageWithAddrRequest,
+            walletrpc.VerifyMessageWithAddrResponse
+        >({
+            request: walletrpc.VerifyMessageWithAddrRequest,
+            response: walletrpc.VerifyMessageWithAddrResponse,
+            method: 'WalletKitVerifyMessageWithAddr',
+            options: {
+                msg,
+                signature: signatureToUse,
+                addr
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error(
+            `[lndmobile/wallet.ts] verifyMessageWithAddr encountered an error:`,
+            error
+        );
+        throw error;
+    }
+};
+
 // TODO exception?
 // TODO move to a more appropiate file?
 export const subscribeInvoices = async (): Promise<string> => {

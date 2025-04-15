@@ -100,6 +100,10 @@ class BackendUtils {
     listAddresses = (...args: any[]) => this.call('listAddresses', args);
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
+    signMessageWithAddr = (...args: any[]) =>
+        this.call('signMessageWithAddr', args);
+    verifyMessageWithAddr = (...args: any[]) =>
+        this.call('verifyMessageWithAddr', args);
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
@@ -172,6 +176,8 @@ class BackendUtils {
         this.call('supportsAddressesWithDerivationPaths');
     isLNDBased = () => this.call('isLNDBased');
     supportInboundFees = () => this.call('supportInboundFees');
+    supportsAddressMessageSigning = () =>
+        this.call('supportsAddressMessageSigning');
     supportsDevTools = () => {
         return this.isLNDBased() || this.call('supportsDevTools');
     };
