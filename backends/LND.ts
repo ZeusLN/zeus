@@ -19,7 +19,7 @@ const calls = new Map<string, Promise<any>>();
 
 export default class LND {
     torSocksPort?: number = undefined;
-
+    private defaultTimeout: number = 30000;
     clearCachedCalls = () => calls.clear();
 
     restReq = async (
@@ -28,7 +28,8 @@ export default class LND {
         method: any,
         data?: any,
         certVerification?: boolean,
-        useTor?: boolean
+        useTor?: boolean,
+        timeout?: number
     ) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
@@ -53,7 +54,10 @@ export default class LND {
             );
         } else {
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Request timeout')), 30000);
+                setTimeout(
+                    () => reject(new Error('Request timeout')),
+                    timeout || this.defaultTimeout
+                );
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
@@ -196,7 +200,13 @@ export default class LND {
         return `${baseUrl}${route}`;
     };
 
-    request = (route: string, method: string, data?: any, params?: any) => {
+    request = (
+        route: string,
+        method: string,
+        data?: any,
+        params?: any,
+        timeout?: number
+    ) => {
         const {
             host,
             lndhubUrl,
@@ -223,14 +233,15 @@ export default class LND {
             method,
             data,
             certVerification,
-            enableTor
+            enableTor,
+            timeout
         );
     };
 
     getRequest = (route: string, data?: any) =>
         this.request(route, 'get', null, data);
-    postRequest = (route: string, data?: any) =>
-        this.request(route, 'post', data);
+    postRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
     getTransactions = (data: any) =>
@@ -485,10 +496,14 @@ export default class LND {
         };
 
         const call = () =>
-            this.postRequest('/v2/router/send', {
-                ...data,
-                allow_self_payment: true
-            });
+            this.postRequest(
+                '/v2/router/send',
+                {
+                    ...data,
+                    allow_self_payment: true
+                },
+                data.timeout_seconds * 1000
+            );
 
         const result: any = await Promise.race([
             forcedTimeout((data.timeout_seconds + 1) * 1000, {
