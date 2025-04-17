@@ -133,6 +133,7 @@
     "general.unknown": "Necunoscut",
     "general.retry": "Reîncercați",
     "general.response": "Răspuns",
+    "general.approximately": "Approximately",
     "channel.status.good": "Bun",
     "channel.status.stable": "Stabil",
     "channel.status.unstable": "Instabil",
