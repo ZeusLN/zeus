@@ -133,6 +133,7 @@
     "general.unknown": "Inconnu",
     "general.retry": "Réessayer",
     "general.response": "Réponse",
+    "general.approximately": "Approximately",
     "channel.status.good": "Bien",
     "channel.status.stable": "Écurie",
     "channel.status.unstable": "Instable",
