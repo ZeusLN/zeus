@@ -133,6 +133,7 @@
     "general.unknown": "알 수 없음",
     "general.retry": "재시도",
     "general.response": "응답",
+    "general.approximately": "Approximately",
     "channel.status.good": "좋음",
     "channel.status.stable": "안정",
     "channel.status.unstable": "불안정",
