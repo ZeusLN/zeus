@@ -133,6 +133,7 @@
     "general.unknown": "Tuntematon",
     "general.retry": "Uudelleenyritys",
     "general.response": "Vastaus",
+    "general.approximately": "Approximately",
     "channel.status.good": "Hyvä",
     "channel.status.stable": "Vakaa",
     "channel.status.unstable": "Epävakaa",
