@@ -133,6 +133,7 @@
     "general.unknown": "Sconosciuto",
     "general.retry": "Riprova",
     "general.response": "Risposta",
+    "general.approximately": "Approximately",
     "channel.status.good": "Bene",
     "channel.status.stable": "Stabile",
     "channel.status.unstable": "Instabile",
