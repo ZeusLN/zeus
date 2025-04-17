@@ -1,5 +1,12 @@
 import { action, observable } from 'mobx';
 
+interface InfoModalParams {
+    text?: string | Array<string>;
+    link?: string;
+    buttons?: Array<{ title: string; callback?: () => void }>;
+    onDismiss?: () => void;
+}
+
 export default class ModalStore {
     @observable public showExternalLinkModal: boolean = false;
     @observable public showAndroidNfcModal: boolean = false;
@@ -17,6 +24,7 @@ export default class ModalStore {
     @observable public alertModalLink: string | undefined;
     @observable public alertModalNav: string | undefined;
     @observable public onPress: () => void;
+    @observable public onDismiss: (() => void) | undefined;
 
     /* External Link Modal */
     @action
@@ -25,15 +33,13 @@ export default class ModalStore {
     };
 
     @action
-    public toggleInfoModal = (
-        text?: string | Array<string>,
-        link?: string,
-        buttons?: Array<{ title: string; callback?: () => void }>
-    ) => {
-        this.showInfoModal = text ? true : false;
-        this.infoModalText = text;
-        this.infoModalLink = link;
-        this.infoModalAdditionalButtons = buttons;
+    public toggleInfoModal = (params?: InfoModalParams) => {
+        this.showInfoModal = !!params?.text;
+        this.infoModalText = params?.text;
+        this.infoModalLink = params?.link;
+        this.infoModalAdditionalButtons = params?.buttons;
+        this.onDismiss = params?.onDismiss;
+        if (!params?.text && params?.onDismiss) params.onDismiss();
     };
 
     @action
@@ -73,9 +79,11 @@ export default class ModalStore {
             return true;
         }
         if (this.showInfoModal) {
+            if (this.onDismiss) this.onDismiss();
             this.showInfoModal = false;
             this.infoModalText = '';
             this.infoModalLink = '';
+            this.onDismiss = undefined;
             this.infoModalAdditionalButtons = undefined;
             return true;
         }

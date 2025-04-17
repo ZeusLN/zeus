@@ -1388,5 +1388,7 @@
     "views.OnChainAddresses.createAddress": "Create address",
     "views.OnChainAddresses.changeAddresses": "Change addresses",
     "androidNotification.lndRunningBackground": "LND is running in the background",
-    "androidNotification.shutdown": "Shutdown"
+    "androidNotification.shutdown": "Shutdown",
+    "notifications.permissionNeeded": "Without notifications some ZEUS features will not work as intended.",
+    "notifications.permissionBlocked": "Please enable notifications in your device settings to continue."
 }

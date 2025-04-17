@@ -51,6 +51,7 @@ import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { handleNotificationPermissions } from '../../utils/NotificationUtils';
 
 import Storage from '../../storage';
 
@@ -535,6 +536,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 setConnectingStatus(false);
                 return;
             }
+        }
+
+        if (connecting) {
+            await handleNotificationPermissions(settings);
         }
 
         if (
