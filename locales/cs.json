@@ -133,6 +133,7 @@
     "general.unknown": "Není známo",
     "general.retry": "Zopakovat",
     "general.response": "Odpověď",
+    "general.approximately": "Approximately",
     "channel.status.good": "Dobrý",
     "channel.status.stable": "Stabilní",
     "channel.status.unstable": "Nestabilní",
