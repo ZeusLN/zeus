@@ -16,6 +16,7 @@ class BackendUtils {
     clnRest: CLNRest;
     lndHub: LndHub;
     nostrWalletConnect: NostrWalletConnect;
+
     constructor() {
         this.lnd = new LND();
         this.lightningNodeConnect = new LightningNodeConnect();
@@ -127,6 +128,10 @@ class BackendUtils {
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
 
+    //Peers
+    listPeers = (...args: any[]) => this.call('listPeers', args);
+    disconnectPeer = (...args: any[]) => this.call('disconnectPeer', args);
+
     // lndhub
     login = (...args: any[]) => this.call('login', args);
 
@@ -176,6 +181,8 @@ class BackendUtils {
         return this.isLNDBased() || this.call('supportsDevTools');
     };
 
+    supportsPeerManagement = () => this.call('supportsPeerManagement');
+
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
     connect = (...args: any[]) => this.call('connect', args);
@@ -191,3 +198,21 @@ class BackendUtils {
 
 const backendUtils = new BackendUtils();
 export default backendUtils;
+
+export const listPeers = () => {
+    const backend = backendUtils.getClass() as any;
+    if (!backend || !backend.listPeers) {
+        console.log('Backend does not support listPeers');
+        return { peers: [] };
+    }
+    return backend.listPeers();
+};
+
+export const disconnectPeer = (pubKey: string) => {
+    const backend = backendUtils.getClass() as any;
+    if (!backend || !backend.disconnectPeer) {
+        console.log('Backend does not support disconnectPeer');
+        return false;
+    }
+    return backend.disconnectPeer(pubKey);
+};
