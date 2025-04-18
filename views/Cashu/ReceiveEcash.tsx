@@ -364,9 +364,9 @@ export default class ReceiveEcash extends React.Component<
             checkInvoicePaid().then(
                 (response?: {
                     isPaid: boolean;
-                    amtSat: number;
-                    paymentRequest: string;
-                    updatedInvoice: CashuInvoice;
+                    amtSat?: number;
+                    paymentRequest?: string;
+                    updatedInvoice?: CashuInvoice;
                 }) => {
                     if (response?.isPaid) {
                         setWatchedInvoicePaid(response.amtSat);
@@ -378,7 +378,7 @@ export default class ReceiveEcash extends React.Component<
                                 exchangeRate,
                                 rate,
                                 type: 'ln',
-                                tx: response.paymentRequest,
+                                tx: response.paymentRequest || '',
                                 preimage: 'N/A'
                             });
                         this.clearIntervals();

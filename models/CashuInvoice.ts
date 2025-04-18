@@ -1,6 +1,5 @@
 import { observable, computed } from 'mobx';
 import humanizeDuration from 'humanize-duration';
-import bolt11 from 'bolt11';
 
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
@@ -20,33 +19,24 @@ export default class CashuInvoice extends BaseModel {
     public mintUrl: string;
 
     // calculated
-    @observable public bolt11: any;
+    @observable public decoded: any;
     public expires_at: number;
 
     public formattedOriginalTimeUntilExpiry: string;
     public formattedTimeUntilExpiry: string;
-
-    constructor(data?: any) {
-        super(data);
-        try {
-            this.bolt11 = bolt11.decode(data.request);
-        } catch (e) {
-            console.log('error decoding Cashu bolt11');
-        }
-    }
 
     @computed public get model(): string {
         return localeString('views.Cashu.CashuInvoice.title');
     }
 
     @computed public get getTimestamp(): string | number {
-        return this.bolt11?.timestamp || this.expires_at || 0;
+        return this.decoded?.timestamp || this.expires_at || 0;
     }
 
     @computed public get getMemo(): string | undefined {
         let memo;
-        for (let i = 0; i < this.bolt11?.tags.length; i++) {
-            const tag = this.bolt11?.tags[i];
+        for (let i = 0; i < this.decoded?.tags.length; i++) {
+            const tag = this.decoded?.tags[i];
             switch (tag.tagName) {
                 case 'description':
                     memo = tag.data;
@@ -72,7 +62,7 @@ export default class CashuInvoice extends BaseModel {
 
     // return amount in satoshis
     @computed public get getAmount(): number {
-        return this.bolt11?.satoshis ? this.bolt11.satoshis : 0;
+        return this.decoded?.satoshis ? this.decoded.satoshis : 0;
     }
 
     // return amount in satoshis
@@ -89,14 +79,14 @@ export default class CashuInvoice extends BaseModel {
     @computed public get getDisplayTimeOrder(): string {
         return DateTimeUtils.listFormattedDateOrder(
             new Date(
-                Number(this.bolt11?.timestamp || this.expires_at || 0) * 1000
+                Number(this.decoded?.timestamp || this.expires_at || 0) * 1000
             )
         );
     }
 
     @computed public get getDisplayTimeShort(): string {
         return DateTimeUtils.listFormattedDateShort(
-            this.bolt11?.timestamp || this.expires_at || 0
+            this.decoded?.timestamp || this.expires_at || 0
         );
     }
 
@@ -104,32 +94,32 @@ export default class CashuInvoice extends BaseModel {
         return this.isPaid
             ? this.settleDate
             : DateTimeUtils.listDate(
-                  this.bolt11?.timestamp || this.expires_at || 0
+                  this.decoded?.timestamp || this.expires_at || 0
               );
     }
 
     @computed public get settleDate(): Date {
         return DateTimeUtils.listDate(
-            this.bolt11?.timestamp || this.expires_at || 0
+            this.decoded?.timestamp || this.expires_at || 0
         );
     }
 
     @computed public get formattedSettleDate(): string {
         return DateTimeUtils.listFormattedDate(
-            this.bolt11?.timestamp || this.expires_at || 0
+            this.decoded?.timestamp || this.expires_at || 0
         );
     }
 
     @computed public get getCreationDate(): Date {
         return DateTimeUtils.listDate(
-            this.bolt11?.timestamp || this.expires_at
+            this.decoded?.timestamp || this.expires_at
         );
     }
 
     @computed public get formattedCreationDate(): string {
-        return !!this.bolt11?.timestamp || !!this.expires_at
+        return !!this.decoded?.timestamp || !!this.expires_at
             ? DateTimeUtils.listFormattedDate(
-                  this.bolt11?.timestamp || this.expires_at
+                  this.decoded?.timestamp || this.expires_at
               )
             : '';
     }
