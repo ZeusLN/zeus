@@ -1,8 +1,16 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    View,
+    ScrollView,
+    Alert,
+    TouchableOpacity
+} from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 
 import Button from '../../components/Button';
 import CopyButton from '../../components/CopyButton';
@@ -17,11 +25,13 @@ import TextInput from '../../components/TextInput';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 import MessageSignStore from '../../stores/MessageSignStore';
 
 interface SignVerifyMessageProps {
     navigation: StackNavigationProp<any, any>;
+    route: RouteProp<any, any>;
     MessageSignStore: MessageSignStore;
 }
 
@@ -30,6 +40,12 @@ interface SignVerifyMessageState {
     messageToVerify: string;
     signatureToVerify: string;
     selectedIndex: number;
+    signingMethodIndex: number;
+    verifyingAddress: string;
+    signingMode: string;
+    signingAddressLocal: string;
+    supportsAddressMessageSigning: boolean;
+    loading: boolean;
 }
 
 @inject('SettingsStore', 'MessageSignStore')
@@ -38,16 +54,168 @@ export default class SignVerifyMessage extends React.Component<
     SignVerifyMessageProps,
     SignVerifyMessageState
 > {
+    navigationFocusListener: any;
+
     state = {
         messageToSign: '',
         messageToVerify: '',
         signatureToVerify: '',
-        selectedIndex: 0
+        selectedIndex: 0,
+        signingMethodIndex: 0,
+        verifyingAddress: '',
+        signingMode: 'lightning',
+        signingAddressLocal: '',
+        supportsAddressMessageSigning: false,
+        loading: false
     };
 
-    componentDidMount() {
-        const { MessageSignStore } = this.props;
+    componentDidMount = () => {
+        const { MessageSignStore, navigation, route } = this.props;
         MessageSignStore.reset();
+
+        // Load addresses right away and also when the screen comes into focus
+        if (BackendUtils.supportsAddressMessageSigning()) {
+            this.setState({ supportsAddressMessageSigning: true });
+            MessageSignStore.loadAddresses();
+
+            // Also reload addresses whenever the screen comes into focus
+            this.navigationFocusListener = navigation.addListener(
+                'focus',
+                () => {
+                    MessageSignStore.loadAddresses();
+
+                    this.checkForAddressSelection();
+                }
+            );
+        }
+
+        const params = route?.params || {};
+
+        if (params.selectedIndex !== undefined) {
+            this.setState({ selectedIndex: params.selectedIndex });
+        }
+
+        if (params.message) {
+            this.setState({
+                messageToVerify: params.message,
+                selectedIndex: 1
+            });
+        }
+
+        if (params.address) {
+            this.setState({
+                verifyingAddress: params.address
+            });
+        }
+
+        this.checkForAddressSelection();
+    };
+
+    componentWillUnmount() {
+        if (this.navigationFocusListener) {
+            this.navigationFocusListener();
+        }
+    }
+
+    checkForAddressSelection = () => {
+        const { route, MessageSignStore } = this.props;
+        const { params } = route || {};
+
+        if (params?.preserveMode === 'onchain') {
+            this.setState({ signingMode: 'onchain' });
+            MessageSignStore.setSigningMode('onchain');
+        }
+
+        if (params?.selectedAddress) {
+            const selectedAddress = params.selectedAddress;
+            const mode = params.mode;
+
+            if (mode === 'sign') {
+                this.setState({
+                    signingAddressLocal: selectedAddress,
+                    signingMethodIndex: 1
+                });
+                MessageSignStore.setSigningMode('onchain');
+                MessageSignStore.setSelectedAddress(selectedAddress);
+            } else if (mode === 'verify') {
+                this.setState({
+                    verifyingAddress: selectedAddress,
+                    signingMode: 'onchain'
+                });
+                MessageSignStore.setSigningMode('onchain');
+            }
+        }
+
+        if (params?.selectedIndex !== undefined) {
+            const selectedIndex = params.selectedIndex;
+            this.setState({ selectedIndex });
+        }
+
+        if (params?.signingMode) {
+            this.setState({ signingMode: params.signingMode });
+            MessageSignStore.setSigningMode(params.signingMode);
+        }
+
+        if (params?.messageToSign !== undefined) {
+            this.setState({ messageToSign: params.messageToSign });
+        }
+
+        if (params?.messageToVerify !== undefined) {
+            this.setState({ messageToVerify: params.messageToVerify });
+        }
+
+        if (params?.signatureToVerify !== undefined) {
+            this.setState({ signatureToVerify: params.signatureToVerify });
+        }
+
+        if (
+            params?.selectedAddress ||
+            params?.selectedIndex !== undefined ||
+            params?.signingMode ||
+            params?.preserveMode ||
+            params?.messageToSign !== undefined ||
+            params?.messageToVerify !== undefined ||
+            params?.signatureToVerify !== undefined
+        ) {
+            this.props.navigation.setParams({
+                selectedAddress: undefined,
+                mode: undefined,
+                selectedIndex: undefined,
+                signingMode: undefined,
+                preserveMode: undefined,
+                messageToSign: undefined,
+                messageToVerify: undefined,
+                signatureToVerify: undefined,
+                timestamp: undefined
+            });
+        }
+    };
+
+    componentDidUpdate(prevProps: SignVerifyMessageProps) {
+        const { addresses, selectedAddress } = this.props.MessageSignStore;
+        const { verifyingAddress, signingAddressLocal } = this.state;
+
+        if (
+            addresses &&
+            addresses.length > 0 &&
+            (!prevProps.MessageSignStore.addresses ||
+                prevProps.MessageSignStore.addresses.length === 0)
+        ) {
+            if (!verifyingAddress) {
+                this.setState({ verifyingAddress: addresses[0].address });
+            }
+
+            if (!signingAddressLocal && selectedAddress) {
+                this.setState({ signingAddressLocal: selectedAddress });
+            }
+        }
+
+        if (
+            selectedAddress !== prevProps.MessageSignStore.selectedAddress &&
+            !signingAddressLocal
+        ) {
+            this.setState({ signingAddressLocal: selectedAddress });
+        }
     }
 
     reset = () => {
@@ -56,23 +224,315 @@ export default class SignVerifyMessage extends React.Component<
         this.setState({
             messageToSign: '',
             messageToVerify: '',
-            signatureToVerify: ''
+            signatureToVerify: '',
+            verifyingAddress: '',
+            signingMode: 'lightning',
+            signingAddressLocal: ''
         });
 
         MessageSignStore.reset();
     };
 
     updateIndex = (selectedIndex: number) => {
-        const { MessageSignStore } = this.props;
-
-        this.setState({
+        // Clear all fields when switching between sign and verify tabs
+        const newState: Partial<SignVerifyMessageState> = {
             selectedIndex,
             messageToSign: '',
             messageToVerify: '',
-            signatureToVerify: ''
+            signatureToVerify: '',
+            signingAddressLocal: '',
+            verifyingAddress: ''
+        };
+
+        if (selectedIndex === 0) {
+            newState.signingMethodIndex = 0;
+            newState.signingMode = 'lightning';
+        }
+
+        this.setState(newState as SignVerifyMessageState);
+
+        const { MessageSignStore } = this.props;
+        MessageSignStore.reset();
+
+        if (selectedIndex === 0) {
+            MessageSignStore.setSigningMode('lightning');
+        }
+    };
+
+    updateSigningMethod = (signingMethodIndex: number) => {
+        const { MessageSignStore } = this.props;
+        const signingMode = signingMethodIndex === 0 ? 'lightning' : 'onchain';
+
+        this.setState({
+            signingAddressLocal: '',
+            signingMethodIndex,
+            signingMode,
+            messageToSign: ''
         });
 
-        MessageSignStore.reset();
+        MessageSignStore.setSigningMode(signingMode);
+        MessageSignStore.setSelectedAddress('');
+    };
+
+    navigateToAddressPicker = (mode: 'sign' | 'verify') => {
+        const { navigation } = this.props;
+        const {
+            signingAddressLocal,
+            verifyingAddress,
+            selectedIndex,
+            signingMode,
+            messageToSign,
+            messageToVerify,
+            signatureToVerify
+        } = this.state;
+
+        navigation.navigate('AddressPicker', {
+            selectedAddress:
+                mode === 'sign' ? signingAddressLocal : verifyingAddress,
+            returnToScreen: 'SignVerifyMessage',
+            navigationMethod: 'navigate',
+            returnParams: {
+                mode,
+                selectedIndex,
+                preserveMode: 'onchain',
+                signingMode,
+                messageToSign,
+                messageToVerify,
+                signatureToVerify
+            }
+        });
+    };
+
+    clearSelectedAddress = (mode: 'sign' | 'verify') => {
+        const { MessageSignStore } = this.props;
+
+        if (mode === 'sign') {
+            this.setState({ signingAddressLocal: '' });
+            MessageSignStore.setSelectedAddress('');
+        } else {
+            this.setState({ verifyingAddress: '' });
+        }
+    };
+
+    renderAddressSelector = (mode: 'sign' | 'verify') => {
+        const { MessageSignStore } = this.props;
+        const { addresses } = MessageSignStore;
+        const { signingAddressLocal, verifyingAddress } = this.state;
+
+        const currentAddress =
+            mode === 'sign' ? signingAddressLocal : verifyingAddress;
+
+        const currentAddressDetails = addresses.find(
+            (addr) => addr.address === currentAddress
+        );
+        const displayLabel = currentAddress;
+
+        return (
+            <View style={styles.addressSelector}>
+                <Text style={{ color: themeColor('secondaryText') }}>
+                    {localeString(
+                        'views.Settings.SignMessage.selectAddressSigning'
+                    )}
+                </Text>
+
+                <TouchableOpacity
+                    style={[
+                        styles.addressButton,
+                        {
+                            backgroundColor: themeColor('secondary'),
+                            ...(currentAddress
+                                ? {
+                                      borderColor: themeColor('highlight'),
+                                      borderWidth: 1
+                                  }
+                                : {
+                                      borderColor: themeColor('secondaryText'),
+                                      borderWidth: 1,
+                                      borderStyle: 'dashed'
+                                  })
+                        }
+                    ]}
+                    onPress={() => this.navigateToAddressPicker(mode)}
+                >
+                    {!currentAddress && (
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    textAlign: 'center',
+                                    marginRight: 5
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.SignMessage.tapToSelectAddress'
+                                )}
+                            </Text>
+                        </View>
+                    )}
+
+                    {currentAddress && (
+                        <Text
+                            style={{
+                                color: themeColor('highlight'),
+                                textAlign: 'center'
+                            }}
+                        >
+                            {displayLabel}
+                        </Text>
+                    )}
+                </TouchableOpacity>
+
+                {currentAddress && (
+                    <View
+                        style={[
+                            styles.addressInfoBox,
+                            {
+                                backgroundColor: themeColor('secondary'),
+                                borderColor: themeColor('secondary')
+                            }
+                        ]}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontSize: 12
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.SignMessage.fullAddress'
+                            )}
+                            :
+                        </Text>
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                marginTop: 3
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    fontSize: 12,
+                                    flex: 1
+                                }}
+                            >
+                                {currentAddress}
+                            </Text>
+                            <CopyButton
+                                copyValue={currentAddress}
+                                iconOnly={true}
+                                iconSize={16}
+                            />
+                        </View>
+
+                        {/* Show account info if available */}
+                        {currentAddressDetails?.accountName && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 12,
+                                        marginTop: 10
+                                    }}
+                                >
+                                    {localeString('general.accountName')}:
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontSize: 12,
+                                        marginTop: 3
+                                    }}
+                                >
+                                    {currentAddressDetails.accountName}
+                                </Text>
+                            </>
+                        )}
+                    </View>
+                )}
+            </View>
+        );
+    };
+
+    renderSigningMethodSelector = () => {
+        const { signingMethodIndex } = this.state;
+        const { supportsAddressMessageSigning } = this.state;
+
+        if (!supportsAddressMessageSigning) {
+            return null;
+        }
+
+        const lightningButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            signingMethodIndex === 0
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    {localeString('general.defaultNodeNickname')}
+                </Text>
+            </React.Fragment>
+        );
+
+        const onchainButton = () => (
+            <React.Fragment>
+                <Text
+                    style={{
+                        color:
+                            signingMethodIndex === 1
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    {localeString('general.onchain')}
+                </Text>
+            </React.Fragment>
+        );
+
+        const buttons = [
+            { element: lightningButton },
+            { element: onchainButton }
+        ];
+        const buttonElements = buttons.map((btn) => btn.element());
+
+        return (
+            <View style={styles.form}>
+                <Text style={{ color: themeColor('secondaryText') }}>
+                    {localeString('views.Settings.SignMessage.signingMethod')}
+                </Text>
+                <ButtonGroup
+                    onPress={this.updateSigningMethod}
+                    selectedIndex={signingMethodIndex}
+                    buttons={buttonElements}
+                    selectedButtonStyle={{
+                        backgroundColor: themeColor('highlight'),
+                        borderRadius: 12
+                    }}
+                    containerStyle={{
+                        backgroundColor: themeColor('secondary'),
+                        borderRadius: 12,
+                        borderColor: themeColor('secondary'),
+                        marginTop: 10,
+                        marginBottom: 10
+                    }}
+                    innerBorderStyle={{
+                        color: themeColor('secondary')
+                    }}
+                />
+
+                {signingMethodIndex === 1 && this.renderAddressSelector('sign')}
+            </View>
+        );
     };
 
     render() {
@@ -81,18 +541,13 @@ export default class SignVerifyMessage extends React.Component<
             messageToSign,
             messageToVerify,
             signatureToVerify,
-            selectedIndex
+            selectedIndex,
+            signingMode,
+            loading
         } = this.state;
-        const {
-            loading,
-            signMessage,
-            verifyMessage,
-            pubkey,
-            valid,
-            error,
-            signature
-        } = MessageSignStore;
+        const { signMessage, pubkey, valid, signature } = MessageSignStore;
 
+        const { supportsAddressMessageSigning } = this.state;
         const signButton = () => (
             <React.Fragment>
                 <Text
@@ -130,7 +585,13 @@ export default class SignVerifyMessage extends React.Component<
         return (
             <Screen>
                 <Header
-                    leftComponent="Back"
+                    leftComponent={{
+                        icon: 'arrow-back',
+                        color: themeColor('text'),
+                        onPress: () => {
+                            navigation.navigate('Tools');
+                        }
+                    }}
                     centerComponent={{
                         text: localeString('views.Settings.SignMessage.title'),
                         style: {
@@ -138,6 +599,19 @@ export default class SignVerifyMessage extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        loading ? (
+                            <View
+                                style={{
+                                    width: 24,
+                                    height: 24,
+                                    marginRight: 10
+                                }}
+                            >
+                                <LoadingIndicator size={24} />
+                            </View>
+                        ) : undefined
+                    }
                     navigation={navigation}
                 />
 
@@ -163,7 +637,7 @@ export default class SignVerifyMessage extends React.Component<
                         }}
                     />
 
-                    {loading && <LoadingIndicator />}
+                    {selectedIndex === 0 && this.renderSigningMethodSelector()}
 
                     {selectedIndex === 0 && (
                         <View>
@@ -204,7 +678,35 @@ export default class SignVerifyMessage extends React.Component<
                                     icon={{
                                         name: 'create'
                                     }}
-                                    onPress={() => signMessage(messageToSign)}
+                                    onPress={() => {
+                                        if (
+                                            this.state.signingMode === 'onchain'
+                                        ) {
+                                            if (
+                                                !this.state.signingAddressLocal
+                                            ) {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'views.Settings.SignMessage.pleaseSelectAddress'
+                                                    )
+                                                );
+                                                return;
+                                            }
+                                        }
+
+                                        if (
+                                            !messageToSign ||
+                                            messageToSign.trim() === ''
+                                        ) {
+                                            Alert.alert(
+                                                localeString(
+                                                    'views.Settings.SignMessage.pleaseEnterMessage'
+                                                )
+                                            );
+                                            return;
+                                        }
+                                        signMessage(messageToSign);
+                                    }}
                                 />
                             </View>
 
@@ -223,7 +725,9 @@ export default class SignVerifyMessage extends React.Component<
                                         <Text
                                             style={{
                                                 ...styles.textInput,
-                                                color: themeColor('text')
+                                                color: themeColor('text'),
+                                                borderColor:
+                                                    themeColor('secondary')
                                             }}
                                         >
                                             {signature}
@@ -240,6 +744,81 @@ export default class SignVerifyMessage extends React.Component<
 
                     {selectedIndex === 1 && (
                         <View>
+                            <View style={styles.form}>
+                                {supportsAddressMessageSigning ? (
+                                    <View style={{ marginBottom: 15 }}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.SignMessage.signatureType'
+                                            )}
+                                        </Text>
+                                        <ButtonGroup
+                                            onPress={(index: number) => {
+                                                const newSigningMode =
+                                                    index === 0
+                                                        ? 'lightning'
+                                                        : 'onchain';
+                                                MessageSignStore.setSigningMode(
+                                                    newSigningMode
+                                                );
+
+                                                this.setState({
+                                                    signingMode: newSigningMode,
+                                                    messageToVerify: '',
+                                                    signatureToVerify: '',
+                                                    verifyingAddress: ''
+                                                });
+                                            }}
+                                            selectedIndex={
+                                                signingMode === 'lightning'
+                                                    ? 0
+                                                    : 1
+                                            }
+                                            buttons={[
+                                                localeString(
+                                                    'general.defaultNodeNickname'
+                                                ),
+                                                localeString('general.onchain')
+                                            ]}
+                                            selectedButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
+                                            }}
+                                            containerStyle={{
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary'),
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                            textStyle={{
+                                                color: themeColor('text')
+                                            }}
+                                            selectedTextStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                        />
+                                    </View>
+                                ) : null}
+
+                                {supportsAddressMessageSigning &&
+                                    signingMode === 'onchain' &&
+                                    this.renderAddressSelector('verify')}
+                            </View>
+
                             <View style={styles.form}>
                                 <Text
                                     style={{
@@ -287,102 +866,176 @@ export default class SignVerifyMessage extends React.Component<
                                             signatureToVerify: text
                                         })
                                     }
+                                    multiline
+                                    style={{
+                                        height: 100
+                                    }}
                                     locked={loading}
                                 />
                             </View>
 
-                            {valid && (
-                                <SuccessMessage
-                                    message={`${localeString(
-                                        'views.Settings.SignMessage.success'
-                                    )} ${pubkey}`}
-                                />
-                            )}
-
-                            {(error || valid === false) && (
-                                <ErrorMessage
-                                    message={
-                                        error
-                                            ? error
-                                            : localeString(
-                                                  'views.Settings.SignMessage.error'
-                                              )
-                                    }
-                                />
-                            )}
+                            {valid !== null ? (
+                                <View style={styles.result}>
+                                    {valid ? (
+                                        <SuccessMessage
+                                            message={localeString(
+                                                'views.Settings.SignMessage.success'
+                                            )}
+                                        />
+                                    ) : (
+                                        <ErrorMessage
+                                            message={localeString(
+                                                'views.Settings.SignMessage.error'
+                                            )}
+                                        />
+                                    )}
+                                </View>
+                            ) : null}
 
                             <View style={styles.button}>
                                 <Button
                                     title={localeString(
                                         'views.Settings.signMessage.buttonVerify'
                                     )}
-                                    onPress={() =>
-                                        verifyMessage({
-                                            msg: messageToVerify,
-                                            signature: signatureToVerify
-                                        })
-                                    }
+                                    icon={{
+                                        name: 'check'
+                                    }}
+                                    onPress={this.verifyMessage}
                                 />
                             </View>
+
+                            {pubkey && (
+                                <View style={styles.button}>
+                                    <CopyButton
+                                        title={localeString(
+                                            'views.Settings.SignMessage.copyPubkey'
+                                        )}
+                                        copyValue={pubkey}
+                                    />
+                                </View>
+                            )}
                         </View>
                     )}
 
-                    {pubkey && (
-                        <View style={styles.button}>
-                            <CopyButton
-                                title={localeString(
-                                    'views.Settings.SignMessage.copyPubkey'
-                                )}
-                                copyValue={pubkey}
-                            />
-                        </View>
-                    )}
-
-                    {(signature || !!valid) && (
-                        <View style={styles.button}>
-                            <Button
-                                title={localeString(
-                                    'views.Settings.SignMessage.clear'
-                                )}
-                                onPress={() => this.reset()}
-                                buttonStyle={{
-                                    backgroundColor: '#261339',
-                                    borderRadius: 30
-                                }}
-                                titleStyle={{
-                                    color: 'white'
-                                }}
-                            />
-                        </View>
-                    )}
+                    <View style={styles.button}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.SignMessage.clear'
+                            )}
+                            icon={{
+                                name: 'clear'
+                            }}
+                            onPress={() => this.reset()}
+                            tertiary
+                        />
+                    </View>
                 </ScrollView>
             </Screen>
         );
     }
+
+    verifyMessage = async () => {
+        const { MessageSignStore } = this.props;
+        const {
+            messageToVerify,
+            signatureToVerify,
+            verifyingAddress,
+            signingMode
+        } = this.state;
+
+        if (!messageToVerify || messageToVerify.trim() === '') {
+            Alert.alert(
+                localeString(
+                    'views.Settings.SignMessage.pleaseEnterMessageVerify'
+                )
+            );
+            return;
+        }
+
+        if (!signatureToVerify || signatureToVerify.trim() === '') {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseEnterSignature')
+            );
+            return;
+        }
+
+        const { supportsAddressMessageSigning } = this.state;
+
+        if (
+            supportsAddressMessageSigning &&
+            signingMode === 'onchain' &&
+            (!verifyingAddress || verifyingAddress.trim() === '')
+        ) {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseSelectAddress')
+            );
+            console.log(
+                '[SignVerifyMessage] Verification aborted: no address provided for on-chain verification'
+            );
+            return;
+        }
+
+        const verifyRequest = {
+            msg: messageToVerify,
+            signature: signatureToVerify,
+            addr:
+                supportsAddressMessageSigning && signingMode === 'onchain'
+                    ? verifyingAddress
+                    : undefined
+        };
+
+        MessageSignStore.verifyMessage(verifyRequest);
+    };
 }
 
 const styles = StyleSheet.create({
     content: {
-        padding: 10
-    },
-    button: {
-        padding: 10
-    },
-    form: {
-        paddingTop: 20,
-        paddingLeft: 5,
-        paddingRight: 5
+        padding: 20
     },
     text: {
         fontFamily: 'PPNeueMontreal-Book'
     },
+    form: {
+        paddingTop: 20
+    },
     textInput: {
-        fontSize: 20,
-        width: '100%',
-        top: 10,
-        backgroundColor: '#31363F',
+        marginTop: 5,
+        borderWidth: 1,
         borderRadius: 6,
-        marginBottom: 20,
-        padding: 10
+        padding: 10,
+        minHeight: 100,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    button: {
+        paddingTop: 20,
+        paddingBottom: 10
+    },
+    result: {
+        paddingTop: 20
+    },
+    infoBox: {
+        padding: 10,
+        borderRadius: 6,
+        borderWidth: 1
+    },
+    addressInfoBox: {
+        padding: 10,
+        borderRadius: 6,
+        borderWidth: 1,
+        marginTop: 10
+    },
+    errorBox: {
+        padding: 10,
+        borderRadius: 6,
+        borderWidth: 1,
+        marginTop: 10
+    },
+    addressSelector: {
+        marginTop: 10
+    },
+    addressButton: {
+        padding: 10,
+        borderRadius: 6,
+        marginTop: 10
     }
 });
