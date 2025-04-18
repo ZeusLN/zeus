@@ -1257,6 +1257,7 @@
     "views.Settings.LightningAddress.changeConnectionString": "Change connection string",
     "views.Settings.LightningAddress.testConnectionString": "Test connection string",
     "views.Settings.LightningAddress.connectionTestSuccess": "Connection test successful!",
+    "views.Settings.LightningAddress.viewPlusPerks": "View perks",
     "views.Settings.LightningAddressSettings.title": "Lightning address settings",
     "views.Settings.LightningAddressSettings.automaticallyAccept": "Automatically accept payments on startup",
     "views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel": "Attestation level for automatic acceptance",

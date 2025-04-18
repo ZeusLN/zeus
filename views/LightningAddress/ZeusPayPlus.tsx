@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
@@ -26,6 +26,7 @@ import Gear from '../../assets/images/SVG/Gear.svg';
 import ZeusPayIcon from '../../assets/images/SVG/zeus-pay.svg';
 
 import ZeusPayPlusSettings from './ZeusPayPlusSettings';
+import ZeusPayPlusPerksList from './ZeusPayPlusPerksList';
 
 interface ZeusPayPlusProps {
     navigation: StackNavigationProp<any, any>;
@@ -82,29 +83,6 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                 />
             </TouchableOpacity>
         );
-
-        const perks = [
-            {
-                title: 'Custom handles',
-                active: true
-            },
-            {
-                title: 'Web portal point of sale features',
-                active: true
-            },
-            {
-                title: 'LSP channel lease discounts',
-                active: true
-            },
-            {
-                title: 'Early access to new features',
-                active: true
-            },
-            {
-                title: 'Exclusive merch',
-                active: false
-            }
-        ];
 
         return (
             <Screen>
@@ -192,46 +170,11 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                                 <ZeusPayPlusSettings
                                     navigation={navigation}
                                     hidePills
+                                    showPerks
                                 />
                             </>
                         ) : (
-                            <ScrollView style={{ margin: 10 }}>
-                                {perks.map((perk, index) => (
-                                    <View
-                                        key={`perk-${index}`}
-                                        style={{
-                                            marginTop: 10,
-                                            marginBottom: 10
-                                        }}
-                                    >
-                                        <Row justify="space-between">
-                                            <Text
-                                                style={{
-                                                    ...styles.perk,
-                                                    color: themeColor('text')
-                                                }}
-                                            >
-                                                {`• ${perk.title}`}
-                                            </Text>
-                                            {!perk.active && (
-                                                <Text
-                                                    style={{
-                                                        ...styles.comingSoon,
-                                                        color: themeColor(
-                                                            'highlight'
-                                                        ),
-                                                        textAlign: 'right'
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'general.comingSoon'
-                                                    )}
-                                                </Text>
-                                            )}
-                                        </Row>
-                                    </View>
-                                ))}
-                            </ScrollView>
+                            <ZeusPayPlusPerksList />
                         )}
                     </View>
                     <View style={{ bottom: 15 }}>
@@ -279,14 +222,5 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
 const styles = StyleSheet.create({
     text: {
         fontFamily: 'PPNeueMontreal-Book'
-    },
-    perk: {
-        fontFamily: 'MarlideDisplay_Regular',
-        fontSize: 30,
-        marginBottom: 5
-    },
-    comingSoon: {
-        fontFamily: 'MarlideDisplay_Bold',
-        fontSize: 20
     }
 });
