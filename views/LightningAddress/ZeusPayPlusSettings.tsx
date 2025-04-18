@@ -14,6 +14,7 @@ interface ZeusPayPlusSettingsProps {
     navigation: StackNavigationProp<any, any>;
     LightningAddressStore?: LightningAddressStore;
     hidePills?: boolean;
+    showPerks?: boolean;
 }
 
 @inject('LightningAddressStore')
@@ -23,7 +24,8 @@ export default class ZeusPayPlusSettings extends React.Component<
     {}
 > {
     render() {
-        const { navigation, LightningAddressStore, hidePills } = this.props;
+        const { navigation, LightningAddressStore, hidePills, showPerks } =
+            this.props;
         const { zeusPlusExpiresAt } = LightningAddressStore!!;
 
         const zeusPayPlus = !!zeusPlusExpiresAt;
@@ -40,6 +42,7 @@ export default class ZeusPayPlusSettings extends React.Component<
             ) : (
                 <></>
             );
+
         const PlusPillLocked = () => (
             <Pill
                 title="ZEUS Pay+"
@@ -50,116 +53,106 @@ export default class ZeusPayPlusSettings extends React.Component<
             />
         );
 
+        const NavIcon = () =>
+            zeusPayPlus ? (
+                <>
+                    <PlusPill />
+                    <Icon
+                        name="keyboard-arrow-right"
+                        color={themeColor('text')}
+                        style={{ marginLeft: 5 }}
+                    />
+                </>
+            ) : (
+                <>
+                    <PlusPillLocked />
+                    <Icon
+                        name="lock"
+                        color={themeColor('secondaryText')}
+                        style={{ marginLeft: 10 }}
+                    />
+                </>
+            );
+
         return (
             <>
-                {zeusPayPlus ? (
-                    <>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
-                            }}
-                            onPress={() => navigation.navigate('ChangeAddress')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.ChangeAddress'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <PlusPill />
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
-                            }}
-                            onPress={() => navigation.navigate('WebPortalPOS')}
-                        >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.webPortalPos'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <PlusPill />
-                            <Icon
-                                name="keyboard-arrow-right"
-                                color={themeColor('text')}
-                            />
-                        </ListItem>
-                    </>
-                ) : (
-                    <>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
+                <ListItem
+                    containerStyle={{
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        marginTop: 20
+                    }}
+                    onPress={() =>
+                        zeusPayPlus
+                            ? navigation.navigate('ChangeAddress')
+                            : null
+                    }
+                >
+                    <ListItem.Content>
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.ChangeAddress'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <PlusPillLocked />
-                            <Icon
-                                name="lock"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                padding: 0,
-                                marginTop: 20
+                            {localeString(
+                                'views.Settings.LightningAddress.ChangeAddress'
+                            )}
+                        </ListItem.Title>
+                    </ListItem.Content>
+                    <NavIcon />
+                </ListItem>
+                <ListItem
+                    containerStyle={{
+                        backgroundColor: 'transparent',
+                        padding: 0,
+                        marginTop: 20
+                    }}
+                    onPress={() =>
+                        zeusPayPlus ? navigation.navigate('WebPortalPOS') : null
+                    }
+                >
+                    <ListItem.Content>
+                        <ListItem.Title
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
-                            <ListItem.Content>
-                                <ListItem.Title
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book'
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.Settings.LightningAddress.webPortalPos'
-                                    )}
-                                </ListItem.Title>
-                            </ListItem.Content>
-                            <PlusPillLocked />
-                            <Icon
-                                name="lock"
-                                color={themeColor('secondaryText')}
-                            />
-                        </ListItem>
-                    </>
+                            {localeString(
+                                'views.Settings.LightningAddress.webPortalPos'
+                            )}
+                        </ListItem.Title>
+                    </ListItem.Content>
+                    <NavIcon />
+                </ListItem>
+                {showPerks && (
+                    <ListItem
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            padding: 0,
+                            marginTop: 20
+                        }}
+                        onPress={() =>
+                            zeusPayPlus
+                                ? navigation.navigate('ZeusPayPlusPerks')
+                                : null
+                        }
+                    >
+                        <ListItem.Content>
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('text'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.LightningAddress.viewPlusPerks'
+                                )}
+                            </ListItem.Title>
+                        </ListItem.Content>
+                        <NavIcon />
+                    </ListItem>
                 )}
             </>
         );
