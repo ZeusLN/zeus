@@ -799,9 +799,22 @@ export default class CashuStore {
 
             let invoice: any;
             if (mintQuote) {
-                this.quoteId = mintQuote?.quote;
+                this.quoteId = mintQuote.quote;
+
+                // decode bolt11 for metadata
+                let decoded;
+                try {
+                    decoded = bolt11.decode(mintQuote.request);
+                } catch (e) {
+                    console.log(
+                        'error decoding Cashu bolt11',
+                        mintQuote.request
+                    );
+                }
+
                 invoice = new CashuInvoice({
                     ...mintQuote,
+                    decoded,
                     mintUrl:
                         this.cashuWallets[this.selectedMintUrl].wallet!!.mint
                             .mintUrl
@@ -894,6 +907,7 @@ export default class CashuStore {
     ) => {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
 
+        if (this.cashuWallets[mintUrl].errorConnecting) return;
         if (!this.cashuWallets[mintUrl].wallet) {
             if (!this.mintUrls.includes(mintUrl)) {
                 await this.addMint(mintUrl, true);
@@ -908,19 +922,20 @@ export default class CashuStore {
             mintUrl
         ].wallet?.checkMintQuote(invoiceQuoteId);
 
-        const updatedInvoice = new CashuInvoice({
-            ...quote,
-            mintUrl
-        });
-
-        const amtSat = updatedInvoice.getAmount;
-
-        const paymentRequest = this.invoice || '';
         if (quote?.state === 'PAID') {
             // try up to 21 counters in case we get out of sync (DEBUG)
             let attempts = 0;
             let retries = 21;
             let success = false;
+
+            const updatedInvoice = new CashuInvoice({
+                ...quote,
+                mintUrl
+            });
+
+            const amtSat = updatedInvoice.getAmount;
+
+            const paymentRequest = this.invoice || '';
 
             while (attempts < retries && !success) {
                 try {
@@ -973,7 +988,7 @@ export default class CashuStore {
                         (item) => item.quote === quote.quote
                     );
                     if (invoiceIndex !== undefined && invoiceIndex > -1) {
-                        this.invoices[invoiceIndex] = updatedInvoice;
+                        this.invoices!![invoiceIndex] = updatedInvoice;
                     } else {
                         this.invoices?.push(updatedInvoice);
                     }
@@ -1006,7 +1021,7 @@ export default class CashuStore {
                 }
             }
         } else {
-            return { isPaid: false, amtSat, paymentRequest, updatedInvoice };
+            return { isPaid: false };
         }
     };
 
@@ -1493,6 +1508,8 @@ export default class CashuStore {
     @action
     public checkTokenSpent = async (decoded: CashuToken) => {
         const { mint } = decoded;
+
+        if (this.cashuWallets[mint].errorConnecting) return;
         if (!this.cashuWallets[mint].wallet) {
             await this.initializeWallet(mint, true);
         }
