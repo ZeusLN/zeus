@@ -15,6 +15,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import AlertStore from '../stores/AlertStore';
+import CashuStore from '../stores/CashuStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import ModalStore from '../stores/ModalStore';
@@ -39,6 +40,7 @@ import Add from '../assets/images/SVG/Add.svg';
 import Alert from '../assets/images/SVG/Alert.svg';
 import CaretUp from '../assets/images/SVG/Caret Up.svg';
 import ClipboardSVG from '../assets/images/SVG/Clipboard.svg';
+import Ecash from '../assets/images/SVG/Ecash.svg';
 import Menu from '../assets/images/SVG/Menu.svg';
 import Hourglass from '../assets/images/SVG/Hourglass.svg';
 import POS from '../assets/images/SVG/POS.svg';
@@ -176,6 +178,23 @@ const PendingHtlcBadge = ({
     </TouchableOpacity>
 );
 
+const UnredeemedTokensBadge = ({
+    navigation
+}: {
+    navigation: StackNavigationProp<any, any>;
+    clipboard: string;
+}) => (
+    <TouchableOpacity
+        onPress={() =>
+            navigation.navigate('UnspentTokens', {
+                animation: 'slide_from_bottom'
+            })
+        }
+    >
+        <Ecash fill={themeColor('text')} width="30" height="30" />
+    </TouchableOpacity>
+);
+
 const POSBadge = ({
     setPosStatus,
     getOrders
@@ -195,6 +214,7 @@ const POSBadge = ({
 
 interface WalletHeaderProps {
     AlertStore?: AlertStore;
+    CashuStore?: CashuStore;
     ChannelsStore?: ChannelsStore;
     SettingsStore?: SettingsStore;
     ModalStore?: ModalStore;
@@ -214,6 +234,7 @@ interface WalletHeaderState {
 
 @inject(
     'AlertStore',
+    'CashuStore',
     'ChannelsStore',
     'LightningAddressStore',
     'ModalStore',
@@ -254,6 +275,7 @@ export default class WalletHeader extends React.Component<
             title,
             channels,
             AlertStore,
+            CashuStore,
             SettingsStore,
             NodeInfoStore,
             ChannelsStore,
@@ -262,6 +284,7 @@ export default class WalletHeader extends React.Component<
             PosStore,
             SyncStore
         } = this.props;
+        const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
@@ -274,6 +297,10 @@ export default class WalletHeader extends React.Component<
                 settings.nodes?.length &&
                 settings.nodes[settings.selectedNode || 0]) ||
             null;
+
+        const unredeemedTokens = sentTokens
+            ? sentTokens.filter((token: any) => !token.spent)
+            : [];
 
         const posEnabled: PosEnabled =
             (settings && settings.pos && settings.pos.posEnabled) ||
@@ -576,6 +603,14 @@ export default class WalletHeader extends React.Component<
                             {!loading && !!clipboard && (
                                 <View style={{ marginRight: 15 }}>
                                     <ClipboardBadge
+                                        navigation={navigation}
+                                        clipboard={clipboard}
+                                    />
+                                </View>
+                            )}
+                            {!loading && unredeemedTokens?.length > 0 && (
+                                <View style={{ marginRight: 15 }}>
+                                    <UnredeemedTokensBadge
                                         navigation={navigation}
                                         clipboard={clipboard}
                                     />
