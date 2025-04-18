@@ -1788,4 +1788,52 @@ export default class CashuStore {
             });
         }
     };
+
+    @action
+    public deleteCashuData = async () => {
+        this.loading = true;
+        const lndDir = this.getLndDir();
+
+        try {
+            for (const mintUrl of this.mintUrls) {
+                const walletId = `${lndDir}==${mintUrl}`;
+                await Storage.removeItem(`${walletId}-mintInfo`);
+                await Storage.removeItem(`${walletId}-counter`);
+                await Storage.removeItem(`${walletId}-proofs`);
+                await Storage.removeItem(`${walletId}-balance`);
+                await Storage.removeItem(`${walletId}-pubkey`);
+            }
+
+            await Storage.removeItem(`${lndDir}-cashu-mintUrls`);
+            await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
+            await Storage.removeItem(`${lndDir}-cashu-totalBalanceSats`);
+            await Storage.removeItem(`${lndDir}-cashu-invoices`);
+            await Storage.removeItem(`${lndDir}-cashu-payments`);
+            await Storage.removeItem(`${lndDir}-cashu-received-tokens`);
+            await Storage.removeItem(`${lndDir}-cashu-sent-tokens`);
+
+            // Reset store state
+            this.reset();
+
+            runInAction(() => {
+                this.loading = false;
+            });
+
+            Alert.alert(
+                localeString('general.success'),
+                localeString('stores.CashuStore.dataDeletedMessage')
+            );
+        } catch (error: any) {
+            console.error('Error deleting Cashu data:', error);
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+            });
+            Alert.alert(
+                localeString('general.error'),
+                localeString('stores.CashuStore.errorDeletingData') +
+                    `: ${error.message}`
+            );
+        }
+    };
 }

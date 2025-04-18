@@ -21,9 +21,30 @@ interface CashuToolsProps {
 @inject('CashuStore')
 @observer
 export default class CashuTools extends React.Component<CashuToolsProps, {}> {
+    handleDeleteData = () => {
+        Alert.alert(
+            localeString('views.Tools.cashu.deleteData.confirmTitle'),
+            localeString('views.Tools.cashu.deleteData.confirmMessage'),
+            [
+                {
+                    text: localeString('general.cancel'),
+                    style: 'cancel'
+                },
+                {
+                    text: localeString('general.delete'),
+                    style: 'destructive',
+                    onPress: async () => {
+                        await this.props.CashuStore.deleteCashuData();
+                    }
+                }
+            ],
+            { cancelable: false }
+        );
+    };
+
     render() {
         const { navigation, CashuStore } = this.props;
-        const { setMintCounter } = CashuStore;
+        const { setMintCounter } = CashuStore; // Keep if needed elsewhere, otherwise remove if only used for bump
         return (
             <Screen>
                 <View style={{ flex: 1 }}>
@@ -140,6 +161,34 @@ ${oldCount} -> ${newCount}
                                 >
                                     {localeString(
                                         'views.Tools.cashu.bumpWalletCounters.subtitle'
+                                    )}
+                                </Text>
+                            </View>
+                        </>
+
+                        <>
+                            <View style={{ marginTop: 25 }}>
+                                <Button
+                                    title={localeString(
+                                        'views.Tools.cashu.deleteData'
+                                    )}
+                                    onPress={this.handleDeleteData}
+                                    warning
+                                />
+                            </View>
+                            <View
+                                style={{
+                                    margin: 10,
+                                    marginTop: 15
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Tools.cashu.deleteData.subtitle'
                                     )}
                                 </Text>
                             </View>
