@@ -219,6 +219,100 @@ describe('ActivityFilterUtils', () => {
         ]);
     });
 
+    // Test cases for keysend filtering
+    it('supports filtering keysend payments and invoices', () => {
+        const activities: any[] = [
+            new Payment({
+                value: '100',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        route: {
+                            hops: [
+                                {
+                                    custom_records: {
+                                        '34349334': 'test message'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }),
+            new Payment({
+                value: '200',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 6).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        route: {
+                            hops: [
+                                {
+                                    custom_records: {
+                                        '5482373484': 'test preimage'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }),
+            new Payment({
+                value: '300',
+                creation_date: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString()
+            }),
+            new Invoice({
+                value: '400',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        custom_records: {
+                            '34349334': 'test message'
+                        }
+                    }
+                ]
+            }),
+            new Invoice({
+                value: '500',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 6).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        custom_records: {
+                            '5482373484': 'test preimage'
+                        }
+                    }
+                ]
+            }),
+            new Invoice({
+                value: '600',
+                creation_date: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString()
+            })
+        ];
+        const filter = getDefaultFilter();
+        filter.keysend = false;
+
+        const filteredActivities = ActivityFilterUtils.filterActivities(
+            activities,
+            filter
+        );
+
+        expect(filteredActivities.map((a) => a.getAmount)).toEqual([
+            '300',
+            600
+        ]);
+    });
+
     //    test case for Memo Filter
     it('supports filtering by memo', () => {
         const activities: any[] = [
@@ -245,6 +339,106 @@ describe('ActivityFilterUtils', () => {
         expect(filteredActivities[0].getNote).toBe('Payment for invoice');
     });
 
+    // Test case for Keysend Filter
+    it('supports filtering by keysend', () => {
+        const activities: any[] = [
+            new Payment({
+                value: '100',
+                creation_date: (
+                    new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        route: {
+                            hops: [
+                                {
+                                    custom_records: {
+                                        '34349334':
+                                            'Keysend payment with message'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }),
+            new Payment({
+                value: '200',
+                creation_date: (
+                    new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        route: {
+                            hops: [
+                                {
+                                    custom_records: {
+                                        '5482373484': 'Keysend preimage'
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }),
+            new Invoice({
+                value: '400',
+                creation_date: (
+                    new Date(2000, 1, 4, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        custom_records: {
+                            '34349334': 'Keysend invoice with message'
+                        }
+                    }
+                ]
+            }),
+            new Invoice({
+                value: '500',
+                creation_date: (
+                    new Date(2000, 1, 5, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                htlcs: [
+                    {
+                        custom_records: {
+                            '5482373484': 'Keysend invoice preimage'
+                        }
+                    }
+                ]
+            }),
+            new Payment({
+                value: '600',
+                creation_date: (
+                    new Date(2000, 1, 6, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                htlcs: []
+            }),
+            new Invoice({
+                value: '700',
+                creation_date: (
+                    new Date(2000, 1, 7, 3, 4, 4).getTime() / 1000
+                ).toString(),
+                htlcs: []
+            })
+        ];
+
+        const filter = getDefaultFilter();
+        filter.keysend = false;
+
+        const filteredActivities = ActivityFilterUtils.filterActivities(
+            activities,
+            filter
+        );
+
+        // Should only include non-keysend activities
+        expect(filteredActivities.length).toBe(2);
+        expect(filteredActivities.map((a) => a.getAmount)).toEqual([
+            '600',
+            700
+        ]);
+    });
+
     const getDefaultFilter = () =>
         ({
             lightning: true,
@@ -254,6 +448,7 @@ describe('ActivityFilterUtils', () => {
             unpaid: true,
             unconfirmed: true,
             minimumAmount: 0,
-            memo: ''
+            memo: '',
+            keysend: true
         } as Filter);
 });
