@@ -611,6 +611,7 @@ export default class CashuStore {
 
     @action
     public initializeWallets = async () => {
+        const start = new Date();
         runInAction(() => {
             this.initializing = true;
             this.loadingMsg = localeString(
@@ -674,7 +675,11 @@ export default class CashuStore {
         });
 
         // Check status of pending items after initialization
-        await this.checkPendingItems();
+        this.checkPendingItems();
+
+        const completionTime =
+            (new Date().getTime() - start.getTime()) / 1000 + 's';
+        console.log('Cashu start-up time:', completionTime);
     };
 
     @action
