@@ -485,6 +485,8 @@
     "views.Channel.lease.purchaseLease": "Purchase channel lease",
     "views.Channel.lease.extendLease": "Extend channel lease",
     "views.UTXOs.CoinControl.noUTXOs": "No UTXOs available",
+    "views.UTXOs.savePlaceholder": "Add a label for this UTXO",
+    "views.UTXOs.addLabel": "Add / Edit Label",
     "views.EditFee.mainText": "Edit network fee",
     "views.EditFee.fastestFee": "Fastest fee",
     "views.EditFee.halfHourFee": "Half hour fee",
