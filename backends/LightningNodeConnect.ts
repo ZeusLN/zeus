@@ -506,6 +506,36 @@ export default class LightningNodeConnect {
                 signature: req.signature
             })
             .then((data: lnrpc.VerifyMessageResponse) => snakeize(data));
+    signMessageWithAddr = async (msg: string, addr: string) =>
+        await this.lnc.lnd.walletKit
+            .signMessageWithAddr({
+                msg:
+                    typeof msg === 'string'
+                        ? Base64Utils.utf8ToBase64(msg)
+                        : Base64Utils.bytesToBase64(msg as Uint8Array),
+                addr
+            })
+            .then((data: walletrpc.SignMessageWithAddrResponse) =>
+                snakeize(data)
+            );
+
+    verifyMessageWithAddr = async (
+        msg: string,
+        signature: string,
+        addr: string
+    ) =>
+        await this.lnc.lnd.walletKit
+            .verifyMessageWithAddr({
+                msg:
+                    typeof msg === 'string'
+                        ? Base64Utils.utf8ToBase64(msg)
+                        : Base64Utils.bytesToBase64(msg as Uint8Array),
+                signature,
+                addr
+            })
+            .then((data: walletrpc.VerifyMessageWithAddrResponse) =>
+                snakeize(data)
+            );
     lnurlAuth = async (r_hash: string) => {
         const signed = await this.signMessage(r_hash);
         return {
@@ -532,6 +562,7 @@ export default class LightningNodeConnect {
     };
 
     supportsMessageSigning = () => this.permSignMessage;
+    supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => this.permSendCoins;
     supportsOnchainReceiving = () => this.permNewAddress;

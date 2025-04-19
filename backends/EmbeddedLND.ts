@@ -61,6 +61,11 @@ const {
     sendCoins
 } = lndMobile.onchain;
 
+import {
+    signMessageWithAddr as signMsgWithAddr,
+    verifyMessageWithAddr as verifyMsgWithAddr
+} from '../lndmobile/wallet';
+
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
 
@@ -232,8 +237,24 @@ export default class EmbeddedLND extends LND {
         );
     };
 
-    // getFees = () => N/A;
-    // setFees = () => N/A;
+    signMessageWithAddr = async (message: string, address: string) => {
+        return await signMsgWithAddr(
+            Base64Utils.stringToUint8Array(message),
+            address
+        );
+    };
+    verifyMessageWithAddr = async (
+        message: string,
+        signature: string,
+        address: string
+    ) => {
+        return await verifyMsgWithAddr(
+            Base64Utils.stringToUint8Array(message),
+            signature,
+            address
+        );
+    };
+
     getRoutes = async (urlParams?: Array<any>) =>
         urlParams && (await queryRoutes(urlParams[0], urlParams[1]));
     // getForwardingHistory = () => N/A
@@ -289,6 +310,7 @@ export default class EmbeddedLND extends LND {
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
 
+    supportsAddressMessageSigning = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
