@@ -1720,63 +1720,88 @@ export default class WalletConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.rune'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            placeholder={'Lt1c...'}
-                                            textColor={
-                                                runeError
-                                                    ? themeColor('error')
-                                                    : themeColor('text')
-                                            }
-                                            autoCorrect={false}
-                                            autoCapitalize="none"
-                                            value={rune}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    runeError: false
-                                                });
-
-                                                // Allow backspace/delete operations without validation
-                                                if (
-                                                    text.length <
-                                                    (rune?.length || 0)
-                                                ) {
-                                                    this.setState({
-                                                        rune: text,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For single character additions
-                                                if (
-                                                    text.length ===
-                                                    (rune?.length || 0) + 1
-                                                ) {
-                                                    const cleanedText =
-                                                        text.replace(
-                                                            /[^A-Za-z0-9\-_=]/g,
-                                                            ''
-                                                        );
-                                                    this.setState({
-                                                        rune: cleanedText,
-                                                        saved: false
-                                                    });
-                                                    return;
-                                                }
-
-                                                // For pasted content
-                                                const trimmedText = text.trim();
-                                                this.setState({
-                                                    rune: trimmedText,
-                                                    runeError:
-                                                        !ValidationUtils.hasValidRuneChars(
-                                                            trimmedText
-                                                        ),
-                                                    saved: false
-                                                });
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
                                             }}
-                                            locked={loading}
-                                        />
+                                        >
+                                            <TextInput
+                                                placeholder={'Lt1c...'}
+                                                textColor={
+                                                    runeError
+                                                        ? themeColor('error')
+                                                        : themeColor('text')
+                                                }
+                                                autoCorrect={false}
+                                                autoCapitalize="none"
+                                                value={rune}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
+                                                style={{
+                                                    flex: 1,
+                                                    marginRight: 15
+                                                }}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        runeError: false
+                                                    });
+
+                                                    // Allow backspace/delete operations without validation
+                                                    if (
+                                                        text.length <
+                                                        (rune?.length || 0)
+                                                    ) {
+                                                        this.setState({
+                                                            rune: text,
+                                                            saved: false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // For single character additions
+                                                    if (
+                                                        text.length ===
+                                                        (rune?.length || 0) + 1
+                                                    ) {
+                                                        const cleanedText =
+                                                            text.replace(
+                                                                /[^A-Za-z0-9\-_=]/g,
+                                                                ''
+                                                            );
+                                                        this.setState({
+                                                            rune: cleanedText,
+                                                            saved: false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // For pasted content
+                                                    const trimmedText =
+                                                        text.trim();
+                                                    this.setState({
+                                                        rune: trimmedText,
+                                                        runeError:
+                                                            !ValidationUtils.hasValidRuneChars(
+                                                                trimmedText
+                                                            ),
+                                                        saved: false
+                                                    });
+                                                }}
+                                                locked={loading}
+                                            />
+                                            <ShowHideToggle
+                                                onPress={() =>
+                                                    this.setState({
+                                                        hidden: !this.state
+                                                            .hidden
+                                                    })
+                                                }
+                                            />
+                                        </View>
                                     </>
                                 ) : (
                                     <>
@@ -1791,65 +1816,93 @@ export default class WalletConfiguration extends React.Component<
                                                 'views.Settings.AddEditNode.macaroon'
                                             )}
                                         </Text>
-                                        <TextInput
-                                            placeholder={'0A...'}
-                                            textColor={
-                                                macaroonHexError
-                                                    ? themeColor('error')
-                                                    : themeColor('text')
-                                            }
-                                            autoCorrect={false}
-                                            autoCapitalize="none"
-                                            value={macaroonHex}
-                                            onChangeText={(text: string) => {
-                                                this.setState({
-                                                    macaroonHexError: false
-                                                });
-
-                                                // Allow backspace/delete operations without validation
-                                                if (
-                                                    text.length <
-                                                    (macaroonHex?.length || 0)
-                                                ) {
-                                                    this.setState({
-                                                        macaroonHex: text,
-                                                        saved: false
-                                                    });
-                                                    return;
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center'
+                                            }}
+                                        >
+                                            <TextInput
+                                                placeholder={'0A...'}
+                                                textColor={
+                                                    macaroonHexError
+                                                        ? themeColor('error')
+                                                        : themeColor('text')
                                                 }
+                                                autoCorrect={false}
+                                                autoCapitalize="none"
+                                                value={macaroonHex}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
+                                                style={{
+                                                    flex: 1,
+                                                    marginRight: 15
+                                                }}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        macaroonHexError: false
+                                                    });
 
-                                                // For single character additions
-                                                if (
-                                                    text.length ===
-                                                    (macaroonHex?.length || 0) +
-                                                        1
-                                                ) {
-                                                    const cleanedText =
-                                                        text.replace(
-                                                            /[^0-9a-fA-F]/g,
-                                                            ''
-                                                        );
+                                                    // Allow backspace/delete operations without validation
+                                                    if (
+                                                        text.length <
+                                                        (macaroonHex?.length ||
+                                                            0)
+                                                    ) {
+                                                        this.setState({
+                                                            macaroonHex: text,
+                                                            saved: false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // For single character additions
+                                                    if (
+                                                        text.length ===
+                                                        (macaroonHex?.length ||
+                                                            0) +
+                                                            1
+                                                    ) {
+                                                        const cleanedText =
+                                                            text.replace(
+                                                                /[^0-9a-fA-F]/g,
+                                                                ''
+                                                            );
+                                                        this.setState({
+                                                            macaroonHex:
+                                                                cleanedText,
+                                                            saved: false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // For pasted content
+                                                    const trimmedText =
+                                                        text.trim();
                                                     this.setState({
                                                         macaroonHex:
-                                                            cleanedText,
+                                                            trimmedText,
+                                                        macaroonHexError:
+                                                            !ValidationUtils.hasValidMacaroonChars(
+                                                                trimmedText
+                                                            ),
                                                         saved: false
                                                     });
-                                                    return;
+                                                }}
+                                                locked={loading}
+                                            />
+                                            <ShowHideToggle
+                                                onPress={() =>
+                                                    this.setState({
+                                                        hidden: !this.state
+                                                            .hidden
+                                                    })
                                                 }
-
-                                                // For pasted content
-                                                const trimmedText = text.trim();
-                                                this.setState({
-                                                    macaroonHex: trimmedText,
-                                                    macaroonHexError:
-                                                        !ValidationUtils.hasValidMacaroonChars(
-                                                            trimmedText
-                                                        ),
-                                                    saved: false
-                                                });
-                                            }}
-                                            locked={loading}
-                                        />
+                                            />
+                                        </View>
                                     </>
                                 )}
                             </>
@@ -1975,81 +2028,102 @@ export default class WalletConfiguration extends React.Component<
                                         'views.Settings.AddEditNode.pairingPhrase'
                                     )}
                                 </Text>
-                                <TextInput
-                                    placeholder={
-                                        'cherry truth mask employ box silver mass bunker fiscal vote'
-                                    }
-                                    textColor={
-                                        pairingPhraseError
-                                            ? themeColor('error')
-                                            : themeColor('text')
-                                    }
-                                    autoCapitalize="none"
-                                    value={pairingPhrase}
-                                    onChangeText={(text: string) => {
-                                        this.setState({
-                                            pairingPhraseError: false
-                                        });
-
-                                        // Allow backspace/delete operations without validation
-                                        if (
-                                            text.length <
-                                            (pairingPhrase?.length || 0)
-                                        ) {
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <TextInput
+                                        placeholder={
+                                            'cherry truth mask employ box silver mass bunker fiscal vote'
+                                        }
+                                        textColor={
+                                            pairingPhraseError
+                                                ? themeColor('error')
+                                                : themeColor('text')
+                                        }
+                                        autoCapitalize="none"
+                                        value={pairingPhrase}
+                                        secureTextEntry={this.state.hidden}
+                                        style={{
+                                            flex: 1,
+                                            marginRight: 15
+                                        }}
+                                        onChangeText={(text: string) => {
                                             this.setState({
-                                                pairingPhrase: text,
+                                                pairingPhraseError: false
+                                            });
+
+                                            // Allow backspace/delete operations without validation
+                                            if (
+                                                text.length <
+                                                (pairingPhrase?.length || 0)
+                                            ) {
+                                                this.setState({
+                                                    pairingPhrase: text,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            // For single character additions
+                                            if (
+                                                text.length ===
+                                                (pairingPhrase?.length || 0) + 1
+                                            ) {
+                                                if (text === ' ') return;
+                                                if (text.includes('  ')) return;
+
+                                                const cleanedText =
+                                                    text.replace(
+                                                        /[^a-zA-Z\s]/g,
+                                                        ''
+                                                    );
+                                                this.setState({
+                                                    pairingPhrase: cleanedText,
+                                                    saved: false
+                                                });
+                                                return;
+                                            }
+
+                                            // For pasted content
+                                            const normalizedPhrase = text
+                                                .trim()
+                                                .replace(/\s+/g, ' ');
+                                            this.setState({
+                                                pairingPhrase: normalizedPhrase,
+                                                pairingPhraseError:
+                                                    !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                        normalizedPhrase
+                                                    ),
                                                 saved: false
                                             });
-                                            return;
-                                        }
-
-                                        // For single character additions
-                                        if (
-                                            text.length ===
-                                            (pairingPhrase?.length || 0) + 1
-                                        ) {
-                                            if (text === ' ') return;
-                                            if (text.includes('  ')) return;
-
-                                            const cleanedText = text.replace(
-                                                /[^a-zA-Z\s]/g,
-                                                ''
-                                            );
+                                        }}
+                                        onBlur={() => {
+                                            const normalizedPhrase =
+                                                pairingPhrase
+                                                    ?.trim()
+                                                    .replace(/\s+/g, ' ');
                                             this.setState({
-                                                pairingPhrase: cleanedText,
+                                                pairingPhrase: normalizedPhrase,
+                                                pairingPhraseError:
+                                                    !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
+                                                        normalizedPhrase
+                                                    ),
                                                 saved: false
                                             });
-                                            return;
+                                        }}
+                                        locked={loading}
+                                    />
+                                    <ShowHideToggle
+                                        onPress={() =>
+                                            this.setState({
+                                                hidden: !this.state.hidden
+                                            })
                                         }
-
-                                        // For pasted content
-                                        const normalizedPhrase = text
-                                            .trim()
-                                            .replace(/\s+/g, ' ');
-                                        this.setState({
-                                            pairingPhrase: normalizedPhrase,
-                                            pairingPhraseError:
-                                                !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                    normalizedPhrase
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    onBlur={() => {
-                                        const normalizedPhrase = pairingPhrase
-                                            ?.trim()
-                                            .replace(/\s+/g, ' ');
-                                        this.setState({
-                                            pairingPhrase: normalizedPhrase,
-                                            pairingPhraseError:
-                                                !ValidationUtils.hasValidPairingPhraseCharsAndWordcount(
-                                                    normalizedPhrase
-                                                ),
-                                            saved: false
-                                        });
-                                    }}
-                                    locked={loading}
-                                />
+                                    />
+                                </View>
 
                                 {!!localKey && (
                                     <>
