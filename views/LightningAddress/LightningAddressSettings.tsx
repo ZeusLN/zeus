@@ -4,23 +4,27 @@ import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import Button from '../../../components/Button';
-import DropdownSetting from '../../../components/DropdownSetting';
-import Header from '../../../components/Header';
-import Screen from '../../../components/Screen';
-import Switch from '../../../components/Switch';
-import Text from '../../../components/Text';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../../components/LoadingIndicator';
+import Button from '../../components/Button';
+import DropdownSetting from '../../components/DropdownSetting';
+import Header from '../../components/Header';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
+import Text from '../../components/Text';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import SettingsStore, {
     NOTIFICATIONS_PREF_KEYS,
     AUTOMATIC_ATTESTATION_KEYS
-} from '../../../stores/SettingsStore';
-import LightningAddressStore from '../../../stores/LightningAddressStore';
+} from '../../stores/SettingsStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+
+import ZeusPayPlusSettings from '../../views/LightningAddress/ZeusPayPlusSettings';
 
 interface LightningAddressSettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -153,7 +157,7 @@ export default class LightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontSize: 17,
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
@@ -183,6 +187,7 @@ export default class LightningAddressSettings extends React.Component<
                                                     !automaticallyAccept
                                             }
                                         });
+                                        restartNeeded();
                                     }}
                                 />
                             </View>
@@ -192,6 +197,7 @@ export default class LightningAddressSettings extends React.Component<
                                 title={localeString(
                                     'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel'
                                 )}
+                                titleColor={themeColor('text')}
                                 selectedValue={
                                     automaticallyAcceptAttestationLevel
                                 }
@@ -207,6 +213,7 @@ export default class LightningAddressSettings extends React.Component<
                                                 value
                                         }
                                     });
+                                    restartNeeded();
                                 }}
                                 values={AUTOMATIC_ATTESTATION_KEYS}
                                 disabled={
@@ -224,7 +231,7 @@ export default class LightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
@@ -271,7 +278,7 @@ export default class LightningAddressSettings extends React.Component<
                             <View style={{ flex: 1 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize: 17
                                     }}
@@ -316,6 +323,7 @@ export default class LightningAddressSettings extends React.Component<
                                 title={localeString(
                                     'views.Settings.LightningAddressSettings.notifications'
                                 )}
+                                titleColor={themeColor('text')}
                                 selectedValue={notifications}
                                 onValueChange={async (value: number) => {
                                     try {
@@ -351,7 +359,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -360,7 +368,7 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
                         <ListItem
@@ -374,7 +382,7 @@ export default class LightningAddressSettings extends React.Component<
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
@@ -385,32 +393,72 @@ export default class LightningAddressSettings extends React.Component<
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
+                        <ZeusPayPlusSettings navigation={navigation} />
+                        {BackendUtils.supportsCashuWallet() &&
+                            settings?.ecash?.enableCashu && (
+                                <ListItem
+                                    containerStyle={{
+                                        backgroundColor: 'transparent',
+                                        padding: 0,
+                                        marginTop: 30
+                                    }}
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'CreateCashuLightningAddress',
+                                            { switchTo: true }
+                                        )
+                                    }
+                                >
+                                    <ListItem.Content>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LightningAddress.switchToCashu'
+                                            )}
+                                        </ListItem.Title>
+                                    </ListItem.Content>
+                                    <Icon
+                                        name="keyboard-arrow-right"
+                                        color={themeColor('text')}
+                                    />
+                                </ListItem>
+                            )}
                         <ListItem
                             containerStyle={{
                                 backgroundColor: 'transparent',
                                 padding: 0,
-                                marginTop: 20
+                                marginTop: 30
                             }}
-                            onPress={() => navigation.navigate('ChangeAddress')}
+                            onPress={() =>
+                                navigation.navigate(
+                                    'CreateNWCLightningAddress',
+                                    { switchTo: true }
+                                )
+                            }
                         >
                             <ListItem.Content>
                                 <ListItem.Title
                                     style={{
-                                        color: themeColor('secondaryText'),
+                                        color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
                                 >
                                     {localeString(
-                                        'views.Settings.LightningAddress.ChangeAddress'
+                                        'views.Settings.LightningAddress.switchToNWC'
                                     )}
                                 </ListItem.Title>
                             </ListItem.Content>
                             <Icon
                                 name="keyboard-arrow-right"
-                                color={themeColor('secondaryText')}
+                                color={themeColor('text')}
                             />
                         </ListItem>
                         <View style={{ marginTop: 40, marginBottom: 20 }}>

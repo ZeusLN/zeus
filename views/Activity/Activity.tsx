@@ -40,6 +40,9 @@ import NotesStore from '../../stores/NotesStore';
 
 import Filter from '../../assets/images/SVG/Filter On.svg';
 import Invoice from '../../models/Invoice';
+import CashuInvoice from '../../models/CashuInvoice';
+import CashuPayment from '../../models/CashuPayment';
+import CashuToken from '../../models/CashuToken';
 import ActivityToCsv from './ActivityToCsv';
 
 interface ActivityProps {
@@ -113,6 +116,70 @@ const ActivityListItem = React.memo(
                     {item.isPaid
                         ? localeString('general.lightning')
                         : localeString('views.PaymentRequest.title')}
+                    {keysendMessageOrMemo ? ': ' : ''}
+                    {keysendMessageOrMemo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {PrivacyUtils.sensitiveValue(
+                                keysendMessageOrMemo
+                            )?.toString()}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item instanceof CashuToken) {
+            displayName = item.received
+                ? localeString('views.Activity.youReceived')
+                : item.spent
+                ? localeString('views.Activity.youSent')
+                : localeString('general.unspent');
+            const memo = item.getMemo;
+            subTitle = (
+                <Text>
+                    {localeString('cashu.token')}
+                    {memo ? ': ' : ''}
+                    {memo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {PrivacyUtils.sensitiveValue(memo)?.toString()}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item instanceof CashuInvoice) {
+            displayName = item.isPaid
+                ? localeString('views.Activity.youReceived')
+                : item.isExpired
+                ? localeString('views.Activity.expiredRequested')
+                : localeString('views.Activity.requestedPayment');
+            const memo = item.getMemo;
+            subTitle = (
+                <Text>
+                    {item.isPaid
+                        ? localeString('general.cashu')
+                        : localeString('views.Cashu.CashuInvoice.title')}
+                    {memo ? ': ' : ''}
+                    {memo ? (
+                        <Text style={{ fontStyle: 'italic' }}>
+                            {PrivacyUtils.sensitiveValue(memo)?.toString()}
+                        </Text>
+                    ) : (
+                        ''
+                    )}
+                </Text>
+            );
+        } else if (item instanceof CashuPayment) {
+            displayName = item.isFailed
+                ? localeString('views.Cashu.CashuPayment.failedPayment')
+                : item.isInTransit
+                ? localeString('views.Cashu.CashuPayment.inTransitPayment')
+                : localeString('views.Activity.youSent');
+            const keysendMessageOrMemo = item.getKeysendMessageOrMemo;
+            subTitle = (
+                <Text>
+                    {localeString('general.cashu')}
                     {keysendMessageOrMemo ? ': ' : ''}
                     {keysendMessageOrMemo ? (
                         <Text style={{ fontStyle: 'italic' }}>
@@ -401,7 +468,26 @@ export default class Activity extends React.PureComponent<
         if (item.model === localeString('views.Payment.title'))
             return 'warning';
 
+        if (item.model === localeString('views.Cashu.CashuPayment.title'))
+            return 'warning';
+
+        if (item.model === localeString('cashu.token')) {
+            return item.sent
+                ? item.spent
+                    ? 'warning'
+                    : 'highlight'
+                : 'success';
+        }
+
         if (item.model === localeString('views.Invoice.title')) {
+            if (item.isExpired && !item.isPaid) {
+                return 'text';
+            } else if (!item.isPaid) {
+                return 'highlight';
+            }
+        }
+
+        if (item.model === localeString('views.Cashu.CashuInvoice.title')) {
             if (item.isExpired && !item.isPaid) {
                 return 'text';
             } else if (!item.isPaid) {
@@ -429,6 +515,15 @@ export default class Activity extends React.PureComponent<
 
         if (item.model === localeString('views.Invoice.title')) {
             navigation.navigate('Invoice', { invoice: item });
+        }
+        if (item.model === localeString('views.Cashu.CashuInvoice.title')) {
+            navigation.navigate('CashuInvoice', { invoice: item });
+        }
+        if (item.model === localeString('views.Cashu.CashuPayment.title')) {
+            navigation.navigate('CashuPayment', { payment: item });
+        }
+        if (item.model === localeString('cashu.token')) {
+            navigation.navigate('CashuToken', { decoded: item });
         }
         if (item.model === localeString('general.transaction')) {
             navigation.navigate('Transaction', { transaction: item });

@@ -7,6 +7,7 @@ export default class ModalStore {
     @observable public showAlertModal: boolean = false;
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
+    @observable public infoModalTitle: string | undefined;
     @observable public infoModalText: string | Array<string> | undefined;
     @observable public infoModalLink: string | undefined;
     @observable public infoModalAdditionalButtons?: Array<{
@@ -25,12 +26,19 @@ export default class ModalStore {
     };
 
     @action
-    public toggleInfoModal = (
-        text?: string | Array<string>,
-        link?: string,
-        buttons?: Array<{ title: string; callback?: () => void }>
-    ) => {
-        this.showInfoModal = text ? true : false;
+    public toggleInfoModal = ({
+        title,
+        text,
+        link,
+        buttons
+    }: {
+        title?: string;
+        text?: string | Array<string>;
+        link?: string;
+        buttons?: Array<{ title: string; callback?: () => void }>;
+    }) => {
+        this.showInfoModal = title || text ? true : false; // Show if title or text exists
+        this.infoModalTitle = title;
         this.infoModalText = text;
         this.infoModalLink = link;
         this.infoModalAdditionalButtons = buttons;
@@ -74,8 +82,9 @@ export default class ModalStore {
         }
         if (this.showInfoModal) {
             this.showInfoModal = false;
-            this.infoModalText = '';
-            this.infoModalLink = '';
+            this.infoModalTitle = undefined;
+            this.infoModalText = undefined;
+            this.infoModalLink = undefined;
             this.infoModalAdditionalButtons = undefined;
             return true;
         }

@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { Animated, View, Text, TouchableOpacity } from 'react-native';
+import {
+    Animated,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -7,13 +13,20 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import Conversion from '../../components/Conversion';
 import PinPad from '../../components/PinPad';
+import EcashMintPicker from '../../components/EcashMintPicker';
+import EcashToggle from '../../components/EcashToggle';
+import ModalBox from '../../components/ModalBox';
 import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 import { getSatAmount } from '../../components/AmountInput';
+import { Row } from '../../components/layout/Row';
+import { Spacer } from '../../components/layout/Spacer';
 
+import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import SyncStore from '../../stores/SyncStore';
 import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -25,11 +38,16 @@ import {
     numberWithCommas
 } from '../../utils/UnitsUtils';
 
+import Bitcoin from './../../assets/images/SVG/Bitcoin.svg';
+import MintToken from './../../assets/images/SVG/MintToken.svg';
+
 interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
+    CashuStore?: CashuStore;
     ChannelsStore?: ChannelsStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
+    SyncStore?: SyncStore;
     UnitsStore?: UnitsStore;
 }
 
@@ -39,9 +57,17 @@ interface KeypadPaneState {
     belowMinAmount: boolean;
     overrideBelowMinAmount: boolean;
     flowLspNotConfigured: boolean;
+    ecashMode: boolean;
 }
 
-@inject('ChannelsStore', 'NodeInfoStore', 'SettingsStore', 'UnitsStore')
+@inject(
+    'CashuStore',
+    'ChannelsStore',
+    'NodeInfoStore',
+    'SettingsStore',
+    'SyncStore',
+    'UnitsStore'
+)
 @observer
 export default class KeypadPane extends React.PureComponent<
     KeypadPaneProps,
@@ -54,10 +80,24 @@ export default class KeypadPane extends React.PureComponent<
         needInbound: false,
         belowMinAmount: false,
         overrideBelowMinAmount: false,
-        flowLspNotConfigured: true
+        flowLspNotConfigured: true,
+        ecashMode: false
     };
 
     async UNSAFE_componentWillMount() {
+        if (BackendUtils.supportsCashuWallet()) {
+            const { ChannelsStore, SettingsStore } = this.props;
+            const { settings } = SettingsStore!;
+
+            this.setState({
+                ecashMode:
+                    settings?.ecash?.enableCashu &&
+                    ChannelsStore?.channels.length === 0
+                        ? true
+                        : false
+            });
+        }
+
         this.handleLsp();
 
         this.props.navigation.addListener('focus', async () => {
@@ -197,21 +237,21 @@ export default class KeypadPane extends React.PureComponent<
         switch (amount.length + getDecimalPlaceholder(amount, units).count) {
             case 1:
             case 2:
-                return needInbound ? 70 : 80;
             case 3:
             case 4:
-                return needInbound ? 55 : 65;
+                return needInbound ? 70 : 80;
             case 5:
+                return needInbound ? 65 : 75;
             case 6:
-                return needInbound ? 45 : 55;
+                return needInbound ? 60 : 65;
             case 7:
-                return needInbound ? 40 : 50;
+                return needInbound ? 55 : 60;
             case 8:
-                return needInbound ? 35 : 45;
+                return needInbound ? 50 : 55;
             case 9:
-                return needInbound ? 25 : 35;
+                return needInbound ? 45 : 50;
             default:
-                return needInbound ? 20 : 30;
+                return needInbound ? 40 : 45;
         }
     };
 
@@ -254,120 +294,259 @@ export default class KeypadPane extends React.PureComponent<
         ]).start();
     };
 
+    private modalBoxRef = React.createRef<ModalBox>();
+
     render() {
-        const { UnitsStore, navigation } = this.props;
-        const { amount, needInbound, belowMinAmount, overrideBelowMinAmount } =
-            this.state;
+        const { CashuStore, UnitsStore, SettingsStore, SyncStore, navigation } =
+            this.props;
+        const {
+            amount,
+            needInbound,
+            belowMinAmount,
+            overrideBelowMinAmount,
+            ecashMode
+        } = this.state;
         const { units } = UnitsStore!;
+        const { settings } = SettingsStore!;
+        const { isSyncing } = SyncStore!;
 
         const color = this.textAnimation.interpolate({
             inputRange: [0, 1],
             outputRange: [themeColor('text'), 'red']
         });
 
+        const noMints = CashuStore?.mintUrls.length === 0;
+
         return (
-            <View style={{ flex: 1 }}>
-                <WalletHeader navigation={navigation} />
+            <>
+                <View style={{ flex: 1 }}>
+                    <WalletHeader navigation={navigation} />
 
-                {needInbound && (
-                    <TouchableOpacity
-                        onPress={() =>
-                            navigation.navigate('LspExplanationFees')
-                        }
-                    >
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                borderRadius: 10,
-                                marginLeft: 10,
-                                marginRight: 10,
-                                padding: 15,
-                                borderWidth: 0.5,
-                                top: 5,
-                                bottom: 5
-                            }}
+                    {!ecashMode && needInbound && (
+                        <TouchableOpacity
+                            onPress={() =>
+                                navigation.navigate('LspExplanationFees')
+                            }
                         >
-                            <Text
+                            <View
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Medium',
-                                    color: themeColor('text'),
-                                    fontSize: 15
-                                }}
-                            >
-                                {this.props.ChannelsStore?.channels.length === 0
-                                    ? localeString(
-                                          'views.Wallet.KeypadPane.lspExplainerFirstChannel'
-                                      )
-                                    : localeString(
-                                          'views.Wallet.KeypadPane.lspExplainer'
-                                      )}
-                            </Text>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Medium',
-                                    color: themeColor('secondaryText'),
-                                    fontSize: 15,
+                                    backgroundColor: themeColor('secondary'),
+                                    borderRadius: 10,
+                                    marginLeft: 10,
+                                    marginRight: 10,
+                                    padding: 15,
+                                    borderWidth: 0.5,
                                     top: 5,
-                                    textAlign: 'right'
+                                    bottom: 5
                                 }}
                             >
-                                {localeString('general.tapToLearnMore')}
-                            </Text>
-                        </View>
-                    </TouchableOpacity>
-                )}
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        color: themeColor('text'),
+                                        fontSize: 15
+                                    }}
+                                >
+                                    {this.props.ChannelsStore?.channels
+                                        .length === 0
+                                        ? localeString(
+                                              'views.Wallet.KeypadPane.lspExplainerFirstChannel'
+                                          )
+                                        : localeString(
+                                              'views.Wallet.KeypadPane.lspExplainer'
+                                          )}
+                                </Text>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Medium',
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 15,
+                                        top: 5,
+                                        textAlign: 'right'
+                                    }}
+                                >
+                                    {localeString('general.tapToLearnMore')}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
 
-                <Animated.View
-                    style={{
-                        flex: 1,
-                        flexDirection: 'column',
-                        alignSelf: 'center',
-                        justifyContent: 'center',
-                        zIndex: 10,
-                        transform: [{ translateX: this.shakeAnimation }],
-                        bottom: 15
-                    }}
-                >
-                    <Animated.Text
+                    <View
                         style={{
-                            color:
-                                amount === '0'
-                                    ? themeColor('secondaryText')
-                                    : color,
-                            fontSize: this.amountSize(),
-                            textAlign: 'center',
-                            fontFamily: 'PPNeueMontreal-Medium'
+                            flex: 1,
+                            alignItems: 'center'
                         }}
                     >
-                        {units === 'BTC'
-                            ? formatBitcoinWithSpaces(amount)
-                            : numberWithCommas(amount)}
-                        <Text style={{ color: themeColor('secondaryText') }}>
-                            {getDecimalPlaceholder(amount, units).string}
-                        </Text>
-                    </Animated.Text>
+                        <Animated.View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                zIndex: 10,
+                                transform: [
+                                    { translateX: this.shakeAnimation }
+                                ],
+                                height: 50
+                            }}
+                        >
+                            <Animated.Text
+                                style={{
+                                    color:
+                                        amount === '0'
+                                            ? themeColor('secondaryText')
+                                            : color,
+                                    fontSize: this.amountSize(),
+                                    textAlign: 'center',
+                                    fontFamily: 'PPNeueMontreal-Medium',
+                                    lineHeight: 80
+                                }}
+                            >
+                                {units === 'BTC'
+                                    ? formatBitcoinWithSpaces(amount)
+                                    : numberWithCommas(amount)}
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {
+                                        getDecimalPlaceholder(amount, units)
+                                            .string
+                                    }
+                                </Text>
+                            </Animated.Text>
 
-                    <UnitToggle onToggle={this.clearValue} />
+                            <View
+                                style={{
+                                    marginBottom: 10,
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <Conversion amount={amount} />
+                            </View>
 
-                    {amount !== '0' && (
-                        <View style={{ top: 10, alignItems: 'center' }}>
-                            <Conversion amount={amount} />
-                        </View>
-                    )}
-                </Animated.View>
-
-                <View>
-                    <View style={{ marginTop: 30, bottom: '10%' }}>
-                        <PinPad
-                            appendValue={this.appendValue}
-                            clearValue={this.clearValue}
-                            deleteValue={this.deleteValue}
-                            numberHighlight
-                            amount
-                        />
+                            <Row
+                                style={{
+                                    alignSelf: 'center',
+                                    padding: 10,
+                                    width: '85%'
+                                }}
+                            >
+                                {BackendUtils.supportsCashuWallet() &&
+                                    settings?.ecash?.enableCashu && (
+                                        <>
+                                            <EcashToggle
+                                                ecashMode={ecashMode}
+                                                onToggle={() => {
+                                                    this.setState({
+                                                        ecashMode: !ecashMode
+                                                    });
+                                                }}
+                                            />
+                                            <Spacer width={10} />
+                                            {ecashMode && (
+                                                <>
+                                                    <EcashMintPicker
+                                                        hideAmount
+                                                        navigation={navigation}
+                                                    />
+                                                    <Spacer width={10} />
+                                                </>
+                                            )}
+                                        </>
+                                    )}
+                                <UnitToggle onToggle={this.clearValue} />
+                            </Row>
+                        </Animated.View>
                     </View>
-                    {belowMinAmount && !overrideBelowMinAmount ? (
-                        <View style={{ alignItems: 'center' }}>
+
+                    <View>
+                        <View style={{ marginTop: 30, bottom: '10%' }}>
+                            <PinPad
+                                appendValue={this.appendValue}
+                                clearValue={this.clearValue}
+                                deleteValue={this.deleteValue}
+                                numberHighlight
+                                amount
+                            />
+                        </View>
+                        {!ecashMode &&
+                        belowMinAmount &&
+                        !overrideBelowMinAmount ? (
+                            <View style={{ alignItems: 'center' }}>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        position: 'absolute',
+                                        bottom: 10
+                                    }}
+                                >
+                                    <View style={{ width: '25%' }}>
+                                        <Button
+                                            title={'50k'}
+                                            quaternary
+                                            noUppercase
+                                            onPress={() => {
+                                                UnitsStore?.resetUnits();
+                                                this.setState({
+                                                    amount: '50000',
+                                                    belowMinAmount: false
+                                                });
+                                            }}
+                                            buttonStyle={{ height: 40 }}
+                                        />
+                                    </View>
+                                    <View style={{ width: '25%' }}>
+                                        <Button
+                                            title={'100k'}
+                                            quaternary
+                                            noUppercase
+                                            onPress={() => {
+                                                UnitsStore?.resetUnits();
+                                                this.setState({
+                                                    amount: '100000',
+                                                    belowMinAmount: false
+                                                });
+                                            }}
+                                            buttonStyle={{ height: 40 }}
+                                        />
+                                    </View>
+                                    <View style={{ width: '25%' }}>
+                                        <Button
+                                            title={'1m'}
+                                            quaternary
+                                            noUppercase
+                                            onPress={() => {
+                                                UnitsStore?.resetUnits();
+                                                this.setState({
+                                                    amount: '1000000',
+                                                    belowMinAmount: false
+                                                });
+                                            }}
+                                            buttonStyle={{ height: 40 }}
+                                        />
+                                    </View>
+                                    <View style={{ width: '25%' }}>
+                                        <Button
+                                            title={localeString(
+                                                'general.other'
+                                            )}
+                                            quaternary
+                                            noUppercase
+                                            onPress={() => {
+                                                UnitsStore?.resetUnits();
+                                                this.setState({
+                                                    belowMinAmount: false,
+                                                    overrideBelowMinAmount: true
+                                                });
+                                            }}
+                                            buttonStyle={{ height: 40 }}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        ) : (
                             <View
                                 style={{
                                     flex: 1,
@@ -376,131 +555,205 @@ export default class KeypadPane extends React.PureComponent<
                                     bottom: 10
                                 }}
                             >
-                                <View style={{ width: '25%' }}>
+                                <View style={{ width: '40%' }}>
                                     <Button
-                                        title={'50k'}
+                                        title={localeString('general.request')}
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore?.resetUnits();
-                                            this.setState({
-                                                amount: '50000',
-                                                belowMinAmount: false
-                                            });
+                                            navigation.navigate(
+                                                ecashMode
+                                                    ? 'ReceiveEcash'
+                                                    : 'Receive',
+                                                {
+                                                    amount,
+                                                    autoGenerate:
+                                                        ecashMode &&
+                                                        amount === '0'
+                                                            ? false
+                                                            : true
+                                                }
+                                            );
                                         }}
                                         buttonStyle={{ height: 40 }}
+                                        disabled={
+                                            (ecashMode && noMints) ||
+                                            (!ecashMode && isSyncing)
+                                        }
                                     />
                                 </View>
-                                <View style={{ width: '25%' }}>
+                                <View style={{ width: '20%' }}>
                                     <Button
-                                        title={'100k'}
+                                        icon={{
+                                            name: 'pencil',
+                                            type: 'font-awesome',
+                                            size: 20,
+                                            color:
+                                                themeColor('buttonText') ||
+                                                themeColor('text')
+                                        }}
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore?.resetUnits();
-                                            this.setState({
-                                                amount: '100000',
-                                                belowMinAmount: false
-                                            });
+                                            navigation.navigate(
+                                                ecashMode
+                                                    ? 'ReceiveEcash'
+                                                    : 'Receive',
+                                                {
+                                                    amount
+                                                }
+                                            );
                                         }}
                                         buttonStyle={{ height: 40 }}
+                                        disabled={
+                                            (ecashMode && noMints) ||
+                                            (!ecashMode && isSyncing)
+                                        }
                                     />
                                 </View>
-                                <View style={{ width: '25%' }}>
+                                <View style={{ width: '40%' }}>
                                     <Button
-                                        title={'1m'}
+                                        title={localeString('general.send')}
                                         quaternary
                                         noUppercase
                                         onPress={() => {
-                                            UnitsStore?.resetUnits();
-                                            this.setState({
-                                                amount: '1000000',
-                                                belowMinAmount: false
-                                            });
+                                            if (ecashMode) {
+                                                this.modalBoxRef.current?.open();
+                                            } else {
+                                                navigation.navigate('Send', {
+                                                    amount:
+                                                        amount !== '0'
+                                                            ? amount
+                                                            : ''
+                                                });
+                                            }
                                         }}
                                         buttonStyle={{ height: 40 }}
-                                    />
-                                </View>
-                                <View style={{ width: '25%' }}>
-                                    <Button
-                                        title={localeString('general.other')}
-                                        quaternary
-                                        noUppercase
-                                        onPress={() => {
-                                            UnitsStore?.resetUnits();
-                                            this.setState({
-                                                belowMinAmount: false,
-                                                overrideBelowMinAmount: true
-                                            });
-                                        }}
-                                        buttonStyle={{ height: 40 }}
+                                        disabled={
+                                            !BackendUtils.supportsLightningSends() ||
+                                            (ecashMode && noMints) ||
+                                            (!ecashMode && isSyncing)
+                                        }
                                     />
                                 </View>
                             </View>
-                        </View>
-                    ) : (
-                        <View
+                        )}
+                    </View>
+                </View>
+                <ModalBox
+                    style={{
+                        ...styles.modal,
+                        backgroundColor: themeColor('background')
+                    }}
+                    swipeToClose={true}
+                    backButtonClose={true}
+                    backdropPressToClose={true}
+                    backdrop={true}
+                    position="bottom"
+                    ref={this.modalBoxRef}
+                >
+                    <View>
+                        <Text
                             style={{
-                                flex: 1,
-                                flexDirection: 'row',
-                                position: 'absolute',
-                                bottom: 10
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('text'),
+                                fontSize: 16,
+                                paddingTop: 24,
+                                paddingBottom: 24
                             }}
                         >
-                            <View style={{ width: '40%' }}>
-                                <Button
-                                    title={localeString('general.request')}
-                                    quaternary
-                                    noUppercase
-                                    onPress={() => {
-                                        navigation.navigate('Receive', {
-                                            amount,
-                                            autoGenerate: true
-                                        });
+                            {localeString('general.send')}
+                        </Text>
+                        <TouchableOpacity
+                            key="send-bitcoin-tx"
+                            onPress={async () => {
+                                navigation.navigate('Send', {
+                                    amount: amount !== '0' ? amount : ''
+                                });
+                                this.modalBoxRef.current?.close();
+                            }}
+                            style={{
+                                ...styles.sendOption,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        >
+                            <Row>
+                                <View style={{ marginRight: 15 }}>
+                                    <Bitcoin
+                                        fill={
+                                            themeColor('action') ||
+                                            themeColor('highlight')
+                                        }
+                                        width={30}
+                                        height={30}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.sendOptionLabel,
+                                        color: themeColor('text')
                                     }}
-                                    buttonStyle={{ height: 40 }}
-                                />
-                            </View>
-                            <View style={{ width: '20%' }}>
-                                <Button
-                                    icon={{
-                                        name: 'pencil',
-                                        type: 'font-awesome',
-                                        size: 20,
-                                        color:
-                                            themeColor('buttonText') ||
-                                            themeColor('text')
+                                >
+                                    {localeString('general.bitcoinPayment')}
+                                </Text>
+                            </Row>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            key="send-mint-token"
+                            onPress={async () => {
+                                navigation.navigate('MintToken', {
+                                    amount: amount !== '0' ? amount : ''
+                                });
+                                this.modalBoxRef.current?.close();
+                            }}
+                            style={{
+                                ...styles.sendOption,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        >
+                            <Row>
+                                <View style={{ marginRight: 15 }}>
+                                    <MintToken
+                                        fill={
+                                            themeColor('action') ||
+                                            themeColor('highlight')
+                                        }
+                                        width={30}
+                                        height={30}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.sendOptionLabel,
+                                        color: themeColor('text')
                                     }}
-                                    quaternary
-                                    noUppercase
-                                    onPress={() => {
-                                        navigation.navigate('Receive', {
-                                            amount
-                                        });
-                                    }}
-                                    buttonStyle={{ height: 40 }}
-                                />
-                            </View>
-                            <View style={{ width: '40%' }}>
-                                <Button
-                                    title={localeString('general.send')}
-                                    quaternary
-                                    noUppercase
-                                    onPress={() => {
-                                        navigation.navigate('Send', {
-                                            amount: amount !== '0' ? amount : ''
-                                        });
-                                    }}
-                                    buttonStyle={{ height: 40 }}
-                                    disabled={
-                                        !BackendUtils.supportsLightningSends()
-                                    }
-                                />
-                            </View>
-                        </View>
-                    )}
-                </View>
-            </View>
+                                >
+                                    {localeString('cashu.mintEcashToken')}
+                                </Text>
+                            </Row>
+                        </TouchableOpacity>
+                    </View>
+                </ModalBox>
+            </>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    modal: {
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        height: 250,
+        paddingLeft: 24,
+        paddingRight: 24
+    },
+    sendOption: {
+        borderRadius: 5,
+        padding: 16,
+        marginBottom: 24
+    },
+    sendOptionLabel: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 22
+    }
+});

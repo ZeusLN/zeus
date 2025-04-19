@@ -23,12 +23,11 @@ import NodeOn from '../assets/images/SVG/Node On.svg';
 import Olympus from '../assets/images/SVG/Olympus.svg';
 import KeyIcon from '../assets/images/SVG/Key.svg';
 import NetworkIcon from '../assets/images/SVG/Network.svg';
-import MailboxFlagUp from '../assets/images/SVG/MailboxFlagUp.svg';
-import MailboxFlagDown from '../assets/images/SVG/MailboxFlagDown.svg';
 import NostrichIcon from '../assets/images/SVG/Nostrich.svg';
 import ReceiveIcon from '../assets/images/SVG/Receive.svg';
 import RoutingIcon from '../assets/images/SVG/Routing.svg';
 import WrenchIcon from '../assets/images/SVG/Wrench.svg';
+import ZeusPayIcon from '../assets/images/SVG/zeus-pay.svg';
 
 import Header from '../components/Header';
 import NodeIdenticon, { NodeTitle } from '../components/NodeIdenticon';
@@ -91,7 +90,6 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
         } = this.props;
         const { showHiddenItems, easterEggCount } = this.state;
         const { implementation, settings, seedPhrase } = SettingsStore;
-        const { paid } = LightningAddressStore;
 
         // Define the type for implementationDisplayValue
         interface ImplementationDisplayValue {
@@ -132,7 +130,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
             }
         }
 
-        const youveGotSats = paid?.length > 0;
+        const youveGotSats = LightningAddressStore.paid?.length > 0;
         const forwardArrowColor = themeColor('secondaryText');
 
         return (
@@ -437,24 +435,22 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                     onPress={() =>
                                         navigation.navigate(
                                             'LightningAddress',
-                                            { skipStatus: youveGotSats }
+                                            {
+                                                skipStatus: youveGotSats
+                                            }
                                         )
                                     }
                                 >
                                     <View style={styles.icon}>
-                                        {youveGotSats ? (
-                                            <MailboxFlagUp
-                                                height={19.25}
-                                                width={22}
-                                                fill={themeColor('highlight')}
-                                            />
-                                        ) : (
-                                            <MailboxFlagDown
-                                                height={19.25}
-                                                width={22}
-                                                fill={themeColor('text')}
-                                            />
-                                        )}
+                                        <ZeusPayIcon
+                                            height={19.25}
+                                            width={22}
+                                            fill={
+                                                youveGotSats
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text')
+                                            }
+                                        />
                                     </View>
                                     <Text
                                         style={{

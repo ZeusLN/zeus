@@ -22,6 +22,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import Storage from '../../storage';
 
 import BalanceStore from '../../stores/BalanceStore';
+import CashuStore from '../../stores/CashuStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
@@ -33,6 +34,7 @@ const ErrorZeus = require('../../assets/images/errorZeus.png');
 interface BalancePaneProps {
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
+    CashuStore: CashuStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
@@ -42,7 +44,13 @@ interface BalancePaneState {
     showBackupPrompt: boolean;
 }
 
-@inject('BalanceStore', 'NodeInfoStore', 'SettingsStore', 'SyncStore')
+@inject(
+    'BalanceStore',
+    'CashuStore',
+    'NodeInfoStore',
+    'SettingsStore',
+    'SyncStore'
+)
 @observer
 export default class BalancePane extends React.PureComponent<
     BalancePaneProps,
@@ -65,6 +73,7 @@ export default class BalancePane extends React.PureComponent<
         const {
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             SettingsStore,
             SyncStore,
             navigation
@@ -76,7 +85,8 @@ export default class BalancePane extends React.PureComponent<
             lightningBalance,
             pendingOpenBalance
         } = BalanceStore;
-        const { implementation } = SettingsStore;
+        const cashuBalance = CashuStore.totalBalanceSats;
+        const { implementation, settings } = SettingsStore;
         const {
             currentBlockHeight,
             bestBlockHeight,
@@ -91,6 +101,7 @@ export default class BalancePane extends React.PureComponent<
             .toFixed(3);
         const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
             .plus(lightningBalance)
+            .plus(settings?.ecash?.enableCashu ? cashuBalance : 0)
             .toNumber()
             .toFixed(3);
 

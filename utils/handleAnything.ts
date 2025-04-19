@@ -3,18 +3,22 @@ import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import stores from '../stores/Stores';
-import { doTorRequest, RequestMethod } from './TorUtils';
+
 import AddressUtils from './AddressUtils';
-import ConnectionFormatUtils from './ConnectionFormatUtils';
-import NodeUriUtils from './NodeUriUtils';
-import { localeString } from './LocaleUtils';
 import BackendUtils from './BackendUtils';
+import CashuUtils from './CashuUtils';
+import ConnectionFormatUtils from './ConnectionFormatUtils';
+import ContactUtils from './ContactUtils';
+import { localeString } from './LocaleUtils';
+import NodeUriUtils from './NodeUriUtils';
+import { doTorRequest, RequestMethod } from './TorUtils';
+
+import CashuToken from '../models/CashuToken';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
-import ContactUtils from './ContactUtils';
 
 const { nodeInfoStore, invoicesStore, unitsStore, settingsStore } = stores;
 
@@ -104,6 +108,11 @@ const handleAnything = async (
     const hasMultiple: boolean =
         (value && lightning) || (value && offer) || (lightning && offer);
 
+    // ecash mode
+    const ecash =
+        BackendUtils.supportsCashuWallet() &&
+        settingsStore?.settings?.ecash?.enableCashu;
+
     let lnurl;
     // if the value is from clipboard and looks like a url we don't want to decode it
     if (!isClipboardValue || !data.match(/^https?:\/\//i)) {
@@ -148,7 +157,8 @@ const handleAnything = async (
                         return [
                             'LnurlPay',
                             {
-                                lnurlParams: params
+                                lnurlParams: params,
+                                ecash
                             }
                         ];
                     } else {
@@ -164,8 +174,18 @@ const handleAnything = async (
                     );
                 }
             } else {
-                await invoicesStore.getPayReq(lightning);
-                return ['PaymentRequest', {}];
+                if (ecash) {
+                    return [
+                        'ChoosePaymentMethod',
+                        {
+                            lightning,
+                            locked: true
+                        }
+                    ];
+                } else {
+                    await invoicesStore.getPayReq(lightning);
+                    return ['PaymentRequest', {}];
+                }
             }
         }
         return [
@@ -210,8 +230,18 @@ const handleAnything = async (
         AddressUtils.isValidLightningPaymentRequest(value || lightning)
     ) {
         if (isClipboardValue) return true;
-        await invoicesStore.getPayReq(value);
-        return ['PaymentRequest', {}];
+        if (ecash) {
+            return [
+                'ChoosePaymentMethod',
+                {
+                    lightning: value,
+                    locked: true
+                }
+            ];
+        } else {
+            await invoicesStore.getPayReq(value);
+            return ['PaymentRequest', {}];
+        }
     } else if (
         !hasAt &&
         AddressUtils.isValidLightningOffer(value || lightning)
@@ -431,7 +461,8 @@ const handleAnything = async (
                         'LnurlPay',
                         {
                             lnurlParams: response,
-                            amount: setAmount
+                            amount: setAmount,
+                            ecash
                         }
                     ];
                 })
@@ -451,7 +482,8 @@ const handleAnything = async (
                             'LnurlPay',
                             {
                                 lnurlParams: data,
-                                amount: setAmount
+                                amount: setAmount,
+                                ecash
                             }
                         ];
                     } else {
@@ -533,7 +565,8 @@ const handleAnything = async (
                             'LnurlPay',
                             {
                                 lnurlParams: params,
-                                amount: setAmount
+                                amount: setAmount,
+                                ecash
                             }
                         ];
                     case 'channelRequest':
@@ -696,6 +729,16 @@ const handleAnything = async (
             'ImportAccount',
             {
                 extended_public_key: value
+            }
+        ];
+    } else if (CashuUtils.isValidCashuToken(value)) {
+        const tokenObj = CashuUtils.decodeCashuToken(value);
+        const decoded = new CashuToken(tokenObj);
+        return [
+            'CashuToken',
+            {
+                token: value,
+                decoded
             }
         ];
     } else {

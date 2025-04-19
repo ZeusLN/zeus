@@ -175,6 +175,7 @@ class BackendUtils {
     supportsDevTools = () => {
         return this.isLNDBased() || this.call('supportsDevTools');
     };
+    supportsCashuWallet = () => this.call('supportsCashuWallet');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);

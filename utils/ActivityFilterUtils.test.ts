@@ -443,6 +443,7 @@ describe('ActivityFilterUtils', () => {
         ({
             lightning: true,
             onChain: true,
+            cashu: true,
             sent: true,
             received: true,
             unpaid: true,
