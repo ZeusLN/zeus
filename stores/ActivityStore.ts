@@ -170,17 +170,20 @@ export default class ActivityStore {
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
 
-        const cashuInvoices = this.cashuStore.invoices;
-        const cashuPayments = this.cashuStore.payments;
-        const cashuReceivedTokens = this.cashuStore.receivedTokens;
-        const cashuSentTokens = this.cashuStore.sentTokens;
-
         let additions = payments.concat(invoices);
         if (BackendUtils.supportsOnchainSends()) {
             additions = additions.concat(transactions);
         }
 
-        if (BackendUtils.supportsCashuWallet()) {
+        if (
+            BackendUtils.supportsCashuWallet() &&
+            this.settingsStore.settings?.ecash?.enableCashu
+        ) {
+            const cashuInvoices = this.cashuStore.invoices;
+            const cashuPayments = this.cashuStore.payments;
+            const cashuReceivedTokens = this.cashuStore.receivedTokens;
+            const cashuSentTokens = this.cashuStore.sentTokens;
+
             additions = additions
                 .concat(cashuInvoices)
                 .concat(cashuPayments)
