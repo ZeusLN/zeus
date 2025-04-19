@@ -10,6 +10,7 @@ import SettingsStore from './SettingsStore';
 import PaymentsStore from './PaymentsStore';
 import InvoicesStore from './InvoicesStore';
 import TransactionsStore from './TransactionsStore';
+import CashuStore from './CashuStore';
 
 import BackendUtils from './../utils/BackendUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
@@ -23,6 +24,7 @@ export interface Filter {
     [index: string]: any;
     lightning: boolean;
     onChain: boolean;
+    cashu: boolean;
     sent: boolean;
     received: boolean;
     unpaid: boolean;
@@ -41,6 +43,7 @@ export interface Filter {
 export const DEFAULT_FILTERS = {
     lightning: true,
     onChain: true,
+    cashu: true,
     sent: true,
     received: true,
     unpaid: true,
@@ -69,17 +72,20 @@ export default class ActivityStore {
     paymentsStore: PaymentsStore;
     invoicesStore: InvoicesStore;
     transactionsStore: TransactionsStore;
+    cashuStore: CashuStore;
 
     constructor(
         settingsStore: SettingsStore,
         paymentsStore: PaymentsStore,
         invoicesStore: InvoicesStore,
-        transactionsStore: TransactionsStore
+        transactionsStore: TransactionsStore,
+        cashuStore: CashuStore
     ) {
         this.settingsStore = settingsStore;
         this.paymentsStore = paymentsStore;
         this.transactionsStore = transactionsStore;
         this.invoicesStore = invoicesStore;
+        this.cashuStore = cashuStore;
     }
 
     public resetFilters = async () => {
@@ -92,6 +98,7 @@ export default class ActivityStore {
         this.filters = {
             lightning: true,
             onChain: true,
+            cashu: true,
             sent: false,
             received: true,
             unpaid: false,
@@ -163,13 +170,26 @@ export default class ActivityStore {
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
 
+        const cashuInvoices = this.cashuStore.invoices;
+        const cashuPayments = this.cashuStore.payments;
+        const cashuReceivedTokens = this.cashuStore.receivedTokens;
+        const cashuSentTokens = this.cashuStore.sentTokens;
+
+        let additions = payments.concat(invoices);
+        if (BackendUtils.supportsOnchainSends()) {
+            additions = additions.concat(transactions);
+        }
+
+        if (BackendUtils.supportsCashuWallet()) {
+            additions = additions
+                .concat(cashuInvoices)
+                .concat(cashuPayments)
+                .concat(cashuReceivedTokens)
+                .concat(cashuSentTokens);
+        }
+
         // push payments, txs, invoices to one array
-        activity.push.apply(
-            activity,
-            BackendUtils.supportsOnchainSends()
-                ? payments.concat(transactions).concat(invoices)
-                : payments.concat(invoices)
-        );
+        activity.push.apply(activity, additions);
         // sort activity by timestamp
         const sortedActivity = activity.sort((a: any, b: any) =>
             a.getTimestamp < b.getTimestamp ? 1 : -1

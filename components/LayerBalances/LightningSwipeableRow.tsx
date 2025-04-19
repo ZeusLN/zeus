@@ -271,13 +271,12 @@ export default class LightningSwipeableRow extends Component<
             return (
                 <TouchableOpacity
                     onPress={() =>
-                        stores.modalStore.toggleInfoModal(
-                            localeString('views.Wallet.waitForSync')
-                        )
+                        stores.modalStore.toggleInfoModal({
+                            text: localeString('views.Wallet.waitForSync')
+                        })
                     }
-                    activeOpacity={1}
                 >
-                    {children}
+                    <View style={{ opacity: 0.25 }}>{children}</View>
                 </TouchableOpacity>
             );
         }
