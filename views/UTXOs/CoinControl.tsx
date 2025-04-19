@@ -16,6 +16,7 @@ import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import UTXOsStore from './../../stores/UTXOsStore';
+import storage from '../../storage';
 
 interface CoinControlProps {
     navigation: StackNavigationProp<any, any>;
@@ -25,6 +26,7 @@ interface CoinControlProps {
 
 interface CoinControlState {
     account: string;
+    utxoLabels: Record<string, string>;
 }
 
 @inject('UTXOsStore')
@@ -43,18 +45,35 @@ export default class CoinControl extends React.Component<
                 : accountParam;
 
         this.state = {
-            account: account || 'default'
+            account: account || 'default',
+            utxoLabels: {}
         };
     }
 
-    async UNSAFE_componentWillMount() {
-        const { UTXOsStore } = this.props;
+    async componentDidMount() {
+        const { UTXOsStore, navigation } = this.props;
         const { account } = this.state;
         const { getUTXOs, listAccounts } = UTXOsStore;
+
         getUTXOs({ account });
         if (BackendUtils.supportsAccounts()) {
             listAccounts();
         }
+
+        navigation.addListener('focus', async () => {
+            const { utxos } = UTXOsStore;
+            const utxoLabels: Record<string, string> = {};
+
+            for (const utxo of utxos) {
+                const key = `${utxo.txid}:${utxo.output}`;
+                const label = await storage.getItem(key);
+                if (label) {
+                    utxoLabels[key] = label;
+                }
+            }
+
+            this.setState({ utxoLabels });
+        });
     }
 
     renderSeparator = () => (
@@ -89,6 +108,7 @@ export default class CoinControl extends React.Component<
                     }}
                     navigation={navigation}
                 />
+
                 {BackendUtils.supportsAccounts() && accounts?.length > 0 && (
                     <AccountFilter
                         default={account}
@@ -100,34 +120,48 @@ export default class CoinControl extends React.Component<
                         showAll
                     />
                 )}
+
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
                     </View>
-                ) : !!utxos && utxos.length > 0 ? (
+                ) : utxos.length > 0 ? (
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
+                            const key = `${item.txid}:${item.output}`;
+                            const message = this.state.utxoLabels[key];
                             const subTitle = item.address;
 
                             return (
-                                <React.Fragment>
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                        onPress={() => {
-                                            navigation.navigate('Utxo', {
-                                                utxo: item
-                                            });
-                                        }}
-                                    >
-                                        <ListItem.Content>
-                                            <Amount
-                                                sats={item.getAmount}
-                                                sensitive
-                                            />
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={() => {
+                                        navigation.navigate('Utxo', {
+                                            utxo: item
+                                        });
+                                    }}
+                                >
+                                    <ListItem.Content>
+                                        <Amount
+                                            sats={item.getAmount}
+                                            sensitive
+                                        />
+                                        <ListItem.Subtitle
+                                            right
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 10
+                                            }}
+                                        >
+                                            {subTitle}
+                                        </ListItem.Subtitle>
+                                        {message && (
                                             <ListItem.Subtitle
                                                 right
                                                 style={{
@@ -137,23 +171,20 @@ export default class CoinControl extends React.Component<
                                                     fontSize: 10
                                                 }}
                                             >
-                                                {subTitle}
+                                                {message}
                                             </ListItem.Subtitle>
-                                        </ListItem.Content>
-                                        {/*
-                                        <ListItem.Content right>
-                                            <FrozenPill />
-                                        </ListItem.Content>
-                                        */}
-                                    </ListItem>
-                                </React.Fragment>
+                                        )}
+                                    </ListItem.Content>
+                                </ListItem>
                             );
                         }}
                         keyExtractor={(_, index) => `utxo-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getUTXOs({ account })}
+                        onRefresh={async () => {
+                            getUTXOs({ account });
+                        }}
                     />
                 ) : (
                     <Button
@@ -163,7 +194,9 @@ export default class CoinControl extends React.Component<
                             size: 25,
                             color: themeColor('text')
                         }}
-                        onPress={() => getUTXOs({ account })}
+                        onPress={async () => {
+                            getUTXOs({ account });
+                        }}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30

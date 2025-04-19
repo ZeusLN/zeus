@@ -21,8 +21,9 @@ import SaveIcon from '../assets/images/SVG/Save.svg';
 interface AddNotesProps {
     navigation: StackNavigationProp<any, any>;
     NotesStore: NotesStore;
-    route: Route<'AddNotes', { noteKey: string }>;
+    route: Route<'AddNotes', { noteKey: string; context?: string }>;
 }
+
 interface AddNotesState {
     notes?: string;
     noteKey?: string;
@@ -60,7 +61,10 @@ export default class AddNotes extends React.Component<
         const { notes } = this.state;
 
         const saveNote = async () => {
-            if (noteKey) {
+            if (noteKey && notes?.trim() === '') {
+                await Storage.removeItem(noteKey);
+                await removeNoteKeys(noteKey);
+            } else if (noteKey) {
                 Storage.setItem(noteKey, notes || '');
                 await storeNoteKeys(noteKey, notes || '');
             }
@@ -90,9 +94,13 @@ export default class AddNotes extends React.Component<
                         leftComponent="Back"
                         centerComponent={{
                             text: isNoteStored
-                                ? localeString(
-                                      'views.SendingLightning.UpdateNote'
-                                  )
+                                ? this.props.route.params?.context === 'label'
+                                    ? localeString('views.UTXOs.UpdateLabel')
+                                    : localeString(
+                                          'views.SendingLightning.UpdateNote'
+                                      )
+                                : this.props.route.params?.context === 'label'
+                                ? localeString('views.UTXOs.AddLabel')
                                 : localeString(
                                       'views.SendingLightning.AddANote'
                                   ),
@@ -126,7 +134,11 @@ export default class AddNotes extends React.Component<
                             marginTop: -13
                         }}
                         value={notes}
-                        placeholder={localeString('views.Payment.writeNote')}
+                        placeholder={
+                            this.props.route.params?.context === 'label'
+                                ? localeString('views.UTXOs.writeLabel')
+                                : localeString('views.Payment.writeNote')
+                        }
                     />
                     <View
                         style={{
