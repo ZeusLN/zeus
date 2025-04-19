@@ -246,6 +246,7 @@ import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import WithdrawalRequest from './views/Tools/WithdrawalRequest';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1154,6 +1155,12 @@ export default class App extends React.PureComponent {
                                                         name="NodeConfigExportImport" // @ts-ignore:next-line
                                                         component={
                                                             NodeConfigExportImport
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WithdrawalRequest" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalRequest
                                                         }
                                                     />
                                                 </Stack.Navigator>
