@@ -71,7 +71,8 @@ export default class Contacts extends React.Component<
             hasBolt12Offer,
             hasOnchainAddress,
             hasPubkey,
-            hasMultiplePayableAddresses
+            hasMultiplePayableAddresses,
+            hasCashuPubkey
         } = contact;
 
         if (hasMultiplePayableAddresses) {
@@ -120,6 +121,15 @@ export default class Contacts extends React.Component<
                 : item.pubkey[0];
         }
 
+        if (hasCashuPubkey) {
+            return item.cashuPubkey[0].length > 23
+                ? `${item.cashuPubkey[0].slice(
+                      0,
+                      12
+                  )}...${item.cashuPubkey[0].slice(-8)}`
+                : item.cashuPubkey[0];
+        }
+
         return localeString('views.Settings.Contacts.noAddress');
     };
 
@@ -153,6 +163,11 @@ export default class Contacts extends React.Component<
                         } else if (contact.isSinglePubkey) {
                             this.props.navigation.navigate('Send', {
                                 destination: item.pubkey[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleCashuPubkey) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.cashuPubkey[0],
                                 contactName: item.name
                             });
                         }
@@ -231,7 +246,8 @@ export default class Contacts extends React.Component<
                 hasMatch('nip05') ||
                 hasMatch('onchainAddress') ||
                 hasMatch('nostrNpub') ||
-                hasMatch('pubkey')
+                hasMatch('pubkey') ||
+                hasMatch('cashuPubkey')
             );
         });
 

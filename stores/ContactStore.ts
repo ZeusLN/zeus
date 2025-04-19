@@ -138,6 +138,7 @@ export default class ContactStore {
                 onchainAddress: prefillContact.onchainAddress || [],
                 nip05: prefillContact.nip05 || [],
                 nostrNpub: prefillContact.nostrNpub || [],
+                cashuPubkey: prefillContact.cashuPubkey || [],
                 name: prefillContact.name,
                 description: prefillContact.description,
                 photo: prefillContact.photo,

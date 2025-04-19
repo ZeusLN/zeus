@@ -31,6 +31,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import ContactStore from '../../stores/ContactStore';
 
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
+import Ecash from '../../assets/images/SVG/Ecash.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
 import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
@@ -70,6 +71,7 @@ interface Contact {
     nip05: string[];
     nostrNpub: string[];
     pubkey: string[];
+    cashuPubkey: string[];
     name: string;
     description: string;
     contactId: string;
@@ -86,6 +88,7 @@ interface AddContactState {
     nip05: string[];
     nostrNpub: string[];
     pubkey: string[];
+    cashuPubkey: string[];
     name: string;
     description: string;
     photo: string | null;
@@ -96,6 +99,7 @@ interface AddContactState {
     isValidBolt12Address: boolean[];
     isValidBolt12Offer: boolean[];
     isValidPubkey: boolean[];
+    isValidCashuPubkey: boolean[];
     isValidOnchainAddress: boolean[];
     isValidNIP05: boolean[];
     isValidNpub: boolean[];
@@ -169,6 +173,7 @@ export default class AddContact extends React.Component<
             nip05: [''],
             nostrNpub: [''],
             pubkey: [''],
+            cashuPubkey: [''],
             name: '',
             description: '',
             photo: null,
@@ -181,7 +186,8 @@ export default class AddContact extends React.Component<
             isValidPubkey: [true],
             isValidOnchainAddress: [true],
             isValidNIP05: [true],
-            isValidNpub: [true]
+            isValidNpub: [true],
+            isValidCashuPubkey: [true]
         };
     }
 
@@ -342,6 +348,20 @@ export default class AddContact extends React.Component<
         }));
     };
 
+    onChangeCashuPubkey = (text: string, index: number) => {
+        const { cashuPubkey } = this.state;
+        console.log('text', cashuPubkey);
+        this.setState({
+            cashuPubkey: Object.assign([...cashuPubkey], { [index]: text }),
+            isValidCashuPubkey: Object.assign(
+                [...this.state.isValidCashuPubkey],
+                {
+                    [index]: text.length === 66 && text.startsWith('02')
+                }
+            )
+        });
+    };
+
     toggleFavorite = () => {
         this.setState((prevState) => ({
             isFavourite: !prevState.isFavourite
@@ -381,6 +401,9 @@ export default class AddContact extends React.Component<
                 isValidPubkey: Array(
                     ContactStore.prefillContact.pubkey?.length || 1
                 ).fill(true),
+                isValidCashuPubkey: Array(
+                    ContactStore.prefillContact.cashuPubkey?.length || 1
+                ).fill(true),
                 isValidOnchainAddress: Array(
                     ContactStore.prefillContact.onchainAddress?.length || 1
                 ).fill(true),
@@ -409,6 +432,7 @@ export default class AddContact extends React.Component<
             nip05,
             nostrNpub,
             pubkey,
+            cashuPubkey,
             name,
             description,
             photo,
@@ -418,7 +442,8 @@ export default class AddContact extends React.Component<
             isValidBolt12Offer,
             isValidNIP05,
             isValidNpub,
-            isValidPubkey
+            isValidPubkey,
+            isValidCashuPubkey
         } = this.state;
 
         const dropdownValues = [
@@ -441,6 +466,11 @@ export default class AddContact extends React.Component<
                 key: 'Pubkey',
                 translateKey: 'views.NodeInfo.pubkey',
                 value: 'pubkey'
+            },
+            {
+                key: 'Cashu Pubkey',
+                translateKey: 'views.Settings.AddContact.cashuPubkey',
+                value: 'cashuPubkey'
             },
             {
                 key: 'Onchain address',
@@ -956,6 +986,76 @@ export default class AddContact extends React.Component<
                                 }
                             />
                         ))}
+                        <ContactInputField
+                            icon={<Ecash />}
+                            value={cashuPubkey?.length ? cashuPubkey[0] : ''}
+                            onChangeText={(text) => {
+                                this.setState({
+                                    cashuPubkey: Object.assign(
+                                        [...cashuPubkey],
+                                        {
+                                            [0]: text
+                                        }
+                                    )
+                                });
+                            }}
+                            onValidate={(text) =>
+                                this.onChangeCashuPubkey(text, 0)
+                            }
+                            placeholder={localeString(
+                                'views.Settings.AddContact.cashuPubkey'
+                            )}
+                            isValid={
+                                isValidCashuPubkey?.length > 0 &&
+                                isValidCashuPubkey[0]
+                            }
+                            index={0}
+                            setValidationState={(index, isValid) => {
+                                this.setState({
+                                    isValidCashuPubkey: Object.assign(
+                                        [...this.state.isValidCashuPubkey],
+                                        { [index]: isValid }
+                                    )
+                                });
+                            }}
+                        />
+                        {cashuPubkey?.slice(1).map((address, index) => (
+                            <ContactInputField
+                                key={index}
+                                icon={<Ecash />}
+                                value={address}
+                                onChangeText={(text) => {
+                                    this.setState({
+                                        cashuPubkey: Object.assign(
+                                            [...cashuPubkey],
+                                            {
+                                                [index + 1]: text
+                                            }
+                                        )
+                                    });
+                                }}
+                                onValidate={(text) =>
+                                    this.onChangeCashuPubkey(text, index + 1)
+                                }
+                                placeholder={localeString(
+                                    'views.Settings.AddContact.cashuPubkey'
+                                )}
+                                isValid={isValidCashuPubkey[index + 1]}
+                                index={index + 1}
+                                setValidationState={(index, isValid) => {
+                                    this.setState({
+                                        isValidCashuPubkey: Object.assign(
+                                            [...this.state.isValidCashuPubkey],
+                                            { [index]: isValid }
+                                        )
+                                    });
+                                }}
+                                isAdditionalField
+                                onDelete={() =>
+                                    this.removeExtraField('cashuPubkey', index)
+                                }
+                            />
+                        ))}
 
                         <ContactInputField
                             icon={<BitcoinIcon />}
@@ -1193,6 +1293,7 @@ export default class AddContact extends React.Component<
                                 isValidOnchainAddress.includes(false) ||
                                 isValidNIP05.includes(false) ||
                                 isValidNpub.includes(false) ||
+                                isValidCashuPubkey.includes(false) ||
                                 !(
                                     (lnAddress?.length && lnAddress[0]) ||
                                     (bolt12Address?.length &&
@@ -1200,7 +1301,8 @@ export default class AddContact extends React.Component<
                                     (bolt12Offer?.length && bolt12Offer[0]) ||
                                     (onchainAddress?.length &&
                                         onchainAddress[0]) ||
-                                    (pubkey?.length && pubkey[0])
+                                    (pubkey?.length && pubkey[0]) ||
+                                    (cashuPubkey?.length && cashuPubkey[0])
                                 )
                             }
                         />

@@ -64,6 +64,7 @@ interface Wallet {
     balanceSats: number;
     pubkey: string;
     errorConnecting: boolean;
+    lockDuration?: number; // Add lock duration
 }
 
 interface MintRecommendation {
@@ -96,7 +97,7 @@ export default class CashuStore {
     @observable public mintingTokenError = false;
     @observable public watchedInvoicePaid = false;
     @observable public watchedInvoicePaidAmt?: number | string;
-    @observable public restorationProgress?: number;
+    @observable public restorationProgress: number | undefined;
     @observable public restorationKeyset?: number;
     @observable public loadingMsg?: string;
     @observable public error = false;
@@ -703,13 +704,15 @@ export default class CashuStore {
             storedCounter,
             storedProofs,
             storedBalanceSats,
-            storedPubkey
+            storedPubkey,
+            storedLockDuration
         ] = await Promise.all([
             Storage.getItem(`${walletId}-mintInfo`),
             Storage.getItem(`${walletId}-counter`),
             Storage.getItem(`${walletId}-proofs`),
             Storage.getItem(`${walletId}-balance`),
-            Storage.getItem(`${walletId}-pubkey`)
+            Storage.getItem(`${walletId}-pubkey`),
+            Storage.getItem(`${walletId}-lockDuration`)
         ]);
 
         const mintInfo = storedMintInfo ? JSON.parse(storedMintInfo) : [];
@@ -719,6 +722,9 @@ export default class CashuStore {
             ? JSON.parse(storedBalanceSats)
             : 0;
         const pubkey: string = storedPubkey || '';
+        const lockDuration = storedLockDuration
+            ? parseInt(storedLockDuration)
+            : 0;
 
         runInAction(() => {
             this.cashuWallets[mintUrl] = {
@@ -728,7 +734,8 @@ export default class CashuStore {
                 counter,
                 proofs,
                 balanceSats,
-                errorConnecting: false
+                errorConnecting: false,
+                lockDuration
             };
         });
 
@@ -1834,6 +1841,53 @@ export default class CashuStore {
                 localeString('stores.CashuStore.errorDeletingData') +
                     `: ${error.message}`
             );
+        }
+    };
+
+    @action
+    public setLockDuration = async (mintUrl: string, duration: number) => {
+        try {
+            // Store the lock duration in local storage
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-lockDuration-${mintUrl}`,
+                duration
+            );
+
+            // Update the wallet's lock duration if it exists
+            if (this.cashuWallets[mintUrl]) {
+                this.cashuWallets[mintUrl].lockDuration = duration;
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Error setting lock duration:', error);
+            return false;
+        }
+    };
+
+    @action
+    public getLockDuration = async (mintUrl: string): Promise<number> => {
+        try {
+            // Try to get the lock duration from local storage
+            const storedDuration = await Storage.getItem(
+                `${this.getLndDir()}-cashu-lockDuration-${mintUrl}`
+            );
+
+            // If stored duration exists, return it
+            if (storedDuration !== null) {
+                return parseInt(storedDuration, 10);
+            }
+
+            // If no stored duration, check if the wallet has a lock duration
+            if (this.cashuWallets[mintUrl]?.lockDuration !== undefined) {
+                return this.cashuWallets[mintUrl].lockDuration || 0;
+            }
+
+            // Default to 0 if no lock duration is set
+            return 0;
+        } catch (error) {
+            console.error('Error getting lock duration:', error);
+            return 0;
         }
     };
 }
