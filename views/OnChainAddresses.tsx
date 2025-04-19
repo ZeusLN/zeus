@@ -130,9 +130,14 @@ const AddressGroup = (props: any) => {
                             backgroundColor: 'transparent'
                         }}
                         onPress={() => {
+                            const addressStr = address.address;
                             NavigationService.navigate('QR', {
-                                value: `BITCOIN:${address.address.toUpperCase()}`,
-                                copyValue: address.address
+                                value: `bitcoin:${
+                                    addressStr === addressStr.toLowerCase()
+                                        ? address.address.toUpperCase()
+                                        : address.address
+                                }`,
+                                copyValue: addressStr
                             });
                         }}
                     >
