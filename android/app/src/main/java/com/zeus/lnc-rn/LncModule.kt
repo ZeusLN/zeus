@@ -147,7 +147,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      Lndmobile.invokeRPC(namespace, eventName, request, gocb)
   }
 
-  // chantools
+   // chantools
 
    @ReactMethod
    fun sweepRemoteClosed(
@@ -179,4 +179,45 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
          }
       }
    }
+
+  // Swaps
+
+  @ReactMethod
+  fun createClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, transactionHash: String, pubNonce: String, promise: Promise) {
+     Log.d("createClaimTransaction called", "");
+
+     try {
+         Lndmobile.createClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, transactionHash, pubNonce)
+         promise.resolve(null)
+     } catch (e: Exception) {
+         val exceptionAsString = e.toString()
+         promise.reject(exceptionAsString)
+     }
+  }
+
+  @ReactMethod
+  fun createReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, isTestnet: Boolean = false, promise: Promise) {
+     Log.d("createReverseClaimTransaction called", "");
+
+     try {
+         Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, isTestnet)
+         promise.resolve(null)
+     } catch (e: Exception) {
+         val exceptionAsString = e.toString()
+         promise.reject(exceptionAsString)
+     }
+  }
+
+  @ReactMethod
+  fun createRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean, isTestnet: Boolean = false, promise: Promise) {
+     Log.d("createRefundTransaction called", "");
+
+     try {
+         var txid = Lndmobile.createRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, isTestnet)
+         promise.resolve(txid)
+     } catch (e: Exception) {
+         val exceptionAsString = e.toString()
+         promise.reject(exceptionAsString)
+     }
+  }
 }
