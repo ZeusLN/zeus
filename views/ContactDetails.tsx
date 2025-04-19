@@ -23,6 +23,7 @@ import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../assets/images/SVG/Key Security.svg';
+import Ecash from '../assets/images/SVG/Ecash.svg';
 import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
 import Star from '../assets/images/SVG/Star.svg';
@@ -71,6 +72,7 @@ export default class ContactDetails extends React.Component<
                 bolt12Offer: [''],
                 onchainAddress: [''],
                 pubkey: [''],
+                cashuPubkey: [''],
                 nip05: [''],
                 nostrNpub: [''],
                 name: '',
@@ -519,6 +521,46 @@ export default class ContactDetails extends React.Component<
                                                     style={styles.contactRow}
                                                 >
                                                     <LightningBolt />
+                                                    <Text
+                                                        style={{
+                                                            ...styles.contactFields,
+                                                            color: themeColor(
+                                                                'chain'
+                                                            )
+                                                        }}
+                                                    >
+                                                        {address.length > 23
+                                                            ? `${address.substring(
+                                                                  0,
+                                                                  10
+                                                              )}...${address.substring(
+                                                                  address.length -
+                                                                      10
+                                                              )}`
+                                                            : address}
+                                                    </Text>
+                                                </View>
+                                            </TouchableOpacity>
+                                        )
+                                    )}
+                                </View>
+                            )}
+
+                            {contact.hasCashuPubkey && (
+                                <View>
+                                    {contact.cashuPubkey.map(
+                                        (address: string, index: number) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                onPress={() =>
+                                                    this.sendAddress(address)
+                                                }
+                                            >
+                                                <View
+                                                    key={index}
+                                                    style={styles.contactRow}
+                                                >
+                                                    <Ecash />
                                                     <Text
                                                         style={{
                                                             ...styles.contactFields,
