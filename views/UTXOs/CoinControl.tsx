@@ -16,6 +16,7 @@ import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import UTXOsStore from './../../stores/UTXOsStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface CoinControlProps {
     navigation: StackNavigationProp<any, any>;
@@ -25,6 +26,7 @@ interface CoinControlProps {
 
 interface CoinControlState {
     account: string;
+    utxoLabels: Record<string, string>;
 }
 
 @inject('UTXOsStore')
@@ -43,19 +45,36 @@ export default class CoinControl extends React.Component<
                 : accountParam;
 
         this.state = {
-            account: account || 'default'
+            account: account || 'default',
+            utxoLabels: {}
         };
     }
 
-    async UNSAFE_componentWillMount() {
+    async componentDidMount() {
         const { UTXOsStore } = this.props;
         const { account } = this.state;
         const { getUTXOs, listAccounts } = UTXOsStore;
+
         getUTXOs({ account });
         if (BackendUtils.supportsAccounts()) {
             listAccounts();
         }
+
+        await this.loadLabels();
     }
+
+    loadLabels = async () => {
+        const utxos = this.props.UTXOsStore.utxos;
+        const labelMap: Record<string, string> = {};
+        for (const utxo of utxos) {
+            const key = `${utxo.txid}:${utxo.output}`;
+            const label = await AsyncStorage.getItem(key);
+            if (label) {
+                labelMap[key] = label;
+            }
+        }
+        this.setState({ utxoLabels: labelMap });
+    };
 
     renderSeparator = () => (
         <View
@@ -68,7 +87,7 @@ export default class CoinControl extends React.Component<
 
     render() {
         const { navigation, UTXOsStore } = this.props;
-        const { account } = this.state;
+        const { account, utxoLabels } = this.state;
         const { loading, utxos, getUTXOs, accounts } = UTXOsStore;
 
         return (
@@ -89,25 +108,29 @@ export default class CoinControl extends React.Component<
                     }}
                     navigation={navigation}
                 />
+
                 {BackendUtils.supportsAccounts() && accounts?.length > 0 && (
                     <AccountFilter
                         default={account}
                         items={accounts}
                         refresh={(account: string) => {
                             getUTXOs({ account });
-                            this.setState({ account });
+                            this.setState({ account }, this.loadLabels);
                         }}
                         showAll
                     />
                 )}
+
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
                     </View>
-                ) : !!utxos && utxos.length > 0 ? (
+                ) : utxos.length > 0 ? (
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
+                            const key = `${item.txid}:${item.output}`;
+                            const message = utxoLabels[key];
                             const subTitle = item.address;
 
                             return (
@@ -119,7 +142,8 @@ export default class CoinControl extends React.Component<
                                         }}
                                         onPress={() => {
                                             navigation.navigate('Utxo', {
-                                                utxo: item
+                                                utxo: item,
+                                                onLabelUpdate: this.loadLabels
                                             });
                                         }}
                                     >
@@ -139,12 +163,23 @@ export default class CoinControl extends React.Component<
                                             >
                                                 {subTitle}
                                             </ListItem.Subtitle>
+                                            {message && (
+                                                <ListItem.Subtitle
+                                                    right
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontSize: 10
+                                                    }}
+                                                >
+                                                    {message}
+                                                </ListItem.Subtitle>
+                                            )}
                                         </ListItem.Content>
-                                        {/*
-                                        <ListItem.Content right>
-                                            <FrozenPill />
-                                        </ListItem.Content>
-                                        */}
+                                        {/* <ListItem.Content right>
+                                                <FrozenPill />
+                                        </ListItem.Content> */}
                                     </ListItem>
                                 </React.Fragment>
                             );
@@ -153,7 +188,10 @@ export default class CoinControl extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getUTXOs({ account })}
+                        onRefresh={async () => {
+                            getUTXOs({ account });
+                            await this.loadLabels();
+                        }}
                     />
                 ) : (
                     <Button
@@ -163,7 +201,10 @@ export default class CoinControl extends React.Component<
                             size: 25,
                             color: themeColor('text')
                         }}
-                        onPress={() => getUTXOs({ account })}
+                        onPress={async () => {
+                            getUTXOs({ account });
+                            await this.loadLabels();
+                        }}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
