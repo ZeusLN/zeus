@@ -447,6 +447,60 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
+
+                    {BackendUtils.supportsInvoiceRequest() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('WithdrawalRequest')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 14,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            <Icon
+                                                name="edit"
+                                                type="feather"
+                                                color={themeColor('text')}
+                                                underlayColor="transparent"
+                                                size={17}
+                                            />
+                                        </Text>
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Tools.withdrawal.title'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </ScrollView>
             </Screen>
         );
