@@ -552,9 +552,9 @@ export default class FiatStore {
         }
     };
 
-    public getSymbol = () => {
+    public getSymbol = (fiatCurrency?: string) => {
         const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const fiat = fiatCurrency || settings.fiat;
         if (fiat) {
             return this.symbolLookup(fiat);
         } else {
@@ -567,9 +567,15 @@ export default class FiatStore {
         }
     };
 
-    public getRate = (sats: boolean = false) => {
+    public getRate = ({
+        sats = false,
+        fiatCurrency
+    }: {
+        sats: boolean;
+        fiatCurrency?: string;
+    }) => {
         const { settings } = this.settingsStore;
-        const { fiat } = settings;
+        const fiat = fiatCurrency || settings.fiat;
 
         if (fiat && this.fiatRates) {
             const fiatEntry = this.fiatRates.filter(
