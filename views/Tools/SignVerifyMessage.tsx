@@ -529,7 +529,7 @@ export default class SignVerifyMessage extends React.Component<
         return (
             <View style={this.styles.form}>
                 <Text style={{ color: themeColor('secondaryText') }}>
-                {localeString('views.Settings.SignMessage.signingMethod')}
+                    {localeString('views.Settings.SignMessage.signingMethod')}
                 </Text>
                 <ButtonGroup
                     onPress={this.updateSigningMethod}
@@ -595,7 +595,9 @@ export default class SignVerifyMessage extends React.Component<
                                 marginBottom: 5
                             }}
                         >
-                            {localeString('views.Settings.SignMessage.selectAddressSigning')}
+                            {localeString(
+                                'views.Settings.SignMessage.selectAddressSigning'
+                            )}
                         </Text>
 
                         {addresses.length === 0 && (
@@ -607,7 +609,9 @@ export default class SignVerifyMessage extends React.Component<
                                 }}
                             >
                                 <Text style={{ color: themeColor('text') }}>
-                                {localeString('views.Settings.SignMessage.loadingAddresses')}
+                                    {localeString(
+                                        'views.Settings.SignMessage.loadingAddresses'
+                                    )}
                                 </Text>
                             </View>
                         )}
@@ -975,7 +979,9 @@ export default class SignVerifyMessage extends React.Component<
                                                 messageToSign.trim() === ''
                                             ) {
                                                 Alert.alert(
-                                                    localeString('views.Settings.SignMessage.pleaseEnterMessage')
+                                                    localeString(
+                                                        'views.Settings.SignMessage.pleaseEnterMessage'
+                                                    )
                                                 );
                                                 return;
                                             }
@@ -1175,7 +1181,9 @@ export default class SignVerifyMessage extends React.Component<
                                                                 .loadingText
                                                         }
                                                     >
-                                                        {localeString('views.Settings.SignMessage.loadingAddresses')}
+                                                        {localeString(
+                                                            'views.Settings.SignMessage.loadingAddresses'
+                                                        )}
                                                     </Text>
                                                 </View>
                                             )}
@@ -1563,12 +1571,18 @@ export default class SignVerifyMessage extends React.Component<
 
         // Validation
         if (!messageToVerify || messageToVerify.trim() === '') {
-            Alert.alert(localeString('views.Settings.SignMessage.pleaseEnterMessageVerify'));
+            Alert.alert(
+                localeString(
+                    'views.Settings.SignMessage.pleaseEnterMessageVerify'
+                )
+            );
             return;
         }
 
         if (!signatureToVerify || signatureToVerify.trim() === '') {
-            Alert.alert(localeString('views.Settings.SignMessage.pleaseEnterSignature'));
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseEnterSignature')
+            );
             return;
         }
 
@@ -1584,7 +1598,10 @@ export default class SignVerifyMessage extends React.Component<
                 localeString('views.Settings.SignMessage.pleaseSelectAddress')
             );
             console.log(
-                '[SignVerifyMessage] Verification aborted: ' + localeString('views.Settings.SignMessage.noAddressForVerification')
+                '[SignVerifyMessage] Verification aborted: ' +
+                    localeString(
+                        'views.Settings.SignMessage.noAddressForVerification'
+                    )
             );
             return;
         }

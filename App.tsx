@@ -284,7 +284,7 @@ export default class App extends React.PureComponent {
                                                 ref={(nav) => {
                                                     if (nav != null) {
                                                         NavigationService.setTopLevelNavigator(
-                                                            nav
+                                                            nav as any
                                                         );
                                                     }
                                                 }}
