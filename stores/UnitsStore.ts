@@ -72,14 +72,17 @@ export default class UnitsStore {
     public getUnformattedAmount = ({
         sats = 0,
         fixedUnits,
-        noCommas
+        noCommas,
+        forceFiatCurrency
     }: {
         sats?: string | number;
         fixedUnits?: string;
         noCommas?: boolean;
+        forceFiatCurrency?: string;
     }): ValueDisplayProps => {
         const { settings } = this.settingsStore;
-        const { fiat, display } = settings;
+        const { display } = settings;
+        const fiat = forceFiatCurrency || settings.fiat;
         const showAllDecimalPlaces: boolean =
             (display && display.showAllDecimalPlaces) || false;
         const units = fixedUnits || this.units;
