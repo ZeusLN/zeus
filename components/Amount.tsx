@@ -309,6 +309,7 @@ interface AmountProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     negative?: boolean;
+    fiatCurrency?: string;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -333,6 +334,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             accessibilityLabel,
             negative = false
         } = this.props;
+        const fiatCurrency = this.props.fiatCurrency;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
         const SettingsStore = this.props.SettingsStore!;
@@ -344,7 +346,11 @@ export default class Amount extends React.Component<AmountProps, {}> {
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
 
-        const unformattedAmount = UnitsStore.getUnformattedAmount(value, units);
+        const unformattedAmount = UnitsStore.getUnformattedAmount(
+            value,
+            units,
+            fiatCurrency
+        );
 
         // display fiat amounts when rate fetch fails as $N/A
         if (unformattedAmount.error) {
