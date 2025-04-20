@@ -309,6 +309,7 @@ interface AmountProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     negative?: boolean;
+    fiatCurrency?: string;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -333,6 +334,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             accessibilityLabel,
             negative = false
         } = this.props;
+        const fiatCurrency = this.props.fiatCurrency;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
         const SettingsStore = this.props.SettingsStore!;
@@ -346,7 +348,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
 
         const unformattedAmount = UnitsStore.getUnformattedAmount({
             sats: value,
-            fixedUnits: units
+            fixedUnits: units,
+            forceFiatCurrency: fiatCurrency
         });
 
         // display fiat amounts when rate fetch fails as $N/A
