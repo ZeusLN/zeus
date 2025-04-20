@@ -13,6 +13,8 @@ const {
     addInvoice,
     getInfo,
     connectPeer,
+    disconnectPeer,
+    listPeers,
     listInvoices,
     listUnspent,
     getNodeInfo,
@@ -159,8 +161,12 @@ export default class EmbeddedLND extends LND {
             );
         });
     };
+    // Peers
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
+    disconnectPeer = async (pubKey: string) => await disconnectPeer(pubKey);
+    listPeers = async () => await listPeers();
+
     decodePaymentRequest = async (urlParams?: string[]) =>
         await decodePayReq((urlParams && urlParams[0]) || '');
     payLightningInvoice = async (data: any) => {

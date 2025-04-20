@@ -57,6 +57,50 @@ export default class Peers extends React.Component<PeersProps, {}> {
                             containerStyle={{
                                 backgroundColor: 'transparent'
                             }}
+                            onPress={() => navigation.navigate('PeersList')}
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('general.connectedPeers')}
+                                </ListItem.Title>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString('general.viewConnectedPeers')}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name="keyboard-arrow-right"
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+                        <View
+                            style={{
+                                margin: 10
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.EmbeddedNode.Peers.connectedPeersSubtitle'
+                                )}
+                            </Text>
+                        </View>
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent'
+                            }}
                             onPress={() => navigation.navigate('NeutrinoPeers')}
                         >
                             <ListItem.Content>

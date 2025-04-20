@@ -34,6 +34,7 @@ import Payment from './views/Payment';
 import PaymentPaths from './views/PaymentPaths';
 import Invoice from './views/Invoice';
 import OnChainAddresses from './views/OnChainAddresses';
+import PeersList from './views/Settings/EmbeddedNode/Peers/PeersList';
 
 import NodeInfo from './views/NodeInfo';
 import NetworkInfo from './views/NetworkInfo';
@@ -1088,6 +1089,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NWCAddressSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="PeersList" // @ts-ignore:next-line
+                                                        component={PeersList}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>

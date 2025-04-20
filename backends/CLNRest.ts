@@ -295,6 +295,8 @@ export default class CLNRest {
 
         return this.postRequest('/v1/fundchannel', request);
     };
+
+    // Peers
     connectPeer = (data: any) => {
         const [host, port] = data.addr.host.split(':');
 
@@ -304,6 +306,11 @@ export default class CLNRest {
             port
         });
     };
+    disconnectPeer = (pubKey: string) => {
+        return this.request('/v1/peers/' + pubKey, 'delete');
+    };
+    listPeers = () => this.request('/v1/peers', 'get');
+
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.postRequest('/v1/decode', {
             string: urlParams && urlParams[0]

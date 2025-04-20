@@ -80,6 +80,7 @@ class BackendUtils {
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
+    disconnectPeer = (...args: any[]) => this.call('disconnectPeer', args);
     decodePaymentRequest = (...args: any[]) =>
         this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args: any[]) =>
@@ -101,6 +102,7 @@ class BackendUtils {
     signMessage = (...args: any[]) => this.call('signMessage', args);
     verifyMessage = (...args: any[]) => this.call('verifyMessage', args);
     lnurlAuth = (...args: any[]) => this.call('lnurlAuth', args);
+    listPeers = (...args: any[]) => this.call('listPeers', args);
 
     fundPsbt = (...args: any[]) => this.call('fundPsbt', args);
     signPsbt = (...args: any[]) => this.call('signPsbt', args);

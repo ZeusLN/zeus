@@ -1514,5 +1514,9 @@
     "zeuspay.enableEcash": "Enable ecash",
     "zeuspay.getChannel": "Get channel",
     "androidNotification.lndRunningBackground": "LND is running in the background",
-    "androidNotification.shutdown": "Shutdown"
+    "androidNotification.shutdown": "Shutdown",
+    "general.connectedPeers": "Connected Peers",
+    "general.viewConnectedPeers": "View and manage connected peers",
+    "general.noPeers": "No connected peers",
+    "views.Settings.EmbeddedNode.Peers.connectedPeersSubtitle": "View and manage your currently connected Lightning peers. You can disconnect from peers that you no longer want to be connected to."
 }

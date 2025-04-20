@@ -317,10 +317,21 @@ export default class LightningNodeConnect {
             );
         });
     };
+
+    // Peers
     connectPeer = async (data: any) =>
         await this.lnc.lnd.lightning
             .connectPeer(data)
             .then((data: lnrpc.ConnectPeerRequest) => snakeize(data));
+    disconnectPeer = async (pubKey: string) =>
+        await this.lnc.lnd.lightning
+            .disconnectPeer({ pub_key: pubKey })
+            .then((data: lnrpc.DisconnectPeerResponse) => snakeize(data));
+    listPeers = async () =>
+        await this.lnc.lnd.lightning
+            .listPeers({})
+            .then((data: lnrpc.ListPeersResponse) => snakeize(data));
+
     decodePaymentRequest = async (urlParams?: Array<string>) =>
         await this.lnc.lnd.lightning
             .decodePayReq({ pay_req: urlParams && urlParams[0] })

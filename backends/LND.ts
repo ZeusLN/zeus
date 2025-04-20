@@ -473,7 +473,12 @@ export default class LND {
             });
         });
     };
+    // Peers
     connectPeer = (data: any) => this.postRequest('/v1/peers', data);
+    disconnectPeer = (pubKey: string) =>
+        this.deleteRequest('/v1/peers/' + pubKey);
+    listPeers = () => this.getRequest('/v1/peers');
+
     decodePaymentRequest = (urlParams?: Array<string>) =>
         this.getRequest(`/v1/payreq/${urlParams && urlParams[0]}`);
     payLightningInvoice = async (data: any) => {
