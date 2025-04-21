@@ -402,7 +402,7 @@ const handleAnything = async (
             const json = await res.json();
             if (!json.Answer && !json.Answer[0]) throw 'Bad';
             bolt12 = json.Answer[0].data;
-            bolt12 = bolt12.replace(/("|\\)/g, '');
+            bolt12 = bolt12.replace(/("|\\|\s+)/g, '');
             bolt12 = bolt12.replace(/bitcoin:b12=/, '');
 
             const { value, amount, lightning, offer }: any =
