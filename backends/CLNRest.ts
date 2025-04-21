@@ -421,15 +421,7 @@ export default class CLNRest {
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
-    supportsOffers = async () => {
-        const { configs } = await this.postRequest('/v1/listconfigs');
-
-        const supportsOffers: boolean = configs['experimental-offers']
-            ? true
-            : false;
-
-        return supportsOffers;
-    };
+    supportsOffers = () => true;
     isLNDBased = () => false;
     supportInboundFees = () => false;
     supportsDevTools = () => true;
