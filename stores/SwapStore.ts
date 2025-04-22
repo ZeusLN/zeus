@@ -95,7 +95,11 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine`
+                `${this.getHost}/swap/submarine`,
+                {
+                    'Content-Type': 'application/json',
+                    Referral: 'pro'
+                }
             );
             const status = response.info().status;
             if (status == 200) {
@@ -107,7 +111,11 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/reverse`
+                `${this.getHost}/swap/reverse`,
+                {
+                    'Content-Type': 'application/json',
+                    Referral: 'pro'
+                }
             );
             const status = response.info().status;
             if (status == 200) {
@@ -122,7 +130,11 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine/${id}/transaction`
+                `${this.getHost}/swap/submarine/${id}/transaction`,
+                {
+                    'Content-Type': 'application/json',
+                    Referral: 'pro'
+                }
             );
 
             const status = response.info().status;
@@ -163,7 +175,8 @@ export default class SwapStore {
                 'POST',
                 `${this.getHost}/swap/submarine`,
                 {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    referralId: 'pro'
                 },
                 JSON.stringify({
                     invoice,
@@ -283,7 +296,8 @@ export default class SwapStore {
                 'POST',
                 `${this.getHost}/swap/reverse`,
                 {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    referralId: 'pro'
                 },
                 data
             );
