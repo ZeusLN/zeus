@@ -380,7 +380,7 @@ export default class CLNRest {
         const signed = await this.signMessage(r_hash);
         return {
             signature: new sha256Hash()
-                .update(Base64Utils.stringToUint8Array(signed.signature))
+                .update(Base64Utils.textToCharCodeBytes(signed.signature))
                 .digest()
         };
     };

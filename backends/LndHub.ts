@@ -80,7 +80,7 @@ export default class LndHub extends LND {
         });
     lnurlAuth = (message: string) => {
         const messageHash = new sha256Hash()
-            .update(Base64Utils.stringToUint8Array(message))
+            .update(Base64Utils.textToCharCodeBytes(message))
             .digest();
 
         let signed, signature, key, linkingKeyPair;
@@ -88,7 +88,7 @@ export default class LndHub extends LND {
             case 'Alby':
                 key = new sha256Hash()
                     .update(
-                        Base64Utils.stringToUint8Array(
+                        Base64Utils.textToCharCodeBytes(
                             `lndhub://${settingsStore.username}:${settingsStore.password}`
                         )
                     )
@@ -98,11 +98,11 @@ export default class LndHub extends LND {
                     .sign(messageHash, { canonical: true })
                     .toDER('hex');
                 signature = new sha256Hash()
-                    .update(Base64Utils.stringToUint8Array(signed))
+                    .update(Base64Utils.textToCharCodeBytes(signed))
                     .digest();
                 break;
             case 'BlueWallet':
-                signature = Base64Utils.stringToUint8Array(
+                signature = Base64Utils.textToCharCodeBytes(
                     `lndhub://${settingsStore.username}:${settingsStore.password}`
                 );
                 break;

@@ -122,7 +122,7 @@ export default class LnurlAuth extends React.Component<
                 // 3. LN WALLET defines hashingKey as PrivateKey(sha256(obtained signature)).
                 // // 4. SERVICE domain name is extracted from auth LNURL and then service-specific linkingPrivKey is defined as PrivateKey(hmacSha256(hashingKey, service domain name)).
                 const linkingKeyPriv = new sha256HMAC(signature.signature)
-                    .update(Base64Utils.stringToUint8Array(this.state.domain))
+                    .update(Base64Utils.textToCharCodeBytes(this.state.domain))
                     .digest();
 
                 const linkingKeyPair = ec.keyFromPrivate(linkingKeyPriv, true);

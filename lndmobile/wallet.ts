@@ -306,7 +306,7 @@ export const genSeed = async (
         method: 'GenSeed',
         options: {
             aezeed_passphrase: passphrase
-                ? Base64Utils.stringToUint8Array(passphrase)
+                ? Base64Utils.textToCharCodeBytes(passphrase)
                 : undefined
         }
     });
@@ -323,9 +323,9 @@ export const initWallet = async (
     // await NativeModules.LndMobile.initWallet(seed, password, recoveryWindow ?? 0, channelBackupsBase64 ?? null);
     const options: lnrpc.IInitWalletRequest = {
         cipher_seed_mnemonic: seed,
-        wallet_password: Base64Utils.stringToUint8Array(password),
+        wallet_password: Base64Utils.textToCharCodeBytes(password),
         aezeed_passphrase: aezeedPassphrase
-            ? Base64Utils.stringToUint8Array(aezeedPassphrase)
+            ? Base64Utils.textToCharCodeBytes(aezeedPassphrase)
             : undefined
     };
     if (recoveryWindow) {
@@ -370,7 +370,7 @@ export const unlockWallet = async (
         response: lnrpc.UnlockWalletResponse,
         method: 'UnlockWallet',
         options: {
-            wallet_password: Base64Utils.stringToUint8Array(password)
+            wallet_password: Base64Utils.textToCharCodeBytes(password)
         }
     });
     console.log('unlock time: ' + (new Date().getTime() - start) / 1000 + 's');

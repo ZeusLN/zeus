@@ -311,7 +311,7 @@ export const sendPaymentSync = async (
     };
     if (tlv_record_name && tlv_record_name.length > 0) {
         options.dest_custom_records = {
-            [TLV_RECORD_NAME]: Base64Utils.utf8ToBytes(tlv_record_name)
+            [TLV_RECORD_NAME]: Base64Utils.textToCharCodeBytes(tlv_record_name)
         };
     }
     if (amount) {
@@ -546,7 +546,7 @@ export const sendKeysendPayment = async (
                 route.hops![lastHop].custom_records!['5482373484'] = pre_image;
                 if (tlv_record_name_str && tlv_record_name_str.length > 0) {
                     route.hops![lastHop].custom_records![TLV_RECORD_NAME] =
-                        Base64Utils.stringToUint8Array(tlv_record_name_str);
+                        Base64Utils.textToCharCodeBytes(tlv_record_name_str);
                 }
 
                 const response = await sendCommand<

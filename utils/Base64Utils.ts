@@ -12,8 +12,7 @@ class Base64Utils {
     base64ToHex = (input: string) =>
         Buffer.from(input, 'base64').toString('hex');
 
-    // TODO: rename to better describe the input
-    stringToUint8Array = (input: string) =>
+    textToCharCodeBytes = (input: string) =>
         Uint8Array.from(input, (x) => x.charCodeAt(0));
 
     hexToBytes = (input: string) =>
