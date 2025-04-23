@@ -5,33 +5,37 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
+import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 interface EcashSettingsProps {
     navigation: StackNavigationProp<any, any>;
+    CashuStore: CashuStore;
     SettingsStore: SettingsStore;
 }
 
 interface EcashSettingsState {
+    loading: boolean;
     enableCashu: boolean;
 }
 
-@inject('SettingsStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class EcashSettings extends React.Component<
     EcashSettingsProps,
     EcashSettingsState
 > {
     state = {
+        loading: false,
         enableCashu: false
     };
 
@@ -58,8 +62,8 @@ export default class EcashSettings extends React.Component<
     );
 
     render() {
-        const { navigation, SettingsStore } = this.props;
-        const { enableCashu } = this.state;
+        const { navigation, CashuStore, SettingsStore } = this.props;
+        const { loading, enableCashu } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
 
         return (
@@ -73,6 +77,16 @@ export default class EcashSettings extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                alignItems: 'center'
+                            }}
+                        >
+                            {loading && <LoadingIndicator size={30} />}
+                        </View>
+                    }
                     navigation={navigation}
                 />
                 <ScrollView
@@ -118,7 +132,8 @@ export default class EcashSettings extends React.Component<
                                 value={enableCashu}
                                 onValueChange={async () => {
                                     this.setState({
-                                        enableCashu: !enableCashu
+                                        enableCashu: !enableCashu,
+                                        loading: true
                                     });
                                     await updateSettings({
                                         ecash: {
@@ -126,10 +141,16 @@ export default class EcashSettings extends React.Component<
                                             enableCashu: !enableCashu
                                         }
                                     });
-                                    restartNeeded();
+                                    if (!enableCashu) {
+                                        await CashuStore.initializeWallets();
+                                    }
+                                    this.setState({
+                                        loading: false
+                                    });
                                 }}
                                 disabled={
-                                    SettingsStore.settingsUpdateInProgress
+                                    SettingsStore.settingsUpdateInProgress ||
+                                    loading
                                 }
                             />
                         </View>
