@@ -12,6 +12,7 @@ import Switch from '../../components/Switch';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -125,6 +126,7 @@ export default class EcashSettings extends React.Component<
                                             enableCashu: !enableCashu
                                         }
                                     });
+                                    restartNeeded();
                                 }}
                                 disabled={
                                     SettingsStore.settingsUpdateInProgress
