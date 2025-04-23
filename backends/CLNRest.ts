@@ -9,7 +9,8 @@ import {
     getBalance,
     getChainTransactions,
     getOffchainBalance,
-    listPeers
+    listPeers,
+    listClosedChannels
 } from './CoreLightningRequestHandler';
 import { localeString } from '../utils/LocaleUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -189,6 +190,11 @@ export default class CLNRest {
 
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
+
+    getClosedChannels = async () => {
+        const channels = await this.postRequest('/v1/listclosedchannels');
+        return listClosedChannels(channels);
+    };
 
     getNode = (data: any) =>
         this.postRequest('/v1/listnodes', { id: data.id }).then((res) => {
@@ -415,6 +421,7 @@ export default class CLNRest {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;
+    supportsClosedChannels = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => true;

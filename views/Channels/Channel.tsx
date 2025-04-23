@@ -343,6 +343,7 @@ export default class ChannelView extends React.Component<
             remote_chan_reserve_sat,
             displayName,
             // closed
+            to_us_msat,
             closeHeight,
             closeType,
             getOpenInitiator,
@@ -484,7 +485,7 @@ export default class ChannelView extends React.Component<
                             ? localeString('views.Channel.pendingClose')
                             : forceClose
                             ? localeString('views.Channel.forceClose')
-                            : closeHeight
+                            : closeHeight || to_us_msat
                             ? localeString('views.Channel.closed')
                             : isActive
                             ? localeString('general.active')
@@ -1104,37 +1105,32 @@ export default class ChannelView extends React.Component<
                                 />
                             </View>
                         )}
-                    {!closeHeight &&
-                        !closing_txid &&
-                        !pendingClose &&
-                        !closing && (
-                            <View
-                                style={{
-                                    ...styles.button,
-                                    marginTop: 20,
-                                    marginBottom: confirmCloseChannel ? 0 : 50
-                                }}
-                            >
-                                <Button
-                                    title={
-                                        confirmCloseChannel
-                                            ? localeString(
-                                                  'views.Channel.cancelClose'
-                                              )
-                                            : localeString(
-                                                  'views.Channel.close'
-                                              )
-                                    }
-                                    onPress={() =>
-                                        this.setState({
-                                            confirmCloseChannel:
-                                                !confirmCloseChannel
-                                        })
-                                    }
-                                    warning={!confirmCloseChannel}
-                                />
-                            </View>
-                        )}
+                    {this.state.channel.isOpen && (
+                        <View
+                            style={{
+                                ...styles.button,
+                                marginTop: 20,
+                                marginBottom: confirmCloseChannel ? 0 : 50
+                            }}
+                        >
+                            <Button
+                                title={
+                                    confirmCloseChannel
+                                        ? localeString(
+                                              'views.Channel.cancelClose'
+                                          )
+                                        : localeString('views.Channel.close')
+                                }
+                                onPress={() =>
+                                    this.setState({
+                                        confirmCloseChannel:
+                                            !confirmCloseChannel
+                                    })
+                                }
+                                warning={!confirmCloseChannel}
+                            />
+                        </View>
+                    )}
                     {confirmCloseChannel && (
                         <View>
                             {closingChannel && (
