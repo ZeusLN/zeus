@@ -1,5 +1,6 @@
 import { observable, computed } from 'mobx';
 import BaseModel from './BaseModel';
+import { settingsStore } from '../stores/storeInstances';
 
 interface Outpoint {
     output_index: number;
@@ -39,5 +40,15 @@ export default class Utxo extends BaseModel {
         return this.outpoint && this.outpoint.txid_str
             ? `${this.outpoint.txid_str}:${this.outpoint.output_index}`
             : `${this.txid}:${this.output}`;
+    }
+
+    @computed public get getLabelKey(): string {
+        const implementation = settingsStore.implementation;
+
+        if (implementation === 'cln-rest') {
+            return `${this.txid}:${this.output}`;
+        } else {
+            return `${this.outpoint.txid_str}:${this.outpoint.output_index}`;
+        }
     }
 }
