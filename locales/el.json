@@ -1482,7 +1482,7 @@
     "stores.CashuStore.alreadyPaid": "Invoice has already been paid.",
     "stores.CashuStore.alreadySpent": "Token has already been spent.",
     "stores.CashuStore.pending": "Payment is pending.",
-    "stores.CashuStore.claimError": "Error claming token",
+    "stores.CashuStore.claimError": "Error claiming token",
     "stores.CashuStore.errorMintingToken": "Error minting token",
     "stores.CashuStore.notEnoughFunds": "Not enough funds to cover payment",
     "stores.CashuStore.feeExceedsAmt": "Melt fees match or exceed token amount",
