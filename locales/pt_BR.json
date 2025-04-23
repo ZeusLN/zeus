@@ -1447,7 +1447,7 @@
     "cashu.tapToConfigure": "Nenhuma cunha encontrada. Toque para configurar",
     "cashu.tapToConfigure.short": "Toque para configurar",
     "cashu.mintToken": "Cunhar token",
-    "cashu.mintEcashToken": "Cunha ecash token",
+    "cashu.mintEcashToken": "Cunhar ecash token",
     "cashu.errorAddingMint": "Erro ao adicionar cunha",
     "views.Cashu.AddMint.title": "Adicione cunha",
     "views.Cashu.AddMint.discover": "Descubra as cunhas",
