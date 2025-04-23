@@ -1208,27 +1208,46 @@ export default class Receive extends React.Component<
         );
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()
-            ? [
-                  {
-                      key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
-                      description: localeString(
-                          'views.Receive.np2wkhDescription'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
-                      description: localeString(
-                          'views.Receive.p2wkhDescription'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2trKey'),
-                      value: '4',
-                      description: localeString('views.Receive.p2trDescription')
-                  }
-              ]
+            ? SettingsStore.implementation === 'cln-rest'
+                ? [
+                      {
+                          key: localeString('views.Receive.p2wkhKey'),
+                          value: '0',
+                          description: localeString(
+                              'views.Receive.p2wkhDescription'
+                          )
+                      },
+                      {
+                          key: localeString('views.Receive.p2trKey'),
+                          value: '4',
+                          description: localeString(
+                              'views.Receive.p2trDescription'
+                          )
+                      }
+                  ]
+                : [
+                      {
+                          key: localeString('views.Receive.np2wkhKey'),
+                          value: '1',
+                          description: localeString(
+                              'views.Receive.np2wkhDescription'
+                          )
+                      },
+                      {
+                          key: localeString('views.Receive.p2wkhKey'),
+                          value: '0',
+                          description: localeString(
+                              'views.Receive.p2wkhDescription'
+                          )
+                      },
+                      {
+                          key: localeString('views.Receive.p2trKey'),
+                          value: '4',
+                          description: localeString(
+                              'views.Receive.p2trDescription'
+                          )
+                      }
+                  ]
             : [
                   {
                       key: localeString('views.Receive.np2wkhKey'),
@@ -1564,7 +1583,6 @@ export default class Receive extends React.Component<
                     }
                     navigation={navigation}
                 />
-
                 <View style={{ flex: 1 }}>
                     {watchedInvoicePaid ? (
                         <View
@@ -3175,7 +3193,11 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: BackendUtils.supportsTaproot() ? 450 : 350,
+                        height: BackendUtils.supportsTaproot()
+                            ? SettingsStore.implementation === 'cln-rest'
+                                ? 350
+                                : 450
+                            : 350,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}
