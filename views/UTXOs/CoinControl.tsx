@@ -125,7 +125,7 @@ export default class CoinControl extends React.Component<
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
                     </View>
-                ) : utxos.length > 0 ? (
+                ) : !!utxos && utxos.length > 0 ? (
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
@@ -171,7 +171,9 @@ export default class CoinControl extends React.Component<
                                                     fontSize: 10
                                                 }}
                                             >
-                                                {message}
+                                                {`${localeString(
+                                                    'general.label'
+                                                )}: ${message}`}
                                             </ListItem.Subtitle>
                                         )}
                                     </ListItem.Content>
@@ -182,7 +184,7 @@ export default class CoinControl extends React.Component<
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={async () => {
+                        onRefresh={() => {
                             getUTXOs({ account });
                         }}
                     />
