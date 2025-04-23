@@ -33,7 +33,42 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
 
     useEffect(() => {
         const { contactData, addressData } = route.params ?? {};
-        setAddressData([contactData, ...addressData]);
+        let parsedContact: any = null;
+
+        if (
+            typeof contactData === 'string' &&
+            contactData.startsWith('zeuscontact:')
+        ) {
+            try {
+                parsedContact = JSON.parse(
+                    contactData.replace(/^zeuscontact:/, '')
+                );
+            } catch (err) {
+                console.error('Failed to parse contactData:', err);
+            }
+        }
+
+        if (parsedContact) {
+            const essentialContact = {
+                contactId: parsedContact.contactId ?? '',
+                name: parsedContact.name ?? '',
+                description: parsedContact.description ?? '',
+                lnAddress: parsedContact.lnAddress ?? [],
+                bolt12Address: parsedContact.bolt12Address ?? [],
+                bolt12Offer: parsedContact.bolt12Offer ?? [],
+                onchainAddress: parsedContact.onchainAddress ?? [],
+                nip05: parsedContact.nip05 ?? [],
+                nostrNpub: parsedContact.nostrNpub ?? [],
+                pubkey: parsedContact.pubkey ?? []
+            };
+
+            setAddressData([
+                `zeuscontact:${JSON.stringify(essentialContact)}`,
+                ...addressData
+            ]);
+        } else {
+            setAddressData(addressData ?? []);
+        }
     }, [route]);
 
     let screenWidth: number;
