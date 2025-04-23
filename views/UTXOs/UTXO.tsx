@@ -38,22 +38,18 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
         storedLabel: ''
     };
 
-    getLabelKey = () => {
-        const utxo = this.props.route.params?.utxo;
-        return `${utxo.txid}:${utxo.output}`;
-    };
-
     async componentDidMount() {
         const { navigation } = this.props;
+        const { utxo } = this.props.route?.params;
 
         navigation.addListener('focus', async () => {
-            const key = this.getLabelKey();
-            const storedLabel = await store.getItem(key);
+            const key = utxo.getLabelKey;
+            const storedLabel = await store.getItem(key!);
             this.setState({ storedLabel: storedLabel || '' });
         });
 
-        const key = this.getLabelKey();
-        const storedLabel = await store.getItem(key);
+        const key = utxo.getLabelKey;
+        const storedLabel = await store.getItem(key!);
         this.setState({ storedLabel: storedLabel || '' });
     }
 
@@ -192,7 +188,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                             { backgroundColor: themeColor('background') }
                         ]}
                     >
-                        {this.getLabelKey() && (
+                        {utxo.getLabelKey && (
                             <Button
                                 title={
                                     this.state.storedLabel
@@ -203,7 +199,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                                 }
                                 onPress={() =>
                                     navigation.navigate('AddNotes', {
-                                        noteKey: this.getLabelKey(),
+                                        noteKey: utxo.getLabelKey,
                                         context: 'label'
                                     })
                                 }

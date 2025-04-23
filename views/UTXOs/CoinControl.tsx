@@ -65,8 +65,8 @@ export default class CoinControl extends React.Component<
             const utxoLabels: Record<string, string> = {};
 
             for (const utxo of utxos) {
-                const key = `${utxo.txid}:${utxo.output}`;
-                const label = await storage.getItem(key);
+                const key = utxo.getLabelKey;
+                const label = await storage.getItem(key!);
                 if (label) {
                     utxoLabels[key] = label;
                 }
@@ -108,7 +108,6 @@ export default class CoinControl extends React.Component<
                     }}
                     navigation={navigation}
                 />
-
                 {BackendUtils.supportsAccounts() && accounts?.length > 0 && (
                     <AccountFilter
                         default={account}
@@ -129,8 +128,8 @@ export default class CoinControl extends React.Component<
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
-                            const key = `${item.txid}:${item.output}`;
-                            const message = this.state.utxoLabels[key];
+                            const key = item.getLabelKey;
+                            const message = this.state.utxoLabels[key!];
                             const subTitle = item.address;
 
                             return (
