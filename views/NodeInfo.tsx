@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { RefreshControl, StyleSheet, ScrollView } from 'react-native';
+import { RefreshControl, StyleSheet, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -38,20 +38,27 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const URIs = (props: { uris: Array<string> }) => {
-            const items: any = [];
-
-            props.uris.forEach((uri, key) => {
-                items.push(
-                    <React.Fragment key={key}>
-                        <CollapsedQR
-                            value={uri}
-                            copyText={localeString('views.NodeInfo.copyUri')}
-                        />
-                    </React.Fragment>
-                );
-            });
-
-            return items;
+            return (
+                <View>
+                    {props.uris.map((uri, index) => (
+                        <View
+                            key={index}
+                            style={{
+                                marginBottom:
+                                    index < props.uris.length - 1 ? 30 : 10
+                            }}
+                        >
+                            <CollapsedQR
+                                value={uri}
+                                copyText={localeString(
+                                    'views.NodeInfo.copyUri'
+                                )}
+                                valueStyle={{ marginBottom: 0 }}
+                            />
+                        </View>
+                    ))}
+                </View>
+            );
         };
 
         const NodeInfoView = () => (
