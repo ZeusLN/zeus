@@ -43,12 +43,12 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
         const { utxo } = this.props.route?.params;
 
         navigation.addListener('focus', async () => {
-            const key = utxo.getLabelKey;
+            const key = utxo.getOutpoint;
             const storedLabel = await store.getItem(key!);
             this.setState({ storedLabel: storedLabel || '' });
         });
 
-        const key = utxo.getLabelKey;
+        const key = utxo.getOutpoint;
         const storedLabel = await store.getItem(key!);
         this.setState({ storedLabel: storedLabel || '' });
     }
@@ -188,7 +188,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                             { backgroundColor: themeColor('background') }
                         ]}
                     >
-                        {utxo.getLabelKey && (
+                        {utxo.getOutpoint && (
                             <Button
                                 title={
                                     this.state.storedLabel
@@ -199,7 +199,7 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                                 }
                                 onPress={() =>
                                     navigation.navigate('AddNotes', {
-                                        noteKey: utxo.getLabelKey,
+                                        noteKey: utxo.getOutpoint,
                                         context: 'label'
                                     })
                                 }
