@@ -43,9 +43,9 @@ interface SwapPaneProps {
 
 interface SwapPaneState {
     reverse: boolean;
-    serviceFeeSats: number | any;
-    inputSats: number | any;
-    outputSats: number | any;
+    serviceFeeSats: number | BigNumber;
+    inputSats: number | BigNumber;
+    outputSats: number | BigNumber;
     invoice: string;
     isValid: boolean;
     error: string;
@@ -260,11 +260,17 @@ export default class SwapPane extends React.PureComponent<
                     {!loading && (
                         <>
                             {(error || apiError) && (
-                                <ErrorMessage message={error || apiError} />
+                                <ErrorMessage
+                                    message={error || apiError}
+                                    dismissable
+                                />
                             )}
 
                             {apiUpdates && (
-                                <SuccessMessage message={apiUpdates} />
+                                <SuccessMessage
+                                    message={apiUpdates}
+                                    dismissable
+                                />
                             )}
 
                             <View style={{ alignItems: 'center' }}>
@@ -495,7 +501,9 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                {'Network fee: '}
+                                                {`${localeString(
+                                                    'views.Swaps.networkFee'
+                                                )}: `}
                                             </Text>
                                             <Amount sats={networkFee} />
                                         </Row>
@@ -506,7 +514,9 @@ export default class SwapPane extends React.PureComponent<
                                                         'PPNeueMontreal-Book'
                                                 }}
                                             >
-                                                {'Service fee: '}
+                                                {`${localeString(
+                                                    'views.Swaps.serviceFee'
+                                                )}: `}
                                             </Text>
                                             <Amount sats={serviceFeeSats} />
                                             <Text
@@ -620,7 +630,9 @@ export default class SwapPane extends React.PureComponent<
 
                                             if (!amount) {
                                                 this.setState({
-                                                    error: 'Please enter a amount!',
+                                                    error: localeString(
+                                                        'views.Swaps.missingAmount'
+                                                    ),
                                                     fetchingInvoice: false
                                                 });
                                                 return;

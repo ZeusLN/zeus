@@ -1040,10 +1040,6 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Swaps" // @ts-ignore:next-line
-                                                        component={Swaps}
-                                                    />
-                                                    <Stack.Screen
                                                         name="ReceiveEcash" // @ts-ignore:next-line
                                                         component={ReceiveEcash}
                                                     />
