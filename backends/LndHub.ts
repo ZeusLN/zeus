@@ -114,6 +114,7 @@ export default class LndHub extends LND {
         });
     };
 
+    supportsPeers = () => false;
     supportsMessageSigning = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => false;

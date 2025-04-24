@@ -83,6 +83,7 @@ export default class NostrWalletConnect {
             payment_hash: Base64Utils.hexToBase64(data.r_hash)
         });
 
+    supportsPeers = () => false;
     supportsMessageSigning = () => false;
     supportsLnurlAuth = () => false;
     supportsOnchainSends = () => false;
