@@ -432,6 +432,7 @@ export default class CLNRest {
         });
     };
 
+    supportsNestedSegWit = () => false;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;

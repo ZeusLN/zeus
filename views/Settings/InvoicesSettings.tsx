@@ -113,13 +113,17 @@ export default class InvoicesSettings extends React.Component<
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()
             ? [
-                  {
-                      key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
-                      description: localeString(
-                          'views.Receive.np2wkhDescription'
-                      )
-                  },
+                  ...(BackendUtils.supportsNestedSegWit()
+                      ? [
+                            {
+                                key: localeString('views.Receive.np2wkhKey'),
+                                value: '1',
+                                description: localeString(
+                                    'views.Receive.np2wkhDescription'
+                                )
+                            }
+                        ]
+                      : []),
                   {
                       key: localeString('views.Receive.p2wkhKey'),
                       value: '0',

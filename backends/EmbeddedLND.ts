@@ -289,6 +289,7 @@ export default class EmbeddedLND extends LND {
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
 
+    supportsNestedSegWit = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
