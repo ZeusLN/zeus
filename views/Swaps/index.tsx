@@ -530,28 +530,134 @@ export default class SwapPane extends React.PureComponent<
                                         </Row>
                                     </View>
                                     <View style={{ top: 165 }}>
-                                        <Row>
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {'Min: '}
-                                            </Text>
-                                            <Amount sats={min} />
-                                        </Row>
-                                        <Row>
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book'
-                                                }}
-                                            >
-                                                {'Max: '}
-                                            </Text>
-                                            <Amount sats={max} />
-                                        </Row>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({ error: '' });
+
+                                                const satAmount = min;
+
+                                                // remove commas
+                                                const sanitizedSatAmount =
+                                                    units !== 'BTC'
+                                                        ? String(satAmount)
+                                                              .replace(/,/g, '')
+                                                              .trim()
+                                                        : satAmount;
+                                                if (
+                                                    !sanitizedSatAmount ||
+                                                    sanitizedSatAmount === '0'
+                                                ) {
+                                                    this.setState({
+                                                        serviceFeeSats: 0,
+                                                        outputSats: 0
+                                                    });
+                                                }
+
+                                                const satAmountNew =
+                                                    new BigNumber(
+                                                        sanitizedSatAmount || 0
+                                                    );
+
+                                                const outputSats =
+                                                    calculateReceiveAmount(
+                                                        satAmountNew,
+                                                        serviceFeePct,
+                                                        networkFee
+                                                    );
+
+                                                this.setState({
+                                                    serviceFeeSats:
+                                                        calculateServiceFeeOnSend(
+                                                            satAmountNew,
+                                                            serviceFeePct,
+                                                            networkFee
+                                                        ),
+                                                    inputSats:
+                                                        Number(
+                                                            sanitizedSatAmount
+                                                        ),
+                                                    outputSats
+                                                });
+                                            }}
+                                        >
+                                            <Row>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'general.min'
+                                                    )}: `}
+                                                </Text>
+                                                <Amount sats={min} />
+                                            </Row>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({ error: '' });
+
+                                                const satAmount = max;
+
+                                                // remove commas
+                                                const sanitizedSatAmount =
+                                                    units !== 'BTC'
+                                                        ? String(satAmount)
+                                                              .replace(/,/g, '')
+                                                              .trim()
+                                                        : satAmount;
+                                                if (
+                                                    !sanitizedSatAmount ||
+                                                    sanitizedSatAmount === '0'
+                                                ) {
+                                                    this.setState({
+                                                        serviceFeeSats: 0,
+                                                        outputSats: 0
+                                                    });
+                                                }
+
+                                                const satAmountNew =
+                                                    new BigNumber(
+                                                        sanitizedSatAmount || 0
+                                                    );
+
+                                                const outputSats =
+                                                    calculateReceiveAmount(
+                                                        satAmountNew,
+                                                        serviceFeePct,
+                                                        networkFee
+                                                    );
+
+                                                this.setState({
+                                                    serviceFeeSats:
+                                                        calculateServiceFeeOnSend(
+                                                            satAmountNew,
+                                                            serviceFeePct,
+                                                            networkFee
+                                                        ),
+                                                    inputSats:
+                                                        Number(
+                                                            sanitizedSatAmount
+                                                        ),
+                                                    outputSats
+                                                });
+                                            }}
+                                        >
+                                            <Row>
+                                                <Text
+                                                    style={{
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {`${localeString(
+                                                        'general.max'
+                                                    )}: `}
+                                                </Text>
+                                                <Amount sats={max} />
+                                            </Row>
+                                        </TouchableOpacity>
                                     </View>
                                 </Row>
                             </View>
