@@ -733,6 +733,28 @@ export default class LND {
         });
     };
 
+    listPeers = async () => {
+        try {
+            const res = await this.getRequest('/v1/peers');
+            return res.peers ?? [];
+        } catch (error) {
+            console.error('Failed to fetch peers:', error);
+            return [];
+        }
+    };
+
+    disconnectPeer = async (pubkey: string): Promise<boolean | null> => {
+        try {
+            const res = await this.deleteRequest(`/v1/peers/${pubkey}`);
+            console.log(res.data?.status);
+            return true;
+        } catch (error) {
+            console.error(`Error disconnecting peer ${pubkey}:`, error);
+            return null;
+        }
+    };
+
+    supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
