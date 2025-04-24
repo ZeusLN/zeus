@@ -1208,46 +1208,31 @@ export default class Receive extends React.Component<
         );
 
         const ADDRESS_TYPES = BackendUtils.supportsTaproot()
-            ? SettingsStore.implementation === 'cln-rest'
-                ? [
-                      {
-                          key: localeString('views.Receive.p2wkhKey'),
-                          value: '0',
-                          description: localeString(
-                              'views.Receive.p2wkhDescription'
-                          )
-                      },
-                      {
-                          key: localeString('views.Receive.p2trKey'),
-                          value: '4',
-                          description: localeString(
-                              'views.Receive.p2trDescription'
-                          )
-                      }
-                  ]
-                : [
-                      {
-                          key: localeString('views.Receive.np2wkhKey'),
-                          value: '1',
-                          description: localeString(
-                              'views.Receive.np2wkhDescription'
-                          )
-                      },
-                      {
-                          key: localeString('views.Receive.p2wkhKey'),
-                          value: '0',
-                          description: localeString(
-                              'views.Receive.p2wkhDescription'
-                          )
-                      },
-                      {
-                          key: localeString('views.Receive.p2trKey'),
-                          value: '4',
-                          description: localeString(
-                              'views.Receive.p2trDescription'
-                          )
-                      }
-                  ]
+            ? [
+                  ...(BackendUtils.supportsNestedSegWit()
+                      ? [
+                            {
+                                key: localeString('views.Receive.np2wkhKey'),
+                                value: '1',
+                                description: localeString(
+                                    'views.Receive.np2wkhDescription'
+                                )
+                            }
+                        ]
+                      : []),
+                  {
+                      key: localeString('views.Receive.p2wkhKey'),
+                      value: '0',
+                      description: localeString(
+                          'views.Receive.p2wkhDescription'
+                      )
+                  },
+                  {
+                      key: localeString('views.Receive.p2trKey'),
+                      value: '4',
+                      description: localeString('views.Receive.p2trDescription')
+                  }
+              ]
             : [
                   {
                       key: localeString('views.Receive.np2wkhKey'),

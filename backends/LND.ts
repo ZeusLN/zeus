@@ -702,6 +702,7 @@ export default class LND {
         });
     };
 
+    supportsNestedSegWit = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
