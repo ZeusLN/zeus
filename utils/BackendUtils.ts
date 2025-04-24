@@ -80,6 +80,8 @@ class BackendUtils {
     openChannelStream = (...args: any[]) =>
         this.call('openChannelStream', args);
     connectPeer = (...args: any[]) => this.call('connectPeer', args);
+    listPeers = (...args: any[]) => this.call('listPeers', args);
+    disconnectPeer = (...args: any[]) => this.call('disconnectPeer', args);
     decodePaymentRequest = (...args: any[]) =>
         this.call('decodePaymentRequest', args);
     payLightningInvoice = (...args: any[]) =>
@@ -135,10 +137,10 @@ class BackendUtils {
     login = (...args: any[]) => this.call('login', args);
 
     // services
+    supportsPeers = () => this.call('supportsPeers');
     supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
     supportsLSPS1rest = () => this.call('supportsLSPS1rest');
-
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
