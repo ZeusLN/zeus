@@ -85,7 +85,10 @@ export default class SwapsPane extends React.Component<
 
             this.setState({ swaps: sortedSwaps, loading: false });
         } catch (error) {
-            this.setState({ error: 'Failed to load swaps', loading: false });
+            this.setState({
+                error: localeString('views.Swaps.SwapsPane.failedToLoad'),
+                loading: false
+            });
             console.error('Error retrieving swaps:', error);
         }
     };
@@ -127,7 +130,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        Type:
+                        {`${localeString('general.type')}: `}
                     </Text>
                     <Text
                         style={{
@@ -190,7 +193,9 @@ export default class SwapsPane extends React.Component<
                             ? `${localeString(
                                   'views.SwapDetails.expectedAmount'
                               )}:`
-                            : `Onchain amount:`}
+                            : `${localeString(
+                                  'views.SwapDetails.onchainAmount'
+                              )}:`}
                     </Text>
                     <Amount
                         sats={
@@ -254,7 +259,11 @@ export default class SwapsPane extends React.Component<
                     <LoadingIndicator />
                 ) : swaps.length === 0 && !error ? (
                     <View style={{ paddingHorizontal: 15 }}>
-                        <WarningMessage message="No Swaps Available" />
+                        <WarningMessage
+                            message={localeString(
+                                'views.Swaps.SwapsPane.noSwaps'
+                            )}
+                        />
                     </View>
                 ) : (
                     <FlatList
