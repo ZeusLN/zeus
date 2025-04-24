@@ -294,13 +294,24 @@ export default class SwapPane extends React.PureComponent<
                                 >
                                     <AmountInput
                                         prefix={
-                                            <View style={{ marginLeft: -10 }}>
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    this.setState({
+                                                        reverse: !reverse,
+                                                        inputSats: 0,
+                                                        outputSats: 0,
+                                                        serviceFeeSats: 0,
+                                                        invoice: ''
+                                                    });
+                                                }}
+                                                style={{ marginLeft: -10 }}
+                                            >
                                                 {reverse ? (
                                                     <LightningSvg width={60} />
                                                 ) : (
                                                     <OnChainSvg width={60} />
                                                 )}
-                                            </View>
+                                            </TouchableOpacity>
                                         }
                                         onAmountChange={(
                                             _,
@@ -403,7 +414,16 @@ export default class SwapPane extends React.PureComponent<
                                     >
                                         <AmountInput
                                             prefix={
-                                                <View
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        this.setState({
+                                                            reverse: !reverse,
+                                                            inputSats: 0,
+                                                            outputSats: 0,
+                                                            serviceFeeSats: 0,
+                                                            invoice: ''
+                                                        });
+                                                    }}
                                                     style={{ marginLeft: -10 }}
                                                 >
                                                     {reverse ? (
@@ -415,7 +435,7 @@ export default class SwapPane extends React.PureComponent<
                                                             width={60}
                                                         />
                                                     )}
-                                                </View>
+                                                </TouchableOpacity>
                                             }
                                             onAmountChange={(
                                                 _,
