@@ -65,7 +65,7 @@ export default class CoinControl extends React.Component<
             const utxoLabels: Record<string, string> = {};
 
             for (const utxo of utxos) {
-                const key = utxo.getLabelKey;
+                const key = utxo.getOutpoint;
                 const label = await storage.getItem(key!);
                 if (label) {
                     utxoLabels[key] = label;
@@ -128,7 +128,7 @@ export default class CoinControl extends React.Component<
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
-                            const key = item.getLabelKey;
+                            const key = item.getOutpoint;
                             const message = this.state.utxoLabels[key!];
                             const subTitle = item.address;
 
