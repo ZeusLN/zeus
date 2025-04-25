@@ -68,7 +68,10 @@ import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import PosStore from '../stores/PosStore';
-import SettingsStore, { TIME_PERIOD_KEYS } from '../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_FIAT,
+    TIME_PERIOD_KEYS
+} from '../stores/SettingsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -94,7 +97,7 @@ import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
-import InvoiceCurrencySelector from './Settings/currencySelect';
+import InvoiceCurrencySelector from './Settings/InvoiceCurrencySelector';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -220,7 +223,8 @@ export default class Receive extends React.Component<
             routeHintMode: RouteHintMode.Automatic,
             selectedRouteHintChannels: undefined,
             currencySelectOpen: false,
-            selectedInvoiceFiatCurrency: ''
+            selectedInvoiceFiatCurrency:
+                this.props.SettingsStore?.settings?.fiat ?? DEFAULT_FIAT
         };
     }
 
@@ -2287,7 +2291,10 @@ export default class Receive extends React.Component<
                                                     });
                                                 }}
                                             />
+<<<<<<< HEAD
 
+=======
+>>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                             {currencySelectOpen && (
                                                 <Modal
                                                     visible={
@@ -2339,15 +2346,26 @@ export default class Receive extends React.Component<
                                                                     true
                                                                 }
                                                                 SettingsStore={
+<<<<<<< HEAD
                                                                     this.props
                                                                         .SettingsStore
+=======
+                                                                    SettingsStore
+                                                                }
+                                                                selectedValue={
+                                                                    this.state
+                                                                        .selectedInvoiceFiatCurrency
+>>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                                                 }
                                                             />
                                                         </View>
                                                     </View>
                                                 </Modal>
                                             )}
+<<<<<<< HEAD
 
+=======
+>>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                             {needInbound && (
                                                 <TouchableOpacity
                                                     onPress={() =>
