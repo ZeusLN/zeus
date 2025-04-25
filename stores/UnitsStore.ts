@@ -137,7 +137,7 @@ export default class UnitsStore {
 
                 const rate = (fiatEntry && fiatEntry.rate) || 0;
                 const { symbol, space, rtl, separatorSwap } =
-                    this.fiatStore.getSymbol();
+                    this.fiatStore.getSymbol(forceFiatCurrency);
 
                 const amount = (
                     FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
