@@ -17,6 +17,7 @@ import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
+import Icon from 'react-native-vector-icons/Feather';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -57,7 +58,7 @@ const getSatAmount = (
 
     const fiatEntry =
         fiat && fiatRates
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            ? fiatRates.find((entry: any) => entry.code === fiat)
             : null;
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
@@ -140,7 +141,11 @@ export default class AmountInput extends React.Component<
         const { amount, onAmountChange } = props;
         let satAmount = '0';
         if (amount)
-            satAmount = getSatAmount(amount, props.forceUnit).toString();
+            satAmount = getSatAmount(
+                amount,
+                props.forceUnit,
+                props.forceFiatCurrency
+            ).toString();
 
         onAmountChange(amount, satAmount);
         this.state = {
@@ -172,7 +177,8 @@ export default class AmountInput extends React.Component<
         if (forceUnit === 'sats' && forceUnit !== this.props.forceUnit) {
             const currentSatAmount = getSatAmount(
                 amount || '',
-                this.props.forceUnit
+                this.props.forceUnit,
+                this.props.forceFiatCurrency
             );
             this.setState({ satAmount: currentSatAmount });
             this.props.onAmountChange(
@@ -180,7 +186,11 @@ export default class AmountInput extends React.Component<
                 currentSatAmount
             );
         } else {
-            const satAmount = getSatAmount(amount || '', forceUnit);
+            const satAmount = getSatAmount(
+                amount || '',
+                forceUnit,
+                forceFiatCurrency
+            );
             this.setState({ satAmount });
         }
     }
@@ -208,7 +218,8 @@ export default class AmountInput extends React.Component<
             SettingsStore,
             forceUnit,
             prefix,
-            error
+            error,
+            forceFiatCurrency
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
@@ -244,23 +255,33 @@ export default class AmountInput extends React.Component<
                                     }
                                     activeOpacity={0.5}
                                     style={{
-                                        paddingVertical: 6,
-                                        paddingHorizontal: 12,
-                                        borderRadius: 16
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        paddingVertical: 8,
+                                        paddingHorizontal: 14,
+                                        borderRadius: 16,
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        borderWidth: 1,
+                                        borderColor: themeColor('highlight')
                                     }}
                                 >
                                     <Text
                                         style={{
-                                            color: themeColor('secondaryColor'),
-                                            fontSize: 13,
-                                            fontFamily: 'PPNeueMontreal-Book'
+                                            color: themeColor('text'),
+                                            fontSize: 14,
+                                            fontFamily: 'PPNeueMontreal-Medium'
                                         }}
                                     >
-                                        {'Select currency (' +
-                                            (this.props.forceFiatCurrency ||
-                                                settings.fiat) +
-                                            ') >'}
+                                        {this.props.forceFiatCurrency ||
+                                            settings.fiat}
                                     </Text>
+                                    <Icon
+                                        name="chevron-right"
+                                        size={14}
+                                        color={themeColor('text')}
+                                        style={{ marginLeft: 5 }}
+                                    />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -283,7 +304,8 @@ export default class AmountInput extends React.Component<
                             const formatted = text.replace(/[^\d.,-]/g, '');
                             const satAmount = getSatAmount(
                                 formatted,
-                                forceUnit
+                                forceUnit,
+                                forceFiatCurrency
                             );
                             onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
