@@ -199,6 +199,7 @@ export interface Settings {
     swapHostTestnet: string;
     swapHostMainnet: string;
     customSwapHost: string;
+    proEnabled: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
     bolt12Address: Bolt12AddressSettings;
@@ -266,31 +267,37 @@ export const FEE_ESTIMATOR_KEYS = [
 export const SWAP_HOST_KEYS_TESTNET = [
     {
         key: 'Boltz',
-        value: 'https://api.testnet.boltz.exchange/v2'
+        value: 'https://api.testnet.boltz.exchange/v2',
+        pro: true
     },
     {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
-        value: 'Custom'
+        value: 'Custom',
+        pro: false
     }
 ];
 export const SWAP_HOST_KEYS_MAINNET = [
     {
         key: 'Boltz',
-        value: 'https://api.boltz.exchange/v2'
+        value: 'https://api.boltz.exchange/v2',
+        pro: true
     },
     {
         key: 'SwapMarket',
-        value: 'https://api.middleway.space/v2'
+        value: 'https://api.middleway.space/v2',
+        pro: false
     },
     {
         key: 'Eldamar Swaps',
-        value: 'https://boltz-api.eldamar.icu/v2'
+        value: 'https://boltz-api.eldamar.icu/v2',
+        pro: false
     },
     {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
-        value: 'Custom'
+        value: 'Custom',
+        pro: false
     }
 ];
 
@@ -1254,6 +1261,7 @@ export default class SettingsStore {
         swapHostTestnet: DEFAULT_SWAP_HOST_TESTNET,
         swapHostMainnet: DEFAULT_SWAP_HOST_MAINNET,
         customSwapHost: '',
+        proEnabled: false,
         // Lightning Address
         lightningAddress: {
             enabled: false,

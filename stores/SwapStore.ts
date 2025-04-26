@@ -90,6 +90,7 @@ export default class SwapStore {
 
     @action
     public getSwapFees = async () => {
+        const { settings } = this.settingsStore;
         this.loading = true;
         console.log(`Fetching fees from: ${this.getHost}`);
         try {
@@ -98,7 +99,7 @@ export default class SwapStore {
                 `${this.getHost}/swap/submarine`,
                 {
                     'Content-Type': 'application/json',
-                    Referral: 'pro'
+                    Referral: settings.proEnabled ? 'pro' : ''
                 }
             );
             const status = response.info().status;
@@ -114,7 +115,7 @@ export default class SwapStore {
                 `${this.getHost}/swap/reverse`,
                 {
                     'Content-Type': 'application/json',
-                    Referral: 'pro'
+                    Referral: settings.proEnabled ? 'pro' : ''
                 }
             );
             const status = response.info().status;
@@ -128,12 +129,13 @@ export default class SwapStore {
 
     public getLockupTransaction = async (id: string) => {
         try {
+            const { settings } = this.settingsStore;
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/submarine/${id}/transaction`,
                 {
                     'Content-Type': 'application/json',
-                    Referral: 'pro'
+                    Referral: settings.proEnabled ? 'pro' : ''
                 }
             );
 
@@ -159,6 +161,7 @@ export default class SwapStore {
             let refundPublicKey: any;
             let refundPrivateKey: any;
             const keys: any = ECPairFactory(ecc).makeRandom();
+            const { settings } = this.settingsStore;
 
             refundPrivateKey = Buffer.from(keys.privateKey).toString('hex');
             refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
@@ -176,7 +179,7 @@ export default class SwapStore {
                 `${this.getHost}/swap/submarine`,
                 {
                     'Content-Type': 'application/json',
-                    referralId: 'pro'
+                    referralId: settings.proEnabled ? 'pro' : ''
                 },
                 JSON.stringify({
                     invoice,
@@ -280,6 +283,7 @@ export default class SwapStore {
 
             const preimage = randomBytes(32);
             const keys: any = ECPairFactory(ecc).makeRandom();
+            const { settings } = this.settingsStore;
 
             // Creating a reverse swap
             const data = JSON.stringify({
@@ -297,7 +301,7 @@ export default class SwapStore {
                 `${this.getHost}/swap/reverse`,
                 {
                     'Content-Type': 'application/json',
-                    referralId: 'pro'
+                    referralId: settings.proEnabled ? 'pro' : ''
                 },
                 data
             );

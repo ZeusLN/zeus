@@ -18,6 +18,8 @@ import SettingsStore, {
     SWAP_HOST_KEYS_MAINNET
 } from '../../stores/SettingsStore';
 import SwapStore from '../../stores/SwapStore';
+import { ListItem } from 'react-native-elements';
+import { Switch } from 'react-native-gesture-handler';
 
 interface SwapSettingsProps {
     navigation: any;
@@ -29,6 +31,7 @@ interface SwapSettingsProps {
 interface SwapSettingsState {
     host: string;
     customSwapHost: string;
+    proEnabled: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
@@ -42,12 +45,14 @@ export default class SwapSettings extends React.Component<
 
         const isTestnet = props.NodeInfoStore?.nodeInfo?.isTestNet;
         const { settings } = props.SettingsStore;
+        const host = isTestnet
+            ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
+            : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET;
 
         this.state = {
-            host: isTestnet
-                ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
-                : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customSwapHost: settings.customSwapHost || ''
+            host,
+            customSwapHost: settings.customSwapHost || '',
+            proEnabled: settings.proEnabled || false
         };
     }
 
@@ -60,14 +65,23 @@ export default class SwapSettings extends React.Component<
             host: isTestnet
                 ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
                 : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customSwapHost: settings.customSwapHost || ''
+            customSwapHost: settings.customSwapHost || '',
+            proEnabled: settings.proEnabled || false
         });
     }
     render() {
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
-        const { customSwapHost, host } = this.state;
+        const { customSwapHost, host, proEnabled } = this.state;
         const { updateSettings } = SettingsStore;
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
+        const selectedHostKeys = isTestnet
+            ? SWAP_HOST_KEYS_TESTNET
+            : SWAP_HOST_KEYS_MAINNET;
+
+        const selectedHost = selectedHostKeys.find((h) => h.value === host);
+
+        const showProSwitch = selectedHost?.pro === true;
+
         return (
             <Screen>
                 <Header
@@ -82,16 +96,69 @@ export default class SwapSettings extends React.Component<
                     navigation={navigation}
                 />
                 <View style={{ paddingHorizontal: 20 }}>
+                    {showProSwitch && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                paddingHorizontal: 0,
+                                paddingVertical: 20
+                            }}
+                        >
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 14
+                                }}
+                            >
+                                {localeString('views.Swaps.Settings.enablePro')}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={proEnabled}
+                                    onValueChange={async () => {
+                                        const newProEnabled = !proEnabled;
+                                        this.setState({
+                                            proEnabled: newProEnabled
+                                        });
+                                        await updateSettings({
+                                            proEnabled: newProEnabled
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
+                    )}
                     <DropdownSetting
                         title="Service Provider"
                         selectedValue={host}
                         onValueChange={async (value: string) => {
-                            this.setState({ host: value });
+                            const newSelectedHost = selectedHostKeys.find(
+                                (h) => h.value === value
+                            );
+
+                            this.setState({
+                                host: value,
+                                proEnabled:
+                                    newSelectedHost?.pro === true
+                                        ? proEnabled
+                                        : false
+                            });
 
                             await updateSettings({
                                 [isTestnet
                                     ? 'swapHostTestnet'
-                                    : 'swapHostMainnet']: value
+                                    : 'swapHostMainnet']: value,
+                                proEnabled:
+                                    newSelectedHost?.pro === true
+                                        ? proEnabled
+                                        : false
                             });
                         }}
                         values={
