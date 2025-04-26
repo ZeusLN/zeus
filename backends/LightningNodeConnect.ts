@@ -531,7 +531,6 @@ export default class LightningNodeConnect {
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 
-    supportsNestedSegWit = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => this.permSendCoins;
@@ -552,6 +551,7 @@ export default class LightningNodeConnect {
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
+    supportsNestedSegWit = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsFlowLSP = () => false;

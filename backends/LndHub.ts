@@ -114,7 +114,6 @@ export default class LndHub extends LND {
         });
     };
 
-    supportsNestedSegWit = () => true;
     supportsMessageSigning = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => false;
@@ -148,6 +147,7 @@ export default class LndHub extends LND {
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
+    supportsNestedSegWit = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
     supportsFlowLSP = () => false;

@@ -289,7 +289,6 @@ export default class EmbeddedLND extends LND {
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
 
-    supportsNestedSegWit = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
@@ -309,6 +308,7 @@ export default class EmbeddedLND extends LND {
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
+    supportsNestedSegWit = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsFlowLSP = () => true;

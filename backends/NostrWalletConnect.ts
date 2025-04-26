@@ -83,7 +83,6 @@ export default class NostrWalletConnect {
             payment_hash: Base64Utils.hexToBase64(data.r_hash)
         });
 
-    supportsNestedSegWit = () => false;
     supportsMessageSigning = () => false;
     supportsLnurlAuth = () => false;
     supportsOnchainSends = () => false;
@@ -103,6 +102,7 @@ export default class NostrWalletConnect {
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
+    supportsNestedSegWit = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
     supportsFlowLSP = () => false;

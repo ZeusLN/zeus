@@ -432,7 +432,6 @@ export default class CLNRest {
         });
     };
 
-    supportsNestedSegWit = () => false;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
@@ -452,6 +451,7 @@ export default class CLNRest {
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => true;
     supportsAddressTypeSelection = () => true;
+    supportsNestedSegWit = () => false;
     supportsTaproot = () => true;
     supportsBumpFee = () => false;
     supportsFlowLSP = () => false;
