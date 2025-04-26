@@ -22,11 +22,14 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
         const { ModalStore } = this.props;
         const {
             showInfoModal,
+            infoModalTitle,
             infoModalText,
             infoModalLink,
             infoModalAdditionalButtons,
             toggleInfoModal
         } = ModalStore;
+
+        const additionalButtonsCount = infoModalAdditionalButtons?.length || 0;
 
         return (
             <ModalBox
@@ -35,7 +38,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                     backgroundColor: 'transparent',
                     minHeight: 200
                 }}
-                onClosed={() => toggleInfoModal()}
+                onClosed={() => toggleInfoModal({})}
             >
                 <View
                     style={{
@@ -57,6 +60,20 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                             }
                         }}
                     >
+                        {infoModalTitle && (
+                            <Text
+                                style={{
+                                    fontFamily: 'MarlideDisplay_Bold',
+                                    color: themeColor('text'),
+                                    fontSize: 34,
+                                    textAlign: 'center',
+                                    marginBottom: 20
+                                }}
+                            >
+                                {infoModalTitle}
+                            </Text>
+                        )}
+
                         {typeof infoModalText === 'string' && (
                             <Text
                                 style={{
@@ -77,10 +94,8 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Book',
                                         color: themeColor('text'),
-                                        fontSize:
-                                            infoModalText.length > 3 ? 18 : 20,
-                                        marginBottom:
-                                            infoModalText.length > 3 ? 18 : 20
+                                        fontSize: 18,
+                                        marginBottom: 20
                                     }}
                                 >
                                     {text}
@@ -100,10 +115,12 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                         <Button
                                             title={title}
                                             onPress={() => {
-                                                toggleInfoModal();
+                                                toggleInfoModal({});
                                                 if (callback) callback();
                                             }}
-                                            tertiary
+                                            // index 0 = primary (default)
+                                            tertiary={index === 1}
+                                            quaternary={index >= 1}
                                         />
                                     </View>
                                 )
@@ -120,17 +137,21 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                                             'general.learnMore'
                                         )}
                                         onPress={() => {
-                                            toggleInfoModal();
+                                            toggleInfoModal({});
                                             UrlUtils.goToUrl(infoModalLink);
                                         }}
-                                        tertiary
+                                        // Style based on the count of preceding additional buttons
+                                        // additionalButtonsCount 0 => index 0 (primary)
+                                        secondary={additionalButtonsCount === 1} // index 1 = secondary
+                                        tertiary={additionalButtonsCount === 2} // index 2 = tertiary
+                                        quaternary={additionalButtonsCount >= 3} // index 3+ = quaternary
                                     />
                                 </View>
                             )}
                             <View style={styles.button}>
                                 <Button
                                     title={localeString('general.close')}
-                                    onPress={() => toggleInfoModal()}
+                                    onPress={() => toggleInfoModal({})}
                                     secondary
                                 />
                             </View>

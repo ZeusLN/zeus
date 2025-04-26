@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
+import DatePicker from 'react-native-date-picker';
+import { CheckBox } from 'react-native-elements';
 
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -32,8 +34,8 @@ import SettingsStore from '../../stores/SettingsStore';
 import Invoice from '../../models/Invoice';
 import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
-import DatePicker from 'react-native-date-picker';
-import { CheckBox } from 'react-native-elements';
+import CashuInvoice from '../../models/CashuInvoice';
+import CashuPayment from '../../models/CashuPayment';
 
 interface ActivityExportProps {
     navigation: any;
@@ -133,8 +135,14 @@ export default class ActivityExport extends React.Component<
             let filteredData: any;
 
             filteredData = filteredActivity.filter((item: any) => {
-                if (type === 'invoice') return item instanceof Invoice;
-                if (type === 'payment') return item instanceof Payment;
+                if (type === 'invoice')
+                    return (
+                        item instanceof Invoice || item instanceof CashuInvoice
+                    );
+                if (type === 'payment')
+                    return (
+                        item instanceof Payment || item instanceof CashuPayment
+                    );
                 if (type === 'transaction') return item instanceof Transaction;
                 return false;
             });

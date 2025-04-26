@@ -7,23 +7,23 @@ import hashjs from 'hash.js';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import { Row } from '../../../components/layout/Row';
-import { ErrorMessage } from '../../../components/SuccessErrorMessage';
-import Button from '../../../components/Button';
-import KeyValue from '../../../components/KeyValue';
-import Header from '../../../components/Header';
-import LoadingIndicator from '../../../components/LoadingIndicator';
-import Screen from '../../../components/Screen';
-import Text from '../../../components/Text';
-import TextInput from '../../../components/TextInput';
+import { Row } from '../../components/layout/Row';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import Button from '../../components/Button';
+import KeyValue from '../../components/KeyValue';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import Screen from '../../components/Screen';
+import Text from '../../components/Text';
+import TextInput from '../../components/TextInput';
 
-import SettingsStore from '../../../stores/SettingsStore';
-import LightningAddressStore from '../../../stores/LightningAddressStore';
+import SettingsStore from '../../stores/SettingsStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import ArrowLeft from '../../../assets/images/SVG/Arrow_left.svg';
+import ArrowLeft from '../../assets/images/SVG/Arrow_left.svg';
 
 interface NostrRelaysProps {
     navigation: StackNavigationProp<any, any>;
@@ -88,9 +88,12 @@ export default class NostrRelays extends React.Component<
                             setup ? (
                                 <TouchableOpacity
                                     onPress={() =>
-                                        navigation.popTo('LightningAddress', {
-                                            relays
-                                        })
+                                        navigation.popTo(
+                                            'CreateZaplockerLightningAddress',
+                                            {
+                                                relays
+                                            }
+                                        )
                                     }
                                     accessibilityLabel={localeString(
                                         'general.goBack'

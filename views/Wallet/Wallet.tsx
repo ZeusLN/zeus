@@ -56,6 +56,7 @@ import Storage from '../../storage';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
+import CashuStore from '../../stores/CashuStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
@@ -92,6 +93,7 @@ interface WalletProps {
     navigation: StackNavigationProp<any, any>;
     AlertStore: AlertStore;
     BalanceStore: BalanceStore;
+    CashuStore: CashuStore;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     NodeInfoStore: NodeInfoStore;
@@ -118,6 +120,7 @@ interface WalletState {
 @inject(
     'AlertStore',
     'BalanceStore',
+    'CashuStore',
     'ChannelsStore',
     'TransactionsStore',
     'NodeInfoStore',
@@ -327,6 +330,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             AlertStore,
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             ChannelsStore,
             TransactionsStore,
             UTXOsStore,
@@ -391,6 +395,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
+            CashuStore.reset();
         }
 
         LnurlPayStore.reset();
@@ -412,6 +417,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 AlertStore.checkNeutrinoPeers();
 
                 if (!recovery) await stopLnd();
+
+                if (settings?.ecash?.enableCashu)
+                    await CashuStore.initializeWallets();
 
                 console.log('lndDir', lndDir);
                 await initializeLnd({
@@ -451,7 +459,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (BackendUtils.supportsAccounts()) UTXOsStore.listAccounts();
             await BalanceStore.getCombinedBalance(false);
             if (BackendUtils.supportsChannelManagement())
-                ChannelsStore.getChannels();
+                await ChannelsStore.getChannels();
             if (rescan) {
                 await updateSettings({
                     rescan: false
@@ -546,8 +554,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 try {
                     await LightningAddressStore.status();
 
-                    if (lightningAddress.automaticallyAccept) {
-                        LightningAddressStore.prepareToAutomaticallyAccept();
+                    if (settings?.lightningAddress?.automaticallyAccept) {
+                        if (
+                            LightningAddressStore.lightningAddressType ===
+                            'zaplocker'
+                        ) {
+                            LightningAddressStore.prepareToAutomaticallyAcceptZaplocker();
+                        } else if (
+                            LightningAddressStore.lightningAddressType ===
+                            'cashu'
+                        ) {
+                            LightningAddressStore.prepareToAutomaticallyAcceptCashu();
+                        }
                     }
 
                     if (
@@ -585,6 +603,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.initChannelAcceptor();
         }
 
+        // Check Cashu balance for upgrade prompts
+        if (implementation === 'embedded-lnd' && settings?.ecash?.enableCashu) {
+            CashuStore.checkAndShowUpgradeModal(
+                0,
+                CashuStore.totalBalanceSats || 0
+            );
+        }
+
         // only navigate to initial url after connection and main calls are made
         if (
             this.state.initialLoad &&
@@ -615,6 +641,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const {
             NodeInfoStore,
             BalanceStore,
+            CashuStore,
             SettingsStore,
             SyncStore,
             navigation
@@ -660,6 +687,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
                         BalanceStore={BalanceStore}
+                        CashuStore={CashuStore}
                         SettingsStore={SettingsStore}
                         SyncStore={SyncStore}
                     />
@@ -717,7 +745,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             <LayerBalances
                                 navigation={navigation}
                                 onRefresh={() => this.getSettingsAndNavigate()}
-                                locked={isSyncing}
                                 consolidated
                             />
 
@@ -833,6 +860,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         tabBarIcon: ({ color }) => {
                                             if (
                                                 isSyncing &&
+                                                !settings?.ecash?.enableCashu &&
                                                 route.name === 'Keypad'
                                             ) {
                                                 return;
@@ -905,12 +933,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         )}
                                     {posStatus !== 'active' && (
                                         <>
-                                            {!error && !isSyncing && (
-                                                <Tab.Screen
-                                                    name="Keypad"
-                                                    component={KeypadScreen}
-                                                />
-                                            )}
+                                            {!error &&
+                                                !(
+                                                    isSyncing &&
+                                                    !settings?.ecash
+                                                        ?.enableCashu
+                                                ) && (
+                                                    <Tab.Screen
+                                                        name="Keypad"
+                                                        component={KeypadScreen}
+                                                    />
+                                                )}
                                             {BackendUtils.supportsChannelManagement() &&
                                                 !error &&
                                                 !isSyncing && (
@@ -978,9 +1011,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             padding: 8
                                         }}
                                     >
-                                        {settings.nodes &&
-                                        loggedIn &&
-                                        implementation
+                                        {CashuStore.initializing
+                                            ? CashuStore.loadingMsg
+                                            : settings.nodes &&
+                                              loggedIn &&
+                                              implementation
                                             ? implementation === 'embedded-lnd'
                                                 ? isInExpressGraphSync
                                                     ? localeString(
@@ -1033,38 +1068,40 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     />
                                 </View>
                             )}
-                            <View
-                                style={{
-                                    bottom: 15,
-                                    position: 'absolute',
-                                    alignSelf: 'center'
-                                }}
-                            >
-                                <Button
-                                    title={
-                                        settings.nodes
-                                            ? localeString(
-                                                  'views.Settings.title'
-                                              )
-                                            : null
-                                    }
-                                    containerStyle={{
-                                        width: 320
+                            {!CashuStore.initializing && (
+                                <View
+                                    style={{
+                                        bottom: 15,
+                                        position: 'absolute',
+                                        alignSelf: 'center'
                                     }}
-                                    titleStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    onPress={() => {
-                                        if (settings.nodes)
-                                            protectedNavigation(
-                                                navigation,
-                                                'Menu'
-                                            );
-                                    }}
-                                    adaptiveWidth
-                                    iconOnly
-                                />
-                            </View>
+                                >
+                                    <Button
+                                        title={
+                                            settings.nodes
+                                                ? localeString(
+                                                      'views.Settings.title'
+                                                  )
+                                                : null
+                                        }
+                                        containerStyle={{
+                                            width: 320
+                                        }}
+                                        titleStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        onPress={() => {
+                                            if (settings.nodes)
+                                                protectedNavigation(
+                                                    navigation,
+                                                    'Menu'
+                                                );
+                                        }}
+                                        adaptiveWidth
+                                        iconOnly
+                                    />
+                                </View>
+                            )}
                         </Screen>
                     )}
             </View>

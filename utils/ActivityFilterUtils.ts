@@ -3,6 +3,9 @@ import { Filter } from '../stores/ActivityStore';
 import Invoice from '../models/Invoice';
 import Payment from '../models/Payment';
 import Transaction from '../models/Transaction';
+import CashuInvoice from '../models/CashuInvoice';
+import CashuPayment from '../models/CashuPayment';
+import CashuToken from '../models/CashuToken';
 
 class ActivityFilterUtils {
     public filterActivities(
@@ -26,13 +29,26 @@ class ActivityFilterUtils {
             );
         }
 
+        if (filter.cashu == false) {
+            filteredActivity = filteredActivity.filter(
+                (activity) =>
+                    !(
+                        activity instanceof CashuInvoice ||
+                        activity instanceof CashuPayment ||
+                        activity instanceof CashuToken
+                    )
+            );
+        }
+
         if (filter.sent == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
                     !(
                         (activity instanceof Transaction &&
                             Number(activity.getAmount) <= 0) ||
-                        activity instanceof Payment
+                        activity instanceof Payment ||
+                        activity instanceof CashuPayment ||
+                        (activity instanceof CashuToken && activity.sent)
                     )
             );
         }
@@ -43,14 +59,18 @@ class ActivityFilterUtils {
                     !(
                         (activity instanceof Transaction &&
                             Number(activity.getAmount) >= 0) ||
-                        (activity instanceof Invoice && activity.isPaid)
+                        (activity instanceof Invoice && activity.isPaid) ||
+                        (activity instanceof CashuInvoice && activity.isPaid) ||
+                        (activity instanceof CashuToken && activity.received)
                     )
             );
         }
 
         if (filter.unpaid == false) {
             filteredActivity = filteredActivity.filter(
-                (activity) => !(activity instanceof Invoice && !activity.isPaid)
+                (activity) =>
+                    !(activity instanceof Invoice && !activity.isPaid) &&
+                    !(activity instanceof CashuInvoice && !activity.isPaid)
             );
         }
 
@@ -94,6 +114,17 @@ class ActivityFilterUtils {
                 (activity: any) =>
                     !(activity instanceof Invoice && activity.isZeusPay)
             );
+        }
+
+        if (filter.keysend == false) {
+            filteredActivity = filteredActivity.filter((activity: any) => {
+                const isPayment = activity instanceof Payment;
+                const isInvoice = activity instanceof Invoice;
+                return (
+                    !(isPayment && activity.isKeysend) &&
+                    !(isInvoice && activity.isKeysend)
+                );
+            });
         }
 
         if (filter.minimumAmount > 0) {

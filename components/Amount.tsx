@@ -47,7 +47,7 @@ interface AmountDisplayProps {
     accessibilityLabel?: string;
 }
 
-interface FiatSymbolProps {
+interface SymbolProps {
     accessible?: boolean;
 }
 
@@ -90,7 +90,7 @@ function AmountDisplay({
         </View>
     );
 
-    const FiatSymbol: React.FC<FiatSymbolProps> = ({ accessible }) => (
+    const FiatSymbol: React.FC<SymbolProps> = ({ accessible }) => (
         <Body
             secondary
             jumbo={jumboText}
@@ -100,6 +100,19 @@ function AmountDisplay({
             accessibilityLabel={unit}
         >
             {actualSymbol}
+        </Body>
+    );
+
+    const ApproximateSymbol: React.FC<SymbolProps> = ({ accessible }) => (
+        <Body
+            secondary
+            jumbo={jumboText}
+            color={color}
+            colorOverride={colorOverride}
+            accessible={accessible}
+            accessibilityLabel={localeString('general.approximately')}
+        >
+            ≈
         </Body>
     );
 
@@ -194,6 +207,11 @@ function AmountDisplay({
                                 accessible={accessible}
                             >
                                 {negative ? '-' : ''}
+                                {unit !== 'BTC' && (
+                                    <ApproximateSymbol
+                                        accessible={accessible}
+                                    />
+                                )}
                                 {amount === 'N/A' && fiatRatesLoading ? (
                                     <LoadingIndicator size={20} />
                                 ) : unit === 'BTC' ? (
@@ -217,6 +235,9 @@ function AmountDisplay({
                     >
                         {pending && <Pending />}
                         <View style={styles.textContainer}>
+                            {unit !== 'BTC' && (
+                                <ApproximateSymbol accessible={accessible} />
+                            )}
                             {amount !== 'N/A' && <FiatSymbol accessible />}
                             {space ? <TextSpace /> : <Spacer width={1} />}
                             <Body

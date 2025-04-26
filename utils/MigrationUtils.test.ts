@@ -80,6 +80,7 @@ describe('MigrationUtils', () => {
             automaticallyAcceptAttestationLevel: 2,
             automaticallyRequestOlympusChannels: false,
             enabled: false,
+            mintUrl: '',
             nostrPrivateKey: '',
             nostrRelays: [
                 'wss://relay.damus.io',
@@ -199,6 +200,7 @@ describe('MigrationUtils', () => {
                             automaticallyAcceptAttestationLevel: 2,
                             automaticallyRequestOlympusChannels: false,
                             enabled: false,
+                            mintUrl: '',
                             nostrPrivateKey: '',
                             notifications: 0,
                             routeHints: false

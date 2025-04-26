@@ -40,6 +40,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
+import ClosedChannel from '../../models/ClosedChannel';
 
 // TODO: does this belong in the model? Or can it be computed from the model?
 export enum Status {
@@ -190,6 +191,38 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                         sendingCapacity={item.sendingCapacity}
                         largestTotal={largestChannelSats}
                         isBelowReserve={item.isBelowReserve}
+                    />
+                </TouchableHighlight>
+            );
+        }
+
+        if (channelsType === ChannelsType.Closed) {
+            const closedItem = item as ClosedChannel;
+
+            return (
+                <TouchableHighlight
+                    onPress={() =>
+                        navigation.navigate('Channel', {
+                            channel: item
+                        })
+                    }
+                >
+                    <ChannelItem
+                        title={closedItem.displayName}
+                        localBalance={closedItem.localBalance}
+                        remoteBalance={closedItem.remoteBalance}
+                        receivingCapacity={closedItem.receivingCapacity}
+                        sendingCapacity={closedItem.sendingCapacity}
+                        status={getStatus()}
+                        pendingHTLCs={closedItem?.pending_htlcs?.length > 0}
+                        pendingTimelock={
+                            closedItem.forceClose
+                                ? forceCloseTimeLabel(
+                                      closedItem.blocks_til_maturity
+                                  )
+                                : undefined
+                        }
+                        isBelowReserve={closedItem.isBelowReserve}
                     />
                 </TouchableHighlight>
             );
@@ -406,6 +439,55 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                                             setChannelsType(
                                                 ChannelsType.Pending
                                             )
+                                    }}
+                                />
+                                <Tab.Screen
+                                    name={closedChannelsTabName}
+                                    component={ClosedChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(ChannelsType.Closed)
+                                    }}
+                                />
+                            </Tab.Navigator>
+                        </NavigationContainer>
+                    </NavigationIndependentTree>
+                ) : BackendUtils.supportsClosedChannels() ? (
+                    <NavigationIndependentTree>
+                        <NavigationContainer
+                            theme={Theme}
+                            ref={this.tabNavigationRef}
+                        >
+                            <Tab.Navigator
+                                initialRouteName={initialRoute}
+                                backBehavior="none"
+                                screenOptions={() => ({
+                                    headerShown: false,
+                                    tabBarActiveTintColor: themeColor('text'),
+                                    tabBarInactiveTintColor: 'gray',
+                                    tabBarShowLabel: true,
+                                    tabBarStyle: {
+                                        borderTopWidth: 0.2,
+                                        borderTopColor:
+                                            themeColor('secondaryText')
+                                    },
+                                    tabBarItemStyle: {
+                                        justifyContent: 'center'
+                                    },
+                                    tabBarIconStyle: { display: 'none' },
+                                    tabBarLabelStyle: {
+                                        fontSize: 16,
+                                        fontFamily: 'PPNeueMontreal-Medium'
+                                    },
+                                    animation: 'shift'
+                                })}
+                            >
+                                <Tab.Screen
+                                    name={openChannelsTabName}
+                                    component={OpenChannelsScreen}
+                                    listeners={{
+                                        focus: () =>
+                                            setChannelsType(ChannelsType.Open)
                                     }}
                                 />
                                 <Tab.Screen

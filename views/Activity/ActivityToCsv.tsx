@@ -4,6 +4,8 @@ import { StyleSheet, View, Alert, Modal } from 'react-native';
 import Invoice from '../../models/Invoice';
 import Payment from '../../models/Payment';
 import Transaction from '../../models/Transaction';
+import CashuInvoice from '../../models/CashuInvoice';
+import CashuPayment from '../../models/CashuPayment';
 
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
@@ -41,11 +43,17 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
         setIsLoading(true);
         setTimeout(async () => {
             const invoiceCsv = await convertActivityToCsv(
-                filteredActivity.filter((item: any) => item instanceof Invoice),
+                filteredActivity.filter(
+                    (item: any) =>
+                        item instanceof Invoice || item instanceof CashuInvoice
+                ),
                 CSV_KEYS.invoice
             );
             const paymentCsv = await convertActivityToCsv(
-                filteredActivity.filter((item: any) => item instanceof Payment),
+                filteredActivity.filter(
+                    (item: any) =>
+                        item instanceof Payment || item instanceof CashuPayment
+                ),
                 CSV_KEYS.payment
             );
             const transactionCsv = await convertActivityToCsv(

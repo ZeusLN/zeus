@@ -78,6 +78,7 @@ export default class ActivityFilter extends React.Component<
         const {
             lightning,
             onChain,
+            cashu,
             sent,
             received,
             unpaid,
@@ -91,7 +92,8 @@ export default class ActivityFilter extends React.Component<
             maximumAmount,
             startDate,
             endDate,
-            memo
+            memo,
+            keysend
         } = filters;
 
         const DateFilter = (props: { type: 'startDate' | 'endDate' }) => (
@@ -183,7 +185,16 @@ export default class ActivityFilter extends React.Component<
                 value: onChain,
                 var: 'onChain',
                 type: 'Toggle',
-                condition: true
+                condition:
+                    BackendUtils.supportsOnchainReceiving() ||
+                    BackendUtils.supportsOnchainSends()
+            },
+            {
+                label: localeString('views.ActivityFilter.cashuPayments'),
+                value: cashu,
+                var: 'cashu',
+                type: 'Toggle',
+                condition: BackendUtils.supportsCashuWallet()
             },
             {
                 label: localeString('general.sent'),
@@ -240,6 +251,13 @@ export default class ActivityFilter extends React.Component<
                 var: 'zeusPay',
                 type: 'Toggle',
                 condition: SettingsStore.settings.lightningAddress.enabled
+            },
+            {
+                label: localeString('views.Channel.keysend'),
+                value: keysend,
+                var: 'keysend',
+                type: 'Toggle',
+                condition: BackendUtils.supportsKeysend()
             },
             {
                 label: localeString('general.unconfirmed'),

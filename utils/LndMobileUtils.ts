@@ -300,7 +300,8 @@ export async function startLnd({
         lndMobile.index;
     const { unlockWallet } = lndMobile.wallet;
 
-    stores.settingsStore.embeddedLndStarted = true;
+    // don't mark as started on wallet creation, only on proper start-up
+    if (walletPassword) stores.settingsStore.embeddedLndStarted = true;
 
     const status = await checkStatus();
     if (

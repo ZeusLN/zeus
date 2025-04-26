@@ -449,3 +449,29 @@ export function isLightTheme() {
     var L = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     return L > 0.179;
 }
+
+export function blendHexColors(hex1: string, hex2: string, t = 0.5) {
+    // Clamp t between 0 and 1
+    t = Math.max(0, Math.min(1, t));
+
+    // Remove '#' if present
+    hex1 = hex1.replace('#', '');
+    hex2 = hex2.replace('#', '');
+
+    // Convert hex to RGB
+    const r1 = parseInt(hex1.substring(0, 2), 16);
+    const g1 = parseInt(hex1.substring(2, 4), 16);
+    const b1 = parseInt(hex1.substring(4, 6), 16);
+
+    const r2 = parseInt(hex2.substring(0, 2), 16);
+    const g2 = parseInt(hex2.substring(2, 4), 16);
+    const b2 = parseInt(hex2.substring(4, 6), 16);
+
+    // Interpolate based on t
+    const r = Math.round(r1 + (r2 - r1) * t);
+    const g = Math.round(g1 + (g2 - g1) * t);
+    const b = Math.round(b1 + (b2 - b1) * t);
+
+    const toHex = (n: number) => n.toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}

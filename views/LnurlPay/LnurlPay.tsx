@@ -16,6 +16,7 @@ import TextInput from '../../components/TextInput';
 import { Row } from '../..//components/layout/Row';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
+import CashuStore from '../../stores/CashuStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -28,10 +29,14 @@ import { ScrollView } from 'react-native-gesture-handler';
 
 interface LnurlPayProps {
     navigation: StackNavigationProp<any, any>;
+    CashuStore: CashuStore;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
     UnitsStore: UnitsStore;
-    route: Route<'LnurlPay', { lnurlParams: any; amount: any; satAmount: any }>;
+    route: Route<
+        'LnurlPay',
+        { lnurlParams: any; amount: any; satAmount: any; ecash: boolean }
+    >;
 }
 
 interface LnurlPayState {
@@ -42,7 +47,7 @@ interface LnurlPayState {
     loading: boolean;
 }
 
-@inject('InvoicesStore', 'LnurlPayStore', 'UnitsStore')
+@inject('CashuStore', 'InvoicesStore', 'LnurlPayStore', 'UnitsStore')
 @observer
 export default class LnurlPay extends React.Component<
     LnurlPayProps,
@@ -76,15 +81,27 @@ export default class LnurlPay extends React.Component<
 
     stateFromProps(props: LnurlPayProps) {
         const { route, UnitsStore } = props;
+        const { resetUnits, getUnformattedAmount, units } = UnitsStore;
         const { lnurlParams: lnurl, amount, satAmount } = route.params ?? {};
+
+        // if requested amount is fixed,
+        // convert units to sats so conversion rate doesn't make things unpayable
+        if (lnurl.minSendable === lnurl.maxSendable) {
+            resetUnits();
+        }
 
         const minSendableSats = Math.floor(lnurl.minSendable / 1000);
 
         const { amount: unformattedAmount } =
-            UnitsStore.getUnformattedAmount(minSendableSats);
+            getUnformattedAmount(minSendableSats);
+
+        // if amount to pay hasn't been previously specified by the user,
+        // fall back to the min sat amount
+        const unspecifiedDefault =
+            units === 'sats' ? minSendableSats.toString() : unformattedAmount;
 
         return {
-            amount: amount && amount != 0 ? amount : unformattedAmount,
+            amount: amount && amount != 0 ? amount : unspecifiedDefault,
             satAmount: satAmount ? satAmount : minSendableSats,
             domain: lnurl.domain,
             comment: ''
@@ -94,8 +111,10 @@ export default class LnurlPay extends React.Component<
     sendValues(satAmount: string | number) {
         this.setState({ loading: true });
 
-        const { navigation, InvoicesStore, LnurlPayStore, route } = this.props;
+        const { navigation, CashuStore, InvoicesStore, LnurlPayStore, route } =
+            this.props;
         const { domain, comment } = this.state;
+        const ecash = route.params?.ecash;
         const lnurl = route.params?.lnurlParams;
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
@@ -148,51 +167,105 @@ export default class LnurlPay extends React.Component<
                 const relays = data.relays;
                 const relays_sig = data.relays_sig;
 
-                InvoicesStore.getPayReq(pr).then(() => {
-                    this.setState({ loading: false });
+                if (ecash) {
+                    // load up both the payment routes
+                    InvoicesStore.getPayReq(pr);
+                    CashuStore.getPayReq(pr).then(() => {
+                        this.setState({ loading: false });
 
-                    if (InvoicesStore.getPayReqError) {
-                        Alert.alert(
-                            localeString(
-                                'views.LnurlPay.LnurlPay.invalidInvoice'
-                            ),
-                            InvoicesStore.getPayReqError,
-                            [
-                                {
-                                    text: localeString('general.ok'),
-                                    onPress: () => void 0
-                                }
-                            ],
-                            { cancelable: false }
+                        if (CashuStore.getPayReqError) {
+                            Alert.alert(
+                                localeString(
+                                    'views.LnurlPay.LnurlPay.invalidInvoice'
+                                ),
+                                CashuStore.getPayReqError,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                            return;
+                        }
+
+                        const payment_hash: string =
+                            (CashuStore.payReq &&
+                                CashuStore.payReq.payment_hash) ||
+                            '';
+                        const description_hash: string =
+                            (CashuStore.payReq &&
+                                CashuStore.payReq.description_hash) ||
+                            '';
+
+                        LnurlPayStore.keep(
+                            payment_hash,
+                            domain,
+                            lnurl.lnurlText,
+                            lnurl.metadata,
+                            description_hash,
+                            successAction,
+                            // Zaplocker
+                            pmthash_sig,
+                            user_pubkey,
+                            relays,
+                            relays_sig,
+                            pr
                         );
-                        return;
-                    }
 
-                    const payment_hash: string =
-                        (InvoicesStore.pay_req &&
-                            InvoicesStore.pay_req.payment_hash) ||
-                        '';
-                    const description_hash: string =
-                        (InvoicesStore.pay_req &&
-                            InvoicesStore.pay_req.description_hash) ||
-                        '';
+                        navigation.navigate('ChoosePaymentMethod', {
+                            lightning: CashuStore.paymentRequest,
+                            locked: true
+                        });
+                    });
+                } else {
+                    InvoicesStore.getPayReq(pr).then(() => {
+                        this.setState({ loading: false });
 
-                    LnurlPayStore.keep(
-                        payment_hash,
-                        domain,
-                        lnurl.lnurlText,
-                        lnurl.metadata,
-                        description_hash,
-                        successAction,
-                        // Zaplocker
-                        pmthash_sig,
-                        user_pubkey,
-                        relays,
-                        relays_sig,
-                        pr
-                    );
-                    navigation.navigate('PaymentRequest');
-                });
+                        if (InvoicesStore.getPayReqError) {
+                            Alert.alert(
+                                localeString(
+                                    'views.LnurlPay.LnurlPay.invalidInvoice'
+                                ),
+                                InvoicesStore.getPayReqError,
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                            return;
+                        }
+
+                        const payment_hash: string =
+                            (InvoicesStore.pay_req &&
+                                InvoicesStore.pay_req.payment_hash) ||
+                            '';
+                        const description_hash: string =
+                            (InvoicesStore.pay_req &&
+                                InvoicesStore.pay_req.description_hash) ||
+                            '';
+
+                        LnurlPayStore.keep(
+                            payment_hash,
+                            domain,
+                            lnurl.lnurlText,
+                            lnurl.metadata,
+                            description_hash,
+                            successAction,
+                            // Zaplocker
+                            pmthash_sig,
+                            user_pubkey,
+                            relays,
+                            relays_sig,
+                            pr
+                        );
+                        navigation.navigate('PaymentRequest');
+                    });
+                }
             });
     }
 
@@ -220,7 +293,7 @@ export default class LnurlPay extends React.Component<
                                 alignItems: 'center'
                             }}
                         >
-                            {loading && <LoadingIndicator size={35} />}
+                            {loading && <LoadingIndicator size={30} />}
                         </View>
                     }
                     navigation={navigation}

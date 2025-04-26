@@ -57,6 +57,7 @@ import {
 import Switch from '../components/Switch';
 import Text from '../components/Text';
 import TextInput from '../components/TextInput';
+import { Spacer } from '../components/layout/Spacer';
 
 import Invoice from '../models/Invoice';
 import Channel from '../models/Channel';
@@ -2495,11 +2496,10 @@ export default class Receive extends React.Component<
                                                                     }
                                                                 }}
                                                             />
+                                                            <Spacer width={4} />
                                                             <View
                                                                 style={{
-                                                                    flex: 1,
-                                                                    // TODO
-                                                                    top: -5
+                                                                    flex: 1
                                                                 }}
                                                             >
                                                                 <DropdownSetting
@@ -3065,7 +3065,14 @@ export default class Receive extends React.Component<
                                                               }`
                                                             : '')
                                                     }
+                                                    disabled={
+                                                        lspIsActive &&
+                                                        (!satAmount ||
+                                                            satAmount === '0')
+                                                    }
                                                     onPress={() => {
+                                                        // Clear the old error messages (if present)
+                                                        LSPStore.reset(true);
                                                         // If clearButton was used in on-chain tab
                                                         // and a new invoice below dust limit is created
                                                         // reset selectedIndex to 1 (lightning)

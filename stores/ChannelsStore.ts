@@ -91,7 +91,7 @@ export default class ChannelsStore {
     };
     @observable public showSearch: boolean = false;
     // aliasMap
-    @observable public aliasMap: any = observable.map({});
+    @observable public aliasMap = observable.map({});
     // external account funding
     @observable public funded_psbt: string = '';
     @observable public pending_chan_ids: Array<string>;
@@ -441,6 +441,17 @@ export default class ChannelsStore {
             })
         ];
 
+        if (BackendUtils.supportsClosedChannels()) {
+            loadPromises.push(
+                BackendUtils.getClosedChannels().then((data: any) => {
+                    const closedChannels = data.channels.map(
+                        (channel: any) => new ClosedChannel(channel)
+                    );
+                    this.closedChannels = closedChannels;
+                })
+            );
+        }
+
         if (BackendUtils.supportsPendingChannels()) {
             loadPromises.push(
                 BackendUtils.getPendingChannels().then((data: any) => {
@@ -477,15 +488,6 @@ export default class ChannelsStore {
                         .concat(pendingCloseChannels)
                         .concat(forceCloseChannels)
                         .concat(waitCloseChannels);
-                })
-            );
-
-            loadPromises.push(
-                BackendUtils.getClosedChannels().then((data: any) => {
-                    const closedChannels = data.channels.map(
-                        (channel: any) => new ClosedChannel(channel)
-                    );
-                    this.closedChannels = closedChannels;
                 })
             );
         }

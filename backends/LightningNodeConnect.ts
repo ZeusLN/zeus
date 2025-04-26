@@ -539,6 +539,7 @@ export default class LightningNodeConnect {
     supportsKeysend = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsPendingChannels = () => true;
+    supportsClosedChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.permNewAddress;
@@ -568,4 +569,5 @@ export default class LightningNodeConnect {
     supportsAddressesWithDerivationPaths = () => this.supports('v0.18.0');
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
+    supportsCashuWallet = () => false;
 }

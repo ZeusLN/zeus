@@ -10,6 +10,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { v4 as uuidv4 } from 'uuid';
 
 import Screen from '../components/Screen';
 import Button from '../components/Button';
@@ -173,13 +174,18 @@ export default class ContactDetails extends React.Component<
     importToContacts = async () => {
         const { contact } = this.state;
 
+        const newContact = {
+            ...contact,
+            contactId: uuidv4()
+        };
+
         const contactsString: any = await Storage.getItem(CONTACTS_KEY);
 
         const existingContacts: Contact[] = contactsString
             ? JSON.parse(contactsString)
             : [];
 
-        const updatedContacts = [...existingContacts, contact].sort((a, b) =>
+        const updatedContacts = [...existingContacts, newContact].sort((a, b) =>
             a.name.localeCompare(b.name)
         );
 

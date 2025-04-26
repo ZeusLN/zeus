@@ -9,29 +9,29 @@ import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import hashjs from 'hash.js';
 
-import Button from '../../../components/Button';
-import KeyValue from '../../../components/KeyValue';
-import Screen from '../../../components/Screen';
-import Text from '../../../components/Text';
-import Header from '../../../components/Header';
-import LoadingIndicator from '../../../components/LoadingIndicator';
-import TextInput from '../../../components/TextInput';
+import Button from '../../components/Button';
+import KeyValue from '../../components/KeyValue';
+import Screen from '../../components/Screen';
+import Text from '../../components/Text';
+import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import TextInput from '../../components/TextInput';
 import {
     ErrorMessage,
     WarningMessage
-} from '../../../components/SuccessErrorMessage';
-import { Row } from '../../../components/layout/Row';
+} from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
 
-import SettingsStore from '../../../stores/SettingsStore';
-import LightningAddressStore from '../../../stores/LightningAddressStore';
+import SettingsStore from '../../stores/SettingsStore';
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
-import { localeString } from '../../../utils/LocaleUtils';
-import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
-import DiceSVG from '../../../assets/images/SVG/Dice.svg';
-import HiddenSVG from '../../../assets/images/SVG/eye_closed.svg';
-import VisibleSVG from '../../../assets/images/SVG/eye_opened.svg';
-import Edit from '../../../assets/images/SVG/Pen.svg';
+import DiceSVG from '../../assets/images/SVG/Dice.svg';
+import HiddenSVG from '../../assets/images/SVG/eye_closed.svg';
+import VisibleSVG from '../../assets/images/SVG/eye_opened.svg';
+import Edit from '../../assets/images/SVG/Pen.svg';
 
 interface NostrKeyProps {
     navigation: StackNavigationProp<any, any>;
@@ -342,8 +342,8 @@ export default class NostrKey extends React.Component<
                                         )}
                                         onPress={() => {
                                             if (setup) {
-                                                navigation.navigate(
-                                                    'LightningAddress',
+                                                navigation.popTo(
+                                                    'CreateZaplockerLightningAddress',
                                                     { nostrPrivateKey }
                                                 );
                                             } else {

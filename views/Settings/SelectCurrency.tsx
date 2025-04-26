@@ -147,7 +147,7 @@ export default class SelectCurrency extends React.Component<
                                             fiat: item.value
                                         }).then(() => {
                                             getSettings();
-                                            navigation.popTo('Currency');
+                                            navigation.goBack();
                                         });
                                     }
                                 }}

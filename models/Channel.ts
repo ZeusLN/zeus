@@ -54,6 +54,7 @@ export default class Channel extends BaseModel {
     // c-lightning
     @observable
     state: string;
+    close_height: number;
     // CLN v23.05 msat deprecations
     msatoshi_total: string;
     msatoshi_to_us: string;
@@ -63,6 +64,7 @@ export default class Channel extends BaseModel {
     total: string;
     to_us: string;
     short_channel_id: string; // CLN
+    close_cause: string;
 
     channel_id?: string;
     alias?: string;
@@ -71,6 +73,22 @@ export default class Channel extends BaseModel {
 
     // enrichments
     displayName?: string;
+
+    @computed
+    public get closeHeight(): number {
+        return this.close_height;
+    }
+
+    @computed
+    public get isOpen(): boolean {
+        return (
+            !this.closeHeight &&
+            !this.closing_txid &&
+            !this.pendingClose &&
+            !this.closing &&
+            !this.close_cause
+        );
+    }
 
     @computed
     public get isActive(): boolean {

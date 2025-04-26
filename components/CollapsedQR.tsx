@@ -38,6 +38,7 @@ interface ExtendedQRCodeProps
 interface ValueTextProps {
     value: string;
     truncateLongValue?: boolean;
+    valueStyle?: any;
 }
 
 // Custom QR code component that forwards refs and handles component readiness
@@ -61,7 +62,7 @@ const ForwardedQRCode = React.forwardRef<QRCodeElement, ExtendedQRCodeProps>(
     )
 ) as React.FC<ExtendedQRCodeProps>;
 
-function ValueText({ value, truncateLongValue }: ValueTextProps) {
+function ValueText({ value, truncateLongValue, valueStyle }: ValueTextProps) {
     const [state, setState] = React.useState<{
         numberOfValueLines: number | undefined;
     }>({ numberOfValueLines: truncateLongValue ? 3 : undefined });
@@ -75,14 +76,24 @@ function ValueText({ value, truncateLongValue }: ValueTextProps) {
             highlight={false}
         >
             <Text
-                style={{ ...styles.value, color: themeColor('secondaryText') }}
+                style={{
+                    ...styles.value,
+                    ...valueStyle,
+                    color: themeColor('secondaryText')
+                }}
                 numberOfLines={state.numberOfValueLines}
             >
                 {value}
             </Text>
         </Touchable>
     ) : (
-        <Text style={{ ...styles.value, color: themeColor('secondaryText') }}>
+        <Text
+            style={{
+                ...styles.value,
+                ...valueStyle,
+                color: themeColor('secondaryText')
+            }}
+        >
             {value}
         </Text>
     );
@@ -90,6 +101,7 @@ function ValueText({ value, truncateLongValue }: ValueTextProps) {
 
 interface CollapsedQRProps {
     value: string;
+    valueStyle?: any;
     showText?: string;
     collapseText?: string;
     copyText?: string;
@@ -141,6 +153,7 @@ export default class CollapsedQR extends React.Component<
         const { collapsed, enlargeQR, tempQRRef } = this.state;
         const {
             value,
+            valueStyle,
             showText,
             copyText,
             copyValue,
@@ -214,6 +227,7 @@ export default class CollapsedQR extends React.Component<
                     <ValueText
                         value={value}
                         truncateLongValue={truncateLongValue}
+                        valueStyle={valueStyle}
                     />
                 )}
                 {!collapsed && value && (
@@ -299,6 +313,7 @@ export default class CollapsedQR extends React.Component<
                     <ValueText
                         value={value}
                         truncateLongValue={truncateLongValue}
+                        valueStyle={valueStyle}
                     />
                 )}
                 {!expanded && (

@@ -29,6 +29,7 @@ interface CustomRecords {
 }
 
 const keySendMessageType = '34349334';
+const keySendPreimageType = '5482373484';
 
 export default class Invoice extends BaseModel {
     public route_hints: Array<RouteHint>;
@@ -84,11 +85,20 @@ export default class Invoice extends BaseModel {
     public created_at?: number;
     public settled_at?: number;
     public invoice?: string;
-
     public amount_received_msat?: string | number;
-
     public formattedOriginalTimeUntilExpiry: string;
     public formattedTimeUntilExpiry: string;
+
+    @computed public get isKeysend(): boolean {
+        if (
+            this.htlcs?.length > 0 &&
+            (this.htlcs?.[0]?.custom_records?.[keySendMessageType] ||
+                this.htlcs?.[0]?.custom_records?.[keySendPreimageType])
+        ) {
+            return true;
+        }
+        return false;
+    }
 
     @computed public get model(): string {
         return localeString('views.Invoice.title');
@@ -188,6 +198,7 @@ export default class Invoice extends BaseModel {
         return (
             this.status === 'paid' ||
             this.state === 'settled' ||
+            this.state === 'PAID' ||
             !!this.settled_at ||
             this.settled ||
             this.ispaid ||
@@ -209,7 +220,6 @@ export default class Invoice extends BaseModel {
             ''
         );
     }
-
     // return amount in satoshis
     @computed public get getAmount(): number {
         if (this.msatoshi_received) {

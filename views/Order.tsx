@@ -114,6 +114,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         } = this.state;
         const { fiatRates, getRate, getSymbol }: any = FiatStore;
         const { settings } = SettingsStore;
+        const { fiatEnabled } = settings;
         const { changeUnits, units } = UnitsStore;
         const fiat = settings.fiat;
         const disableTips: boolean = settings?.pos?.disableTips || false;
@@ -169,11 +170,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        const taxSats = new BigNumber(order.total_tax_money.amount)
-            .div(100)
-            .div(rate)
-            .multipliedBy(SATS_PER_BTC)
-            .toFixed(0);
+        const taxSats = fiatEnabled
+            ? new BigNumber(order.total_tax_money.amount)
+                  .div(100)
+                  .div(rate)
+                  .multipliedBy(SATS_PER_BTC)
+                  .toFixed(0)
+            : new BigNumber(subTotalSats)
+                  .multipliedBy(new BigNumber(taxPercentage || '0'))
+                  .dividedBy(100)
+                  .toFixed(0);
 
         const twentyPercentButton = () => (
             <Text
@@ -565,16 +571,25 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     })}
 
                     <Divider />
+                    {fiatEnabled && (
+                        <>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'general.conversionRate'
+                                )}
+                                value={exchangeRate}
+                            />
 
-                    <KeyValue
-                        keyValue={localeString('general.conversionRate')}
-                        value={exchangeRate}
-                    />
-
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.subtotalFiat')}
-                        value={FiatStore.formatAmountForDisplay(subTotalFiat)}
-                    />
+                            <KeyValue
+                                keyValue={localeString(
+                                    'pos.views.Order.subtotalFiat'
+                                )}
+                                value={FiatStore.formatAmountForDisplay(
+                                    subTotalFiat
+                                )}
+                            />
+                        </>
+                    )}
 
                     <TouchableOpacity
                         onPress={() => {
@@ -606,7 +621,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         />
                     </TouchableOpacity>
 
-                    <Divider />
+                    {fiatEnabled && <Divider />}
 
                     {!isPaid && !disableTips && (
                         <>
@@ -755,14 +770,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 </View>
                             )}
 
-                            <KeyValue
-                                keyValue={localeString(
-                                    'pos.views.Order.tipFiat'
-                                )}
-                                value={FiatStore.formatAmountForDisplay(
-                                    tipFiat
-                                )}
-                            />
+                            {fiatEnabled && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'pos.views.Order.tipFiat'
+                                    )}
+                                    value={FiatStore.formatAmountForDisplay(
+                                        tipFiat
+                                    )}
+                                />
+                            )}
 
                             <TouchableOpacity
                                 onPress={() => {
@@ -868,13 +885,23 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 ? ` (${taxPercentage}%)`
                                 : ''
                         }`}
-                        value={order.getTaxMoneyDisplay}
+                        value={
+                            fiatEnabled ? (
+                                order.getTaxMoneyDisplay
+                            ) : bitcoinUnits === 'sats' ? (
+                                <Amount fixedUnits="sats" sats={taxSats} />
+                            ) : (
+                                <Amount fixedUnits="BTC" sats={taxSats} />
+                            )
+                        }
                     />
 
-                    <KeyValue
-                        keyValue={localeString('pos.views.Order.totalFiat')}
-                        value={FiatStore.formatAmountForDisplay(totalFiat)}
-                    />
+                    {fiatEnabled && (
+                        <KeyValue
+                            keyValue={localeString('pos.views.Order.totalFiat')}
+                            value={FiatStore.formatAmountForDisplay(totalFiat)}
+                        />
+                    )}
 
                     <TouchableOpacity
                         onPress={() => {
@@ -908,27 +935,32 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             title={localeString('general.pay')}
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
-                                navigation.navigate('Receive', {
-                                    amount:
-                                        units === 'sats'
-                                            ? totalSats
-                                            : units === 'BTC'
-                                            ? new BigNumber(totalSats)
-                                                  .div(SATS_PER_BTC)
-                                                  .toFixed(8)
-                                            : totalFiat,
-                                    autoGenerate: true,
-                                    memo,
-                                    // For displaying paid orders
-                                    orderId: order.id,
-                                    // sats
-                                    orderTip: tipSats,
-                                    orderTotal: totalSats,
-                                    // formatted string rate
-                                    exchangeRate,
-                                    // numerical rate
-                                    rate
-                                })
+                                navigation.navigate(
+                                    settings?.ecash?.enableCashu
+                                        ? 'ReceiveEcash'
+                                        : 'Receive',
+                                    {
+                                        amount:
+                                            units === 'sats'
+                                                ? totalSats
+                                                : units === 'BTC'
+                                                ? new BigNumber(totalSats)
+                                                      .div(SATS_PER_BTC)
+                                                      .toFixed(8)
+                                                : totalFiat,
+                                        autoGenerate: true,
+                                        memo,
+                                        // For displaying paid orders
+                                        orderId: order.id,
+                                        // sats
+                                        orderTip: tipSats,
+                                        orderTotal: totalSats,
+                                        // formatted string rate
+                                        exchangeRate,
+                                        // numerical rate
+                                        rate
+                                    }
+                                )
                             }
                             disabled={isNaN(Number(totalSats))}
                         />

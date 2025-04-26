@@ -3,7 +3,6 @@ import Channel from './Channel';
 import { lnrpc } from '../proto/lightning';
 
 export default class ClosedChannel extends Channel {
-    close_height: number;
     time_lock_balance: string;
     close_time: number;
     resolutions: any;
@@ -11,17 +10,26 @@ export default class ClosedChannel extends Channel {
 
     @computed
     public get localBalance(): string {
+        if (this.to_us_msat) {
+            return (Number(this.to_us_msat) / 1000).toString();
+        }
         return this.settled_balance;
     }
 
     @computed
     public get remoteBalance(): string {
+        if (this.to_us_msat) {
+            return (
+                (Number(this.total_msat) - Number(this.to_us_msat)) /
+                1000
+            ).toString();
+        }
         return `${Number(this.capacity) - Number(this.settled_balance || 0)}`;
     }
 
     @computed
     public get closeHeight(): number {
-        return this.close_height;
+        return Number(this.capacity) - Number(this.settled_balance || 0);
     }
 
     @computed
