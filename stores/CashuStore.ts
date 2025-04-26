@@ -935,8 +935,17 @@ export default class CashuStore {
             let retries = 21;
             let success = false;
 
+            // decode bolt11 for metadata
+            let decoded;
+            try {
+                decoded = bolt11.decode(quote.request);
+            } catch (e) {
+                console.log('error decoding Cashu bolt11', quote.request);
+            }
+
             const updatedInvoice = new CashuInvoice({
                 ...quote,
+                decoded,
                 mintUrl
             });
 

@@ -9,7 +9,8 @@ import {
     getBalance,
     getChainTransactions,
     getOffchainBalance,
-    listPeers
+    listPeers,
+    listClosedChannels
 } from './CoreLightningRequestHandler';
 import { localeString } from '../utils/LocaleUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -18,6 +19,7 @@ import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 const calls = new Map<string, Promise<any>>();
 
 export default class CLNRest {
+    private defaultTimeout: number = 30000;
     getHeaders = (rune: string): any => {
         return {
             Rune: rune
@@ -49,7 +51,8 @@ export default class CLNRest {
         method: any,
         data?: any,
         certVerification?: boolean,
-        useTor?: boolean
+        useTor?: boolean,
+        timeout?: number
     ) => {
         // use body data as an identifier too, we don't want to cancel when we
         // are making multiples calls to get all the node names, for example
@@ -74,7 +77,10 @@ export default class CLNRest {
             );
         } else {
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Request timeout')), 30000);
+                setTimeout(
+                    () => reject(new Error('Request timeout')),
+                    timeout || this.defaultTimeout
+                );
             });
 
             const fetchPromise = ReactNativeBlobUtil.config({
@@ -122,7 +128,6 @@ export default class CLNRest {
                 timeoutPromise
             ]).catch((error) => {
                 calls.delete(id);
-                console.log('Request timed out for:', url);
                 throw error;
             });
 
@@ -132,7 +137,13 @@ export default class CLNRest {
         return await calls.get(id);
     };
 
-    request = (route: string, method: string, data?: any, params?: any) => {
+    request = (
+        route: string,
+        method: string,
+        data?: any,
+        params?: any,
+        timeout?: number
+    ) => {
         const { host, port, rune, certVerification, enableTor } = settingsStore;
 
         if (params) {
@@ -152,7 +163,8 @@ export default class CLNRest {
             method,
             data,
             certVerification,
-            enableTor
+            enableTor,
+            timeout
         );
     };
 
@@ -176,8 +188,13 @@ export default class CLNRest {
         return `${baseUrl}${route}`;
     };
 
-    postRequest = (route: string, data?: any) =>
-        this.request(route, 'post', data);
+    postRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'post', data, null, timeout);
+
+    getClosedChannels = async () => {
+        const channels = await this.postRequest('/v1/listclosedchannels');
+        return listClosedChannels(channels);
+    };
 
     getNode = (data: any) =>
         this.postRequest('/v1/listnodes', { id: data.id }).then((res) => {
@@ -310,19 +327,27 @@ export default class CLNRest {
         });
 
     payLightningInvoice = (data: any) =>
-        this.postRequest('/v1/pay', {
-            bolt11: data.payment_request,
-            amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent,
-            retry_for: data.timeout_seconds
-        });
+        this.postRequest(
+            '/v1/pay',
+            {
+                bolt11: data.payment_request,
+                amount_msat: Number(data.amt && data.amt * 1000),
+                maxfeepercent: data.max_fee_percent,
+                retry_for: data.timeout_seconds
+            },
+            data.timeout_seconds * 1000
+        );
     sendKeysend = (data: any) => {
-        return this.postRequest('/v1/keysend', {
-            destination: data.pubkey,
-            amount_msat: Number(data.amt && data.amt * 1000),
-            maxfeepercent: data.max_fee_percent,
-            retry_for: data.timeout_seconds
-        });
+        return this.postRequest(
+            '/v1/keysend',
+            {
+                destination: data.pubkey,
+                amount_msat: Number(data.amt && data.amt * 1000),
+                maxfeepercent: data.max_fee_percent,
+                retry_for: data.timeout_seconds
+            },
+            data.timeout_seconds * 1000
+        );
     };
     closeChannel = (urlParams?: Array<string>) => {
         const request = {
@@ -396,6 +421,7 @@ export default class CLNRest {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;
+    supportsClosedChannels = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => true;
@@ -421,15 +447,7 @@ export default class CLNRest {
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
-    supportsOffers = async () => {
-        const { configs } = await this.postRequest('/v1/listconfigs');
-
-        const supportsOffers: boolean = configs['experimental-offers']
-            ? true
-            : false;
-
-        return supportsOffers;
-    };
+    supportsOffers = () => true;
     isLNDBased = () => false;
     supportInboundFees = () => false;
     supportsDevTools = () => true;
