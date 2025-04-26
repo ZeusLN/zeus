@@ -1207,48 +1207,31 @@ export default class Receive extends React.Component<
             </TouchableOpacity>
         );
 
-        const ADDRESS_TYPES = BackendUtils.supportsTaproot()
-            ? [
-                  ...(BackendUtils.supportsNestedSegWit()
-                      ? [
-                            {
-                                key: localeString('views.Receive.np2wkhKey'),
-                                value: '1',
-                                description: localeString(
-                                    'views.Receive.np2wkhDescription'
-                                )
-                            }
-                        ]
-                      : []),
-                  {
-                      key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
-                      description: localeString(
-                          'views.Receive.p2wkhDescription'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2trKey'),
-                      value: '4',
-                      description: localeString('views.Receive.p2trDescription')
-                  }
-              ]
-            : [
-                  {
-                      key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
-                      description: localeString(
-                          'views.Receive.np2wkhDescriptionAlt'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
-                      description: localeString(
-                          'views.Receive.p2wkhDescription'
-                      )
-                  }
-              ];
+        const ADDRESS_TYPES = [];
+
+        if (BackendUtils.supportsNestedSegWit()) {
+            ADDRESS_TYPES.push({
+                key: localeString('views.Receive.np2wkhKey'),
+                value: '1',
+                description: BackendUtils.supportsTaproot()
+                    ? localeString('views.Receive.np2wkhDescription')
+                    : localeString('views.Receive.np2wkhDescriptionAlt')
+            });
+        }
+
+        ADDRESS_TYPES.push({
+            key: localeString('views.Receive.p2wkhKey'),
+            value: '0',
+            description: localeString('views.Receive.p2wkhDescription')
+        });
+
+        if (BackendUtils.supportsTaproot()) {
+            ADDRESS_TYPES.push({
+                key: localeString('views.Receive.p2trKey'),
+                value: '4',
+                description: localeString('views.Receive.p2trDescription')
+            });
+        }
 
         const unifiedButton = () => (
             <React.Fragment>
