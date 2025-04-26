@@ -207,6 +207,7 @@ const POSBadge = ({
             getOrders();
             setPosStatus('active');
         }}
+        accessibilityLabel={localeString('general.pos')}
     >
         <POS stroke={themeColor('text')} width="30" height="35" />
     </TouchableOpacity>
@@ -253,7 +254,7 @@ export default class WalletHeader extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
+        const { SettingsStore, NodeInfoStore } = this.props;
         const { settings } = SettingsStore!;
 
         if (settings.privacy && settings.privacy.clipboard) {
@@ -265,6 +266,13 @@ export default class WalletHeader extends React.Component<
                 });
             }
         }
+
+        // Ensure NodeInfoStore has active connectivity monitoring
+        NodeInfoStore!.setupConnectivityCheck();
+    }
+
+    componentWillUnmount() {
+        // No need to cleanup connectivity check here as it's managed by the store
     }
 
     render() {
@@ -419,8 +427,43 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
+        const ConnectionErrorBadge = () => {
+            // Check for connection issues using the NodeInfoStore method
+            const connectionStatus = NodeInfoStore!.hasConnectionIssues();
+
+            // Only display the badge if there are connection issues
+            if (!connectionStatus.hasIssue) return null;
+
+            const message = connectionStatus.isConnectionError
+                ? localeString('general.connectionLost')
+                : localeString('general.nodeNotSynced');
+
+            return (
+                <Badge
+                    onPress={() => navigation.navigate('NodeInfo')}
+                    value={`⚠ ${message}`}
+                    badgeStyle={{
+                        ...styles.badgeStyle,
+                        backgroundColor: themeColor('warning'),
+                        borderColor: themeColor('error'),
+                        borderWidth: 1,
+                        minHeight: 18 * fontScale,
+                        borderRadius: 9 * fontScale,
+                        paddingHorizontal: 8
+                    }}
+                    textStyle={{
+                        ...styles.badgeTextStyle,
+                        fontWeight: 'bold',
+                        color: themeColor('text'),
+                        fontSize: 12 * fontScale
+                    }}
+                />
+            );
+        };
+
         const StatusBadges = () => (
             <>
+                <ConnectionErrorBadge />
                 <CustodialBadge />
                 <NetworkBadge />
                 <ReadOnlyBadge />
