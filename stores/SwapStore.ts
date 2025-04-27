@@ -35,7 +35,7 @@ export default class SwapStore {
         );
     }
 
-    @computed get proHeaders() {
+    @computed get getHeaders() {
         const settings = this.settingsStore.settings;
         return settings.proEnabled
             ? {
@@ -111,7 +111,7 @@ export default class SwapStore {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/submarine`,
-                this.proHeaders
+                this.getHeaders
             );
             const status = response.info().status;
             if (status == 200) {
@@ -124,7 +124,7 @@ export default class SwapStore {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/reverse`,
-                this.proHeaders
+                this.getHeaders
             );
             const status = response.info().status;
             if (status == 200) {
@@ -140,7 +140,7 @@ export default class SwapStore {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/submarine/${id}/transaction`,
-                this.proHeaders
+                this.getHeaders
             );
 
             const status = response.info().status;
