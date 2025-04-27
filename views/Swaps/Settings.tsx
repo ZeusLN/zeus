@@ -96,45 +96,6 @@ export default class SwapSettings extends React.Component<
                     navigation={navigation}
                 />
                 <View style={{ paddingHorizontal: 20 }}>
-                    {showProSwitch && (
-                        <ListItem
-                            containerStyle={{
-                                backgroundColor: 'transparent',
-                                paddingHorizontal: 0,
-                                paddingVertical: 20
-                            }}
-                        >
-                            <ListItem.Title
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize: 14
-                                }}
-                            >
-                                {localeString('views.Swaps.Settings.enablePro')}
-                            </ListItem.Title>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            >
-                                <Switch
-                                    value={proEnabled}
-                                    onValueChange={async () => {
-                                        const newProEnabled = !proEnabled;
-                                        this.setState({
-                                            proEnabled: newProEnabled
-                                        });
-                                        await updateSettings({
-                                            proEnabled: newProEnabled
-                                        });
-                                    }}
-                                />
-                            </View>
-                        </ListItem>
-                    )}
                     <DropdownSetting
                         title="Service Provider"
                         selectedValue={host}
@@ -145,20 +106,18 @@ export default class SwapSettings extends React.Component<
 
                             this.setState({
                                 host: value,
-                                proEnabled:
-                                    newSelectedHost?.pro === true
-                                        ? proEnabled
-                                        : false
+                                proEnabled: newSelectedHost?.pro
+                                    ? proEnabled
+                                    : false
                             });
 
                             await updateSettings({
                                 [isTestnet
                                     ? 'swapHostTestnet'
                                     : 'swapHostMainnet']: value,
-                                proEnabled:
-                                    newSelectedHost?.pro === true
-                                        ? proEnabled
-                                        : false
+                                proEnabled: newSelectedHost?.pro
+                                    ? proEnabled
+                                    : false
                             });
                         }}
                         values={
@@ -196,6 +155,45 @@ export default class SwapSettings extends React.Component<
                                 error={!customSwapHost}
                             />
                         </>
+                    )}
+                    {showProSwitch && (
+                        <ListItem
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                paddingHorizontal: 0,
+                                paddingTop: 30
+                            }}
+                        >
+                            <ListItem.Title
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize: 14
+                                }}
+                            >
+                                {localeString('views.Swaps.Settings.enablePro')}
+                            </ListItem.Title>
+                            <View
+                                style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Switch
+                                    value={proEnabled}
+                                    onValueChange={async () => {
+                                        const newProEnabled = !proEnabled;
+                                        this.setState({
+                                            proEnabled: newProEnabled
+                                        });
+                                        await updateSettings({
+                                            proEnabled: newProEnabled
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </ListItem>
                     )}
                 </View>
             </Screen>
