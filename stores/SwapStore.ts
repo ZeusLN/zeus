@@ -35,6 +35,21 @@ export default class SwapStore {
         );
     }
 
+    @computed get proHeaders() {
+        const settings = this.settingsStore.settings;
+        return settings.proEnabled
+            ? {
+                  'Content-Type': 'application/json',
+                  Referral: 'pro'
+              }
+            : undefined;
+    }
+
+    @computed get referralId() {
+        const settings = this.settingsStore.settings;
+        return settings.proEnabled ? 'pro' : undefined;
+    }
+
     /** Returns the API host based on network type */
     @computed
     public get getHost() {
@@ -90,17 +105,13 @@ export default class SwapStore {
 
     @action
     public getSwapFees = async () => {
-        const { settings } = this.settingsStore;
         this.loading = true;
         console.log(`Fetching fees from: ${this.getHost}`);
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/submarine`,
-                {
-                    'Content-Type': 'application/json',
-                    Referral: settings.proEnabled ? 'pro' : ''
-                }
+                this.proHeaders
             );
             const status = response.info().status;
             if (status == 200) {
@@ -113,10 +124,7 @@ export default class SwapStore {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/reverse`,
-                {
-                    'Content-Type': 'application/json',
-                    Referral: settings.proEnabled ? 'pro' : ''
-                }
+                this.proHeaders
             );
             const status = response.info().status;
             if (status == 200) {
@@ -129,14 +137,10 @@ export default class SwapStore {
 
     public getLockupTransaction = async (id: string) => {
         try {
-            const { settings } = this.settingsStore;
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${this.getHost}/swap/submarine/${id}/transaction`,
-                {
-                    'Content-Type': 'application/json',
-                    Referral: settings.proEnabled ? 'pro' : ''
-                }
+                this.proHeaders
             );
 
             const status = response.info().status;
@@ -161,7 +165,6 @@ export default class SwapStore {
             let refundPublicKey: any;
             let refundPrivateKey: any;
             const keys: any = ECPairFactory(ecc).makeRandom();
-            const { settings } = this.settingsStore;
 
             refundPrivateKey = Buffer.from(keys.privateKey).toString('hex');
             refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
@@ -178,14 +181,14 @@ export default class SwapStore {
                 'POST',
                 `${this.getHost}/swap/submarine`,
                 {
-                    'Content-Type': 'application/json',
-                    referralId: settings.proEnabled ? 'pro' : ''
+                    'Content-Type': 'application/json'
                 },
                 JSON.stringify({
                     invoice,
                     to: 'BTC',
                     from: 'BTC',
-                    refundPublicKey
+                    refundPublicKey,
+                    ...(this.referralId && { referralId: this.referralId })
                 })
             );
 
@@ -283,7 +286,6 @@ export default class SwapStore {
 
             const preimage = randomBytes(32);
             const keys: any = ECPairFactory(ecc).makeRandom();
-            const { settings } = this.settingsStore;
 
             // Creating a reverse swap
             const data = JSON.stringify({
@@ -291,7 +293,8 @@ export default class SwapStore {
                 to: 'BTC',
                 from: 'BTC',
                 claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
-                preimageHash: crypto.sha256(preimage).toString('hex')
+                preimageHash: crypto.sha256(preimage).toString('hex'),
+                ...(this.referralId && { referralId: this.referralId })
             });
 
             console.log('Data before sending to API:', data);
@@ -300,8 +303,7 @@ export default class SwapStore {
                 'POST',
                 `${this.getHost}/swap/reverse`,
                 {
-                    'Content-Type': 'application/json',
-                    referralId: settings.proEnabled ? 'pro' : ''
+                    'Content-Type': 'application/json'
                 },
                 data
             );
