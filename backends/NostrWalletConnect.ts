@@ -121,4 +121,5 @@ export default class NostrWalletConnect {
     isLNDBased = () => false;
     supportInboundFees = () => false;
     supportsCashuWallet = () => false;
+    supportsWatchtower = () => false;
 }

@@ -452,4 +452,5 @@ export default class CLNRest {
     supportInboundFees = () => false;
     supportsDevTools = () => true;
     supportsCashuWallet = () => false;
+    supportsWatchtower = () => false;
 }

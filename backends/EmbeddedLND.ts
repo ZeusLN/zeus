@@ -281,7 +281,27 @@ export default class EmbeddedLND extends LND {
     listAddresses = async () => await listAddresses();
     importAccount = async (data: any) => await importAccount(data);
     rescan = async (data: any) => await rescan(data);
+    // Watchtower Client methods
+    addWatchtower = async (data: any) =>
+        await lndMobile.watchtowerClient.addTower(data.pubkey, data.address);
 
+    listWatchtowers = async () => await lndMobile.watchtowerClient.listTowers();
+
+    getWatchtowerInfo = async (pubkey: string) =>
+        await lndMobile.watchtowerClient.getTowerInfo(pubkey);
+
+    deactivateWatchtower = async (pubkey: string) =>
+        await lndMobile.watchtowerClient.deactivateTower(pubkey);
+
+    removeWatchtower = async (pubkey: string) =>
+        await lndMobile.watchtowerClient.removeTower(pubkey);
+
+    getWatchtowerStats = async () => await lndMobile.watchtowerClient.stats();
+
+    getWatchtowerPolicy = async () => await lndMobile.watchtowerClient.policy();
+
+    terminateWatchtowerSession = async (data: any) =>
+        await lndMobile.watchtowerClient.terminateSession(data.session_id);
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
     //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
@@ -327,4 +347,5 @@ export default class EmbeddedLND extends LND {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => true;
+    supportsWatchtower = () => true;
 }
