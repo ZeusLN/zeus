@@ -84,7 +84,6 @@ const getSatAmount = (amount: string | number, forceUnit?: string) => {
 };
 
 const getAmount = (sats: string | number) => {
-    const { fiatStore, settingsStore, unitsStore } = Stores;
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
     const { fiat } = settings;
