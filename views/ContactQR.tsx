@@ -42,7 +42,13 @@ const ContactQR: React.FC<ContactQRProps> = (props: ContactQRProps) => {
     screenWidth = Dimensions.get('window').width;
 
     const renderItem = ({ item, index }: { item: any; index: number }) => (
-        <CollapsedQR value={item} expanded hideText={index === 0} />
+        <CollapsedQR
+            showShare={true}
+            value={item}
+            expanded
+            hideText={index === 0}
+            iconOnly={true}
+        />
     );
     const PaginationItem: React.FC<{
         index: number;
