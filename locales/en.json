@@ -1534,6 +1534,7 @@
     "views.Swaps.setFeeRate": "Set on-chain fee rate (optional)",
     "views.Swaps.SwapsPane.noSwaps": "No swaps have been made yet",
     "views.Swaps.SwapsPane.failedToLoad": "Failed to load swaps",
+    "views.Swaps.Settings.enablePro": "Enable Pro",
     "views.SwapDetails.title": "Swap Details",
     "views.SwapDetails.acceptZerpConf": "Accept Zero Conf",
     "views.SwapDetails.expectedAmount": "Expected amount",

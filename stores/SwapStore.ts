@@ -35,6 +35,21 @@ export default class SwapStore {
         );
     }
 
+    @computed get getHeaders() {
+        const settings = this.settingsStore.settings;
+        return settings.proEnabled
+            ? {
+                  'Content-Type': 'application/json',
+                  Referral: 'pro'
+              }
+            : undefined;
+    }
+
+    @computed get referralId() {
+        const settings = this.settingsStore.settings;
+        return settings.proEnabled ? 'pro' : undefined;
+    }
+
     /** Returns the API host based on network type */
     @computed
     public get getHost() {
@@ -95,7 +110,8 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine`
+                `${this.getHost}/swap/submarine`,
+                this.getHeaders
             );
             const status = response.info().status;
             if (status == 200) {
@@ -107,7 +123,8 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/reverse`
+                `${this.getHost}/swap/reverse`,
+                this.getHeaders
             );
             const status = response.info().status;
             if (status == 200) {
@@ -122,7 +139,8 @@ export default class SwapStore {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${this.getHost}/swap/submarine/${id}/transaction`
+                `${this.getHost}/swap/submarine/${id}/transaction`,
+                this.getHeaders
             );
 
             const status = response.info().status;
@@ -169,7 +187,8 @@ export default class SwapStore {
                     invoice,
                     to: 'BTC',
                     from: 'BTC',
-                    refundPublicKey
+                    refundPublicKey,
+                    ...(this.referralId && { referralId: this.referralId })
                 })
             );
 
@@ -274,7 +293,8 @@ export default class SwapStore {
                 to: 'BTC',
                 from: 'BTC',
                 claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
-                preimageHash: crypto.sha256(preimage).toString('hex')
+                preimageHash: crypto.sha256(preimage).toString('hex'),
+                ...(this.referralId && { referralId: this.referralId })
             });
 
             console.log('Data before sending to API:', data);
