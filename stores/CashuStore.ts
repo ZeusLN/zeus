@@ -143,6 +143,10 @@ export default class CashuStore {
         this.totalBalanceSats = 0;
         this.mintUrls = [];
         this.selectedMintUrl = '';
+        this.invoices = undefined;
+        this.payments = undefined;
+        this.receivedTokens = undefined;
+        this.sentTokens = undefined;
         this.clearInvoice();
         this.clearPayReq();
         this.shownThresholdModals = [];
@@ -1570,7 +1574,7 @@ export default class CashuStore {
 
         const mintUrl = decoded.mint;
 
-        if (!this.cashuWallets[mintUrl].wallet) {
+        if (!this.cashuWallets[mintUrl]?.wallet) {
             await this.initializeWallet(mintUrl, true);
         }
 
@@ -1608,6 +1612,7 @@ export default class CashuStore {
                 let meltQuote = await wallet.createMeltQuote(
                     invoice.paymentRequest
                 );
+
                 if (initialAssumedFeeSat !== meltQuote.fee_reserve) {
                     const receiveAmtSat: number =
                         tokenAmt - meltQuote.fee_reserve;
