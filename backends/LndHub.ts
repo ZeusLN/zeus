@@ -147,6 +147,7 @@ export default class LndHub extends LND {
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
+    supportsNestedSegWit = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
     supportsFlowLSP = () => false;

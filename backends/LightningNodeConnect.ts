@@ -551,6 +551,7 @@ export default class LightningNodeConnect {
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
+    supportsNestedSegWit = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsFlowLSP = () => false;

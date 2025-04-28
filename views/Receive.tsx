@@ -1207,44 +1207,31 @@ export default class Receive extends React.Component<
             </TouchableOpacity>
         );
 
-        const ADDRESS_TYPES = BackendUtils.supportsTaproot()
-            ? [
-                  {
-                      key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
-                      description: localeString(
-                          'views.Receive.np2wkhDescription'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
-                      description: localeString(
-                          'views.Receive.p2wkhDescription'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2trKey'),
-                      value: '4',
-                      description: localeString('views.Receive.p2trDescription')
-                  }
-              ]
-            : [
-                  {
-                      key: localeString('views.Receive.np2wkhKey'),
-                      value: '1',
-                      description: localeString(
-                          'views.Receive.np2wkhDescriptionAlt'
-                      )
-                  },
-                  {
-                      key: localeString('views.Receive.p2wkhKey'),
-                      value: '0',
-                      description: localeString(
-                          'views.Receive.p2wkhDescription'
-                      )
-                  }
-              ];
+        const ADDRESS_TYPES = [];
+
+        if (BackendUtils.supportsNestedSegWit()) {
+            ADDRESS_TYPES.push({
+                key: localeString('views.Receive.np2wkhKey'),
+                value: '1',
+                description: BackendUtils.supportsTaproot()
+                    ? localeString('views.Receive.np2wkhDescription')
+                    : localeString('views.Receive.np2wkhDescriptionAlt')
+            });
+        }
+
+        ADDRESS_TYPES.push({
+            key: localeString('views.Receive.p2wkhKey'),
+            value: '0',
+            description: localeString('views.Receive.p2wkhDescription')
+        });
+
+        if (BackendUtils.supportsTaproot()) {
+            ADDRESS_TYPES.push({
+                key: localeString('views.Receive.p2trKey'),
+                value: '4',
+                description: localeString('views.Receive.p2trDescription')
+            });
+        }
 
         const unifiedButton = () => (
             <React.Fragment>
@@ -1519,6 +1506,10 @@ export default class Receive extends React.Component<
             (BackendUtils.supportsAMP() && !lspIsActive) ||
             (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive);
 
+        const baseModalHeight = 300;
+        const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
+        const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
+
         return (
             <Screen>
                 <Header
@@ -1564,7 +1555,6 @@ export default class Receive extends React.Component<
                     }
                     navigation={navigation}
                 />
-
                 <View style={{ flex: 1 }}>
                     {watchedInvoicePaid ? (
                         <View
@@ -3175,7 +3165,7 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: BackendUtils.supportsTaproot() ? 450 : 350,
+                        height: modalHeight,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}
