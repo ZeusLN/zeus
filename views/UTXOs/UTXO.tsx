@@ -13,13 +13,14 @@ import Amount from './../../components/Amount';
 import Header from '../../components/Header';
 import KeyValue from './../../components/KeyValue';
 import Screen from './../../components/Screen';
+import Button from '../../components/Button';
+
 import Utxo from './../../models/Utxo';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import UrlUtils from './../../utils/UrlUtils';
 import NodeInfoStore from './../../stores/NodeInfoStore';
-import Button from '../../components/Button';
-import store from '../../storage';
+import storage from '../../storage';
 
 interface UTXOProps {
     navigation: StackNavigationProp<any, any>;
@@ -41,16 +42,15 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
     async componentDidMount() {
         const { navigation } = this.props;
         const { utxo } = this.props.route?.params;
-
-        navigation.addListener('focus', async () => {
-            const key = utxo.getOutpoint;
-            const storedLabel = await store.getItem(key!);
-            this.setState({ storedLabel: storedLabel || '' });
-        });
-
         const key = utxo.getOutpoint;
-        const storedLabel = await store.getItem(key!);
-        this.setState({ storedLabel: storedLabel || '' });
+
+        const updateStoredLabel = async () => {
+            const storedLabel = await storage.getItem(key!);
+            this.setState({ storedLabel: storedLabel || '' });
+        };
+
+        navigation.addListener('focus', updateStoredLabel);
+        await updateStoredLabel();
     }
 
     render() {
@@ -174,11 +174,20 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                         )}
 
                         {this.state.storedLabel && (
-                            <KeyValue
-                                keyValue="Label"
-                                value={this.state.storedLabel}
-                                sensitive
-                            />
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        noteKey: utxo.getOutpoint,
+                                        context: 'label'
+                                    })
+                                }
+                            >
+                                <KeyValue
+                                    keyValue={localeString('views.UTXOs.label')}
+                                    value={this.state.storedLabel}
+                                    sensitive
+                                />
+                            </TouchableOpacity>
                         )}
                     </ScrollView>
 
@@ -193,9 +202,9 @@ export default class UTXO extends React.Component<UTXOProps, UTXOState> {
                                 title={
                                     this.state.storedLabel
                                         ? localeString(
-                                              'views.UTXOs.UpdateLabel'
+                                              'views.UTXOs.updateLabel'
                                           )
-                                        : localeString('views.UTXOs.AddLabel')
+                                        : localeString('views.UTXOs.addLabel')
                                 }
                                 onPress={() =>
                                     navigation.navigate('AddNotes', {

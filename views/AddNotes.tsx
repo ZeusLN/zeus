@@ -95,12 +95,12 @@ export default class AddNotes extends React.Component<
                         centerComponent={{
                             text: isNoteStored
                                 ? this.props.route.params?.context === 'label'
-                                    ? localeString('views.UTXOs.UpdateLabel')
+                                    ? localeString('views.UTXOs.updateLabel')
                                     : localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )
                                 : this.props.route.params?.context === 'label'
-                                ? localeString('views.UTXOs.AddLabel')
+                                ? localeString('views.UTXOs.addLabel')
                                 : localeString(
                                       'views.SendingLightning.AddANote'
                                   ),
