@@ -467,7 +467,10 @@ export default class InvoicesStore {
         return BackendUtils.getNewAddress(params)
             .then((data: any) => {
                 const address =
-                    data.address || data.bech32 || (data[0] && data[0].address);
+                    data.address ||
+                    data.bech32 ||
+                    data.p2tr ||
+                    (data[0] && data[0].address);
                 runInAction(() => {
                     if (!params.unified) this.onChainAddress = address;
                     if (!params.unified) this.creatingInvoice = false;
