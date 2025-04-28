@@ -1145,6 +1145,14 @@ export default class ChannelView extends React.Component<
                                 <>
                                     <View style={{ marginBottom: 10 }}>
                                         <Text
+                                            infoModalText={[
+                                                localeString(
+                                                    'views.Channel.forceClose.infoText1'
+                                                ),
+                                                localeString(
+                                                    'views.Channel.forceClose.infoText2'
+                                                )
+                                            ]}
                                             style={{
                                                 ...styles.text,
                                                 color: themeColor('text'),
