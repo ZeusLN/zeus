@@ -146,6 +146,10 @@ export default class InvoicesSettings extends React.Component<
             </TouchableOpacity>
         );
 
+        const baseModalHeight = 300;
+        const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
+        const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
+
         return (
             <Screen>
                 <Header
@@ -594,7 +598,7 @@ export default class InvoicesSettings extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: BackendUtils.supportsTaproot() ? 450 : 350,
+                        height: modalHeight,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}
