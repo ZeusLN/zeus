@@ -59,6 +59,7 @@ export default class AddNotes extends React.Component<
         const { storeNoteKeys, removeNoteKeys } = NotesStore;
         const { noteKey, isNoteStored } = this.state;
         const { notes } = this.state;
+        const { context } = this.props.route.params;
 
         const saveNote = async () => {
             if (noteKey && notes?.trim() === '') {
@@ -94,13 +95,13 @@ export default class AddNotes extends React.Component<
                         leftComponent="Back"
                         centerComponent={{
                             text: isNoteStored
-                                ? this.props.route.params?.context === 'label'
-                                    ? localeString('views.UTXOs.UpdateLabel')
+                                ? context === 'label'
+                                    ? localeString('views.UTXOs.updateLabel')
                                     : localeString(
                                           'views.SendingLightning.UpdateNote'
                                       )
-                                : this.props.route.params?.context === 'label'
-                                ? localeString('views.UTXOs.AddLabel')
+                                : context === 'label'
+                                ? localeString('views.UTXOs.addLabel')
                                 : localeString(
                                       'views.SendingLightning.AddANote'
                                   ),
@@ -135,7 +136,7 @@ export default class AddNotes extends React.Component<
                         }}
                         value={notes}
                         placeholder={
-                            this.props.route.params?.context === 'label'
+                            context === 'label'
                                 ? localeString('views.UTXOs.writeLabel')
                                 : localeString('views.Payment.writeNote')
                         }
