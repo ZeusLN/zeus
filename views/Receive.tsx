@@ -1506,6 +1506,10 @@ export default class Receive extends React.Component<
             (BackendUtils.supportsAMP() && !lspIsActive) ||
             (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive);
 
+        const baseModalHeight = 300;
+        const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
+        const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
+
         return (
             <Screen>
                 <Header
@@ -3161,11 +3165,7 @@ export default class Receive extends React.Component<
                         backgroundColor: themeColor('background'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
-                        height: BackendUtils.supportsTaproot()
-                            ? SettingsStore.implementation === 'cln-rest'
-                                ? 350
-                                : 450
-                            : 350,
+                        height: modalHeight,
                         paddingLeft: 24,
                         paddingRight: 24
                     }}
