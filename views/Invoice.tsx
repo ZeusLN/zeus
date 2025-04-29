@@ -21,10 +21,12 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
+import InvoicesStore from '../stores/InvoicesStore';
 
 interface InvoiceProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
+    InvoicesStore?: InvoicesStore;
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
@@ -32,7 +34,7 @@ interface InvoiceState {
     storedNote: string;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'InvoicesStore')
 export default class InvoiceView extends React.Component<
     InvoiceProps,
     InvoiceState
@@ -44,16 +46,25 @@ export default class InvoiceView extends React.Component<
     async componentDidMount() {
         const { navigation, route } = this.props;
         const invoice = route.params?.invoice;
-        navigation.addListener('focus', () => {
+
+        await this.props.InvoicesStore?.getPayReq(invoice.bolt12);
+
+        navigation.addListener('focus', async () => {
+            const invoice = route.params?.invoice;
+            await this.props.InvoicesStore?.getPayReq(invoice.bolt12);
             const note = invoice.getNote;
             this.setState({ storedNote: note });
         });
     }
 
     render() {
-        const { navigation, SettingsStore, route } = this.props;
+        const { navigation, SettingsStore, route, InvoicesStore } = this.props;
+        const pay_req = InvoicesStore?.pay_req;
         const { storedNote } = this.state;
         const invoice = route.params?.invoice;
+        const invreq_amount_sat = pay_req?.invreq_amount_msat
+            ? (parseInt(pay_req?.invreq_amount_msat) / 1000).toString()
+            : '';
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
         invoice.determineFormattedRemainingTimeUntilExpiry(locale);
@@ -76,7 +87,12 @@ export default class InvoiceView extends React.Component<
             is_amp,
             value,
             getNoteKey,
-            getAmount
+            getAmount,
+            invreq_id,
+            active,
+            single_use,
+            used,
+            bolt12
         } = invoice;
         const privateInvoice = invoice.private;
 
@@ -84,7 +100,9 @@ export default class InvoiceView extends React.Component<
             <TouchableOpacity
                 onPress={() =>
                     navigation.navigate('QR', {
-                        value: `lightning:${getPaymentRequest}`,
+                        value: invreq_id
+                            ? bolt12
+                            : `lightning:${getPaymentRequest}`,
                         satAmount: getAmount
                     })
                 }
@@ -113,7 +131,9 @@ export default class InvoiceView extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: is_amp
+                        text: invreq_id
+                            ? localeString('views.Tools.withdrawal.title')
+                            : is_amp
                             ? localeString('views.Receive.ampInvoice')
                             : localeString('views.Invoice.title'),
                         style: {
@@ -140,16 +160,29 @@ export default class InvoiceView extends React.Component<
                     navigation={navigation}
                 />
                 <ScrollView keyboardShouldPersistTaps="handled">
-                    <View style={styles.center}>
-                        <Amount
-                            sats={invoice.getAmount}
-                            sensitive
-                            jumboText
-                            toggleable
-                            pending={!invoice.isExpired && !invoice.isPaid}
-                            credit={invoice.isPaid}
-                        />
-                    </View>
+                    {!invoice.invreq_id && (
+                        <View style={styles.center}>
+                            <Amount
+                                sats={invoice.getAmount}
+                                sensitive
+                                jumboText
+                                toggleable
+                                pending={!invoice.isExpired && !invoice.isPaid}
+                                credit={invoice.isPaid}
+                            />
+                        </View>
+                    )}
+
+                    {invoice.invreq_id && (
+                        <View style={styles.center}>
+                            <Amount
+                                sats={invreq_amount_sat}
+                                sensitive
+                                jumboText
+                                toggleable
+                            />
+                        </View>
+                    )}
 
                     <View style={styles.content}>
                         {is_amp && isPaid && (
@@ -162,6 +195,69 @@ export default class InvoiceView extends React.Component<
                                 }
                                 sensitive
                             />
+                        )}
+
+                        {invreq_id && (
+                            <>
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PaymentRequest.description'
+                                    )}
+                                    value={pay_req?.offer_description}
+                                    sensitive
+                                    color={themeColor('text')}
+                                />
+
+                                <KeyValue
+                                    keyValue={localeString('general.active')}
+                                    value={
+                                        active
+                                            ? localeString('general.true')
+                                            : localeString('general.false')
+                                    }
+                                    sensitive
+                                />
+
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PayCode.singleUse'
+                                    )}
+                                    value={
+                                        single_use
+                                            ? localeString('general.true')
+                                            : localeString('general.false')
+                                    }
+                                    sensitive
+                                />
+
+                                <KeyValue
+                                    keyValue={localeString('general.used')}
+                                    value={
+                                        used
+                                            ? localeString('general.true')
+                                            : localeString('general.false')
+                                    }
+                                    sensitive
+                                />
+
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.withdrawal.id'
+                                    )}
+                                    value={invreq_id}
+                                    sensitive
+                                    color={themeColor('text')}
+                                />
+
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.PayCode.bolt12'
+                                    )}
+                                    value={bolt12}
+                                    sensitive
+                                    color={themeColor('text')}
+                                />
+                            </>
                         )}
 
                         {getKeysendMessage && (
@@ -220,7 +316,7 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        {!!formattedOriginalTimeUntilExpiry && (
+                        {!!formattedOriginalTimeUntilExpiry && !invreq_id && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.originalExpiration'
@@ -230,7 +326,7 @@ export default class InvoiceView extends React.Component<
                             />
                         )}
 
-                        {!!formattedTimeUntilExpiry && (
+                        {!!formattedTimeUntilExpiry && !invreq_id && (
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Invoice.expiration'
