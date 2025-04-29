@@ -24,6 +24,7 @@ export default class InvoicesStore {
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
+    @observable withdrawalRequests: Array<Invoice> = [];
     @observable invoice: Invoice | null;
     @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
@@ -81,6 +82,7 @@ export default class InvoicesStore {
         this.error_msg = null;
         this.getPayReqError = null;
         this.invoices = [];
+        this.withdrawalRequests = [];
         this.invoice = null;
         this.pay_req = null;
         this.payment_request = null;
@@ -117,6 +119,30 @@ export default class InvoicesStore {
                 });
             })
             .catch(() => this.resetInvoices());
+    };
+
+    @action
+    public getWithdrawalRequest = async () => {
+        this.loading = true;
+        await BackendUtils.listInvoiceRequest()
+            .then((data: any) => {
+                runInAction(() => {
+                    this.withdrawalRequests = data.invoicerequests
+                        .map(
+                            (withdrawalRequest: any) =>
+                                new Invoice(withdrawalRequest)
+                        )
+                        .slice()
+                        .reverse();
+                    this.loading = false;
+                });
+            })
+            .catch(() => {
+                runInAction(() => {
+                    this.withdrawalRequests = [];
+                    this.loading = false;
+                });
+            });
     };
 
     @action

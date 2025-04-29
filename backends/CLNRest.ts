@@ -451,6 +451,7 @@ export default class CLNRest {
             description
         });
     };
+    listInvoiceRequest = () => this.postRequest('/v1/listinvoicerequests');
     createOffer = ({
         description,
         label,

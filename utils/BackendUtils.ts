@@ -133,6 +133,8 @@ class BackendUtils {
     fetchInvoiceFromOffer = (...args: any[]) =>
         this.call('fetchInvoiceFromOffer', args);
     invoiceRequest = (...args: any[]) => this.call('invoiceRequest', args);
+    listInvoiceRequest = (...args: any[]) =>
+        this.call('listInvoiceRequest', args);
 
     // lndhub
     login = (...args: any[]) => this.call('login', args);
