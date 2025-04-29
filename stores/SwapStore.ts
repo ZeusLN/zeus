@@ -160,6 +160,7 @@ export default class SwapStore {
 
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
+        const { implementation } = this.settingsStore;
         try {
             console.log('Creating submarine swap...');
             let refundPublicKey: any;
@@ -218,7 +219,8 @@ export default class SwapStore {
                 responseData,
                 keys,
                 invoice,
-                this.getHost
+                this.getHost,
+                implementation
             );
 
             runInAction(() => {
@@ -246,7 +248,8 @@ export default class SwapStore {
         newSwap: any,
         keys: any,
         invoice: any,
-        endpoint: string
+        endpoint: string,
+        implementation: any
     ) => {
         try {
             // Retrieve existing swaps
@@ -258,7 +261,8 @@ export default class SwapStore {
                 ...newSwap,
                 keys,
                 invoice,
-                endpoint
+                endpoint,
+                implementation
             };
 
             // Add the enriched swap to the beginning of array
@@ -280,6 +284,7 @@ export default class SwapStore {
         fee: string,
         navigation: any
     ) => {
+        const { implementation } = this.settingsStore;
         try {
             initEccLib(ecc);
             console.log('Creating reverse swap...');
@@ -334,7 +339,8 @@ export default class SwapStore {
                 keys,
                 destinationAddress,
                 preimage,
-                this.getHost
+                this.getHost,
+                implementation
             );
 
             runInAction(() => {
@@ -364,7 +370,8 @@ export default class SwapStore {
         keys: any,
         destinationAddress: string,
         preimage: any,
-        endpoint: string
+        endpoint: string,
+        implementation: any
     ) => {
         try {
             // Retrieve existing swaps
@@ -377,7 +384,8 @@ export default class SwapStore {
                 keys,
                 destinationAddress,
                 preimage,
-                endpoint
+                endpoint,
+                implementation
             };
 
             // Add the enriched swap to the beginning of array

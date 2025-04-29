@@ -19,10 +19,12 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import SwapStore from '../../stores/SwapStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
     SwapStore?: SwapStore;
+    SettingsStore?: SettingsStore;
 }
 
 interface SwapsPaneState {
@@ -31,7 +33,7 @@ interface SwapsPaneState {
     loading: boolean;
 }
 
-@inject('TransactionsStore', 'SwapStore')
+@inject('TransactionsStore', 'SwapStore', 'SettingsStore')
 @observer
 export default class SwapsPane extends React.Component<
     SwapsPaneProps,
@@ -55,6 +57,8 @@ export default class SwapsPane extends React.Component<
     }
 
     fetchSwaps = async () => {
+        const { SettingsStore } = this.props;
+        const { implementation } = SettingsStore!;
         this.setState({ loading: true });
         try {
             // Fetch submarine swaps
@@ -64,6 +68,9 @@ export default class SwapsPane extends React.Component<
             const submarineSwaps = storedSubmarineSwaps
                 ? JSON.parse(storedSubmarineSwaps)
                 : [];
+            const filteredSubmarineSwaps = submarineSwaps.filter(
+                (swap: any) => swap.implementation === implementation
+            );
 
             // Fetch reverse swaps
             const storedReverseSwaps = await EncryptedStorage.getItem(
@@ -72,9 +79,15 @@ export default class SwapsPane extends React.Component<
             const reverseSwaps = storedReverseSwaps
                 ? JSON.parse(storedReverseSwaps)
                 : [];
+            const filteredReverseSwaps = reverseSwaps.filter(
+                (swap: any) => swap.implementation === implementation
+            );
 
             // Combine both types of swaps
-            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+            const allSwaps = [
+                ...filteredSubmarineSwaps,
+                ...filteredReverseSwaps
+            ];
 
             // Sort by creation date (most recent first)
             const sortedSwaps = allSwaps.sort(
