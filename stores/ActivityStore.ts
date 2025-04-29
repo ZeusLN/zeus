@@ -169,8 +169,10 @@ export default class ActivityStore {
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
         const invoices = this.invoicesStore.invoices;
+        const withdrawalRequests = this.invoicesStore.withdrawalRequests;
 
         let additions = payments.concat(invoices);
+        additions = additions.concat(withdrawalRequests);
         if (BackendUtils.supportsOnchainSends()) {
             additions = additions.concat(transactions);
         }
@@ -191,7 +193,7 @@ export default class ActivityStore {
                 .concat(cashuSentTokens);
         }
 
-        // push payments, txs, invoices to one array
+        // push payments, txs, invoices and withdrawal requests to one array
         activity.push.apply(activity, additions);
         // sort activity by timestamp
         const sortedActivity = activity.sort((a: any, b: any) =>
@@ -207,6 +209,7 @@ export default class ActivityStore {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
+        await this.invoicesStore.getWithdrawalRequest();
 
         runInAction(() => {
             this.activity = this.getSortedActivity();
@@ -216,6 +219,14 @@ export default class ActivityStore {
 
     public updateInvoices = async (locale: string | undefined) => {
         await this.invoicesStore.getInvoices();
+        await runInAction(async () => {
+            this.activity = this.getSortedActivity();
+            await this.setFilters(this.filters, locale);
+        });
+    };
+
+    public updateWithdrawalRequest = async (locale: string | undefined) => {
+        await this.invoicesStore.getWithdrawalRequest();
         await runInAction(async () => {
             this.activity = this.getSortedActivity();
             await this.setFilters(this.filters, locale);

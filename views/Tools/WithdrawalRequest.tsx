@@ -60,13 +60,14 @@ export default class WithdrawalRequest extends Component<
     }
 
     handleInputChange = (key: 'amount' | 'description', value: string) => {
+        const msat = (parseInt(value) * 1000).toString();
         const { units } = Stores.unitsStore;
         const isBTC = units === 'BTC';
 
         this.setState((prevState) => ({
             ...prevState,
             [key]: value,
-            satsAmount: isBTC ? getSatAmount(value).toString() : value
+            satsAmount: isBTC ? getSatAmount(msat).toString() : msat
         }));
 
         if (key === 'description') {

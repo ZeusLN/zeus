@@ -100,7 +100,11 @@ const ActivityListItem = React.memo(
         let displayName = item.model;
         let subTitle = item.model;
 
-        if (item instanceof Invoice) {
+        if (item.invreq_id) {
+            displayName = item.used
+                ? localeString('views.Activity.youWithdrew')
+                : localeString('views.Activity.pendingWithdrawal');
+        } else if (item instanceof Invoice) {
             displayName = item.isPaid
                 ? item.is_amp
                     ? localeString('views.Activity.youReceivedAmp')
@@ -253,40 +257,42 @@ const ActivityListItem = React.memo(
                             {displayName}
                         </ListItem.Title>
 
-                        <View
-                            style={{
-                                ...styles.rightCell,
-                                flexDirection: 'row',
-                                flexWrap: 'wrap',
-                                columnGap: 5,
-                                rowGap: -5,
-                                justifyContent: 'flex-end'
-                            }}
-                        >
-                            <Amount
-                                sats={item.getAmount}
-                                sensitive
-                                color={getRightTitleTheme(item)}
-                            />
-                            {!!item.getFee && item.getFee != 0 && (
-                                <>
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 16
-                                        }}
-                                    >
-                                        +
-                                    </Text>
-                                    <Amount
-                                        sats={item.getFee}
-                                        sensitive
-                                        color={getRightTitleTheme(item)}
-                                        fee
-                                    />
-                                </>
-                            )}
-                        </View>
+                        {!item.invreq_id && (
+                            <View
+                                style={{
+                                    ...styles.rightCell,
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    columnGap: 5,
+                                    rowGap: -5,
+                                    justifyContent: 'flex-end'
+                                }}
+                            >
+                                <Amount
+                                    sats={item.getAmount}
+                                    sensitive
+                                    color={getRightTitleTheme(item)}
+                                />
+                                {!!item.getFee && item.getFee != 0 && (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 16
+                                            }}
+                                        >
+                                            +
+                                        </Text>
+                                        <Amount
+                                            sats={item.getFee}
+                                            sensitive
+                                            color={getRightTitleTheme(item)}
+                                            fee
+                                        />
+                                    </>
+                                )}
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.row}>
@@ -304,20 +310,23 @@ const ActivityListItem = React.memo(
                             {subTitle}
                         </ListItem.Subtitle>
 
-                        <ListItem.Subtitle
-                            style={{
-                                ...styles.rightCell,
-                                color: themeColor('secondaryText'),
-                                fontFamily: 'PPNeueMontreal-Book'
-                            }}
-                        >
-                            {order
-                                ? item.getDisplayTimeOrder
-                                : item.getDisplayTimeShort}
-                        </ListItem.Subtitle>
+                        {!item.invreq_id && (
+                            <ListItem.Subtitle
+                                style={{
+                                    ...styles.rightCell,
+                                    color: themeColor('secondaryText'),
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {order
+                                    ? item.getDisplayTimeOrder
+                                    : item.getDisplayTimeShort}
+                            </ListItem.Subtitle>
+                        )}
                     </View>
 
-                    {!item.isPaid &&
+                    {!item.invreq_id &&
+                        !item.isPaid &&
                         !item.isExpired &&
                         item.formattedTimeUntilExpiry && (
                             <View style={styles.row}>
@@ -456,7 +465,8 @@ export default class Activity extends React.PureComponent<
 
         this.invoicesListener = eventEmitter.addListener(
             BackendUtils.subscribeInvoices(),
-            () => ActivityStore.updateInvoices(locale)
+            () => ActivityStore.updateInvoices(locale),
+            () => ActivityStore.updateWithdrawalRequest(locale)
         );
     };
 
@@ -527,7 +537,10 @@ export default class Activity extends React.PureComponent<
             return;
         }
 
-        if (item.model === localeString('views.Invoice.title')) {
+        if (
+            item.model === localeString('views.Invoice.title') ||
+            item.invreq_id
+        ) {
             navigation.navigate('Invoice', { invoice: item });
         }
         if (item.model === localeString('views.Cashu.CashuInvoice.title')) {
