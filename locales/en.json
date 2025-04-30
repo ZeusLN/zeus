@@ -1553,6 +1553,7 @@
     "views.SwapDetails.bip21": "BIP21",
     "views.SwapDetails.refund": "Refund",
     "views.SwapSettings.customHost": "Enter a custom host",
+    "views.SwapSettings.failureReason": "Failure reason",
     "androidNotification.lndRunningBackground": "LND is running in the background",
     "androidNotification.shutdown": "Shutdown"
 }
