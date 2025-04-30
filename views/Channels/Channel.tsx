@@ -1145,6 +1145,14 @@ export default class ChannelView extends React.Component<
                                 <>
                                     <View style={{ marginBottom: 10 }}>
                                         <Text
+                                            infoModalText={[
+                                                localeString(
+                                                    'views.Channel.forceClose.infoText1'
+                                                ),
+                                                localeString(
+                                                    'views.Channel.forceClose.infoText2'
+                                                )
+                                            ]}
                                             style={{
                                                 ...styles.text,
                                                 color: themeColor('text'),
@@ -1186,33 +1194,32 @@ export default class ChannelView extends React.Component<
                                                 }}
                                                 navigation={navigation}
                                             />
+
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor('text')
+                                                }}
+                                                infoModalText={localeString(
+                                                    'views.Channel.externalAddress.info'
+                                                )}
+                                            >
+                                                {localeString(
+                                                    'views.Channel.externalAddress'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={'bc1...'}
+                                                value={deliveryAddress}
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        deliveryAddress: text
+                                                    })
+                                                }
+                                                locked={closingChannel}
+                                            />
                                         </>
                                     )}
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor('text')
-                                            }}
-                                            infoModalText={localeString(
-                                                'views.Channel.externalAddress.info'
-                                            )}
-                                        >
-                                            {localeString(
-                                                'views.Channel.externalAddress'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            placeholder={'bc1...'}
-                                            value={deliveryAddress}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    deliveryAddress: text
-                                                })
-                                            }
-                                            locked={closingChannel}
-                                        />
-                                    </>
                                 </>
                             )}
                             <View style={styles.button}>
