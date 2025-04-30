@@ -445,6 +445,8 @@
     "views.Channel.externalAddress": "(Optional) External address",
     "views.Channel.externalAddress.info": "If specified, your channel funds will be sent to this external address, instead of an address in the internal wallet.",
     "views.Channel.forceClose": "Wymuś zamknięcie",
+    "views.Channel.forceClose.infoText1": "Force closes should only be done when the channel partner has been offline for an extended period of time. Typically, the party initiating the force close will have to wait to spend their bitcoin, while the other side can spend their funds immediately.",
+    "views.Channel.forceClose.infoText2": "The length of the waiting period is defined when the channel is opened. It can range from just a day to a few weeks. This time period may be listed on this page, labeled as 'CSV Delay'.", 
     "views.Channel.confirmClose": "Potwierdź zamknięcie kanału",
     "views.Channel.aliases": "Aliases",
     "views.Channel.aliasScid": "Alias SCID",
