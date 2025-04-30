@@ -28,6 +28,7 @@ import AddressUtils from '../../utils/AddressUtils';
 import SwapStore from '../../stores/SwapStore';
 import UnitsStore from '../../stores/UnitsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -44,6 +45,7 @@ interface SwapPaneProps {
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;
     InvoicesStore: InvoicesStore;
+    SettingsStore: SettingsStore;
 }
 
 interface SwapPaneState {
@@ -61,7 +63,7 @@ interface SwapPaneState {
     feeSettingToggle: boolean;
 }
 
-@inject('SwapStore', 'UnitsStore', 'InvoicesStore')
+@inject('SwapStore', 'UnitsStore', 'InvoicesStore', 'SettingsStore')
 @observer
 export default class SwapPane extends React.PureComponent<
     SwapPaneProps,
@@ -87,7 +89,13 @@ export default class SwapPane extends React.PureComponent<
     }
 
     render() {
-        const { SwapStore, UnitsStore, navigation, InvoicesStore } = this.props;
+        const {
+            SwapStore,
+            UnitsStore,
+            navigation,
+            InvoicesStore,
+            SettingsStore
+        } = this.props;
         const {
             reverse,
             serviceFeeSats,
@@ -104,6 +112,7 @@ export default class SwapPane extends React.PureComponent<
         const { subInfo, reverseInfo, loading, apiError } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
+        const { implementation } = SettingsStore;
 
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFee = reverse
@@ -889,113 +898,124 @@ export default class SwapPane extends React.PureComponent<
                                         marginVertical: 5
                                     }}
                                 >
-                                    <Button
-                                        onPress={async () => {
-                                            this.setState({
-                                                invoice: '',
-                                                fetchingInvoice: true
-                                            });
-                                            try {
-                                                const amount =
-                                                    units === 'sats'
-                                                        ? outputSats
-                                                        : units === 'BTC'
-                                                        ? new BigNumber(
-                                                              outputSats
-                                                          )
-                                                              .div(SATS_PER_BTC)
-                                                              .toFixed(8)
-                                                        : '';
+                                    {!(
+                                        reverse && implementation === 'lndhub'
+                                    ) && (
+                                        <Button
+                                            onPress={async () => {
+                                                this.setState({
+                                                    invoice: '',
+                                                    fetchingInvoice: true
+                                                });
+                                                try {
+                                                    const amount =
+                                                        units === 'sats'
+                                                            ? outputSats
+                                                            : units === 'BTC'
+                                                            ? new BigNumber(
+                                                                  outputSats
+                                                              )
+                                                                  .div(
+                                                                      SATS_PER_BTC
+                                                                  )
+                                                                  .toFixed(8)
+                                                            : '';
 
-                                                if (!amount) {
+                                                    if (!amount) {
+                                                        this.setState({
+                                                            error: localeString(
+                                                                'views.Swaps.missingAmount'
+                                                            ),
+                                                            fetchingInvoice:
+                                                                false
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    await InvoicesStore.createUnifiedInvoice(
+                                                        {
+                                                            memo: '',
+                                                            value:
+                                                                amount.toString() ||
+                                                                '0',
+                                                            expiry: '3600'
+                                                        }
+                                                    );
+
+                                                    if (reverse) {
+                                                        if (
+                                                            InvoicesStore.onChainAddress
+                                                        ) {
+                                                            this.setState({
+                                                                invoice:
+                                                                    InvoicesStore.onChainAddress,
+                                                                error: '',
+                                                                isValid: true
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                error: localeString(
+                                                                    'views.Swaps.generateOnchainAddressFailed'
+                                                                ),
+                                                                fetchingInvoice:
+                                                                    false
+                                                            });
+                                                        }
+                                                    } else {
+                                                        if (
+                                                            InvoicesStore.payment_request
+                                                        ) {
+                                                            this.setState({
+                                                                invoice:
+                                                                    InvoicesStore.payment_request,
+                                                                isValid: true,
+                                                                error: ''
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                error: localeString(
+                                                                    'views.Swaps.generateInvoiceFailed'
+                                                                ),
+                                                                fetchingInvoice:
+                                                                    false
+                                                            });
+                                                        }
+                                                    }
+                                                    this.setState({
+                                                        fetchingInvoice: false
+                                                    });
+                                                } catch (e: any) {
+                                                    console.error(
+                                                        'Error generating invoice:',
+                                                        e
+                                                    );
                                                     this.setState({
                                                         error: localeString(
-                                                            'views.Swaps.missingAmount'
+                                                            'views.Swaps.generateInvoiceFailed'
                                                         ),
                                                         fetchingInvoice: false
                                                     });
-                                                    return;
                                                 }
-
-                                                await InvoicesStore.createUnifiedInvoice(
-                                                    {
-                                                        memo: '',
-                                                        value:
-                                                            amount.toString() ||
-                                                            '0',
-                                                        expiry: '3600'
-                                                    }
-                                                );
-
-                                                if (reverse) {
-                                                    if (
-                                                        InvoicesStore.onChainAddress
-                                                    ) {
-                                                        this.setState({
-                                                            invoice:
-                                                                InvoicesStore.onChainAddress,
-                                                            error: '',
-                                                            isValid: true
-                                                        });
-                                                    } else {
-                                                        this.setState({
-                                                            error: localeString(
-                                                                'views.Swaps.generateOnchainAddressFailed'
-                                                            ),
-                                                            fetchingInvoice:
-                                                                false
-                                                        });
-                                                    }
-                                                } else {
-                                                    if (
-                                                        InvoicesStore.payment_request
-                                                    ) {
-                                                        this.setState({
-                                                            invoice:
-                                                                InvoicesStore.payment_request,
-                                                            isValid: true,
-                                                            error: ''
-                                                        });
-                                                    } else {
-                                                        this.setState({
-                                                            error: localeString(
-                                                                'views.Swaps.generateInvoiceFailed'
-                                                            ),
-                                                            fetchingInvoice:
-                                                                false
-                                                        });
-                                                    }
-                                                }
-                                                this.setState({
-                                                    fetchingInvoice: false
-                                                });
-                                            } catch (e: any) {
-                                                console.error(
-                                                    'Error generating invoice:',
-                                                    e
-                                                );
-                                                this.setState({
-                                                    error: localeString(
-                                                        'views.Swaps.generateInvoiceFailed'
-                                                    ),
-                                                    fetchingInvoice: false
-                                                });
+                                            }}
+                                            title={
+                                                !reverse
+                                                    ? localeString(
+                                                          'views.Swaps.generateInvoice'
+                                                      )
+                                                    : localeString(
+                                                          'views.Swaps.generateOnchainAddress'
+                                                      )
                                             }
-                                        }}
-                                        title={
-                                            !reverse
-                                                ? localeString(
-                                                      'views.Swaps.generateInvoice'
-                                                  )
-                                                : localeString(
-                                                      'views.Swaps.generateOnchainAddress'
-                                                  )
-                                        }
-                                        secondary
-                                        disabled={
-                                            errorMsg || !!invoice || loading
-                                        }
-                                    />
+                                            secondary
+                                            disabled={
+                                                errorMsg ||
+                                                !!invoice ||
+                                                loading ||
+                                                inputSats === 0 ||
+                                                outputSats === 0
+                                            }
+                                        />
+                                    )}
                                 </View>
                                 <View style={{ paddingHorizontal: 20 }}>
                                     <TouchableOpacity
@@ -1008,7 +1028,11 @@ export default class SwapPane extends React.PureComponent<
                                     >
                                         <View
                                             style={{
-                                                marginTop: 10,
+                                                marginTop:
+                                                    reverse &&
+                                                    implementation === 'lndhub'
+                                                        ? 0
+                                                        : 10,
                                                 marginBottom: 20
                                             }}
                                         >
