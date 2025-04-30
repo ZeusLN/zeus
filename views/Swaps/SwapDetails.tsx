@@ -48,6 +48,7 @@ interface SwapDetailsProps {
 
 interface SwapDetailsState {
     updates: string | null;
+    failureReason: string;
     error: string | { message?: string } | null;
     loading: boolean;
 }
@@ -62,6 +63,7 @@ export default class SwapDetails extends React.Component<
         super(props);
         this.state = {
             updates: null,
+            failureReason: '',
             error: null,
             loading: false
         };
@@ -189,13 +191,18 @@ export default class SwapDetails extends React.Component<
             }
 
             // Update the status in the component state
-            this.setState({ updates: data.status, loading: false });
+            this.setState({
+                updates: data.status,
+                failureReason: data.failureReason,
+                loading: false
+            });
 
             // Update the status in Encrypted Storage
             await this.updateSwapStatusInStorage(
                 createdResponse.id,
                 data.status,
-                isSubmarineSwap
+                isSubmarineSwap,
+                data.failureReason
             );
 
             switch (data.status) {
@@ -411,29 +418,32 @@ export default class SwapDetails extends React.Component<
     updateSwapStatusInStorage = async (
         swapId: string,
         status: string,
-        isSubmarineSwap: boolean
+        isSubmarineSwap: boolean,
+        failureReason?: string
     ) => {
         try {
             let storedSwaps: any;
-            if (isSubmarineSwap) {
-                storedSwaps = await EncryptedStorage.getItem('swaps');
-            } else {
-                storedSwaps = await EncryptedStorage.getItem('reverse-swaps');
-            }
+            const key = isSubmarineSwap ? 'swaps' : 'reverse-swaps';
+            storedSwaps = await EncryptedStorage.getItem(key);
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             const updatedSwaps = swaps.map((swap: any) =>
-                swap.id === swapId ? { ...swap, status } : swap
+                swap.id === swapId
+                    ? {
+                          ...swap,
+                          status,
+                          ...(isSubmarineSwap && failureReason
+                              ? { failureReason }
+                              : {})
+                      }
+                    : swap
             );
 
-            await EncryptedStorage.setItem(
-                isSubmarineSwap ? 'swaps' : 'reverse-swaps',
-                JSON.stringify(updatedSwaps)
-            );
+            await EncryptedStorage.setItem(key, JSON.stringify(updatedSwaps));
             console.log(
                 `Updated ${
-                    isSubmarineSwap ? `swap ` : `reverse swap `
-                }status for swap ID ${swapId} to "${status}"`
+                    isSubmarineSwap ? `swap` : `reverse swap`
+                } status for swap ID ${swapId} to "${status}"`
             );
         } catch (error) {
             console.error('Error updating swap status in storage:', error);
@@ -580,7 +590,7 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
-        const { updates, error } = this.state;
+        const { updates, error, failureReason } = this.state;
         const swapData = this.props.route.params?.swapData ?? '';
 
         const isSubmarineSwap = !!swapData.bip21;
@@ -645,6 +655,19 @@ export default class SwapDetails extends React.Component<
                             keyValue={localeString('views.Channel.status')}
                             value={SwapStore?.formatStatus(updates)}
                             color={SwapStore?.statusColor(updates)}
+                        />
+                    )}
+                    {(failureReason || swapData.failureReason) && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.SwapSettings.failureReason'
+                            )}
+                            value={SwapStore?.formatStatus(
+                                failureReason || swapData.failureReason
+                            )}
+                            color={SwapStore?.statusColor(
+                                failureReason || swapData.failureReason
+                            )}
                         />
                     )}
                     {isSubmarineSwap && (
@@ -773,13 +796,13 @@ export default class SwapDetails extends React.Component<
                         secondary
                     />
                 )}
-                {(updates === 'invoice.failedToPay' ||
+                {((updates === 'invoice.failedToPay' &&
+                    (swapData?.failureReason === 'invoice could not be paid' ||
+                        failureReason === 'invoice could not be paid')) ||
                     updates === 'transaction.lockupFailed') && (
                     <Button
                         title={localeString('views.Swaps.refundSwap')}
-                        containerStyle={{
-                            paddingVertical: 10
-                        }}
+                        containerStyle={{ paddingVertical: 10 }}
                         onPress={() =>
                             navigation.navigate('RefundSwap', { swapData })
                         }

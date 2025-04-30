@@ -171,7 +171,9 @@ export default class SwapsPane extends React.Component<
                             fontSize: 16
                         }}
                     >
-                        {SwapStore?.formatStatus(item.status)}
+                        {item.failureReason
+                            ? SwapStore?.formatStatus(item.failureReason)
+                            : SwapStore?.formatStatus(item.status)}
                     </Text>
                 </View>
                 <View
