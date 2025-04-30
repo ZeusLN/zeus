@@ -82,6 +82,8 @@ export default class SwapStore {
             case 'swap.expired':
             case 'invoice.expired':
             case 'transaction.lockupFailed':
+            case 'invoice could not be paid':
+            case 'invoice expired':
                 stateColor = themeColor('error');
                 break;
             default:
