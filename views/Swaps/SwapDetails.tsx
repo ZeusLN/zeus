@@ -82,18 +82,18 @@ export default class SwapDetails extends React.Component<
         const isSubmarineSwap = Boolean(swapData.bip21);
 
         if (isSubmarineSwap) {
-            if (swapData?.status === 'invoice.failedToPay') {
-                this.setState({ updates: 'invoice.failedToPay' });
+            const failedStatus = [
+                'invoice.failedToPay',
+                'transaction.refunded',
+                'transaction.claimed',
+                'swap.expired'
+            ];
+
+            if (failedStatus.includes(swapData?.status)) {
+                this.setState({ updates: swapData.status });
                 return;
             }
-            if (swapData?.status === 'transaction.refunded') {
-                this.setState({ updates: 'transaction.refunded' });
-                return;
-            }
-            if (swapData?.status === 'transaction.claimed') {
-                this.setState({ updates: 'transaction.claimed' });
-                return;
-            }
+
             this.getSwapUpdates(swapData, isSubmarineSwap);
         } else {
             this.getReverseSwapUpdates(swapData, isSubmarineSwap);

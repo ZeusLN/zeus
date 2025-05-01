@@ -163,6 +163,8 @@ export default class SwapStore {
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
         const { implementation } = this.settingsStore;
+        const { nodeInfo } = this.nodeInfoStore;
+        const nodePubkey = nodeInfo.nodeId;
         try {
             console.log('Creating submarine swap...');
             let refundPublicKey: any;
@@ -222,7 +224,8 @@ export default class SwapStore {
                 keys,
                 invoice,
                 this.getHost,
-                implementation
+                implementation,
+                nodePubkey
             );
 
             runInAction(() => {
@@ -251,7 +254,8 @@ export default class SwapStore {
         keys: any,
         invoice: any,
         endpoint: string,
-        implementation: any
+        implementation: any,
+        nodePubkey: string
     ) => {
         try {
             // Retrieve existing swaps
@@ -264,7 +268,8 @@ export default class SwapStore {
                 keys,
                 invoice,
                 endpoint,
-                implementation
+                implementation,
+                nodePubkey
             };
 
             // Add the enriched swap to the beginning of array
@@ -287,6 +292,8 @@ export default class SwapStore {
         navigation: any
     ) => {
         const { implementation } = this.settingsStore;
+        const { nodeInfo } = this.nodeInfoStore;
+        const nodePubkey = nodeInfo.nodeId;
         try {
             initEccLib(ecc);
             console.log('Creating reverse swap...');
@@ -342,7 +349,8 @@ export default class SwapStore {
                 destinationAddress,
                 preimage,
                 this.getHost,
-                implementation
+                implementation,
+                nodePubkey
             );
 
             runInAction(() => {
@@ -373,7 +381,8 @@ export default class SwapStore {
         destinationAddress: string,
         preimage: any,
         endpoint: string,
-        implementation: any
+        implementation: any,
+        nodePubkey: string
     ) => {
         try {
             // Retrieve existing swaps
@@ -387,7 +396,8 @@ export default class SwapStore {
                 destinationAddress,
                 preimage,
                 endpoint,
-                implementation
+                implementation,
+                nodePubkey
             };
 
             // Add the enriched swap to the beginning of array
