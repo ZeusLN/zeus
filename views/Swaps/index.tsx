@@ -24,11 +24,11 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC, numberWithCommas } from '../../utils/UnitsUtils';
 import AddressUtils from '../../utils/AddressUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 import SwapStore from '../../stores/SwapStore';
 import UnitsStore from '../../stores/UnitsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -45,7 +45,6 @@ interface SwapPaneProps {
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;
     InvoicesStore: InvoicesStore;
-    SettingsStore: SettingsStore;
 }
 
 interface SwapPaneState {
@@ -63,7 +62,7 @@ interface SwapPaneState {
     feeSettingToggle: boolean;
 }
 
-@inject('SwapStore', 'UnitsStore', 'InvoicesStore', 'SettingsStore')
+@inject('SwapStore', 'UnitsStore', 'InvoicesStore')
 @observer
 export default class SwapPane extends React.PureComponent<
     SwapPaneProps,
@@ -89,13 +88,7 @@ export default class SwapPane extends React.PureComponent<
     }
 
     render() {
-        const {
-            SwapStore,
-            UnitsStore,
-            navigation,
-            InvoicesStore,
-            SettingsStore
-        } = this.props;
+        const { SwapStore, UnitsStore, navigation, InvoicesStore } = this.props;
         const {
             reverse,
             serviceFeeSats,
@@ -112,7 +105,6 @@ export default class SwapPane extends React.PureComponent<
         const { subInfo, reverseInfo, loading, apiError } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
-        const { implementation } = SettingsStore;
 
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFee = reverse
@@ -899,7 +891,8 @@ export default class SwapPane extends React.PureComponent<
                                     }}
                                 >
                                     {!(
-                                        reverse && implementation === 'lndhub'
+                                        reverse &&
+                                        !BackendUtils.supportsOnchainSends()
                                     ) && (
                                         <Button
                                             onPress={async () => {
@@ -1030,7 +1023,7 @@ export default class SwapPane extends React.PureComponent<
                                             style={{
                                                 marginTop:
                                                     reverse &&
-                                                    implementation === 'lndhub'
+                                                    !BackendUtils.supportsOnchainSends()
                                                         ? 0
                                                         : 10,
                                                 marginBottom: 20
