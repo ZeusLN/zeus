@@ -19,10 +19,14 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import SwapStore from '../../stores/SwapStore';
+import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
     SwapStore?: SwapStore;
+    SettingsStore?: SettingsStore;
+    NodeInfoStore?: NodeInfoStore;
 }
 
 interface SwapsPaneState {
@@ -31,7 +35,7 @@ interface SwapsPaneState {
     loading: boolean;
 }
 
-@inject('TransactionsStore', 'SwapStore')
+@inject('SwapStore', 'SettingsStore', 'NodeInfoStore')
 @observer
 export default class SwapsPane extends React.Component<
     SwapsPaneProps,
@@ -55,6 +59,11 @@ export default class SwapsPane extends React.Component<
     }
 
     fetchSwaps = async () => {
+        const { SettingsStore, NodeInfoStore } = this.props;
+        const { implementation } = SettingsStore!;
+        const { nodeInfo } = NodeInfoStore!;
+        const pubkey = nodeInfo?.nodeId;
+
         this.setState({ loading: true });
         try {
             // Fetch submarine swaps
@@ -64,6 +73,13 @@ export default class SwapsPane extends React.Component<
             const submarineSwaps = storedSubmarineSwaps
                 ? JSON.parse(storedSubmarineSwaps)
                 : [];
+            const filteredSubmarineSwaps = submarineSwaps.filter(
+                (swap: any) => {
+                    return swap.nodePubkey
+                        ? swap.nodePubkey === pubkey
+                        : swap.implementation === implementation;
+                }
+            );
 
             // Fetch reverse swaps
             const storedReverseSwaps = await EncryptedStorage.getItem(
@@ -72,9 +88,17 @@ export default class SwapsPane extends React.Component<
             const reverseSwaps = storedReverseSwaps
                 ? JSON.parse(storedReverseSwaps)
                 : [];
+            const filteredReverseSwaps = reverseSwaps.filter((swap: any) => {
+                return swap.nodePubkey
+                    ? swap.nodePubkey === pubkey
+                    : swap.implementation === implementation;
+            });
 
             // Combine both types of swaps
-            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+            const allSwaps = [
+                ...filteredSubmarineSwaps,
+                ...filteredReverseSwaps
+            ];
 
             // Sort by creation date (most recent first)
             const sortedSwaps = allSwaps.sort(
@@ -130,7 +154,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('general.type')}: `}
+                        {`${localeString('general.type')} `}
                     </Text>
                     <Text
                         style={{
@@ -150,7 +174,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('views.Channel.status')}:`}
+                        {`${localeString('views.Channel.status')}`}
                     </Text>
                     <Text
                         style={{
@@ -158,7 +182,9 @@ export default class SwapsPane extends React.Component<
                             fontSize: 16
                         }}
                     >
-                        {SwapStore?.formatStatus(item.status)}
+                        {item.failureReason
+                            ? SwapStore?.formatStatus(item.failureReason)
+                            : SwapStore?.formatStatus(item.status)}
                     </Text>
                 </View>
                 <View
@@ -169,7 +195,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('views.SwapDetails.swapId')}:`}
+                        {`${localeString('views.SwapDetails.swapId')}`}
                     </Text>
                     <Text
                         style={{
@@ -192,10 +218,10 @@ export default class SwapsPane extends React.Component<
                         {item?.type === 'Submarine'
                             ? `${localeString(
                                   'views.SwapDetails.expectedAmount'
-                              )}:`
+                              )}`
                             : `${localeString(
                                   'views.SwapDetails.onchainAmount'
-                              )}:`}
+                              )}`}
                     </Text>
                     <Amount
                         sats={
@@ -218,7 +244,7 @@ export default class SwapsPane extends React.Component<
                         <Text
                             style={{ color: themeColor('text'), fontSize: 16 }}
                         >
-                            {`${localeString('general.createdAt')}:`}
+                            {`${localeString('general.createdAt')}`}
                         </Text>
                         <Text
                             style={{

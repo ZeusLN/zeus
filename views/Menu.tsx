@@ -471,46 +471,44 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 </TouchableOpacity>
                             </View>
                         )}
-
-                    {BackendUtils.supportsOnchainSends() &&
-                        BackendUtils.supportsOnchainReceiving() && (
-                            <View
-                                style={{
-                                    backgroundColor: themeColor('secondary'),
-                                    width: '90%',
-                                    borderRadius: 10,
-                                    alignSelf: 'center',
-                                    marginVertical: 5
-                                }}
+                    {selectedNode && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Swaps')}
                             >
-                                <TouchableOpacity
-                                    onPress={() => navigation.navigate('Swaps')}
-                                >
-                                    <View style={styles.columnField}>
-                                        <View style={styles.icon}>
-                                            <SwapsIcon
-                                                fill={themeColor('text')}
-                                                height={25}
-                                                width={25}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString('views.Swaps.title')}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <SwapsIcon
+                                            fill={themeColor('text')}
+                                            height={25}
+                                            width={25}
+                                        />
                                     </View>
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Swaps.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {BackendUtils.supportsAddressesWithDerivationPaths() && (
                         <View
