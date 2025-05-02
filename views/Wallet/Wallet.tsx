@@ -316,11 +316,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (settings.selectNodeOnStartup && initialStart) {
                     // Update UI state but don't connect to any wallet yet
                     if (!this.state.unlocked) {
-                        this.startListeners();
                         this.setState({ unlocked: true });
                     }
                     // Skip wallet activation by navigating directly to Wallets screen
-                    navigation.navigate('Wallets', { fromStartup: true });
+                    navigation.replace('Wallets', { fromStartup: true });
                     return;
                 }
 

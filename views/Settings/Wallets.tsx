@@ -6,9 +6,7 @@ import {
     Image,
     StyleSheet,
     FlatListProps,
-    Platform,
-    BackHandler,
-    NativeEventSubscription
+    Platform
 } from 'react-native';
 
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -59,6 +57,7 @@ interface NodesState {
     selectedNode: number | null;
     loading: boolean;
     fromStartup: boolean;
+    isSelecting: boolean;
 }
 
 const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
@@ -67,13 +66,13 @@ const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
-    backHandler: NativeEventSubscription | null = null;
 
     state = {
         nodes: [],
         selectedNode: 0,
         loading: false,
-        fromStartup: false
+        fromStartup: false,
+        isSelecting: false
     };
 
     componentDidMount() {
@@ -85,12 +84,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 fromStartup: true,
                 selectedNode: null // Set selectedNode to null when in startup mode
             });
-
-            // Add back button handler for Android
-            this.backHandler = BackHandler.addEventListener(
-                'hardwareBackPress',
-                this.handleBackButton
-            );
         }
 
         this.props.navigation.addListener('focus', this.handleFocus);
@@ -99,10 +92,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
-
-        if (this.backHandler) {
-            this.backHandler.remove();
-        }
     }
 
     handleBackButton = () => {
@@ -222,7 +211,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         return (
             <Screen>
                 <Header
-                    leftComponent={this.state.fromStartup ? undefined : 'Back'}
+                    leftComponent={
+                        this.state.fromStartup || this.state.isSelecting
+                            ? undefined
+                            : 'Back'
+                    }
                     centerComponent={{
                         text: localeString('views.Settings.Wallets.title'),
                         style: {
@@ -296,6 +289,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 // the Wallet view, skip connecting procedures
                                                 navigation.popTo('Wallet');
                                             } else {
+                                                // Immediately set isSelecting to true to hide back button
+                                                // This will prevent the back button from appearing
+                                                // even after fromStartup is set to false
+                                                this.setState({
+                                                    isSelecting: true
+                                                });
+
                                                 const currentImplementation =
                                                     implementation;
                                                 if (
@@ -304,19 +304,23 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 ) {
                                                     BackendUtils.disconnect();
                                                 }
+
+                                                // Store startup state before updating settings
+                                                const wasFromStartup =
+                                                    this.state.fromStartup;
+
+                                                // If in startup mode, update local state
+                                                if (wasFromStartup) {
+                                                    this.setState({
+                                                        fromStartup: false,
+                                                        selectedNode: index // Highlight the selected wallet immediately
+                                                    });
+                                                }
+
                                                 await updateSettings({
                                                     nodes,
                                                     selectedNode: index
                                                 }).then(() => {
-                                                    // If we were in startup mode, this is our first wallet selection
-                                                    const wasFromStartup =
-                                                        this.state.fromStartup;
-                                                    if (wasFromStartup) {
-                                                        this.setState({
-                                                            fromStartup: false
-                                                        });
-                                                    }
-
                                                     // Never show restart needed if coming from startup
                                                     if (
                                                         item.implementation ===
