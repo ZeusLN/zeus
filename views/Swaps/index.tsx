@@ -83,9 +83,31 @@ export default class SwapPane extends React.PureComponent<
         feeSettingToggle: false
     };
 
+    private _unsubscribe?: () => void;
+
     async UNSAFE_componentWillMount() {
         this.props.SwapStore.getSwapFees();
     }
+
+    componentDidMount() {
+        this._unsubscribe = this.props.navigation.addListener(
+            'blur',
+            this.resetFields
+        );
+    }
+
+    componentWillUnmount() {
+        this._unsubscribe?.();
+    }
+
+    resetFields = () => {
+        this.setState({
+            inputSats: 0,
+            outputSats: 0,
+            invoice: '',
+            error: ''
+        });
+    };
 
     render() {
         const { SwapStore, UnitsStore, navigation, InvoicesStore } = this.props;
