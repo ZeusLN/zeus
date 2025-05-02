@@ -121,7 +121,8 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             setConnectingStatus,
             setInitialStart,
             implementation,
-            embeddedLndStarted
+            embeddedLndStarted,
+            initialStart
         }: any = SettingsStore;
 
         const implementationDisplayValue: { [key: string]: string } = {};
@@ -246,6 +247,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 : 'transparent'
                                         }}
                                         onPress={async () => {
+                                            if (initialStart) {
+                                                setInitialStart(false);
+                                            }
                                             if (nodeActive) {
                                                 // if already on selected node, just pop to
                                                 // the Wallet view, skip connecting procedures
@@ -275,7 +279,6 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         setConnectingStatus(
                                                             true
                                                         );
-                                                        setInitialStart(false);
                                                         navigation.popTo(
                                                             'Wallet'
                                                         );
