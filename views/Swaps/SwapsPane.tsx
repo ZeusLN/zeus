@@ -154,7 +154,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('general.type')}: `}
+                        {`${localeString('general.type')} `}
                     </Text>
                     <Text
                         style={{
@@ -174,7 +174,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('views.Channel.status')}:`}
+                        {`${localeString('views.Channel.status')}`}
                     </Text>
                     <Text
                         style={{
@@ -195,7 +195,7 @@ export default class SwapsPane extends React.Component<
                     }}
                 >
                     <Text style={{ color: themeColor('text'), fontSize: 16 }}>
-                        {`${localeString('views.SwapDetails.swapId')}:`}
+                        {`${localeString('views.SwapDetails.swapId')}`}
                     </Text>
                     <Text
                         style={{
@@ -218,10 +218,10 @@ export default class SwapsPane extends React.Component<
                         {item?.type === 'Submarine'
                             ? `${localeString(
                                   'views.SwapDetails.expectedAmount'
-                              )}:`
+                              )}`
                             : `${localeString(
                                   'views.SwapDetails.onchainAmount'
-                              )}:`}
+                              )}`}
                     </Text>
                     <Amount
                         sats={
@@ -244,7 +244,7 @@ export default class SwapsPane extends React.Component<
                         <Text
                             style={{ color: themeColor('text'), fontSize: 16 }}
                         >
-                            {`${localeString('general.createdAt')}:`}
+                            {`${localeString('general.createdAt')}`}
                         </Text>
                         <Text
                             style={{
