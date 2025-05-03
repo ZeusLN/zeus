@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -91,7 +91,7 @@ export default class WIFSweeper extends React.Component<
 
         return (
             <Screen>
-                <View style={styles.container}>
+                <View style={{ flex: 1 }}>
                     <Header
                         leftComponent="Back"
                         centerComponent={{
@@ -115,7 +115,7 @@ export default class WIFSweeper extends React.Component<
                         </View>
                     )}
 
-                    <View style={styles.content}>
+                    <View style={{ padding: 20, flex: 1 }}>
                         <Text style={{ color: themeColor('secondaryText') }}>
                             {localeString('views.Wif.enterPrivatekey')}
                         </Text>
@@ -148,7 +148,7 @@ export default class WIFSweeper extends React.Component<
                         </View>
                     </View>
 
-                    <View style={styles.buttonWrapper}>
+                    <View style={{ padding: 20, paddingBottom: 30 }}>
                         <Button
                             title={localeString('views.Wif.sweep')}
                             onPress={() => {
@@ -167,17 +167,3 @@ export default class WIFSweeper extends React.Component<
         );
     }
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1
-    },
-    content: {
-        padding: 20,
-        flex: 1
-    },
-    buttonWrapper: {
-        padding: 20,
-        paddingBottom: 30
-    }
-});
