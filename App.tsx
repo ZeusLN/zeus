@@ -246,6 +246,8 @@ import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import WIFSweeper from './views/wif';
+import HandlePrivateKeyQRScanner from './views/HandlePrivateKeyQRScanner';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -274,6 +276,7 @@ export default class App extends React.PureComponent {
         const Stack = createStackNavigator();
         return (
             <Provider
+<<<<<<< HEAD
                 ActivityStore={activityStore}
                 AlertStore={alertStore}
                 BalanceStore={balanceStore}
@@ -301,6 +304,35 @@ export default class App extends React.PureComponent {
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
+=======
+                AlertStore={Stores.alertStore}
+                BalanceStore={Stores.balanceStore}
+                TransactionsStore={Stores.transactionsStore}
+                ChannelsStore={Stores.channelsStore}
+                NodeInfoStore={Stores.nodeInfoStore}
+                InvoicesStore={Stores.invoicesStore}
+                SettingsStore={Stores.settingsStore}
+                FiatStore={Stores.fiatStore}
+                UnitsStore={Stores.unitsStore}
+                PaymentsStore={Stores.paymentsStore}
+                FeeStore={Stores.feeStore}
+                LnurlPayStore={Stores.lnurlPayStore}
+                UTXOsStore={Stores.utxosStore}
+                MessageSignStore={Stores.messageSignStore}
+                ActivityStore={Stores.activityStore}
+                PosStore={Stores.posStore}
+                InventoryStore={Stores.inventoryStore}
+                ModalStore={Stores.modalStore}
+                NotesStore={Stores.notesStore}
+                ContactStore={Stores.contactStore}
+                SyncStore={Stores.syncStore}
+                LSPStore={Stores.lspStore}
+                LightningAddressStore={Stores.lightningAddressStore}
+                ChannelBackupStore={Stores.channelBackupStore}
+                OffersStore={Stores.offersStore}
+                CashuStore={Stores.cashuStore}
+                SweepStore={Stores.sweepStore}
+>>>>>>> 81e89bdb (init)
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -628,6 +660,12 @@ export default class App extends React.PureComponent {
                                                         name="HandleAnythingQRScanner" // @ts-ignore:next-line
                                                         component={
                                                             HandleAnythingQRScanner
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="HandlePrivateKeyQRScanner" // @ts-ignore:next-line
+                                                        component={
+                                                            HandlePrivateKeyQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
@@ -1155,6 +1193,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NodeConfigExportImport
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WIFSweeper" // @ts-ignore:next-line
+                                                        component={WIFSweeper}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
