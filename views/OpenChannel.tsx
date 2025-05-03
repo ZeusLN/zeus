@@ -364,11 +364,17 @@ export default class OpenChannel extends React.Component<
                 >
                     <Tab
                         value={connectPeerOnly ? 1 : 0}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                            // Clear error messages when switching tabs to prevent them from persisting
+                            ChannelsStore.errorMsgPeer = null;
+                            ChannelsStore.errorMsgChannel = null;
+                            ChannelsStore.connectingToPeer = false;
+                            ChannelsStore.openingChannel = false;
+
                             this.setState({
                                 connectPeerOnly: e === 0 ? false : true
-                            })
-                        }
+                            });
+                        }}
                         indicatorStyle={{
                             backgroundColor: themeColor('text'),
                             height: 3

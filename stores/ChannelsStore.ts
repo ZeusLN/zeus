@@ -991,6 +991,7 @@ export default class ChannelsStore {
                         this.funding_txid_str = null;
                         this.errorOpenChannel = true;
                         this.openingChannel = false;
+                        this.connectingToPeer = false;
                         this.channelRequest = null;
                         this.peerSuccess = false;
                         this.channelSuccess = false;
