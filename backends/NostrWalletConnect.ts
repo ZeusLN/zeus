@@ -91,6 +91,7 @@ export default class NostrWalletConnect {
     supportsKeysend = () => false;
     supportsChannelManagement = () => false;
     supportsPendingChannels = () => false;
+    supportsClosedChannels = () => false;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => false;
@@ -101,6 +102,7 @@ export default class NostrWalletConnect {
     supportsNodeInfo = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
+    supportsNestedSegWit = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
     supportsFlowLSP = () => false;

@@ -319,6 +319,7 @@ export default class EmbeddedLND extends LND {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => true;
+    supportsClosedChannels = () => true;
     supportsMPP = () => this.supports('v0.10.0');
     supportsAMP = () => this.supports('v0.13.0');
     supportsCoinControl = () => this.supports('v0.12.0');
@@ -329,6 +330,7 @@ export default class EmbeddedLND extends LND {
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
+    supportsNestedSegWit = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsFlowLSP = () => true;

@@ -9,7 +9,8 @@ import {
     getBalance,
     getChainTransactions,
     getOffchainBalance,
-    listPeers
+    listPeers,
+    listClosedChannels
 } from './CoreLightningRequestHandler';
 import { localeString } from '../utils/LocaleUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -190,6 +191,11 @@ export default class CLNRest {
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
 
+    getClosedChannels = async () => {
+        const channels = await this.postRequest('/v1/listclosedchannels');
+        return listClosedChannels(channels);
+    };
+
     getNode = (data: any) =>
         this.postRequest('/v1/listnodes', { id: data.id }).then((res) => {
             return res;
@@ -287,7 +293,26 @@ export default class CLNRest {
                 payments: paymentList
             };
         });
-    getNewAddress = () => this.postRequest('/v1/newaddr');
+
+    getNewAddress = (data: any) => {
+        let addresstype: string | undefined;
+
+        switch (data.type) {
+            case '0':
+                addresstype = 'bech32';
+                break;
+            case '4':
+                addresstype = 'p2tr';
+                break;
+            default:
+                addresstype = undefined;
+        }
+
+        const params = addresstype ? { addresstype } : {};
+        const res = this.postRequest('/v1/newaddr', params);
+        return res;
+    };
+
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
         const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
@@ -416,6 +441,7 @@ export default class CLNRest {
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;
     supportsPendingChannels = () => false;
+    supportsClosedChannels = () => true;
     supportsMPP = () => false;
     supportsAMP = () => false;
     supportsCoinControl = () => true;
@@ -425,8 +451,9 @@ export default class CLNRest {
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     singleFeesEarnedTotal = () => true;
-    supportsAddressTypeSelection = () => false;
-    supportsTaproot = () => false;
+    supportsAddressTypeSelection = () => true;
+    supportsNestedSegWit = () => false;
+    supportsTaproot = () => true;
     supportsBumpFee = () => false;
     supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;

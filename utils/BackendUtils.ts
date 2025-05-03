@@ -147,6 +147,7 @@ class BackendUtils {
     supportsKeysend = () => this.call('supportsKeysend');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsPendingChannels = () => this.call('supportsPendingChannels');
+    supportsClosedChannels = () => this.call('supportsClosedChannels');
     supportsMPP = () => this.call('supportsMPP');
     supportsAMP = () => this.call('supportsAMP');
     supportsCoinControl = () => this.call('supportsCoinControl');
@@ -182,6 +183,7 @@ class BackendUtils {
         return this.isLNDBased() || this.call('supportsDevTools');
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
+    supportsNestedSegWit = () => this.call('supportsNestedSegWit');
 
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
