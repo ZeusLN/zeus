@@ -122,27 +122,40 @@ export default class InvoicesStore {
     };
 
     @action
-    public getWithdrawalRequest = async () => {
+    public getWithdrawalRequests = async () => {
         this.loading = true;
-        await BackendUtils.listInvoiceRequest()
-            .then((data: any) => {
-                runInAction(() => {
-                    this.withdrawalRequests = data.invoicerequests
-                        .map(
-                            (withdrawalRequest: any) =>
-                                new Invoice(withdrawalRequest)
-                        )
-                        .slice()
-                        .reverse();
-                    this.loading = false;
-                });
-            })
-            .catch(() => {
-                runInAction(() => {
-                    this.withdrawalRequests = [];
-                    this.loading = false;
-                });
+        try {
+            const { invoicerequests } =
+                await BackendUtils.listWithdrawalRequests();
+
+            const enhancedRequests: Invoice[] = [];
+
+            for (const withdrawalRequest of invoicerequests) {
+                try {
+                    await this.getPayReq(withdrawalRequest.bolt12);
+                    enhancedRequests.push(
+                        new Invoice({
+                            ...withdrawalRequest,
+                            invreq_amount_msat:
+                                this.pay_req?.invreq_amount_msat,
+                            offer_description: this.pay_req?.offer_description
+                        })
+                    );
+                } catch {
+                    enhancedRequests.push(new Invoice(withdrawalRequest));
+                }
+            }
+
+            runInAction(() => {
+                this.withdrawalRequests = enhancedRequests.reverse();
+                this.loading = false;
             });
+        } catch {
+            runInAction(() => {
+                this.withdrawalRequests = [];
+                this.loading = false;
+            });
+        }
     };
 
     @action
