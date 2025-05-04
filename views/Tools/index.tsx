@@ -409,7 +409,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {BackendUtils.supportsInvoiceRequest() && (
+                    {BackendUtils.supportsWithdrawalRequests() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -450,7 +450,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                         }}
                                     >
                                         {localeString(
-                                            'views.Tools.withdrawal.title'
+                                            'general.withdrawalRequest'
                                         )}
                                     </Text>
                                     <View style={styles.ForwardArrow}>

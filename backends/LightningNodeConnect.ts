@@ -554,6 +554,7 @@ export default class LightningNodeConnect {
     supportsAccounts = () => this.permImportAccount;
     supportsRouting = () => this.permForwardingHistory;
     supportsNodeInfo = () => true;
+    supportsWithdrawalRequests = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsNestedSegWit = () => true;
