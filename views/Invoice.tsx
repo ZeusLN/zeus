@@ -21,17 +21,17 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
-import InvoicesStore from '../stores/InvoicesStore';
+import Storage from '../storage';
 
 interface InvoiceProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore?: SettingsStore;
-    InvoicesStore?: InvoicesStore;
     route: Route<'InvoiceView', { invoice: Invoice }>;
 }
 
 interface InvoiceState {
     storedNote: string;
+    invreq_time: string | null;
 }
 
 @inject('SettingsStore', 'InvoicesStore')
@@ -40,31 +40,37 @@ export default class InvoiceView extends React.Component<
     InvoiceState
 > {
     state = {
-        storedNote: ''
+        storedNote: '',
+        invreq_time: null
     };
 
     async componentDidMount() {
-        const { navigation, route } = this.props;
+        const { route } = this.props;
         const invoice = route.params?.invoice;
 
-        await this.props.InvoicesStore?.getPayReq(invoice.bolt12);
-
-        navigation.addListener('focus', async () => {
-            const invoice = route.params?.invoice;
-            await this.props.InvoicesStore?.getPayReq(invoice.bolt12);
-            const note = invoice.getNote;
-            this.setState({ storedNote: note });
-        });
+        if (invoice.bolt12) {
+            const timestamp = await Storage.getItem(
+                `withdrawalRequest_${invoice.bolt12}`
+            );
+            if (!timestamp) {
+                this.setState({
+                    storedNote: invoice.getNote
+                });
+            } else {
+                const dateTime = new Date(Number(JSON.parse(timestamp)));
+                const invreq_time = dateTime.toString();
+                this.setState({
+                    storedNote: invoice.getNote,
+                    invreq_time
+                });
+            }
+        }
     }
 
     render() {
-        const { navigation, SettingsStore, route, InvoicesStore } = this.props;
-        const pay_req = InvoicesStore?.pay_req;
+        const { navigation, SettingsStore, route } = this.props;
         const { storedNote } = this.state;
         const invoice = route.params?.invoice;
-        const invreq_amount_sat = pay_req?.invreq_amount_msat
-            ? (parseInt(pay_req?.invreq_amount_msat) / 1000).toString()
-            : '';
         const locale = SettingsStore?.settings.locale;
         invoice.determineFormattedOriginalTimeUntilExpiry(locale);
         invoice.determineFormattedRemainingTimeUntilExpiry(locale);
@@ -132,7 +138,7 @@ export default class InvoiceView extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: invreq_id
-                            ? localeString('views.Tools.withdrawal.title')
+                            ? localeString('general.withdrawalRequest')
                             : is_amp
                             ? localeString('views.Receive.ampInvoice')
                             : localeString('views.Invoice.title'),
@@ -176,7 +182,9 @@ export default class InvoiceView extends React.Component<
                     {invoice.invreq_id && (
                         <View style={styles.center}>
                             <Amount
-                                sats={invreq_amount_sat}
+                                sats={(
+                                    Number(invoice.invreq_amount_msat) / 1000
+                                ).toString()}
                                 sensitive
                                 jumboText
                                 toggleable
@@ -203,7 +211,7 @@ export default class InvoiceView extends React.Component<
                                     keyValue={localeString(
                                         'views.PaymentRequest.description'
                                     )}
-                                    value={pay_req?.offer_description}
+                                    value={invoice.offer_description}
                                     sensitive
                                     color={themeColor('text')}
                                 />
@@ -239,6 +247,16 @@ export default class InvoiceView extends React.Component<
                                     }
                                     sensitive
                                 />
+
+                                {this.state.invreq_time && (
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.NodeInfo.ForwardingHistory.timestamp'
+                                        )}
+                                        value={this.state.invreq_time}
+                                        sensitive
+                                    />
+                                )}
 
                                 <KeyValue
                                     keyValue={localeString(
