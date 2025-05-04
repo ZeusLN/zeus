@@ -6,7 +6,9 @@ import {
     Image,
     StyleSheet,
     FlatListProps,
-    Platform
+    Platform,
+    BackHandler,
+    NativeEventSubscription
 } from 'react-native';
 
 import DragList, { DragListRenderItemInfo } from 'react-native-draglist';
@@ -49,12 +51,14 @@ interface NodesProps {
     loading?: boolean;
     selectedNode?: number;
     SettingsStore: SettingsStore;
+    route?: any;
 }
 
 interface NodesState {
     nodes: any[];
-    selectedNode: number;
+    selectedNode: number | null;
     loading: boolean;
+    fromStartup: boolean;
 }
 
 const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
@@ -63,15 +67,31 @@ const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
+    backHandler: NativeEventSubscription | null = null;
 
     state = {
         nodes: [],
         selectedNode: 0,
-        loading: false
+        loading: false,
+        fromStartup: false
     };
 
     componentDidMount() {
         this.refreshSettings();
+
+        // Check if we're coming from startup based on route param
+        if (this.props.route?.params?.fromStartup) {
+            this.setState({
+                fromStartup: true,
+                selectedNode: null // Set selectedNode to null when in startup mode
+            });
+
+            // Add back button handler for Android
+            this.backHandler = BackHandler.addEventListener(
+                'hardwareBackPress',
+                this.handleBackButton
+            );
+        }
 
         this.props.navigation.addListener('focus', this.handleFocus);
     }
@@ -79,7 +99,18 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     componentWillUnmount() {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
+
+        if (this.backHandler) {
+            this.backHandler.remove();
+        }
     }
+
+    handleBackButton = () => {
+        if (this.state.fromStartup) {
+            return true;
+        }
+        return false;
+    };
 
     handleFocus = () => {
         if (this.isInitialFocus) {
@@ -94,10 +125,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             loading: true
         });
         await this.props.SettingsStore.getSettings().then((settings) => {
+            // If we're in startup mode, we don't want to set a selected node
+            // Otherwise, use the one from settings
+            const selectedNodeValue = this.state.fromStartup
+                ? null
+                : (settings && settings.selectedNode) || 0;
+
             this.setState({
                 loading: false,
                 nodes: settings?.nodes || [],
-                selectedNode: (settings && settings.selectedNode) || 0
+                selectedNode: selectedNodeValue
             });
         });
     }
@@ -185,7 +222,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         return (
             <Screen>
                 <Header
-                    leftComponent="Back"
+                    leftComponent={this.state.fromStartup ? undefined : 'Back'}
                     centerComponent={{
                         text: localeString('views.Settings.Wallets.title'),
                         style: {
@@ -213,9 +250,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 onDragEnd
                             }: DragListRenderItemInfo<any>) => {
                                 let nodeSubtitle = '';
+
+                                // Only mark a wallet as active if we're not in fromStartup mode
                                 const nodeActive =
-                                    selectedNode === index ||
-                                    (!selectedNode && index === 0);
+                                    !this.state.fromStartup &&
+                                    (selectedNode === index ||
+                                        (!selectedNode && index === 0));
+
                                 if (nodeActive) {
                                     nodeSubtitle = `${localeString(
                                         'general.active'
@@ -267,12 +308,23 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                     nodes,
                                                     selectedNode: index
                                                 }).then(() => {
+                                                    // If we were in startup mode, this is our first wallet selection
+                                                    const wasFromStartup =
+                                                        this.state.fromStartup;
+                                                    if (wasFromStartup) {
+                                                        this.setState({
+                                                            fromStartup: false
+                                                        });
+                                                    }
+
+                                                    // Never show restart needed if coming from startup
                                                     if (
                                                         item.implementation ===
                                                             'embedded-lnd' &&
                                                         Platform.OS ===
                                                             'android' &&
-                                                        embeddedLndStarted
+                                                        embeddedLndStarted &&
+                                                        !wasFromStartup // Skip restart if coming from startup
                                                     ) {
                                                         restartNeeded(true);
                                                     } else {
