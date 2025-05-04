@@ -1084,8 +1084,7 @@ export default class CashuStore {
                         this.invoices
                     );
 
-                    // update Activity list
-                    activityStore.getSortedActivity();
+                    await activityStore.getSortedActivity();
 
                     // We use this flag to ensure we don't call the check repeatedly
                     // if rapidly redeeming from ZEUS Pay on open

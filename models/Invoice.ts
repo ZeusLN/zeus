@@ -72,8 +72,8 @@ export default class Invoice extends BaseModel {
     public single_use: boolean;
     public bolt12: string;
     public used: boolean;
-    public invreq_amount_msat?: string;
-    public offer_description?: string;
+    public invreq_amount_msat: string;
+    public offer_description: string;
     // pay req
     public timestamp?: string | number;
     public destination?: string;
@@ -109,7 +109,7 @@ export default class Invoice extends BaseModel {
 
     @computed public get model(): string {
         if (this.invreq_id) {
-            return localeString('general.withdrawalReqeust');
+            return localeString('general.withdrawalRequest');
         }
         return localeString('views.Invoice.title');
     }
