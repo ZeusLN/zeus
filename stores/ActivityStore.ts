@@ -164,7 +164,7 @@ export default class ActivityStore {
         this.setFilters(this.filters);
     };
 
-    getSortedActivity = () => {
+    getSortedActivity = async () => {
         const activity: any[] = [];
         const payments = this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
@@ -196,9 +196,26 @@ export default class ActivityStore {
         // push payments, txs, invoices and withdrawal requests to one array
         activity.push.apply(activity, additions);
         // sort activity by timestamp
-        const sortedActivity = activity.sort((a: any, b: any) =>
-            a.getTimestamp < b.getTimestamp ? 1 : -1
+        const resolvedTuples = await Promise.all(
+            activity.map(async (item: any) => {
+                let timestamp: number;
+
+                if (item.bolt12) {
+                    const ts = await Storage.getItem(
+                        `withdrawalRequest_${item.bolt12}`
+                    );
+                    timestamp = Number(ts);
+                } else {
+                    timestamp = item.getTimestamp;
+                }
+
+                return [item, timestamp] as const;
+            })
         );
+
+        const sortedActivity = resolvedTuples
+            .sort((a, b) => b[1] - a[1])
+            .map(([item]) => item);
 
         return sortedActivity;
     };
@@ -209,10 +226,12 @@ export default class ActivityStore {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
-        await this.invoicesStore.getWithdrawalRequest();
+        if (BackendUtils.supportsWithdrawalRequests())
+            await this.invoicesStore.getWithdrawalRequests();
+        const sortedActivity = await this.getSortedActivity();
 
         runInAction(() => {
-            this.activity = this.getSortedActivity();
+            this.activity = sortedActivity;
             this.filteredActivity = this.activity;
         });
     };
@@ -220,15 +239,16 @@ export default class ActivityStore {
     public updateInvoices = async (locale: string | undefined) => {
         await this.invoicesStore.getInvoices();
         await runInAction(async () => {
-            this.activity = this.getSortedActivity();
+            this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);
         });
     };
 
     public updateWithdrawalRequest = async (locale: string | undefined) => {
-        await this.invoicesStore.getWithdrawalRequest();
+        if (BackendUtils.supportsWithdrawalRequests())
+            await this.invoicesStore.getWithdrawalRequests();
         await runInAction(async () => {
-            this.activity = this.getSortedActivity();
+            this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);
         });
     };
@@ -237,7 +257,7 @@ export default class ActivityStore {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await runInAction(async () => {
-            this.activity = this.getSortedActivity();
+            this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);
         });
     };
