@@ -22,6 +22,8 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Icon } from 'react-native-elements';
 
+import Storage from '../../storage';
+
 interface WithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
@@ -79,12 +81,16 @@ export default class WithdrawalRequest extends Component<
         const { description, satsAmount } = this.state;
         this.setState({ loading: true, error_msg: null }, async () => {
             try {
-                const response = await BackendUtils.invoiceRequest({
+                const response = await BackendUtils.createWithdrawalRequest({
                     amount: satsAmount,
                     description
                 });
 
                 if (response && response.bolt12) {
+                    await Storage.setItem(
+                        `withdrawalRequest_${response.bolt12}`,
+                        Date.now()
+                    );
                     this.setState({
                         bolt12: response.bolt12,
                         showQR: true,
@@ -143,7 +149,7 @@ export default class WithdrawalRequest extends Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Tools.withdrawal.title'),
+                        text: localeString('general.withdrawalRequest'),
                         style: {
                             fontFamily: 'PPNeueMontreal-Book',
                             color: themeColor('text')
