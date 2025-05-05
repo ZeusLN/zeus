@@ -249,6 +249,7 @@ import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import WithdrawalRequest from './views/Tools/WithdrawalRequest';
+import WithdrawalView from './views/Withdrawal';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1169,6 +1170,12 @@ export default class App extends React.PureComponent {
                                                         name="WithdrawalRequest" // @ts-ignore:next-line
                                                         component={
                                                             WithdrawalRequest
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Withdrawal" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalView
                                                         }
                                                     />
                                                 </Stack.Navigator>
