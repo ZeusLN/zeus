@@ -833,6 +833,7 @@ export default class ChannelsStore {
         this.channelRequest = null;
         this.peerSuccess = false;
         this.channelSuccess = false;
+        this.connectingToPeer = false;
     };
 
     @action
@@ -982,6 +983,7 @@ export default class ChannelsStore {
                         this.errorMsgChannel = null;
                         this.channelRequest = null;
                         this.channelSuccess = true;
+                        this.connectingToPeer = false;
                     })
                 )
                 .catch((error: Error) =>
