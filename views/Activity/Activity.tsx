@@ -611,7 +611,7 @@ export default class Activity extends React.PureComponent<
         }
 
         if (item.model === localeString('general.withdrawalRequest')) {
-            navigation.navigate('Invoice', { invoice: item });
+            navigation.navigate('Withdrawal', { withdrawalRequest: item });
         }
         if (item.model === localeString('views.Invoice.title')) {
             navigation.navigate('Invoice', { invoice: item });
