@@ -211,6 +211,8 @@ import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import WIFSweeper from './views/wif';
+import HandlePrivateKeyQRScanner from './views/HandlePrivateKeyQRScanner';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -265,6 +267,7 @@ export default class App extends React.PureComponent {
                 ChannelBackupStore={Stores.channelBackupStore}
                 OffersStore={Stores.offersStore}
                 CashuStore={Stores.cashuStore}
+                SweepStore={Stores.sweepStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -591,6 +594,12 @@ export default class App extends React.PureComponent {
                                                         name="HandleAnythingQRScanner" // @ts-ignore:next-line
                                                         component={
                                                             HandleAnythingQRScanner
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="HandlePrivateKeyQRScanner" // @ts-ignore:next-line
+                                                        component={
+                                                            HandlePrivateKeyQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
@@ -1088,6 +1097,10 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NWCAddressSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WIFSweeper" // @ts-ignore:next-line
+                                                        component={WIFSweeper}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
