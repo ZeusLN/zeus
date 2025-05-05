@@ -335,6 +335,8 @@ export default class OpenChannel extends React.Component<
         } = ChannelsStore;
         const { confirmedBlockchainBalance } = BalanceStore;
 
+        const loading = connectingToPeer || openingChannel;
+
         if (funded_psbt)
             navigation.navigate('PSBT', {
                 psbt: funded_psbt
@@ -364,11 +366,15 @@ export default class OpenChannel extends React.Component<
                 >
                     <Tab
                         value={connectPeerOnly ? 1 : 0}
-                        onChange={(e) =>
+                        onChange={(e) => {
+                            // Clear error messages when switching tabs to prevent them from persisting
+                            ChannelsStore.errorMsgPeer = null;
+                            ChannelsStore.errorMsgChannel = null;
+
                             this.setState({
                                 connectPeerOnly: e === 0 ? false : true
-                            })
-                        }
+                            });
+                        }}
                         indicatorStyle={{
                             backgroundColor: themeColor('text'),
                             height: 3
@@ -392,6 +398,7 @@ export default class OpenChannel extends React.Component<
                             containerStyle={{
                                 backgroundColor: themeColor('secondary')
                             }}
+                            disabled={loading}
                         />
                         <Tab.Item
                             title={localeString(
@@ -404,6 +411,7 @@ export default class OpenChannel extends React.Component<
                             containerStyle={{
                                 backgroundColor: themeColor('secondary')
                             }}
+                            disabled={loading}
                         />
                     </Tab>
 
@@ -438,9 +446,7 @@ export default class OpenChannel extends React.Component<
                     )}
 
                     <View style={styles.content}>
-                        {(connectingToPeer || openingChannel) && (
-                            <LightningIndicator />
-                        )}
+                        {loading && <LightningIndicator />}
                         {peerSuccess && (
                             <SuccessMessage
                                 message={localeString(
