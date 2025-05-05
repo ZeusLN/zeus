@@ -96,6 +96,11 @@ export default class SwapDetails extends React.Component<
 
             this.getSwapUpdates(swapData, isSubmarineSwap);
         } else {
+            if (swapData?.status === 'transaction.refunded') {
+                this.setState({ updates: 'transaction.refunded' });
+                return;
+            }
+
             this.getReverseSwapUpdates(swapData, isSubmarineSwap);
         }
     }

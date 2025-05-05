@@ -375,6 +375,68 @@ export default class SwapStore {
         }
     };
 
+    @action
+    public updateSwapStatuses = async () => {
+        console.log('Updating swap statuses...');
+        try {
+            const storedSubmarineSwaps = await EncryptedStorage.getItem(
+                'swaps'
+            );
+            const storedReverseSwaps = await EncryptedStorage.getItem(
+                'reverse-swaps'
+            );
+
+            const submarineSwaps = storedSubmarineSwaps
+                ? JSON.parse(storedSubmarineSwaps)
+                : [];
+            const reverseSwaps = storedReverseSwaps
+                ? JSON.parse(storedReverseSwaps)
+                : [];
+
+            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+
+            for (const swap of allSwaps) {
+                if (!swap?.id) continue;
+
+                try {
+                    const response = await ReactNativeBlobUtil.fetch(
+                        'GET',
+                        `${this.getHost}/swap/${swap.id}`,
+                        this.getHeaders
+                    );
+
+                    const result = await response.json();
+                    if (result?.status) {
+                        swap.status = result.status;
+                    }
+                } catch (err: any) {
+                    console.warn(
+                        `Failed to fetch status for swap ${swap.id}`,
+                        err
+                    );
+                }
+            }
+
+            const updatedSubmarineSwaps = allSwaps.filter(
+                (s) => s.type === 'Submarine'
+            );
+            const updatedReverseSwaps = allSwaps.filter(
+                (s) => s.type === 'Reverse'
+            );
+
+            await EncryptedStorage.setItem(
+                'swaps',
+                JSON.stringify(updatedSubmarineSwaps)
+            );
+            await EncryptedStorage.setItem(
+                'reverse-swaps',
+                JSON.stringify(updatedReverseSwaps)
+            );
+        } catch (error) {
+            console.error('Updating swap statuses failed:', error);
+        }
+    };
+
     private saveReverseSwaps = async (
         newSwap: any,
         keys: any,
