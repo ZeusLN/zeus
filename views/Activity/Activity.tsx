@@ -46,6 +46,7 @@ import CashuToken from '../../models/CashuToken';
 import ActivityToCsv from './ActivityToCsv';
 import Storage from '../../storage';
 import dateTimeUtils from '../../utils/DateTimeUtils';
+import WithdrawalRequest from '../../models/WithdrawalRequest';
 
 interface ActivityProps {
     navigation: StackNavigationProp<any, any>;
@@ -127,7 +128,7 @@ const ActivityListItem = React.memo(
         let displayName = item.model;
         let subTitle = item.model;
 
-        if (item.invreq_id) {
+        if (item instanceof WithdrawalRequest) {
             displayName = item.used
                 ? localeString('views.Activity.youWithdrew')
                 : localeString('views.Activity.pendingWithdrawal');
