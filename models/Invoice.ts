@@ -67,13 +67,6 @@ export default class Invoice extends BaseModel {
     public status: string;
     public amount_msat: number;
     public invoice_amount_msat: string | number;
-    public invreq_id: string;
-    public active: boolean;
-    public single_use: boolean;
-    public bolt12: string;
-    public used: boolean;
-    public invreq_amount_msat: string;
-    public offer_description: string;
     // pay req
     public timestamp?: string | number;
     public destination?: string;
@@ -108,9 +101,6 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get model(): string {
-        if (this.invreq_id) {
-            return localeString('general.withdrawalRequest');
-        }
         return localeString('views.Invoice.title');
     }
 
@@ -227,7 +217,6 @@ export default class Invoice extends BaseModel {
             this.payment_request ||
             this.pay_req ||
             this.paymentRequest ||
-            this.invreq_id ||
             ''
         );
     }
@@ -247,9 +236,6 @@ export default class Invoice extends BaseModel {
         }
         if (this.amount) {
             return Number(this.amount);
-        }
-        if (this.invreq_id) {
-            return Number(this.invreq_amount_msat) / 1000;
         }
         return this.settled
             ? Number(this.amt_paid_sat)
@@ -491,9 +477,7 @@ export default class Invoice extends BaseModel {
     }
 
     @computed public get getNoteKey(): string {
-        return `note-${
-            this.payment_hash || this.getRPreimage || this.invreq_id || ''
-        }`;
+        return `note-${this.payment_hash || this.getRPreimage || ''}`;
     }
 
     @computed public get getNote(): string {

@@ -16,6 +16,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
+import WithdrawalRequest from '../models/WithdrawalRequest';
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -24,10 +25,11 @@ export default class InvoicesStore {
     @observable error_msg: string | null;
     @observable getPayReqError: string | null = null;
     @observable invoices: Array<Invoice> = [];
-    @observable withdrawalRequests: Array<Invoice> = [];
+    @observable withdrawalRequests: Array<WithdrawalRequest> = [];
     @observable invoice: Invoice | null;
     @observable onChainAddress: string | null;
     @observable pay_req: Invoice | null;
+    @observable withdrawal_req: WithdrawalRequest | null;
     @observable payment_request: string | null;
     @observable payment_request_amt: string | null;
     @observable creatingInvoice = false;
@@ -128,21 +130,24 @@ export default class InvoicesStore {
             const { invoicerequests } =
                 await BackendUtils.listWithdrawalRequests();
 
-            const enhancedRequests: Invoice[] = [];
+            const enhancedRequests: WithdrawalRequest[] = [];
 
             for (const withdrawalRequest of invoicerequests) {
                 try {
-                    await this.getPayReq(withdrawalRequest.bolt12);
+                    await this.getWithdrawalReq(withdrawalRequest.bolt12);
                     enhancedRequests.push(
-                        new Invoice({
+                        new WithdrawalRequest({
                             ...withdrawalRequest,
                             invreq_amount_msat:
-                                this.pay_req?.invreq_amount_msat,
-                            offer_description: this.pay_req?.offer_description
+                                this.withdrawal_req?.invreq_amount_msat,
+                            offer_description:
+                                this.withdrawal_req?.offer_description
                         })
                     );
                 } catch {
-                    enhancedRequests.push(new Invoice(withdrawalRequest));
+                    enhancedRequests.push(
+                        new WithdrawalRequest(withdrawalRequest)
+                    );
                 }
             }
 
@@ -601,6 +606,32 @@ export default class InvoicesStore {
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.pay_req = null;
+                    this.getPayReqError = error_friendly;
+                    this.loading = false;
+                });
+            });
+    };
+
+    @action
+    public getWithdrawalReq = (withdrawalReq: string) => {
+        this.loading = true;
+        this.withdrawal_req = null;
+        this.paymentRequest = withdrawalReq;
+        this.feeEstimate = null;
+
+        return BackendUtils.decodePaymentRequest([withdrawalReq])
+            .then((data: any) => {
+                runInAction(() => {
+                    this.withdrawal_req = new WithdrawalRequest(data);
+                    this.getPayReqError = null;
+                    this.loading = false;
+                });
+                return;
+            })
+            .catch((error: Error) => {
+                const error_friendly = errorToUserFriendly(error);
+                runInAction(() => {
+                    this.withdrawal_req = null;
                     this.getPayReqError = error_friendly;
                     this.loading = false;
                 });
