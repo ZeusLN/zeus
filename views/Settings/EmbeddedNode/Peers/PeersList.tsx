@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { FlatList, Text, View, RefreshControl } from 'react-native';
-import { Icon, ListItem } from 'react-native-elements';
+import { Divider, Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -125,41 +125,51 @@ export default class PeersList extends React.Component<
                                 />
                             }
                             renderItem={({ item }: { item: Peer }) => (
-                                <ListItem
-                                    containerStyle={{
-                                        backgroundColor: 'transparent'
-                                    }}
-                                >
-                                    <ListItem.Content>
-                                        <ListItem.Title
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {item.pub_key}
-                                        </ListItem.Title>
-                                        <ListItem.Subtitle
-                                            style={{
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            {item.address}
-                                        </ListItem.Subtitle>
-                                    </ListItem.Content>
-                                    <Icon
-                                        name="close"
-                                        color={themeColor('text')}
-                                        onPress={() =>
-                                            this.disconnectPeer(item.pub_key)
-                                        }
+                                <View>
+                                    <ListItem
+                                        containerStyle={{
+                                            backgroundColor: 'transparent'
+                                        }}
+                                    >
+                                        <ListItem.Content>
+                                            <ListItem.Title
+                                                style={{
+                                                    color: themeColor('text'),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {item.pub_key}
+                                            </ListItem.Title>
+                                            <ListItem.Subtitle
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {item.address}
+                                            </ListItem.Subtitle>
+                                        </ListItem.Content>
+                                        <Icon
+                                            name="close"
+                                            color={themeColor('text')}
+                                            onPress={() =>
+                                                this.disconnectPeer(
+                                                    item.pub_key
+                                                )
+                                            }
+                                        />
+                                    </ListItem>
+                                    <Divider
+                                        style={{
+                                            backgroundColor:
+                                                themeColor('border')
+                                        }}
                                     />
-                                </ListItem>
+                                </View>
                             )}
                             ListEmptyComponent={
                                 <View
