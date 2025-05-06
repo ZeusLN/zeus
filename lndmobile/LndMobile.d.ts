@@ -52,6 +52,49 @@ export interface ILndMobile {
         locale: string,
         translations: { [key: string]: string }
     ): void;
+
+    // Swaps
+    createClaimTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        privateKey: string,
+        servicePubKey: string,
+        transactionHash: string,
+        pubNonce: string
+    ): Promise<string>;
+
+    createReverseClaimTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        privateKey: string,
+        servicePubKey: string,
+        preimageHex: string,
+        transactionHex: string,
+        lockupAddress: string,
+        destinationAddress: string,
+        feeRate: number,
+        isTestnet?: boolean
+    ): Promise<string>;
+
+    createRefundTransaction(
+        endpoint: string,
+        swapId: string,
+        claimLeaf: string,
+        refundLeaf: string,
+        transactionHex: string,
+        privateKey: string,
+        servicePubKey: string,
+        feeRate: number,
+        timeoutBlockHeight: number,
+        destinationAddress: string,
+        lockupAddress: string,
+        cooperative: boolean,
+        isTestnet?: boolean
+    ): Promise<string>;
 }
 
 export interface ILndMobileTools {

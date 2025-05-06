@@ -195,6 +195,11 @@ export interface Settings {
     lsps1HostTestnet: string;
     lsps1Token: string;
     lsps1ShowPurchaseButton: boolean;
+    // Swaps
+    swapHostTestnet: string;
+    swapHostMainnet: string;
+    customSwapHost: string;
+    proEnabled: boolean;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
     bolt12Address: Bolt12AddressSettings;
@@ -256,6 +261,43 @@ export const FEE_ESTIMATOR_KEYS = [
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom'
+    }
+];
+
+export const SWAP_HOST_KEYS_TESTNET = [
+    {
+        key: 'Boltz',
+        value: 'https://api.testnet.boltz.exchange/v2',
+        pro: true
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom',
+        pro: false
+    }
+];
+export const SWAP_HOST_KEYS_MAINNET = [
+    {
+        key: 'Boltz',
+        value: 'https://api.boltz.exchange/v2',
+        pro: true
+    },
+    {
+        key: 'SwapMarket',
+        value: 'https://api.middleway.space/v2',
+        pro: false
+    },
+    {
+        key: 'Eldamar Swaps',
+        value: 'https://boltz-api.eldamar.icu/v2',
+        pro: false
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom',
+        pro: false
     }
 ];
 
@@ -1023,6 +1065,11 @@ export const DEFAULT_LSPS1_PUBKEY_TESTNET =
 export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
+// Swaps
+export const DEFAULT_SWAP_HOST_MAINNET = 'https://api.boltz.exchange/v2';
+export const DEFAULT_SWAP_HOST_TESTNET =
+    'https://api.testnet.boltz.exchange/v2';
+
 export const DEFAULT_NOSTR_RELAYS_2023 = [
     'wss://nostr.mutinywallet.com',
     'wss://relay.damus.io',
@@ -1210,6 +1257,11 @@ export default class SettingsStore {
         lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
         lsps1Token: '',
         lsps1ShowPurchaseButton: true,
+        //swaps
+        swapHostTestnet: DEFAULT_SWAP_HOST_TESTNET,
+        swapHostMainnet: DEFAULT_SWAP_HOST_MAINNET,
+        customSwapHost: '',
+        proEnabled: false,
         // Lightning Address
         lightningAddress: {
             enabled: false,
