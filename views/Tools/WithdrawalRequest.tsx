@@ -9,7 +9,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 import CollapsedQR from '../../components/CollapsedQR';
-import Stores from '../../stores/Stores';
+import { unitsStore } from '../../stores/Stores';
 const ZIconWhite = require('../../assets/images/icon-white.png');
 const ZIcon = require('../../assets/images/icon-black.png');
 
@@ -63,7 +63,7 @@ export default class WithdrawalRequest extends Component<
 
     handleInputChange = (key: 'amount' | 'description', value: string) => {
         const msat = (parseInt(value) * 1000).toString();
-        const { units } = Stores.unitsStore;
+        const { units } = unitsStore;
         const isBTC = units === 'BTC';
 
         this.setState((prevState) => ({

@@ -3,6 +3,7 @@ import { action, observable, runInAction } from 'mobx';
 // LN
 import Payment from './../models/Payment';
 import Invoice from './../models/Invoice';
+import WithdrawalRequest from '../models/WithdrawalRequest';
 // on-chain
 import Transaction from './../models/Transaction';
 
@@ -63,9 +64,11 @@ export const DEFAULT_FILTERS = {
 
 export default class ActivityStore {
     @observable public error = false;
-    @observable public activity: Array<Invoice | Payment | Transaction> = [];
+    @observable public activity: Array<
+        Invoice | Payment | Transaction | WithdrawalRequest
+    > = [];
     @observable public filteredActivity: Array<
-        Invoice | Payment | Transaction
+        Invoice | Payment | Transaction | WithdrawalRequest
     > = [];
     @observable public filters: Filter = DEFAULT_FILTERS;
     settingsStore: SettingsStore;
