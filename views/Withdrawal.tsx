@@ -11,18 +11,17 @@ import Screen from '../components/Screen';
 import Button from '../components/Button';
 import { Row } from '../components/layout/Row';
 
-import Invoice from '../models/Invoice';
-
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import EditNotes from '../assets/images/SVG/Pen.svg';
 import QR from '../assets/images/SVG/QR.svg';
 import Storage from '../storage';
+import WithdrawalRequest from '../models/WithdrawalRequest';
 
 interface WithdrawalProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'WithdrawalView', { withdrawalRequest: Invoice }>;
+    route: Route<'WithdrawalView', { withdrawalRequest: WithdrawalRequest }>;
 }
 
 interface WithdrawalState {
