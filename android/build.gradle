@@ -5,7 +5,7 @@ buildscript {
         compileSdkVersion = 34
         targetSdkVersion = 34
         ndkVersion = "26.1.10909125"
-        kotlinVersion = "1.9.22"
+        kotlinVersion = "2.1.10"
     }
     subprojects { subproject ->
         afterEvaluate{
@@ -24,7 +24,8 @@ buildscript {
     dependencies {
         classpath("com.android.tools.build:gradle")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        println("Using Kotlin Version: ${rootProject.ext.kotlinVersion}")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${rootProject.ext.kotlinVersion}")
         classpath("com.google.protobuf:protobuf-gradle-plugin:0.9.4")
 
         // LN address notifications

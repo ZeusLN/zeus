@@ -29,7 +29,7 @@ class MainApplication : Application(), ReactApplication {
                 add(LndMobileToolsPackage())
                 add(LndMobileScheduledSyncPackage())
                 add(LncPackage())
-                // add(new ZeusTorPackage());
+                add(TorMobilePackage());
             }
 
         override fun getJSMainModuleName(): String = "index"
