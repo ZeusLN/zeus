@@ -54,6 +54,7 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
+import Peer from '../models/Peer';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -177,6 +178,8 @@ export default class OpenChannel extends React.Component<
     }
 
     async componentDidMount() {
+        const { ChannelsStore } = this.props;
+        ChannelsStore.getPeers();
         this.initFromProps(this.props);
     }
 
@@ -333,7 +336,6 @@ export default class OpenChannel extends React.Component<
 
         try {
             await this.props.ChannelsStore.disconnectPeer(selectedPeer.pubkey);
-            await this.props.ChannelsStore.getPeers();
             this.closeDisconnectModal();
             // todo alert modal rendering
             ModalStore.alertModalText = 'Peer disconnected successfully';
@@ -412,7 +414,7 @@ export default class OpenChannel extends React.Component<
                         navigation={navigation}
                     />
                     <Tab
-                        value={connectPeerOnly ? 1 : 0}
+                        value={this.state.activeTab}
                         onChange={(e) => {
                             // Clear error messages when switching tabs to prevent them from persisting
                             ChannelsStore.errorMsgPeer = null;
@@ -530,11 +532,14 @@ export default class OpenChannel extends React.Component<
                                 }
                             />
                         )}
-                        {(errorMsgPeer || errorMsgChannel) && (
+                        {(errorMsgPeer ||
+                            errorMsgChannel ||
+                            errorDisconnectPeer) && (
                             <ErrorMessage
                                 message={
                                     errorMsgChannel ||
                                     errorMsgPeer ||
+                                    errorDisconnectPeer ||
                                     localeString('general.error')
                                 }
                             />
@@ -546,23 +551,7 @@ export default class OpenChannel extends React.Component<
                                 style={{ padding: 20 }}
                                 data={ChannelsStore.peers}
                                 renderItem={({ item }) => {
-                                    const peer = {
-                                        pubkey:
-                                            item.pubkey ??
-                                            item.pub_key ??
-                                            item.id,
-                                        address:
-                                            item.address ??
-                                            item.netaddr?.join(', '),
-                                        alias: item.alias,
-                                        ping_time: item.ping_time,
-                                        sats_sent:
-                                            item.sat_sent ?? item.sats_sent,
-                                        sats_recv:
-                                            item.sat_recv ?? item.sats_recv,
-                                        connected: item.connected,
-                                        num_channels: item.num_channels
-                                    };
+                                    const peer = new Peer(item);
 
                                     return (
                                         <TouchableOpacity
@@ -739,9 +728,7 @@ export default class OpenChannel extends React.Component<
                                     );
                                 }}
                                 keyExtractor={(item, index) =>
-                                    `peer-${
-                                        item.pub_key ?? item.pubkey ?? item.id
-                                    }-${index}`
+                                    `peer-${item.pubkey}-${index}`
                                 }
                                 ListEmptyComponent={
                                     <Text
