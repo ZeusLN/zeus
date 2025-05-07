@@ -745,8 +745,7 @@ export default class LND {
 
     disconnectPeer = async (pubkey: string): Promise<boolean | null> => {
         try {
-            const res = await this.deleteRequest(`/v1/peers/${pubkey}`);
-            console.log(res.data?.status);
+            await this.deleteRequest(`/v1/peers/${pubkey}`);
             return true;
         } catch (error) {
             console.error(`Error disconnecting peer ${pubkey}:`, error);

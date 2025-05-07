@@ -211,7 +211,16 @@ export default class CLNRest {
         return (await listPeers(data)).peersWithAliases;
     };
     disconnectPeer = async (pubkey: string) => {
-        await this.postRequest('/v1/disconnect', { id: pubkey, force: true });
+        try {
+            await this.postRequest('/v1/disconnect', {
+                id: pubkey,
+                force: true
+            });
+            return true;
+        } catch (error) {
+            console.error(`Error disconnecting peer ${pubkey}:`, error);
+            return null;
+        }
     };
     getChannelInfo = (shortChanId: string) => {
         const data = this.postRequest('/v1/listchannels', {

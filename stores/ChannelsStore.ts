@@ -8,6 +8,7 @@ import Channel from '../models/Channel';
 import ClosedChannel from '../models/ClosedChannel';
 import ChannelInfo, { RoutingPolicy } from '../models/ChannelInfo';
 import FundedPsbt from '../models/FundedPsbt';
+import Peer from '../models/Peer';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import CloseChannelRequest from '../models/CloseChannelRequest';
@@ -70,7 +71,7 @@ export default class ChannelsStore {
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
     @observable channelRequest: any;
-    @observable public peers: Array<any> = [];
+    @observable public peers: Array<Peer> = [];
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
@@ -678,9 +679,9 @@ export default class ChannelsStore {
             const response = await BackendUtils.listPeers();
 
             runInAction(() => {
-                this.peers = response.map((peer: any) => ({
-                    ...peer
-                }));
+                this.peers = response.map((peerData: any) => {
+                    return new Peer(peerData);
+                });
                 this.loading = false;
             });
         } catch (error: any) {
@@ -702,37 +703,32 @@ export default class ChannelsStore {
 
         try {
             const isPeer = this.peers.find(
-                (peer: any) =>
-                    peer.pubkey === pubkey ||
-                    peer.pub_key === pubkey ||
-                    peer.id === pubkey
+                (peer: Peer) => peer.pubkey === pubkey
             );
 
             if (!isPeer) {
                 throw new Error('Peer not found');
             }
-
             const res = await BackendUtils.disconnectPeer(pubkey);
-            if (res) {
-                runInAction(() => {
-                    this.peers = this.peers.filter(
-                        (peer) => peer.pubKey !== pubkey
-                    );
-                    console.log('Updated peers after disconnect:', this.peers);
-                    this.loading = false;
-                });
 
-                return true;
-            } else {
+            if (!res) {
                 throw new Error('Failed to disconnect peer');
             }
-        } catch (error: any) {
-            console.error('Error disconnecting peer:', error);
 
+            runInAction(() => {
+                this.peers = this.peers.filter(
+                    (peer: Peer) => peer.pubkey !== pubkey
+                );
+                this.loading = false;
+            });
+
+            return true;
+        } catch (error: any) {
+            console.error('Error disconnecting peer:', error, error.message);
             runInAction(() => {
                 this.error = true;
                 this.errorDisconnectPeer =
-                    error.message ?? 'Failed to disconnect peer';
+                    error.message || 'Failed to disconnect peer';
                 this.loading = false;
             });
 
