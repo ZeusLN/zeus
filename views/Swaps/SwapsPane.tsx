@@ -3,7 +3,6 @@ import { Text, TouchableOpacity, View, FlatList } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import EncryptedStorage from 'react-native-encrypted-storage';
 import moment from 'moment';
 
 import {
@@ -21,6 +20,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import SwapStore from '../../stores/SwapStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+
+import Storage from '../../storage';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -67,9 +68,7 @@ export default class SwapsPane extends React.Component<
         this.setState({ loading: true });
         try {
             // Fetch submarine swaps
-            const storedSubmarineSwaps = await EncryptedStorage.getItem(
-                'swaps'
-            );
+            const storedSubmarineSwaps = await Storage.getItem('swaps');
             const submarineSwaps = storedSubmarineSwaps
                 ? JSON.parse(storedSubmarineSwaps)
                 : [];
@@ -82,9 +81,7 @@ export default class SwapsPane extends React.Component<
             );
 
             // Fetch reverse swaps
-            const storedReverseSwaps = await EncryptedStorage.getItem(
-                'reverse-swaps'
-            );
+            const storedReverseSwaps = await Storage.getItem('reverse-swaps');
             const reverseSwaps = storedReverseSwaps
                 ? JSON.parse(storedReverseSwaps)
                 : [];

@@ -24,7 +24,8 @@ import { localeString } from '../../utils/LocaleUtils';
 
 import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import EncryptedStorage from 'react-native-encrypted-storage';
+
+import Storage from '../../storage';
 
 interface RefundSwapProps {
     navigation: any;
@@ -105,7 +106,7 @@ export default class RefundSwap extends React.Component<
     updateSwapInStorage = async (swapId: string, txid: string) => {
         try {
             // Retrieve the swaps from encrypted storage
-            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            const storedSwaps = await Storage.getItem('swaps');
             if (!storedSwaps) {
                 throw new Error('No swaps found in storage');
             }
@@ -126,7 +127,7 @@ export default class RefundSwap extends React.Component<
             swaps[swapIndex].txid = txid;
 
             // Save the updated swaps back to encrypted storage
-            await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
+            await Storage.setItem('swaps', JSON.stringify(swaps));
 
             console.log('Swap updated in storage:', swaps[swapIndex]);
         } catch (error) {

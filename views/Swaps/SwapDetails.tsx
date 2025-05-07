@@ -7,7 +7,6 @@ import { crypto } from 'bitcoinjs-lib';
 import bolt11 from 'bolt11';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
 const { createClaimTransaction, createReverseClaimTransaction } =
@@ -29,6 +28,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 
 import QR from '../../assets/images/SVG/QR.svg';
+
+import Storage from '../../storage';
 
 interface SwapDetailsProps {
     navigation: StackNavigationProp<any, any>;
@@ -429,7 +430,7 @@ export default class SwapDetails extends React.Component<
         try {
             let storedSwaps: any;
             const key = isSubmarineSwap ? 'swaps' : 'reverse-swaps';
-            storedSwaps = await EncryptedStorage.getItem(key);
+            storedSwaps = await Storage.getItem(key);
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             const updatedSwaps = swaps.map((swap: any) =>
@@ -444,7 +445,7 @@ export default class SwapDetails extends React.Component<
                     : swap
             );
 
-            await EncryptedStorage.setItem(key, JSON.stringify(updatedSwaps));
+            await Storage.setItem(key, JSON.stringify(updatedSwaps));
             console.log(
                 `Updated ${
                     isSubmarineSwap ? `swap` : `reverse swap`
