@@ -77,6 +77,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import ContactStore from '../../stores/ContactStore';
 import NotesStore from '../../stores/NotesStore';
+import SwapStore from '../../stores/SwapStore';
 
 import Bitcoin from '../../assets/images/SVG/Bitcoin.svg';
 import CaretUp from '../../assets/images/SVG/Caret Up.svg';
@@ -107,6 +108,7 @@ interface WalletProps {
     SyncStore: SyncStore;
     LSPStore: LSPStore;
     NotesStore: NotesStore;
+    SwapStore: SwapStore;
     ChannelBackupStore: ChannelBackupStore;
     LightningAddressStore: LightningAddressStore;
     LnurlPayStore: LnurlPayStore;
@@ -136,7 +138,8 @@ interface WalletState {
     'LnurlPayStore',
     'ChannelBackupStore',
     'LightningAddressStore',
-    'NotesStore'
+    'NotesStore',
+    'SwapStore'
 )
 @observer
 export default class Wallet extends React.Component<WalletProps, WalletState> {
@@ -343,7 +346,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             SyncStore,
             LightningAddressStore,
             LnurlPayStore,
-            NotesStore
+            NotesStore,
+            SwapStore
         } = this.props;
         const {
             settings,
@@ -395,6 +399,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
+            SwapStore.updateSwapStatuses();
             CashuStore.reset();
         }
 

@@ -6,13 +6,14 @@ import { randomBytes } from 'crypto';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 
 import { themeColor } from '../utils/ThemeUtils';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
     DEFAULT_SWAP_HOST_MAINNET,
     DEFAULT_SWAP_HOST_TESTNET
 } from './SettingsStore';
+
+import Storage from '../storage';
 
 export default class SwapStore {
     @observable public subInfo = {};
@@ -259,7 +260,7 @@ export default class SwapStore {
     ) => {
         try {
             // Retrieve existing swaps
-            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            const storedSwaps = await Storage.getItem('swaps');
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             // Adding the new properties to the swap
@@ -276,7 +277,7 @@ export default class SwapStore {
             swaps.unshift(enrichedSwap);
 
             // Save the updated swaps array back to Encrypted Storage
-            await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
+            await Storage.setItem('swaps', JSON.stringify(swaps));
             console.log('Swap saved successfully to Encrypted Storage.');
         } catch (error: any) {
             console.error('Error saving swap to storage:', error);
@@ -375,6 +376,64 @@ export default class SwapStore {
         }
     };
 
+    @action
+    public updateSwapStatuses = async () => {
+        console.log('Updating swap statuses...');
+        try {
+            const storedSubmarineSwaps = await Storage.getItem('swaps');
+            const storedReverseSwaps = await Storage.getItem('reverse-swaps');
+
+            const submarineSwaps = storedSubmarineSwaps
+                ? JSON.parse(storedSubmarineSwaps)
+                : [];
+            const reverseSwaps = storedReverseSwaps
+                ? JSON.parse(storedReverseSwaps)
+                : [];
+
+            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+
+            for (const swap of allSwaps) {
+                if (!swap?.id) continue;
+
+                try {
+                    const response = await ReactNativeBlobUtil.fetch(
+                        'GET',
+                        `${this.getHost}/swap/${swap.id}`,
+                        this.getHeaders
+                    );
+
+                    const result = await response.json();
+                    if (result?.status) {
+                        swap.status = result.status;
+                    }
+                } catch (err: any) {
+                    console.warn(
+                        `Failed to fetch status for swap ${swap.id}`,
+                        err
+                    );
+                }
+            }
+
+            const updatedSubmarineSwaps = allSwaps.filter(
+                (s) => s.type === 'Submarine'
+            );
+            const updatedReverseSwaps = allSwaps.filter(
+                (s) => s.type === 'Reverse'
+            );
+
+            await Storage.setItem(
+                'swaps',
+                JSON.stringify(updatedSubmarineSwaps)
+            );
+            await Storage.setItem(
+                'reverse-swaps',
+                JSON.stringify(updatedReverseSwaps)
+            );
+        } catch (error) {
+            console.error('Updating swap statuses failed:', error);
+        }
+    };
+
     private saveReverseSwaps = async (
         newSwap: any,
         keys: any,
@@ -386,7 +445,7 @@ export default class SwapStore {
     ) => {
         try {
             // Retrieve existing swaps
-            const storedSwaps = await EncryptedStorage.getItem('reverse-swaps');
+            const storedSwaps = await Storage.getItem('reverse-swaps');
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             // Adding the new properties to the swap
@@ -404,10 +463,7 @@ export default class SwapStore {
             swaps.unshift(enrichedSwap);
 
             // Save the updated swaps array back to Encrypted Storage
-            await EncryptedStorage.setItem(
-                'reverse-swaps',
-                JSON.stringify(swaps)
-            );
+            await Storage.setItem('reverse-swaps', JSON.stringify(swaps));
             console.log(
                 'Reverse swap saved successfully to Encrypted Storage.'
             );
