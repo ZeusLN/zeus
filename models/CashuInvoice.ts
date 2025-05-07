@@ -5,7 +5,7 @@ import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
-import { notesStore } from '../stores/storeInstances';
+import { notesStore } from '../stores/Stores';
 
 export default class CashuInvoice extends BaseModel {
     // MintQuote

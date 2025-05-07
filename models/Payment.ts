@@ -9,7 +9,7 @@ import { localeString } from '../utils/LocaleUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
-import { notesStore } from '../stores/storeInstances';
+import { notesStore } from '../stores/Stores';
 
 const keySendMessageType = '34349334';
 const keySendPreimageType = '5482373484';

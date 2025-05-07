@@ -4,9 +4,9 @@ import ecc from '../zeus_modules/noble_ecc';
 
 bitcoin.initEccLib(ecc);
 
-import Base64Utils from '../utils/Base64Utils';
-import stores from '../stores/Stores';
+import { nodeInfoStore } from '../stores/Stores';
 
+import Base64Utils from '../utils/Base64Utils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { walletrpc } from '../proto/lightning';
@@ -333,7 +333,7 @@ class AddressUtils {
     };
 
     scriptPubKeyToAddress = (scriptPubKeyHex: string) => {
-        const nodeInfo = stores?.nodeInfoStore?.nodeInfo;
+        const nodeInfo = nodeInfoStore?.nodeInfo;
         const { isTestNet, isRegTest } = nodeInfo;
 
         let network = bitcoin.networks.bitcoin;

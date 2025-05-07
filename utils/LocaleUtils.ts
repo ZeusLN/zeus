@@ -1,6 +1,6 @@
 import { NativeModules } from 'react-native';
 
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 import * as EN from '../locales/en.json';
 import * as CS from '../locales/cs.json';
 import * as DE from '../locales/de.json';
@@ -75,7 +75,7 @@ const JAVA_LAYER_STRINGS = [
 ];
 
 export function localeString(localeString: string): any {
-    const { settings } = stores.settingsStore;
+    const { settings } = settingsStore;
     const { locale } = settings;
 
     switch (locale) {
@@ -148,7 +148,7 @@ export const languagesWithNounCapitalization = ['de', 'pl', 'cs', 'sk'];
 export const formatInlineNoun = (text: string): string => {
     if (
         !languagesWithNounCapitalization.includes(
-            stores.settingsStore?.settings?.locale || ''
+            settingsStore?.settings?.locale || ''
         )
     ) {
         return text.toLowerCase();

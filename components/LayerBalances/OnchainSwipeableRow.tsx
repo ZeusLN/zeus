@@ -16,7 +16,7 @@ import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import stores from './../../stores/Stores';
+import { modalStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import Coins from './../../assets/images/SVG/Coins.svg';
@@ -185,7 +185,7 @@ export default class OnchainSwipeableRow extends Component<
             return (
                 <TouchableOpacity
                     onPress={() =>
-                        stores.modalStore.toggleInfoModal({
+                        modalStore.toggleInfoModal({
                             text: localeString('views.Wallet.waitForSync')
                         })
                     }

@@ -18,9 +18,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import stores from '../../stores/Stores';
+import { cashuStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
-const { cashuStore } = stores;
 
 import MintToken from '../../assets/images/SVG/MintToken.svg';
 import Mint from '../../assets/images/SVG/Mint.svg';

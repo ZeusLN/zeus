@@ -28,7 +28,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import stores from './Stores';
+import { activityStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -1011,7 +1011,7 @@ export default class CashuStore {
                     );
 
                     // update Activity list
-                    stores.activityStore.getSortedActivity();
+                    activityStore.getSortedActivity();
 
                     return {
                         isPaid: true,

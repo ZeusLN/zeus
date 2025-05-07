@@ -49,7 +49,7 @@ import Temple from '../assets/images/SVG/Temple.svg';
 import Sync from '../assets/images/SVG/Sync.svg';
 import ZeusPaySVG from '../assets/images/SVG/zeus-pay.svg';
 
-import stores from '../stores/Stores';
+import { balanceStore } from '../stores/Stores';
 
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
@@ -592,9 +592,8 @@ export default class WalletHeader extends React.Component<
                             }}
                         >
                             {!loading &&
-                                (stores.balanceStore.loadingBlockchainBalance ||
-                                    stores.balanceStore
-                                        .loadingLightningBalance ||
+                                (balanceStore.loadingBlockchainBalance ||
+                                    balanceStore.loadingLightningBalance ||
                                     laLoading) && (
                                     <View style={{ paddingRight: 15 }}>
                                         <LoadingIndicator size={35} />

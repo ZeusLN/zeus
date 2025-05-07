@@ -2,7 +2,12 @@ import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import stores from '../stores/Stores';
+import {
+    nodeInfoStore,
+    invoicesStore,
+    unitsStore,
+    settingsStore
+} from '../stores/Stores';
 
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
@@ -19,8 +24,6 @@ import CashuToken from '../models/CashuToken';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
-
-const { nodeInfoStore, invoicesStore, unitsStore, settingsStore } = stores;
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);

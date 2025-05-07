@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { ListItem, Divider } from 'react-native-elements';
-import { inject, observer } from 'mobx-react';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -11,8 +10,7 @@ import Header from '../../../components/Header';
 import Switch from '../../../components/Switch';
 import KeyValue from '../../../components/KeyValue';
 
-import stores from '../../../stores/Stores';
-import SettingsStore from '../../../stores/SettingsStore';
+import { channelBackupStore, settingsStore } from '../../../stores/Stores';
 import {
     LAST_CHANNEL_BACKUP_STATUS,
     LAST_CHANNEL_BACKUP_TIME
@@ -29,7 +27,6 @@ import { exportAllChannelBackups } from '../../../lndmobile/channel';
 
 interface DisasterRecoveryProps {
     navigation: StackNavigationProp<any, any>;
-    SettingsStore: SettingsStore;
 }
 
 interface DisasterRecoveryState {
@@ -44,8 +41,6 @@ interface DisasterRecoveryState {
     lastDisasterRecoveryBackupTime: string;
 }
 
-@inject('SettingsStore')
-@observer
 export default class DisasterRecovery extends React.Component<
     DisasterRecoveryProps,
     DisasterRecoveryState
@@ -63,8 +58,7 @@ export default class DisasterRecovery extends React.Component<
     };
 
     UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
-        const { settings } = SettingsStore;
+        const { settings } = settingsStore;
 
         this.setState({
             automaticDisasterRecoveryBackup:
@@ -87,7 +81,7 @@ export default class DisasterRecovery extends React.Component<
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             automaticDisasterRecoveryBackup,
             disasterRecoveryCopied,
@@ -99,7 +93,7 @@ export default class DisasterRecovery extends React.Component<
             lastDisasterRecoveryBackupStatus,
             lastDisasterRecoveryBackupTime
         } = this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = settingsStore;
 
         const setChannelBackupRecoveredError = () => {
             this.setState({
@@ -354,7 +348,7 @@ export default class DisasterRecovery extends React.Component<
                                     }
                                     onPress={async () => {
                                         try {
-                                            await stores.channelBackupStore.backupChannels();
+                                            await channelBackupStore.backupChannels();
 
                                             this.setState({
                                                 disasterRecoveryBackupOlympus:
@@ -429,7 +423,7 @@ export default class DisasterRecovery extends React.Component<
                                     onPress={async () => {
                                         try {
                                             const { backup, created_at }: any =
-                                                await stores.channelBackupStore.recoverStaticChannelBackup();
+                                                await channelBackupStore.recoverStaticChannelBackup();
                                             if (backup && created_at) {
                                                 this.setState({
                                                     disasterRecoveryFileRecovered:

@@ -1,6 +1,6 @@
 import bolt11 from 'bolt11';
 
-import { settingsStore } from '../stores/storeInstances';
+import { settingsStore } from '../stores/Stores';
 
 import LND from './LND';
 import LoginRequest from './../models/LoginRequest';

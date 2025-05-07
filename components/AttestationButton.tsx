@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TouchableOpacity } from 'react-native';
 
-import stores from '../stores/Stores';
+import { lightningAddressStore } from '../stores/Stores';
 
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -22,7 +22,7 @@ export default function AttestationButton(props: any) {
             onPress={() => {
                 if (attestationStatus === 'neutral') {
                     setLoading(true);
-                    stores.lightningAddressStore
+                    lightningAddressStore
                         .lookupAttestations(hash, amount_msat)
                         .then(({ attestations, status }) => {
                             setAttestations(attestations);

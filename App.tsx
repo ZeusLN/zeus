@@ -6,7 +6,34 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackHandler, NativeEventSubscription, StatusBar } from 'react-native';
 
-import Stores from './stores/Stores';
+import {
+    activityStore,
+    alertStore,
+    balanceStore,
+    cashuStore,
+    channelBackupStore,
+    channelsStore,
+    contactStore,
+    feeStore,
+    fiatStore,
+    inventoryStore,
+    invoicesStore,
+    lightningAddressStore,
+    lnurlPayStore,
+    lspStore,
+    messageSignStore,
+    modalStore,
+    nodeInfoStore,
+    notesStore,
+    offersStore,
+    paymentsStore,
+    posStore,
+    settingsStore,
+    syncStore,
+    transactionsStore,
+    unitsStore,
+    utxosStore
+} from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
 import { AppContainer } from './components/layout/AppContainer';
@@ -216,12 +243,12 @@ export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
 
     private handleBackPress = (navigation: any) => {
-        const dialogHasBeenClosed = Stores.modalStore.closeVisibleModalDialog();
+        const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
         if (dialogHasBeenClosed) {
             return true;
         }
 
-        if (Stores.settingsStore.loginRequired()) {
+        if (settingsStore.loginRequired()) {
             BackHandler.exitApp();
             return true;
         }
@@ -239,32 +266,32 @@ export default class App extends React.PureComponent {
         const Stack = createStackNavigator();
         return (
             <Provider
-                AlertStore={Stores.alertStore}
-                BalanceStore={Stores.balanceStore}
-                TransactionsStore={Stores.transactionsStore}
-                ChannelsStore={Stores.channelsStore}
-                NodeInfoStore={Stores.nodeInfoStore}
-                InvoicesStore={Stores.invoicesStore}
-                SettingsStore={Stores.settingsStore}
-                FiatStore={Stores.fiatStore}
-                UnitsStore={Stores.unitsStore}
-                PaymentsStore={Stores.paymentsStore}
-                FeeStore={Stores.feeStore}
-                LnurlPayStore={Stores.lnurlPayStore}
-                UTXOsStore={Stores.utxosStore}
-                MessageSignStore={Stores.messageSignStore}
-                ActivityStore={Stores.activityStore}
-                PosStore={Stores.posStore}
-                InventoryStore={Stores.inventoryStore}
-                ModalStore={Stores.modalStore}
-                NotesStore={Stores.notesStore}
-                ContactStore={Stores.contactStore}
-                SyncStore={Stores.syncStore}
-                LSPStore={Stores.lspStore}
-                LightningAddressStore={Stores.lightningAddressStore}
-                ChannelBackupStore={Stores.channelBackupStore}
-                OffersStore={Stores.offersStore}
-                CashuStore={Stores.cashuStore}
+                ActivityStore={activityStore}
+                AlertStore={alertStore}
+                BalanceStore={balanceStore}
+                CashuStore={cashuStore}
+                ChannelBackupStore={channelBackupStore}
+                ChannelsStore={channelsStore}
+                ContactStore={contactStore}
+                FeeStore={feeStore}
+                FiatStore={fiatStore}
+                InventoryStore={inventoryStore}
+                InvoicesStore={invoicesStore}
+                LightningAddressStore={lightningAddressStore}
+                LnurlPayStore={lnurlPayStore}
+                LSPStore={lspStore}
+                MessageSignStore={messageSignStore}
+                ModalStore={modalStore}
+                NodeInfoStore={nodeInfoStore}
+                NotesStore={notesStore}
+                OffersStore={offersStore}
+                PaymentsStore={paymentsStore}
+                PosStore={posStore}
+                SettingsStore={settingsStore}
+                SyncStore={syncStore}
+                TransactionsStore={transactionsStore}
+                UnitsStore={unitsStore}
+                UTXOsStore={utxosStore}
             >
                 <AppContainer>
                     <PushNotificationManager>

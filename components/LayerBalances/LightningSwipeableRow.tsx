@@ -18,9 +18,8 @@ import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import stores from './../../stores/Stores';
+import { modalStore, invoicesStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
-const { invoicesStore } = stores;
 
 import Receive from './../../assets/images/SVG/Receive.svg';
 import Routing from './../../assets/images/SVG/Routing.svg';
@@ -271,7 +270,7 @@ export default class LightningSwipeableRow extends Component<
             return (
                 <TouchableOpacity
                     onPress={() =>
-                        stores.modalStore.toggleInfoModal({
+                        modalStore.toggleInfoModal({
                             text: localeString('views.Wallet.waitForSync')
                         })
                     }

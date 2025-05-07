@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 
 // 100_000_000
 const SATS_PER_BTC = 100000000;
@@ -19,7 +19,7 @@ const getDecimalPlaceholder = (amount: string, units: string) => {
     return {
         string: amount.includes('.')
             ? units === 'BTC' &&
-              !stores?.settingsStore?.settings?.display?.removeDecimalSpaces
+              !settingsStore?.settings?.display?.removeDecimalSpaces
                 ? '00 000 000'.slice(
                       occupiedPlaces +
                           (decimalPart.length > 5
@@ -55,7 +55,7 @@ const formatBitcoinWithSpaces = (x: string | number) => {
         return integerFormatted;
     }
 
-    if (stores?.settingsStore?.settings?.display?.removeDecimalSpaces) {
+    if (settingsStore?.settings?.display?.removeDecimalSpaces) {
         return `${integerFormatted}.${decimalPart}`;
     }
 

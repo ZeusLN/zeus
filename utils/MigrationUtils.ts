@@ -1,4 +1,4 @@
-import { settingsStore } from '../stores/storeInstances';
+import { settingsStore } from '../stores/Stores';
 import {
     Settings,
     DEFAULT_FIAT_RATES_SOURCE,

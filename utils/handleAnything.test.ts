@@ -2,7 +2,7 @@ jest.mock('../stores/ChannelBackupStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('react-native-notifications', () => ({}));
 
-import stores from '../stores/Stores';
+import { invoicesStore } from '../stores/Stores';
 import handleAnything from './handleAnything';
 
 let mockProcessBIP21Uri = jest.fn();
@@ -137,7 +137,7 @@ describe('handleAnything', () => {
             const result = await handleAnything(data);
 
             expect(result).toEqual(['PaymentRequest', {}]);
-            expect(stores.invoicesStore.getPayReq).toHaveBeenCalledWith(
+            expect(invoicesStore.getPayReq).toHaveBeenCalledWith(
                 'some payment request'
             );
         });
