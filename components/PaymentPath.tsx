@@ -14,7 +14,7 @@ import { Row } from './layout/Row';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 
-import stores from '../stores/Stores';
+import { channelsStore, nodeInfoStore } from '../stores/Stores';
 import LoadingIndicator from './LoadingIndicator';
 
 interface PaymentPathProps {
@@ -140,7 +140,7 @@ const ExpandedHop = (props: any) => {
                         if (!hop.pubKey) return;
                         UrlUtils.goToBlockExplorerPubkey(
                             hop.pubKey,
-                            stores.nodeInfoStore.testnet
+                            nodeInfoStore.testnet
                         );
                     }}
                 >
@@ -258,9 +258,9 @@ export default class PaymentPath extends React.Component<
     prefetchAliases(paths: any[]) {
         paths.forEach((path) => {
             path.forEach((hop: any) => {
-                const aliasMap = stores.channelsStore.aliasMap;
+                const aliasMap = channelsStore.aliasMap;
                 if (hop?.pubKey && !hop.alias && !aliasMap.get(hop.pubKey)) {
-                    stores.channelsStore.getNodeInfo(hop.pubKey);
+                    channelsStore.getNodeInfo(hop.pubKey);
                 }
             });
         });
@@ -270,8 +270,8 @@ export default class PaymentPath extends React.Component<
         const { enhancedPath } = this.props;
         const { expanded } = this.state;
 
-        const aliasMap = stores.channelsStore.aliasMap;
-        const ourPubKey = stores.nodeInfoStore.nodeInfo.nodeId;
+        const aliasMap = channelsStore.aliasMap;
+        const ourPubKey = nodeInfoStore.nodeInfo.nodeId;
 
         const paths: any[] = [];
         const updateMap = (k: number, v: boolean) => {

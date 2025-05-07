@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import BaseModel from './BaseModel';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { notesStore } from '../stores/storeInstances';
+import { notesStore } from '../stores/Stores';
 
 interface OutputDetail {
     address: string;

@@ -11,7 +11,7 @@ import Carousel from 'react-native-reanimated-carousel';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
 
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 
 import Button from '../components/Button';
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -204,7 +204,6 @@ const Intro: React.FC<IntroProps> = (props) => {
                                     </View>
                                 }
                                 onPress={async () => {
-                                    const { settingsStore } = stores;
                                     const {
                                         setConnectingStatus,
                                         updateSettings

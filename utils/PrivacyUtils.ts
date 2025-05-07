@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 
 const numbersLibrary = 'ΑΒΓΔΕϚΣΤΖΗΘϝϟϡ–◦¤☼ΙΠΧΜ';
 const alphabetLibrary = 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ';
@@ -15,7 +15,7 @@ class PrivacyUtils {
         fixedLength?: number | null,
         numberSet?: boolean
     ) => {
-        const { settings } = stores.settingsStore;
+        const { settings } = settingsStore;
         const { privacy } = settings;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
         if (!lurkerMode) return input;

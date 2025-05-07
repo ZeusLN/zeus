@@ -1,4 +1,4 @@
-import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
+import { settingsStore, nodeInfoStore } from '../stores/Stores';
 import TransactionRequest from '../models/TransactionRequest';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import VersionUtils from '../utils/VersionUtils';

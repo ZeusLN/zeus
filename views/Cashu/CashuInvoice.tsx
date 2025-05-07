@@ -6,7 +6,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';
-import stores from '../../stores/Stores';
+import { activityStore, settingsStore } from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
@@ -77,8 +77,8 @@ export default class CashuInvoiceView extends React.Component<
                         updatedInvoice: result?.updatedInvoice
                     });
                     clearInterval(checkInterval); // Stop checking once paid
-                    stores.activityStore.getActivityAndFilter(
-                        stores.settingsStore.settings.locale
+                    activityStore.getActivityAndFilter(
+                        settingsStore.settings.locale
                     );
                 } else {
                     console.log('Invoice not paid, checking again...');

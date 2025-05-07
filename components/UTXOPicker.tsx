@@ -20,7 +20,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
-import stores from '../stores/Stores';
+import { utxosStore } from '../stores/Stores';
 import UTXOsStore from '../stores/UTXOsStore';
 
 interface UTXOPickerProps {
@@ -62,7 +62,7 @@ export default class UTXOPicker extends React.Component<
     }
 
     openPicker() {
-        stores.utxosStore.getUTXOs(this.state.account);
+        utxosStore.getUTXOs(this.state.account);
         this.setState({
             utxosSelected: [],
             showUtxoModal: true,

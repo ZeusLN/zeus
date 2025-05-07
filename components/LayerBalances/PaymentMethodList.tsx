@@ -17,7 +17,7 @@ import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
 
-import stores from '../../stores/Stores';
+import { settingsStore } from '../../stores/Stores';
 
 interface PaymentMethodListProps {
     navigation: StackNavigationProp<any, any>;
@@ -199,7 +199,7 @@ export default class PaymentMethodList extends Component<
         if (
             lightning &&
             BackendUtils.supportsCashuWallet() &&
-            stores?.settingsStore?.settings?.ecash?.enableCashu
+            settingsStore?.settings?.ecash?.enableCashu
         ) {
             DATA.push({
                 layer: 'Lightning via ecash',

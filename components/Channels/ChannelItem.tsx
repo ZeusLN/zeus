@@ -11,7 +11,7 @@ import { Tag } from './Tag';
 import PrivacyUtils from './../../utils/PrivacyUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import Stores from '../../stores/Stores';
+import { settingsStore } from '../../stores/Stores';
 
 import ClockIcon from '../../assets/images/SVG/Clock.svg';
 import HourglassIcon from '../../assets/images/SVG/Hourglass.svg';
@@ -56,7 +56,7 @@ export function ChannelItem({
     highlightLabels?: boolean;
     isBelowReserve?: boolean;
 }) {
-    const { settings } = Stores.settingsStore;
+    const { settings } = settingsStore;
     const { privacy } = settings;
     const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
