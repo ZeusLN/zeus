@@ -681,6 +681,9 @@ export default class CashuStore {
         // Check status of pending items after initialization
         this.checkPendingItems();
 
+        // Check for sweep to self-custody threshold
+        this.checkAndSweepMints();
+
         const completionTime =
             (new Date().getTime() - start.getTime()) / 1000 + 's';
         console.log('Cashu start-up time:', completionTime);
@@ -1012,6 +1015,8 @@ export default class CashuStore {
 
                     // update Activity list
                     stores.activityStore.getSortedActivity();
+
+                    this.checkAndSweepMints(mintUrl);
 
                     return {
                         isPaid: true,
@@ -1698,6 +1703,8 @@ export default class CashuStore {
                 await this.setMintCounter(mintUrl, newCounter);
                 await this.setMintBalance(mintUrl, balanceSats);
                 await this.setTotalBalance(totalBalanceSats);
+
+                this.checkAndSweepMints(mintUrl);
             }
 
             this.loading = false;
@@ -1712,6 +1719,224 @@ export default class CashuStore {
                 errorMessage:
                     error_msg || localeString('stores.CashuStore.claimError')
             };
+        }
+    };
+
+    @action
+    public checkAndSweepMints = async (specificMintUrl?: string) => {
+        if (this.channelsStore.channels.length === 0) {
+            return;
+        }
+
+        const automaticallySweep =
+            this.settingsStore.settings.ecash.automaticallySweep;
+        const sweepThresholdSats =
+            this.settingsStore.settings.ecash.sweepThresholdSats;
+        if (
+            !automaticallySweep ||
+            !sweepThresholdSats ||
+            sweepThresholdSats <= 0
+        ) {
+            return;
+        }
+
+        const mintsToCheck = specificMintUrl
+            ? [specificMintUrl]
+            : this.mintUrls;
+
+        for (const mintUrl of mintsToCheck) {
+            const walletData = this.cashuWallets[mintUrl];
+            if (!walletData) {
+                console.warn(
+                    `Cashu sweep check: Wallet data not found for mint ${mintUrl}`
+                );
+                continue;
+            }
+
+            if (walletData.balanceSats > sweepThresholdSats) {
+                console.log(
+                    `Cashu sweep triggered for ${mintUrl}: Balance ${walletData.balanceSats} > Threshold ${sweepThresholdSats}`
+                );
+                try {
+                    await this.sweepMint(mintUrl);
+                } catch (error) {
+                    console.error(`Error sweeping mint ${mintUrl}:`, error);
+                }
+            } else {
+                console.log(
+                    `Cashu sweep check for ${mintUrl}: Balance ${walletData.balanceSats} <= Threshold ${sweepThresholdSats}`
+                );
+            }
+        }
+    };
+
+    @action
+    public sweepMint = async (mintUrl: string): Promise<boolean> => {
+        console.log(`Attempting to sweep funds from mint: ${mintUrl}`);
+        this.loading = true;
+
+        try {
+            if (!this.cashuWallets[mintUrl]?.wallet) {
+                console.log(`Initializing wallet for sweep: ${mintUrl}`);
+                await this.initializeWallet(mintUrl, true);
+            }
+
+            const wallet = this.cashuWallets[mintUrl].wallet;
+            if (!wallet) {
+                throw new Error(
+                    `Wallet for mint ${mintUrl} could not be initialized.`
+                );
+            }
+
+            const amountToSweep = this.cashuWallets[mintUrl].balanceSats;
+            if (amountToSweep <= 0) {
+                console.log(`Sweep skipped for ${mintUrl}: Zero balance.`);
+                this.loading = false;
+                return true;
+            }
+
+            const allProofs = [...this.cashuWallets[mintUrl].proofs];
+
+            const memo = `${localeString(
+                'stores.CashuStore.autoSweep'
+            )} ${mintUrl}`;
+            const invoiceParams = {
+                expiry: '3600',
+                routeHints: true,
+                noLsp: true
+            };
+
+            // 1. Create initial invoice for full amount to estimate fee
+            console.log(
+                `Sweep ${mintUrl}: Creating initial invoice for ${amountToSweep} sats`
+            );
+            const initialInvoice = await this.invoicesStore.createInvoice({
+                ...invoiceParams,
+                memo,
+                value: String(amountToSweep)
+            });
+            if (!initialInvoice?.paymentRequest)
+                throw new Error(
+                    'Failed to create initial invoice for fee estimation.'
+                );
+
+            // 2. Get melt quote for fee
+            console.log(
+                `Sweep ${mintUrl}: Getting melt quote for fee estimation`
+            );
+            const initialMeltQuote = await wallet.createMeltQuote(
+                initialInvoice.paymentRequest
+            );
+            const feeReserve = initialMeltQuote.fee_reserve;
+            console.log(
+                `Sweep ${mintUrl}: Estimated fee reserve: ${feeReserve} sats`
+            );
+
+            // 3. Calculate actual receive amount and create final invoice
+            const receiveAmtSat = amountToSweep - feeReserve;
+            if (receiveAmtSat <= 0) {
+                console.warn(
+                    `Sweep ${mintUrl}: Fee reserve (${feeReserve}) exceeds or equals amount to sweep (${amountToSweep}). Cannot sweep.`
+                );
+                this.loading = false;
+                return false;
+            }
+
+            console.log(
+                `Sweep ${mintUrl}: Creating final invoice for ${receiveAmtSat} sats`
+            );
+            const finalInvoice = await this.invoicesStore.createInvoice({
+                ...invoiceParams,
+                memo: `${memo} [${localeString(
+                    'views.Cashu.CashuToken.feeAdjusted'
+                )}]`,
+                value: String(receiveAmtSat)
+            });
+            if (!finalInvoice?.paymentRequest)
+                throw new Error('Failed to create final invoice for sweep.');
+
+            // 4. Get final melt quote
+            console.log(`Sweep ${mintUrl}: Getting final melt quote`);
+            const finalMeltQuote = await wallet.createMeltQuote(
+                finalInvoice.paymentRequest
+            );
+            const amountToSend =
+                finalMeltQuote.amount + finalMeltQuote.fee_reserve;
+
+            console.log(
+                `Sweep ${mintUrl}: Preparing proofs for sending ${amountToSend} sats`
+            );
+            const currentCounter = this.cashuWallets[mintUrl].counter;
+
+            const { proofsToSend, proofsToKeep, newCounterValue } =
+                await this.getSpendingProofsWithPreciseCounter(
+                    wallet,
+                    amountToSend,
+                    allProofs,
+                    currentCounter
+                );
+
+            console.log(
+                `Sweep ${mintUrl}: Melting ${proofsToSend.length} proofs`
+            );
+            const meltResponse = await wallet.meltProofs(
+                finalMeltQuote,
+                proofsToSend,
+                {
+                    counter: newCounterValue + 1
+                }
+            );
+            console.log(
+                `Sweep ${mintUrl}: Melt response received`,
+                meltResponse
+            );
+
+            await this.removeMintProofs(mintUrl, allProofs);
+
+            if (proofsToKeep.length > 0) {
+                console.log(
+                    `Sweep ${mintUrl}: Adding back ${proofsToKeep.length} kept proofs`
+                );
+                await this.addMintProofs(mintUrl, proofsToKeep);
+            }
+
+            // 3. Add back any change proofs from the melt operation
+            if (meltResponse?.change?.length) {
+                console.log(
+                    `Sweep ${mintUrl}: Adding back ${meltResponse.change.length} change proofs`
+                );
+                await this.addMintProofs(mintUrl, meltResponse.change);
+                await this.setMintCounter(
+                    mintUrl,
+                    newCounterValue + meltResponse.change.length + 1
+                );
+            } else {
+                await this.setMintCounter(mintUrl, newCounterValue + 1);
+            }
+
+            // 4. Recalculate and update balances
+            const finalMintProofs = this.cashuWallets[mintUrl].proofs;
+            const finalMintBalance = CashuUtils.sumProofsValue(finalMintProofs);
+            await this.setMintBalance(mintUrl, finalMintBalance);
+            await this.calculateTotalBalance(); // Recalculate total across all mints
+
+            console.log(
+                `Sweep ${mintUrl}: Successfully swept ${receiveAmtSat} sats. Final mint balance: ${finalMintBalance}`
+            );
+            this.loading = false;
+            return true;
+        } catch (error: any) {
+            console.error(`Sweep failed for mint ${mintUrl}:`, error);
+            // Attempt to restore original proofs if sweep failed mid-way? Complex.
+            // For now, just log the error and stop loading.
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = `${localeString(
+                    'stores.CashuStore.sweepError'
+                )} (${mintUrl}): ${error.message || error.toString()}`;
+            });
+            return false;
         }
     };
 

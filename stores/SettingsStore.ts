@@ -137,6 +137,8 @@ interface Bolt12AddressSettings {
 
 interface EcashSettings {
     enableCashu: boolean;
+    automaticallySweep?: boolean;
+    sweepThresholdSats?: number;
 }
 
 export interface Settings {
@@ -1228,7 +1230,9 @@ export default class SettingsStore {
             localPart: ''
         },
         ecash: {
-            enableCashu: false
+            enableCashu: false,
+            automaticallySweep: false,
+            sweepThresholdSats: 10000
         },
         selectNodeOnStartup: false
     };

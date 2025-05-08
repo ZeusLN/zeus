@@ -6,11 +6,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import AmountInput from '../../components/AmountInput';
+
 import Pill from '../../components/Pill';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
 import CashuStore from '../../stores/CashuStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
@@ -20,15 +23,18 @@ import UrlUtils from '../../utils/UrlUtils';
 interface EcashSettingsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    ChannelsStore: ChannelsStore;
     SettingsStore: SettingsStore;
 }
 
 interface EcashSettingsState {
     loading: boolean;
     enableCashu: boolean;
+    automaticallySweep: boolean;
+    sweepThresholdSats: string;
 }
 
-@inject('CashuStore', 'SettingsStore')
+@inject('CashuStore', 'ChannelsStore', 'SettingsStore')
 @observer
 export default class EcashSettings extends React.Component<
     EcashSettingsProps,
@@ -36,7 +42,9 @@ export default class EcashSettings extends React.Component<
 > {
     state = {
         loading: false,
-        enableCashu: false
+        enableCashu: false,
+        automaticallySweep: false,
+        sweepThresholdSats: '0'
     };
 
     async UNSAFE_componentWillMount() {
@@ -46,25 +54,51 @@ export default class EcashSettings extends React.Component<
 
         this.setState({
             enableCashu:
-                settings?.ecash?.enableCashu !== null
+                settings?.ecash?.enableCashu !== null &&
+                settings?.ecash?.enableCashu !== undefined
                     ? settings.ecash.enableCashu
-                    : false
+                    : false,
+            automaticallySweep: settings?.ecash?.automaticallySweep
+                ? true
+                : false,
+            sweepThresholdSats: settings?.ecash?.sweepThresholdSats
+                ? settings.ecash.sweepThresholdSats.toString()
+                : '0'
         });
     }
 
-    renderSeparator = () => (
-        <View
-            style={{
-                height: 1,
-                backgroundColor: themeColor('separator')
-            }}
-        />
-    );
+    handleThresholdChange = async (
+        amount: string,
+        satAmount: string | number
+    ) => {
+        const threshold =
+            typeof satAmount === 'number' ? satAmount : parseInt(satAmount, 10);
+        const finalThreshold =
+            isNaN(threshold) || threshold < 0 ? 0 : threshold;
+
+        this.setState({ sweepThresholdSats: amount, loading: true });
+
+        await this.props.SettingsStore.updateSettings({
+            ecash: {
+                ...this.props.SettingsStore.settings.ecash,
+                sweepThresholdSats: finalThreshold
+            }
+        });
+
+        // Update state with the cleaned threshold value after saving
+        this.setState({
+            sweepThresholdSats: finalThreshold.toString(),
+            loading: false
+        });
+    };
 
     render() {
-        const { navigation, CashuStore, SettingsStore } = this.props;
-        const { loading, enableCashu } = this.state;
+        const { navigation, CashuStore, ChannelsStore, SettingsStore } =
+            this.props;
+        const { loading, enableCashu, automaticallySweep, sweepThresholdSats } =
+            this.state;
         const { settings, updateSettings }: any = SettingsStore;
+        const hasOpenChannels = ChannelsStore.channels.length > 0;
 
         return (
             <Screen>
@@ -155,6 +189,7 @@ export default class EcashSettings extends React.Component<
                             />
                         </View>
                     </View>
+
                     <View
                         style={{
                             marginTop: 20,
@@ -216,6 +251,98 @@ export default class EcashSettings extends React.Component<
                             }}
                         />
                     </View>
+
+                    {hasOpenChannels && enableCashu && (
+                        <View style={{ marginTop: 20 }}>
+                            <View
+                                style={{ flexDirection: 'row', marginTop: 20 }}
+                            >
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 17
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Ecash.automaticallySweep'
+                                        )}
+                                    </Text>
+                                </View>
+                                <View
+                                    style={{
+                                        alignSelf: 'center',
+                                        marginLeft: 5
+                                    }}
+                                >
+                                    <Switch
+                                        value={automaticallySweep}
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                automaticallySweep:
+                                                    !automaticallySweep,
+                                                loading: true
+                                            });
+                                            await updateSettings({
+                                                ecash: {
+                                                    ...settings.ecash,
+                                                    automaticallySweep:
+                                                        !automaticallySweep
+                                                }
+                                            });
+                                            this.setState({
+                                                loading: false
+                                            });
+                                        }}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress ||
+                                            loading
+                                        }
+                                    />
+                                </View>
+                            </View>
+                            {automaticallySweep && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 17,
+                                            marginTop: 10
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Ecash.sweepThresholdSatsTitle'
+                                        )}
+                                    </Text>
+                                    <AmountInput
+                                        amount={sweepThresholdSats}
+                                        onAmountChange={
+                                            this.handleThresholdChange
+                                        }
+                                        forceUnit="sats"
+                                        hideConversion={true}
+                                        hideUnitChangeButton={true}
+                                    />
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 16,
+                                            marginBottom: 15
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.Ecash.sweepThresholdSatsTitle.description'
+                                        )}
+                                    </Text>
+                                </>
+                            )}
+                        </View>
+                    )}
                 </ScrollView>
             </Screen>
         );
