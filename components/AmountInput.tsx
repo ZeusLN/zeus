@@ -9,7 +9,7 @@ import TextInput from './TextInput';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
-import Stores from '../stores/Stores';
+import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -35,7 +35,6 @@ interface AmountInputState {
 }
 
 const getSatAmount = (amount: string | number, forceUnit?: string) => {
-    const { fiatStore, settingsStore, unitsStore } = Stores;
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
     const { fiat } = settings;

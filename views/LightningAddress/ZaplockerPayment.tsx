@@ -8,7 +8,7 @@ import AttestationButton from '../../components/AttestationButton';
 import Text from '../../components/Text';
 import { Row } from '../../components/layout/Row';
 
-import stores from '../../stores/Stores';
+import { lightningAddressStore } from '../../stores/Stores';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -17,7 +17,6 @@ import Receive from '../../assets/images/SVG/Receive.svg';
 
 export default function ZaplockerPayment(props: any) {
     const { item, index, navigation, isReady } = props;
-    const { lightningAddressStore } = stores;
     const { lookupPreimageAndRedeemZaplocker } = lightningAddressStore;
 
     const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');

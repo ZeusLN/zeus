@@ -1,6 +1,6 @@
 import { StackNavigationProp } from '@react-navigation/stack';
 
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 
 const protectedNavigation = async (
     navigation: StackNavigationProp<any, any>,
@@ -8,7 +8,7 @@ const protectedNavigation = async (
     disactivatePOS?: boolean,
     routeParams?: any
 ) => {
-    const { posStatus, settings, setPosStatus } = stores.settingsStore;
+    const { posStatus, settings, setPosStatus } = settingsStore;
     const loginRequired = settings && (settings.passphrase || settings.pin);
     const posEnabled = posStatus === 'active';
 

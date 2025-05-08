@@ -1,5 +1,5 @@
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
+import { settingsStore, nodeInfoStore } from '../stores/Stores';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';

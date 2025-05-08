@@ -1,4 +1,4 @@
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 
 const Kyriaki: { [key: string]: any } = {
     generalStyle: 'dark',
@@ -369,7 +369,7 @@ const Radioactive: { [key: string]: any } = {
 };
 
 export function themeColor(themeString: string): any {
-    const { settings } = stores.settingsStore;
+    const { settings } = settingsStore;
     const theme = settings.display && settings.display.theme;
 
     switch (theme) {

@@ -12,7 +12,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { Row } from './layout/Row';
 import Success from '../assets/images/SVG/Success.svg';
 import Touchable from './Touchable';
-import Stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 import ReactNativeHapticFeedback from 'react-native-haptic-feedback';
 
 import DeleteKey from '../assets/images/SVG/DeleteKey.svg';
@@ -64,9 +64,9 @@ export default function PinPad({
     }, []);
 
     const bigKeypadButtons =
-        Stores.settingsStore.settings &&
-        Stores.settingsStore.settings.display &&
-        Stores.settingsStore.settings.display.bigKeypadButtons;
+        settingsStore.settings &&
+        settingsStore.settings.display &&
+        settingsStore.settings.display.bigKeypadButtons;
 
     // Sets pinNumbers before first render, and doesn't reset them on state change
     const pinNumbers = useMemo(() => {

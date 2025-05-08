@@ -4,7 +4,7 @@ import moment from 'moment';
 import BaseModel from './BaseModel';
 import { localeString } from '../utils/LocaleUtils';
 import { orderPaymentInfo } from '../stores/PosStore';
-import { fiatStore } from '../stores/storeInstances';
+import { fiatStore } from '../stores/Stores';
 
 interface BasePriceMoney {
     amount: number;

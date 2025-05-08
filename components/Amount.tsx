@@ -18,7 +18,7 @@ import PrivacyUtils from '../utils/PrivacyUtils';
 
 import ClockIcon from '../assets/images/SVG/Clock.svg';
 
-import stores from '../stores/Stores';
+import { settingsStore } from '../stores/Stores';
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
@@ -126,8 +126,7 @@ function AmountDisplay({
     switch (unit) {
         case 'sats':
             const hideMsats =
-                !stores.settingsStore?.settings?.display
-                    ?.showMillisatoshiAmounts;
+                !settingsStore?.settings?.display?.showMillisatoshiAmounts;
             if (hideMsats) {
                 const [wholeSats] = amount.toString().split('.');
                 amount = wholeSats;

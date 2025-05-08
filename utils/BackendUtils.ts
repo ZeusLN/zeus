@@ -1,4 +1,4 @@
-import { settingsStore } from '../stores/storeInstances';
+import { settingsStore } from '../stores/Stores';
 // LND
 import LND from '../backends/LND';
 import LightningNodeConnect from '../backends/LightningNodeConnect';

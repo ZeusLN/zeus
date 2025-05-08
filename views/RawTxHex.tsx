@@ -19,7 +19,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
 
-import stores from '../stores/Stores';
+import { nodeInfoStore } from '../stores/Stores';
 import TransactionsStore from '../stores/TransactionsStore';
 
 interface RawTxHexProps {
@@ -133,7 +133,7 @@ export default class RawTxHex extends React.PureComponent<
                             onPress={() =>
                                 UrlUtils.goToBlockExplorerTXID(
                                     broadcast_txid,
-                                    stores.nodeInfoStore.nodeInfo.isTestNet
+                                    nodeInfoStore.nodeInfo.isTestNet
                                 )
                             }
                         />
