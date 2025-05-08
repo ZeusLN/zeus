@@ -1728,9 +1728,15 @@ export default class CashuStore {
             return;
         }
 
+        const automaticallySweep =
+            this.settingsStore.settings.ecash.automaticallySweep;
         const sweepThresholdSats =
             this.settingsStore.settings.ecash.sweepThresholdSats;
-        if (!sweepThresholdSats || sweepThresholdSats <= 0) {
+        if (
+            !automaticallySweep ||
+            !sweepThresholdSats ||
+            sweepThresholdSats <= 0
+        ) {
             return;
         }
 
