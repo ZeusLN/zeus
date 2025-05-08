@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, Platform, View } from 'react-native';
 import { Notifications } from 'react-native-notifications';
-import stores from './stores/Stores';
+import { lightningAddressStore, settingsStore } from './stores/Stores';
 
 export default class PushNotificationManager extends React.Component<any, any> {
     componentDidMount() {
@@ -15,7 +15,7 @@ export default class PushNotificationManager extends React.Component<any, any> {
             (event) => {
                 const deviceToken = event.deviceToken;
                 console.log('Device Token Received', deviceToken);
-                stores.lightningAddressStore.setDeviceToken(deviceToken);
+                lightningAddressStore.setDeviceToken(deviceToken);
             }
         );
         Notifications.events().registerRemoteNotificationsRegistrationFailed(
@@ -33,7 +33,7 @@ export default class PushNotificationManager extends React.Component<any, any> {
                 console.log('Notification Received - Foreground', notification);
                 // Don't display redeem notification if auto-redeem is on
                 if (
-                    stores.settingsStore.settings?.lightningAddress
+                    settingsStore.settings?.lightningAddress
                         ?.automaticallyAccept &&
                     JSON.stringify(notification.payload).includes(
                         'Redeem within the next 24 hours'

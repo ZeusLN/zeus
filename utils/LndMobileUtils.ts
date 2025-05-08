@@ -24,7 +24,7 @@ import {
     cancelGossipSync
 } from '../lndmobile/index';
 
-import stores from '../stores/Stores';
+import { settingsStore, syncStore } from '../stores/Stores';
 import {
     DEFAULT_NEUTRINO_PEERS_MAINNET,
     SECONDARY_NEUTRINO_PEERS_MAINNET,
@@ -98,7 +98,7 @@ const writeLndConfig = async ({
 }) => {
     const { writeConfig } = lndMobile.index;
 
-    const peerMode = stores.settingsStore?.settings?.dontAllowOtherPeers
+    const peerMode = settingsStore?.settings?.dontAllowOtherPeers
         ? 'connect'
         : 'addpeer';
 
@@ -143,10 +143,10 @@ const writeLndConfig = async ({
     [Neutrino]
     ${
         !isTestnet
-            ? stores.settingsStore?.settings?.neutrinoPeersMainnet
+            ? settingsStore?.settings?.neutrinoPeersMainnet
                   .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
                   .join('')
-            : stores.settingsStore?.settings?.neutrinoPeersTestnet
+            : settingsStore?.settings?.neutrinoPeersTestnet
                   .map((peer) => `neutrino.${peerMode}=${peer}\n    `)
                   .join('')
     }
@@ -165,10 +165,9 @@ const writeLndConfig = async ({
 
     [fee]
     fee.url=${
-        stores.settingsStore?.settings?.feeEstimator === 'Custom'
-            ? stores.settingsStore?.settings?.customFeeEstimator
-            : stores.settingsStore?.settings?.feeEstimator ||
-              DEFAULT_FEE_ESTIMATOR
+        settingsStore?.settings?.feeEstimator === 'Custom'
+            ? settingsStore?.settings?.customFeeEstimator
+            : settingsStore?.settings?.feeEstimator || DEFAULT_FEE_ESTIMATOR
     }
     
     [autopilot]
@@ -188,9 +187,7 @@ const writeLndConfig = async ({
     
     [routerrpc]
     routerrpc.estimator=${
-        stores.settingsStore?.settings?.bimodalPathfinding
-            ? 'bimodal'
-            : 'apriori'
+        settingsStore?.settings?.bimodalPathfinding ? 'bimodal' : 'apriori'
     }`;
 
         await writeConfig({ lndDir, config });
@@ -210,10 +207,10 @@ export async function deleteLndWallet(lndDir: string) {
 
 export async function expressGraphSync() {
     return await new Promise(async (resolve) => {
-        stores.syncStore.setExpressGraphSyncStatus(true);
+        syncStore.setExpressGraphSyncStatus(true);
         const start = new Date();
 
-        stores.syncStore.waitForExpressGraphSyncEnd().then(() => {
+        syncStore.waitForExpressGraphSyncEnd().then(() => {
             // call cancellation to LND here
             console.log('Express graph sync cancelling...');
             cancelGossipSync();
@@ -221,7 +218,7 @@ export async function expressGraphSync() {
             resolve(true);
         });
 
-        if (stores.settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
+        if (settingsStore?.settings?.resetExpressGraphSyncOnStartup) {
             log.d('Clearing speedloader files');
             try {
                 await NativeModules.LndMobileTools.DEBUG_deleteSpeedloaderLastrunFile();
@@ -233,20 +230,20 @@ export async function expressGraphSync() {
 
         try {
             const gossipStatus = await gossipSync(
-                stores.settingsStore?.settings?.speedloader === 'Custom'
-                    ? stores.settingsStore?.settings?.customSpeedloader
-                    : stores.settingsStore?.settings?.speedloader ||
+                settingsStore?.settings?.speedloader === 'Custom'
+                    ? settingsStore?.settings?.customSpeedloader
+                    : settingsStore?.settings?.speedloader ||
                           DEFAULT_SPEEDLOADER
             );
 
             const completionTime =
                 (new Date().getTime() - start.getTime()) / 1000 + 's';
             console.log('gossipStatus', `${gossipStatus} - ${completionTime}`);
-            stores.syncStore.setExpressGraphSyncStatus(false);
+            syncStore.setExpressGraphSyncStatus(false);
             resolve(true);
         } catch (e) {
             log.e('GossipSync exception!', [e]);
-            stores.syncStore.setExpressGraphSyncStatus(false);
+            syncStore.setExpressGraphSyncStatus(false);
             resolve(true);
         }
     });
@@ -301,7 +298,7 @@ export async function startLnd({
     const { unlockWallet } = lndMobile.wallet;
 
     // don't mark as started on wallet creation, only on proper start-up
-    if (walletPassword) stores.settingsStore.embeddedLndStarted = true;
+    if (walletPassword) settingsStore.embeddedLndStarted = true;
 
     const status = await checkStatus();
     if (
@@ -352,7 +349,7 @@ export async function startLnd({
                     log.d('Got lnrpc.WalletState.UNLOCKED');
                 } else if (state.state === lnrpc.WalletState.RPC_ACTIVE) {
                     log.d('Got lnrpc.WalletState.RPC_ACTIVE');
-                    stores.syncStore.startSyncing();
+                    syncStore.startSyncing();
                     res(true);
                     LndMobileEventEmitter.removeAllListeners('SubscribeState');
                 } else if (state.state === lnrpc.WalletState.SERVER_ACTIVE) {
@@ -532,12 +529,12 @@ export async function optimizeNeutrinoPeers(
 
     if (selectedPeers.length > 0) {
         if (isTestnet) {
-            await stores.settingsStore.updateSettings({
+            await settingsStore.updateSettings({
                 neutrinoPeersTestnet: selectedPeers,
                 dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
             });
         } else {
-            await stores.settingsStore.updateSettings({
+            await settingsStore.updateSettings({
                 neutrinoPeersMainnet: selectedPeers,
                 dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
             });

@@ -1,12 +1,12 @@
 import { Linking } from 'react-native';
-import stores from '../stores/Stores';
+import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
 
 const goToBlockExplorer = (
     type: string,
     value: string | number,
     testnet?: boolean
 ) => {
-    const { settings } = stores.settingsStore;
+    const { settings } = settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
     const host =
@@ -14,7 +14,7 @@ const goToBlockExplorer = (
             ? privacy.customBlockExplorer
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
     const network =
-        stores.nodeInfoStore.nodeInfo.isTestNet || testnet ? 'testnet/' : '';
+        nodeInfoStore.nodeInfo.isTestNet || testnet ? 'testnet/' : '';
 
     let path: string = type;
     if (type === 'block-height') {
@@ -48,10 +48,10 @@ const goToBlockExplorerPubkey = (pubKey: string, testnet?: boolean) =>
     goToBlockExplorer('lightning/node', pubKey, testnet);
 
 const goToUrl = (url: string) => {
-    stores.modalStore.setUrl(url);
-    stores.modalStore.setClipboardValue(url);
-    stores.modalStore.toggleExternalLinkModal(true);
-    stores.modalStore.setAction(() => leaveZeus(url));
+    modalStore.setUrl(url);
+    modalStore.setClipboardValue(url);
+    modalStore.toggleExternalLinkModal(true);
+    modalStore.setAction(() => leaveZeus(url));
 };
 
 const leaveZeus = (url: string) => {

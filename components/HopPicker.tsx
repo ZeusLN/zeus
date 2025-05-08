@@ -22,7 +22,6 @@ import ChannelsFilter from './Channels/ChannelsFilter';
 
 import Channel from '../models/Channel';
 
-import stores from '../stores/Stores';
 import ChannelsStore, { ChannelsType } from '../stores/ChannelsStore';
 import UnitsStore from '../stores/UnitsStore';
 
@@ -70,11 +69,12 @@ export default class ChannelPicker extends React.Component<
     }
 
     refreshChannels(): void {
-        stores.channelsStore.getChannels().then(() => {
+        const { ChannelsStore } = this.props;
+        ChannelsStore.getChannels().then(() => {
             this.setState({
                 selectedChannels: this.state.selectedChannels
                     .map((c1) =>
-                        stores.channelsStore.channels.find(
+                        ChannelsStore.channels.find(
                             (c2) => c2.channelId === c1.channelId
                         )
                     )

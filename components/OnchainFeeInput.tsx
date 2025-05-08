@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Text, TouchableWithoutFeedback, View } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
+import LoadingIndicator from './LoadingIndicator';
 import TextInput from '../components/TextInput';
+
+import { feeStore, settingsStore } from '../stores/Stores';
+
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
-import stores from '../stores/Stores';
-import LoadingIndicator from './LoadingIndicator';
 
 interface OnchainFeeInputProps {
     navigation: StackNavigationProp<any, any>;
@@ -18,8 +20,6 @@ const DEFAULT_FEE = '10';
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { fee, onChangeFee, navigation } = props;
-
-    const { settingsStore, feeStore } = stores;
     const { settings } = settingsStore;
     const enableMempoolRates = settings?.privacy?.enableMempoolRates;
     const preferredMempoolRate =

@@ -1,7 +1,7 @@
 import bolt11 from 'bolt11';
 import { webln } from '@getalby/sdk';
 
-import { settingsStore } from '../stores/storeInstances';
+import { settingsStore } from '../stores/Stores';
 
 import Base64Utils from '../utils/Base64Utils';
 

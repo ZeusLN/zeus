@@ -5,7 +5,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import CashuStore from '../../stores/CashuStore';
-import stores from '../../stores/Stores';
+import { activityStore, settingsStore } from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -87,8 +87,8 @@ export default class CashuTokenView extends React.Component<
                         updatedToken
                     });
                     clearInterval(checkInterval); // Stop checking once spent
-                    stores.activityStore.getActivityAndFilter(
-                        stores.settingsStore.settings.locale
+                    activityStore.getActivityAndFilter(
+                        settingsStore.settings.locale
                     );
                 } else {
                     console.log('Token not spent, checking again...');

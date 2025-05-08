@@ -22,7 +22,7 @@ import EcashSwipeableRow from './EcashSwipeableRow';
 import { Row as LayoutRow } from '../layout/Row';
 import Pill from '../Pill';
 
-import stores from '../../stores/Stores';
+import { cashuStore, utxosStore } from '../../stores/Stores';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -79,9 +79,9 @@ const getEcashRowColors = () => {
     try {
         // Ensure cashuStore and totalBalanceSats are available
         if (
-            !stores.cashuStore ||
-            stores.cashuStore.totalBalanceSats === undefined ||
-            stores.cashuStore.totalBalanceSats === null
+            !cashuStore ||
+            cashuStore.totalBalanceSats === undefined ||
+            cashuStore.totalBalanceSats === null
         ) {
             console.warn(
                 'getEcashRowColors: Cashu store or totalBalanceSats not available.'
@@ -89,13 +89,13 @@ const getEcashRowColors = () => {
             return false;
         }
 
-        const balanceSats = new BigNumber(stores.cashuStore.totalBalanceSats);
+        const balanceSats = new BigNumber(cashuStore.totalBalanceSats);
 
         // Check if balanceSats is a valid number
         if (balanceSats.isNaN()) {
             console.warn(
                 'getEcashRowColors: Invalid balanceSats value:',
-                stores.cashuStore.totalBalanceSats
+                cashuStore.totalBalanceSats
             );
             return false;
         }
@@ -307,7 +307,7 @@ const SwipeableRow = ({
                 value={value}
                 amount={amount}
                 locked={locked}
-                needsConfig={stores.cashuStore.mintUrls.length === 0}
+                needsConfig={cashuStore.mintUrls.length === 0}
             >
                 <Row item={item} />
             </EcashSwipeableRow>
@@ -326,8 +326,8 @@ const SwipeableRow = ({
         <TouchableOpacity
             onPress={() => {
                 item.hidden
-                    ? stores.utxosStore.unhideAccount(item.layer)
-                    : stores.utxosStore.hideAccount(item.layer);
+                    ? utxosStore.unhideAccount(item.layer)
+                    : utxosStore.hideAccount(item.layer);
             }}
         >
             {item.hidden ? (

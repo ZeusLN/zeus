@@ -24,7 +24,7 @@ import {
     WarningMessage
 } from '../../components/SuccessErrorMessage';
 
-import stores from '../../stores/Stores';
+import { nodeInfoStore } from '../../stores/Stores';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -243,7 +243,7 @@ export default class SeedQRExport extends React.PureComponent<
             const nodeBase58Segwit = bip32
                 .fromSeed(
                     Buffer.from(entropy, 'hex'),
-                    stores.nodeInfoStore.nodeInfo.isTestNet
+                    nodeInfoStore.nodeInfo.isTestNet
                         ? SEGWIT_TESTNET.config
                         : SEGWIT_MAINNET.config
                 )
@@ -252,7 +252,7 @@ export default class SeedQRExport extends React.PureComponent<
             const nodeBase58NativeSegwit = bip32
                 .fromSeed(
                     Buffer.from(entropy, 'hex'),
-                    stores.nodeInfoStore.nodeInfo.isTestNet
+                    nodeInfoStore.nodeInfo.isTestNet
                         ? NATIVE_SEGWIT_TESTNET.config
                         : NATIVE_SEGWIT_MAINNET.config
                 )

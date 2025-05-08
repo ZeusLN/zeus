@@ -3,7 +3,7 @@ import { NativeModules, NativeEventEmitter } from 'react-native';
 import LNC from '../zeus_modules/@lightninglabs/lnc-rn';
 import { lnrpc, walletrpc } from '../zeus_modules/@lightninglabs/lnc-core';
 
-import { settingsStore, nodeInfoStore } from '../stores/storeInstances';
+import { settingsStore, nodeInfoStore } from '../stores/Stores';
 import CredentialStore from './LNC/credentialStore';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';

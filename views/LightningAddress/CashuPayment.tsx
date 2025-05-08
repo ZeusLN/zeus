@@ -7,7 +7,7 @@ import Amount from '../../components/Amount';
 import Text from '../../components/Text';
 import { Row } from '../../components/layout/Row';
 
-import stores from '../../stores/Stores';
+import { cashuStore, lightningAddressStore } from '../../stores/Stores';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -16,7 +16,6 @@ import Receive from '../../assets/images/SVG/Receive.svg';
 
 export default function CashuPayment(props: any) {
     const { item, index } = props;
-    const { cashuStore, lightningAddressStore } = stores;
     const { redeemCashu } = lightningAddressStore;
 
     const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
