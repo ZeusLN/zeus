@@ -11,6 +11,7 @@ import {
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { Icon } from 'react-native-elements';
 
 interface LnurlPaySuccessProps {
     color?: string;
@@ -129,6 +130,18 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                 }}
                 contentContainerStyle={{ gap: 5, padding: 15 }}
             >
+                <Icon
+                    name="keyboard-arrow-up"
+                    type="material"
+                    size={20}
+                    color={themeColor('text')}
+                    containerStyle={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        zIndex: 1
+                    }}
+                />
                 {body}
                 {domain && servicedBy}
             </ScrollView>
@@ -142,6 +155,18 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                     padding: 15
                 }}
             >
+                <Icon
+                    name="keyboard-arrow-up"
+                    type="material"
+                    size={20}
+                    color={themeColor('text')}
+                    containerStyle={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        zIndex: 1
+                    }}
+                />
                 {body}
                 {domain && servicedBy}
             </View>
