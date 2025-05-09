@@ -603,12 +603,15 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LSPStore.initChannelAcceptor();
         }
 
-        // Check Cashu balance for upgrade prompts
         if (implementation === 'embedded-lnd' && settings?.ecash?.enableCashu) {
+            // Check Cashu balance for upgrade prompts
             CashuStore.checkAndShowUpgradeModal(
                 0,
                 CashuStore.totalBalanceSats || 0
             );
+
+            // Check for sweep to self-custody threshold
+            CashuStore.checkAndSweepMints();
         }
 
         // only navigate to initial url after connection and main calls are made
