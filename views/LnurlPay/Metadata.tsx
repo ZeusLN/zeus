@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Text, Image, View, ScrollView } from 'react-native';
-
-import { themeColor } from './../../utils/ThemeUtils';
 import { Icon } from 'react-native-elements';
+
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayMetadataProps {
     metadata: string;
