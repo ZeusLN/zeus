@@ -5,6 +5,7 @@ import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import CashuStore from '../../stores/CashuStore';
+import ChannelsStore from '../../stores/ChannelsStore';
 import { activityStore, settingsStore } from '../../stores/Stores';
 
 import Amount from '../../components/Amount';
@@ -29,7 +30,8 @@ import QR from '../../assets/images/SVG/QR.svg';
 
 interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
-    CashuStore?: CashuStore;
+    CashuStore: CashuStore;
+    ChannelsStore: ChannelsStore;
     route: Route<'CashuToken', { token?: string; decoded: CashuToken }>;
 }
 
@@ -39,7 +41,7 @@ interface CashuTokenState {
     errorMessage: string;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'ChannelsStore')
 @observer
 export default class CashuTokenView extends React.Component<
     CashuTokenProps,
@@ -98,7 +100,7 @@ export default class CashuTokenView extends React.Component<
     }
 
     render() {
-        const { navigation, route, CashuStore } = this.props;
+        const { navigation, route, CashuStore, ChannelsStore } = this.props;
         const { success, errorMessage, updatedToken } = this.state;
         const { mintUrls, addMint, claimToken, loading, errorAddingMint } =
             CashuStore!!;
@@ -119,6 +121,7 @@ export default class CashuTokenView extends React.Component<
         const token = route.params?.token || encodedToken;
 
         const haveMint = mintUrls.includes(mint);
+        const hasOpenChannels = ChannelsStore?.channels?.length > 0;
 
         const QRButton = () => (
             <TouchableOpacity
@@ -287,7 +290,6 @@ export default class CashuTokenView extends React.Component<
                                 )}
                             </>
                         )}
-                        {/* TODO ecash add check for open channels? */}
                         <Button
                             title={localeString(
                                 'views.Cashu.CashuToken.meltTokenSelfCustody'
@@ -310,7 +312,12 @@ export default class CashuTokenView extends React.Component<
                                 }
                             }}
                             containerStyle={{ marginTop: 15 }}
-                            disabled={!isSupported || loading || success}
+                            disabled={
+                                !hasOpenChannels ||
+                                !isSupported ||
+                                loading ||
+                                success
+                            }
                             secondary
                         />
                     </View>
