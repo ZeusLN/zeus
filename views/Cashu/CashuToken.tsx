@@ -240,7 +240,7 @@ export default class CashuTokenView extends React.Component<
                         )}
                     </View>
                 </ScrollView>
-                {!received && !sent && (
+                {!received && (!sent || (sent && !spent)) && (
                     <View style={{ bottom: 15 }}>
                         {BackendUtils.supportsCashuWallet() && (
                             <>
