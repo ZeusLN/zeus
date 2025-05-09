@@ -581,6 +581,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
+        if (
+            connecting &&
+            implementation === 'embedded-lnd' &&
+            settings?.ecash?.enableCashu
+        ) {
+            // Check for sweep to self-custody threshold
+            if (connecting) {
+                CashuStore.checkAndSweepMints();
+            }
+        }
+
         if (connecting && start != null) {
             console.log(
                 'connect time: ' + (new Date().getTime() - start) / 1000 + 's'
@@ -609,9 +620,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 0,
                 CashuStore.totalBalanceSats || 0
             );
-
-            // Check for sweep to self-custody threshold
-            CashuStore.checkAndSweepMints();
         }
 
         // only navigate to initial url after connection and main calls are made
