@@ -58,12 +58,14 @@ export default class EcashSettings extends React.Component<
                 settings?.ecash?.enableCashu !== undefined
                     ? settings.ecash.enableCashu
                     : false,
-            automaticallySweep: settings?.ecash?.automaticallySweep
-                ? true
-                : false,
+            automaticallySweep:
+                settings?.ecash?.automaticallySweep !== null &&
+                settings?.ecash?.automaticallySweep !== undefined
+                    ? settings.ecash.automaticallySweep
+                    : false,
             sweepThresholdSats: settings?.ecash?.sweepThresholdSats
                 ? settings.ecash.sweepThresholdSats.toString()
-                : '0'
+                : '10000'
         });
     }
 
@@ -147,7 +149,7 @@ export default class EcashSettings extends React.Component<
                         >
                             <Text
                                 style={{
-                                    color: themeColor('secondaryText'),
+                                    color: themeColor('text'),
                                     fontSize: 17
                                 }}
                             >
@@ -265,7 +267,7 @@ export default class EcashSettings extends React.Component<
                                 >
                                     <Text
                                         style={{
-                                            color: themeColor('secondaryText'),
+                                            color: themeColor('text'),
                                             fontSize: 17
                                         }}
                                     >
@@ -284,8 +286,6 @@ export default class EcashSettings extends React.Component<
                                         value={automaticallySweep}
                                         onValueChange={async () => {
                                             this.setState({
-                                                automaticallySweep:
-                                                    !automaticallySweep,
                                                 loading: true
                                             });
                                             await updateSettings({
@@ -296,6 +296,8 @@ export default class EcashSettings extends React.Component<
                                                 }
                                             });
                                             this.setState({
+                                                automaticallySweep:
+                                                    !automaticallySweep,
                                                 loading: false
                                             });
                                         }}
