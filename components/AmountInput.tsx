@@ -210,11 +210,6 @@ export default class AmountInput extends React.Component<
                                     }
                                     activeOpacity={0.5}
                                     style={{
-<<<<<<< HEAD
-                                        paddingVertical: 6,
-                                        paddingHorizontal: 12,
-                                        borderRadius: 16
-=======
                                         flexDirection: 'row',
                                         alignItems: 'center',
                                         paddingVertical: 8,
@@ -224,7 +219,6 @@ export default class AmountInput extends React.Component<
                                             themeColor('secondary'),
                                         borderWidth: 1,
                                         borderColor: themeColor('highlight')
->>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                     }}
                                 >
                                     <Text
@@ -234,15 +228,8 @@ export default class AmountInput extends React.Component<
                                             fontFamily: 'PPNeueMontreal-Medium'
                                         }}
                                     >
-<<<<<<< HEAD
-                                        {'Select currency (' +
-                                            (this.props.forceFiatCurrency ||
-                                                settings.fiat) +
-                                            ') >'}
-=======
                                         {this.props.forceFiatCurrency ||
                                             settings.fiat}
->>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                     </Text>
                                     <Icon
                                         name="chevron-right"
