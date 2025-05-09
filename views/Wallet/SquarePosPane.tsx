@@ -175,7 +175,12 @@ export default class SquarePosPane extends React.PureComponent<
             >
                 <TouchableHighlight
                     onPress={() => {
-                        if (getRate() === '$N/A') return;
+                        if (
+                            getRate({
+                                sats: this.props.UnitsStore?.units === 'sats'
+                            }) === '$N/A'
+                        )
+                            return;
                         navigation.navigate('Order', {
                             order: item
                         });
@@ -325,7 +330,9 @@ export default class SquarePosPane extends React.PureComponent<
             <View style={{ flex: 1 }}>
                 <WalletHeader title={headerString} navigation={navigation} />
 
-                {getRate() === '$N/A' ? (
+                {getRate({
+                    sats: this.props.UnitsStore?.units === 'sats'
+                }) === '$N/A' ? (
                     <Animated.View
                         style={{
                             alignSelf: 'center',
@@ -348,16 +355,26 @@ export default class SquarePosPane extends React.PureComponent<
                         <Text
                             style={{
                                 color:
-                                    getRate() === '$N/A'
+                                    getRate({
+                                        sats:
+                                            this.props.UnitsStore?.units ===
+                                            'sats'
+                                    }) === '$N/A'
                                         ? themeColor('error')
                                         : themeColor('text'),
                                 alignSelf: 'center',
                                 marginBottom: 10
                             }}
                         >
-                            {getRate() === '$N/A'
+                            {getRate({
+                                sats: this.props.UnitsStore?.units === 'sats'
+                            }) === '$N/A'
                                 ? localeString('general.fiatFetchError')
-                                : getRate()}
+                                : getRate({
+                                      sats:
+                                          this.props.UnitsStore?.units ===
+                                          'sats'
+                                  })}
                         </Text>
                     </TouchableOpacity>
                 )}
