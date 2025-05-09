@@ -2367,10 +2367,6 @@ export default class Receive extends React.Component<
                                                     });
                                                 }}
                                             />
-<<<<<<< HEAD
-
-=======
->>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                             {currencySelectOpen && (
                                                 <Modal
                                                     visible={
@@ -2422,26 +2418,17 @@ export default class Receive extends React.Component<
                                                                     true
                                                                 }
                                                                 SettingsStore={
-<<<<<<< HEAD
-                                                                    this.props
-                                                                        .SettingsStore
-=======
                                                                     SettingsStore
                                                                 }
                                                                 selectedValue={
                                                                     this.state
                                                                         .selectedInvoiceFiatCurrency
->>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                                                 }
                                                             />
                                                         </View>
                                                     </View>
                                                 </Modal>
                                             )}
-<<<<<<< HEAD
-
-=======
->>>>>>> 25f695c5 (refactored the code in InvoiceCurrencySelector, lint fixes and correct usage of getSatAmount)
                                             {needInbound && (
                                                 <TouchableOpacity
                                                     onPress={() =>
