@@ -17,7 +17,7 @@ import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import EcashSvg from '../../assets/images/SVG/DynamicSVG/EcashSvg';
 
-import { settingsStore } from '../../stores/Stores';
+import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 
 interface PaymentMethodListProps {
     navigation: StackNavigationProp<any, any>;
@@ -213,7 +213,7 @@ export default class PaymentMethodList extends Component<
             DATA.push({
                 layer: 'Offer',
                 subtitle: `${offer?.slice(0, 12)}...${offer?.slice(-12)}`,
-                disabled: !BackendUtils.supportsOffers()
+                disabled: !nodeInfoStore.supportsOffers
             });
         }
 
