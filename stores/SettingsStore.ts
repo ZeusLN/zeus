@@ -137,7 +137,7 @@ interface Bolt12AddressSettings {
 
 interface EcashSettings {
     enableCashu: boolean;
-    automaticallySweep?: boolean;
+    automaticallySweep: boolean;
     sweepThresholdSats?: number;
 }
 
