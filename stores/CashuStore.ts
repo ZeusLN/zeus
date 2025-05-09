@@ -681,9 +681,6 @@ export default class CashuStore {
         // Check status of pending items after initialization
         this.checkPendingItems();
 
-        // Check for sweep to self-custody threshold
-        this.checkAndSweepMints();
-
         const completionTime =
             (new Date().getTime() - start.getTime()) / 1000 + 's';
         console.log('Cashu start-up time:', completionTime);
