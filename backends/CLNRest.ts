@@ -407,6 +407,19 @@ export default class CLNRest {
     // BOLT 12 / Offers
     listOffers = () =>
         this.postRequest('/v1/listoffers', { active_only: true });
+    createWithdrawalRequest = ({
+        amount,
+        description
+    }: {
+        amount: string;
+        description: string;
+    }) => {
+        return this.postRequest('/v1/invoicerequest', {
+            amount: Number(amount),
+            description
+        });
+    };
+    listWithdrawalRequests = () => this.postRequest('/v1/listinvoicerequests');
     createOffer = ({
         description,
         label,
@@ -446,6 +459,7 @@ export default class CLNRest {
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
+    supportsWithdrawalRequests = () => true;
     supportsAccounts = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
