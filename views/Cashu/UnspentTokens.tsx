@@ -35,8 +35,14 @@ export default class UnspentTokens extends React.PureComponent<
         unspentTokens: []
     };
 
-    UNSAFE_componentWillMount() {
-        this.loadTokens();
+    componentDidMount() {
+        this.props.navigation.addListener('focus', this.loadTokens);
+        this.loadTokens(); // Initial load
+    }
+
+    componentWillUnmount() {
+        this.props.navigation.removeListener &&
+            this.props.navigation.removeListener('focus', this.loadTokens);
     }
 
     loadTokens = () => {
