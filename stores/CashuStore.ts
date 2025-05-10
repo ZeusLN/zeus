@@ -2067,6 +2067,17 @@ export default class CashuStore {
                 );
             }
 
+            // Ensure there are proofs to send before creating the token
+            if (!proofsToSend || proofsToSend.length === 0) {
+                console.error(
+                    'mintToken: No proofs to send, cannot create a valid token.'
+                );
+                throw new Error(
+                    localeString('stores.CashuStore.errorMintingToken') +
+                        ' (no proofs to create token)'
+                );
+            }
+
             if (proofsToKeep.length) {
                 await this.addMintProofs(mintUrl, proofsToKeep);
             }
