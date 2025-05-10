@@ -514,7 +514,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsOffers() && (
+                    {selectedNode && NodeInfoStore.supportsOffers && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -556,7 +556,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsOffers() && (
+                    {selectedNode && NodeInfoStore.supportsOffers && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

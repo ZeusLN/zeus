@@ -18,7 +18,11 @@ import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
-import { modalStore, invoicesStore } from './../../stores/Stores';
+import {
+    modalStore,
+    invoicesStore,
+    nodeInfoStore
+} from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import Receive from './../../assets/images/SVG/Receive.svg';
@@ -142,7 +146,7 @@ export default class LightningSwipeableRow extends Component<
         const width =
             BackendUtils.supportsRouting() &&
             BackendUtils.supportsLightningSends() &&
-            BackendUtils.supportsOffers()
+            nodeInfoStore.supportsOffers
                 ? 280
                 : BackendUtils.supportsRouting() &&
                   BackendUtils.supportsLightningSends()
@@ -164,7 +168,7 @@ export default class LightningSwipeableRow extends Component<
                     width,
                     progress
                 )}
-                {BackendUtils.supportsOffers() &&
+                {nodeInfoStore.supportsOffers &&
                     this.renderAction(
                         localeString('general.paycodes'),
                         width,
