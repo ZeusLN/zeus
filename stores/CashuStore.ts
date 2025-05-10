@@ -29,7 +29,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import { activityStore } from './Stores';
+import { activityStore, lightningAddressStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -2279,6 +2279,10 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-seed-version`);
             await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);
             await Storage.removeItem(`${lndDir}-cashu-seed`);
+
+            if (lightningAddressStore.lightningAddressType === 'cashu') {
+                lightningAddressStore.deleteAddress();
+            }
 
             // Reset store state
             this.reset();
