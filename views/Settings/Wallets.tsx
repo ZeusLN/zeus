@@ -49,12 +49,15 @@ interface NodesProps {
     loading?: boolean;
     selectedNode?: number;
     SettingsStore: SettingsStore;
+    route?: any;
 }
 
 interface NodesState {
     nodes: any[];
-    selectedNode: number;
+    selectedNode: number | null;
     loading: boolean;
+    fromStartup: boolean;
+    isSelecting: boolean;
 }
 
 const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
@@ -67,11 +70,21 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
     state = {
         nodes: [],
         selectedNode: 0,
-        loading: false
+        loading: false,
+        fromStartup: false,
+        isSelecting: false
     };
 
     componentDidMount() {
         this.refreshSettings();
+
+        // Check if we're coming from startup based on route param
+        if (this.props.route?.params?.fromStartup) {
+            this.setState({
+                fromStartup: true,
+                selectedNode: null // Set selectedNode to null when in startup mode
+            });
+        }
 
         this.props.navigation.addListener('focus', this.handleFocus);
     }
@@ -80,6 +93,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         this.props.navigation.removeListener &&
             this.props.navigation.removeListener('focus', this.handleFocus);
     }
+
+    handleBackButton = () => {
+        if (this.state.fromStartup) {
+            return true;
+        }
+        return false;
+    };
 
     handleFocus = () => {
         if (this.isInitialFocus) {
@@ -94,10 +114,16 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             loading: true
         });
         await this.props.SettingsStore.getSettings().then((settings) => {
+            // If we're in startup mode, we don't want to set a selected node
+            // Otherwise, use the one from settings
+            const selectedNodeValue = this.state.fromStartup
+                ? null
+                : (settings && settings.selectedNode) || 0;
+
             this.setState({
                 loading: false,
                 nodes: settings?.nodes || [],
-                selectedNode: (settings && settings.selectedNode) || 0
+                selectedNode: selectedNodeValue
             });
         });
     }
@@ -185,7 +211,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         return (
             <Screen>
                 <Header
-                    leftComponent="Back"
+                    leftComponent={
+                        this.state.fromStartup || this.state.isSelecting
+                            ? undefined
+                            : 'Back'
+                    }
                     centerComponent={{
                         text: localeString('views.Settings.Wallets.title'),
                         style: {
@@ -213,9 +243,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                 onDragEnd
                             }: DragListRenderItemInfo<any>) => {
                                 let nodeSubtitle = '';
+
+                                // Only mark a wallet as active if we're not in fromStartup mode
                                 const nodeActive =
-                                    selectedNode === index ||
-                                    (!selectedNode && index === 0);
+                                    !this.state.fromStartup &&
+                                    (selectedNode === index ||
+                                        (!selectedNode && index === 0));
+
                                 if (nodeActive) {
                                     nodeSubtitle = `${localeString(
                                         'general.active'
@@ -255,6 +289,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 // the Wallet view, skip connecting procedures
                                                 navigation.popTo('Wallet');
                                             } else {
+                                                // Immediately set isSelecting to true to hide back button
+                                                // This will prevent the back button from appearing
+                                                // even after fromStartup is set to false
+                                                this.setState({
+                                                    isSelecting: true
+                                                });
+
                                                 const currentImplementation =
                                                     implementation;
                                                 if (
@@ -263,16 +304,31 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                 ) {
                                                     BackendUtils.disconnect();
                                                 }
+
+                                                // Store startup state before updating settings
+                                                const wasFromStartup =
+                                                    this.state.fromStartup;
+
+                                                // If in startup mode, update local state
+                                                if (wasFromStartup) {
+                                                    this.setState({
+                                                        fromStartup: false,
+                                                        selectedNode: index // Highlight the selected wallet immediately
+                                                    });
+                                                }
+
                                                 await updateSettings({
                                                     nodes,
                                                     selectedNode: index
                                                 }).then(() => {
+                                                    // Never show restart needed if coming from startup
                                                     if (
                                                         item.implementation ===
                                                             'embedded-lnd' &&
                                                         Platform.OS ===
                                                             'android' &&
-                                                        embeddedLndStarted
+                                                        embeddedLndStarted &&
+                                                        !wasFromStartup // Skip restart if coming from startup
                                                     ) {
                                                         restartNeeded(true);
                                                     } else {
