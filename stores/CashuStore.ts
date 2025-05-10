@@ -1475,16 +1475,16 @@ export default class CashuStore {
             console.log('PROOFS TO SEND:', proofsToSend);
             console.log('PROOFS TO KEEP:', proofsToKeep);
 
-            proofs = proofsToSend; // Ensure 'proofs' variable is updated for subsequent logic
+            proofs = proofsToSend;
 
             if (proofsToKeep.length)
                 await this.addMintProofs(mintUrl, proofsToKeep);
 
             let meltResponse = await wallet!!.meltProofs(
                 this.meltQuote!!,
-                proofsToSend, // Use the successfully obtained proofsToSend
+                proofsToSend,
                 {
-                    counter: newCounterValue + 1 // Use the successfully obtained newCounterValue
+                    counter: newCounterValue + 1
                 }
             );
             console.log('melt response', meltResponse);
@@ -1492,11 +1492,11 @@ export default class CashuStore {
             if (meltResponse?.change?.length) {
                 await this.setMintCounter(
                     mintUrl,
-                    newCounterValue + meltResponse.change.length + 1 // Use the successfully obtained newCounterValue
+                    newCounterValue + meltResponse.change.length + 1
                 );
                 await this.addMintProofs(mintUrl, meltResponse.change);
             } else {
-                await this.setMintCounter(mintUrl, newCounterValue + 1); // Use the successfully obtained newCounterValue
+                await this.setMintCounter(mintUrl, newCounterValue + 1);
             }
 
             const realFee = Math.max(
