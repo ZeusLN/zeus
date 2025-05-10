@@ -7,6 +7,7 @@ import Channel from '../models/Channel';
 import ClosedChannel from '../models/ClosedChannel';
 import ChannelInfo from '../models/ChannelInfo';
 import FundedPsbt from '../models/FundedPsbt';
+import Peer from '../models/Peer';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import CloseChannelRequest from '../models/CloseChannelRequest';
@@ -52,6 +53,8 @@ export default class ChannelsStore {
     @observable public errorPeerConnect = false;
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
+    @observable public errorListPeers: string | null;
+    @observable public errorDisconnectPeer: string | null;
     @observable public nodes: any = {};
     @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
@@ -67,6 +70,7 @@ export default class ChannelsStore {
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
     @observable channelRequest: any;
+    @observable public peers: Array<Peer> = [];
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
@@ -197,6 +201,7 @@ export default class ChannelsStore {
         this.totalOffline = 0;
         this.channelsType = ChannelsType.Open;
         this.pendingHTLCs = [];
+        this.peers = [];
     };
 
     @action
@@ -661,6 +666,73 @@ export default class ChannelsStore {
                     });
                 });
         });
+    };
+
+    @action
+    public getPeers = async () => {
+        this.loading = true;
+        this.error = false;
+        this.errorListPeers = null;
+
+        try {
+            const response = await BackendUtils.listPeers();
+
+            runInAction(() => {
+                this.peers = response.map((peerData: any) => {
+                    return new Peer(peerData);
+                });
+                this.loading = false;
+            });
+        } catch (error: any) {
+            console.error('Error fetching peers:', error);
+
+            runInAction(() => {
+                this.error = true;
+                this.errorListPeers = error.message ?? 'Failed to fetch peers';
+                this.loading = false;
+            });
+        }
+    };
+
+    @action
+    public disconnectPeer = async (pubkey: string) => {
+        this.loading = true;
+        this.error = false;
+        this.errorDisconnectPeer = null;
+
+        try {
+            const isPeer = this.peers.find(
+                (peer: Peer) => peer.pubkey === pubkey
+            );
+
+            if (!isPeer) {
+                throw new Error('Peer not found');
+            }
+            const res = await BackendUtils.disconnectPeer(pubkey);
+
+            if (!res) {
+                throw new Error('Failed to disconnect peer');
+            }
+
+            runInAction(() => {
+                this.peers = this.peers.filter(
+                    (peer: Peer) => peer.pubkey !== pubkey
+                );
+                this.loading = false;
+            });
+
+            return true;
+        } catch (error: any) {
+            console.error('Error disconnecting peer:', error, error.message);
+            runInAction(() => {
+                this.error = true;
+                this.errorDisconnectPeer =
+                    error.message || 'Failed to disconnect peer';
+                this.loading = false;
+            });
+
+            return false;
+        }
     };
 
     private handleChannelOpen = (request: any, outputs?: any) => {
