@@ -907,7 +907,8 @@ export default class CashuStore {
     public checkInvoicePaid = async (
         quoteId?: string,
         quoteMintUrl?: string,
-        lockedQuote?: boolean
+        lockedQuote?: boolean,
+        skipMintCheck?: boolean
     ) => {
         const mintUrl = quoteMintUrl || this.selectedMintUrl;
 
@@ -1013,7 +1014,11 @@ export default class CashuStore {
                     // update Activity list
                     activityStore.getSortedActivity();
 
-                    this.checkAndSweepMints(mintUrl);
+                    // We use this flag to ensure we don't call the check repeatedly
+                    // if rapidly redeeming from ZEUS Pay on open
+                    if (!skipMintCheck) {
+                        this.checkAndSweepMints(mintUrl);
+                    }
 
                     return {
                         isPaid: true,
