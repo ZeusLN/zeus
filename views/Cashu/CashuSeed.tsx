@@ -330,7 +330,7 @@ export default class CashuSeed extends React.PureComponent<
                                     navigation.popTo('Wallet');
                                 }}
                                 title={localeString(
-                                    'views.Settings.Seed.backup12Complete'
+                                    'views.SendingLightning.goToWallet'
                                 )}
                             />
                         </View>
