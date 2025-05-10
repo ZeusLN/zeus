@@ -722,7 +722,8 @@ export default class LightningAddressStore {
         mint_url: string,
         amount_msat: number,
         skipStatus?: boolean,
-        localNotification?: boolean
+        localNotification?: boolean,
+        skipMintCheck?: boolean
     ) => {
         this.error = false;
         this.error_msg = '';
@@ -761,7 +762,8 @@ export default class LightningAddressStore {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
                 mint_url,
-                true
+                true, // lockedQuote
+                skipMintCheck
             );
 
             if (
@@ -1165,13 +1167,20 @@ export default class LightningAddressStore {
     public redeemAllOpenPaymentsCashu = async (localNotification?: boolean) => {
         this.redeemingAll = true;
 
-        for (const item of this.paid.slice().reverse()) {
+        const openPaymentsToProcess = this.paid.slice().reverse();
+        const totalPayments = openPaymentsToProcess.length;
+
+        for (let i = 0; i < totalPayments; i++) {
+            const item = openPaymentsToProcess[i];
+            const isLast = i === totalPayments - 1; // True if this is the last item
+
             await this.redeemCashu(
                 item.quote_id,
                 item.mint_url,
                 item.amount_msat,
-                true,
-                localNotification
+                true, // skipStatus
+                localNotification,
+                !isLast // skipMintCheck
             );
         }
 
