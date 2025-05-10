@@ -252,7 +252,7 @@ export default class SendingOnChain extends React.Component<
                             {(publishSuccess || error) && (
                                 <Button
                                     title={localeString(
-                                        'views.SendingOnChain.goToWallet'
+                                        'views.SendingLightning.goToWallet'
                                     )}
                                     icon={{
                                         name: 'list',

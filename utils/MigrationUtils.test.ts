@@ -61,8 +61,20 @@ jest.mock('../stores/SettingsStore', () => ({
         Standalone: 'standalone'
     }
 }));
+jest.mock('../storage', () => ({
+    setItem: jest.fn().mockResolvedValue(true),
+    getItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn()
+}));
 
 import MigrationUtils from './MigrationUtils';
+
+// Mock console logs to keep test output clean
+const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
+const mockConsoleError = jest
+    .spyOn(console, 'error')
+    .mockImplementation(() => {});
 
 describe('MigrationUtils', () => {
     const defaultSettings = {
@@ -227,6 +239,93 @@ describe('MigrationUtils', () => {
                     squareEnabled: false
                 }
             });
+        });
+    });
+
+    describe('migrateCashuSeedVersion', () => {
+        beforeEach(() => {
+            // Clear mock history before each test
+            require('../storage').setItem.mockClear();
+            mockConsoleLog.mockClear();
+            mockConsoleError.mockClear();
+        });
+
+        afterAll(() => {
+            // Restore original console functions
+            mockConsoleLog.mockRestore();
+            mockConsoleError.mockRestore();
+        });
+
+        it('should set seedVersion to "v1" and save to Storage if undefined', async () => {
+            const mockCashuStore: any = {
+                seedVersion: undefined,
+                getLndDir: jest.fn().mockReturnValue('testLndDir')
+            };
+
+            await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
+
+            expect(mockCashuStore.seedVersion).toBe('v1');
+            expect(require('../storage').setItem).toHaveBeenCalledTimes(1);
+            expect(require('../storage').setItem).toHaveBeenCalledWith(
+                'testLndDir-cashu-seed-version',
+                'v1'
+            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(
+                'Migrating Cashu seed version to v1'
+            );
+            expect(mockConsoleLog).toHaveBeenCalledWith(
+                'Cashu seed version migrated and saved as v1.'
+            );
+        });
+
+        it('should not change seedVersion or call Storage.setItem if seedVersion is already "v1"', async () => {
+            const mockCashuStore: any = {
+                seedVersion: 'v1',
+                getLndDir: jest.fn().mockReturnValue('testLndDir')
+            };
+
+            await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
+
+            expect(mockCashuStore.seedVersion).toBe('v1');
+            expect(require('../storage').setItem).not.toHaveBeenCalled();
+            expect(mockConsoleLog).not.toHaveBeenCalledWith(
+                'Migrating Cashu seed version to v1'
+            );
+        });
+
+        it('should not change seedVersion or call Storage.setItem if seedVersion is already defined with another value', async () => {
+            const mockCashuStore: any = {
+                seedVersion: 'v2-bip39',
+                getLndDir: jest.fn().mockReturnValue('testLndDir')
+            };
+
+            await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
+
+            expect(mockCashuStore.seedVersion).toBe('v2-bip39');
+            expect(require('../storage').setItem).not.toHaveBeenCalled();
+        });
+
+        it('should handle errors during Storage.setItem gracefully', async () => {
+            require('../storage').setItem.mockRejectedValueOnce(
+                new Error('Storage failed')
+            );
+            const mockCashuStore: any = {
+                seedVersion: undefined,
+                getLndDir: jest.fn().mockReturnValue('testLndDir')
+            };
+
+            await MigrationUtils.migrateCashuSeedVersion(mockCashuStore);
+
+            expect(mockCashuStore.seedVersion).toBe('v1'); // Version is set before storage attempt
+            expect(require('../storage').setItem).toHaveBeenCalledTimes(1);
+            expect(require('../storage').setItem).toHaveBeenCalledWith(
+                'testLndDir-cashu-seed-version',
+                'v1'
+            );
+            expect(mockConsoleError).toHaveBeenCalledWith(
+                'Error saving migrated Cashu seed version:',
+                expect.any(Error)
+            );
         });
     });
 });
