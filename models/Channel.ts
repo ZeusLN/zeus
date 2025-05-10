@@ -42,7 +42,7 @@ export default class Channel extends BaseModel {
     capacity: string;
     private: boolean;
     initiator?: boolean;
-    peer_scid_alias?: number;
+    peer_scid_alias?: string;
     zero_conf_confirmed_scid?: number;
     alias_scids?: Array<number>; // array uint64
     local_chan_reserve_sat?: string;
