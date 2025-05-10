@@ -29,7 +29,6 @@ import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import ContactStore from '../../stores/ContactStore';
-
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
@@ -89,7 +88,7 @@ interface AddContactState {
     name: string;
     description: string;
     photo: string | null;
-    showExtraFieldModal: boolean;
+    showFieldModal: boolean;
     confirmDelete: boolean;
     isFavourite: boolean;
     isValidLightningAddress: boolean[];
@@ -101,7 +100,6 @@ interface AddContactState {
     isValidNpub: boolean[];
     [key: string]: string[] | any;
 }
-
 const ContactInputField = ({
     icon,
     value,
@@ -111,7 +109,7 @@ const ContactInputField = ({
     isValid,
     index,
     setValidationState,
-    isAdditionalField,
+    isAdditionalField = false,
     onDelete
 }: ContactInputFieldProps) => (
     <>
@@ -130,25 +128,28 @@ const ContactInputField = ({
                 value={value}
                 placeholder={placeholder}
                 placeholderTextColor={themeColor('secondaryText')}
-                style={{
-                    ...styles.textInput,
-                    color: isValid ? themeColor('text') : themeColor('error')
-                }}
+                style={[
+                    styles.fieldInput,
+                    {
+                        color: isValid
+                            ? themeColor('text')
+                            : themeColor('error')
+                    }
+                ]}
                 autoCapitalize="none"
             />
             {isAdditionalField && (
-                <TouchableOpacity style={styles.deleteIcon}>
+                <TouchableOpacity style={styles.icons} onPress={onDelete}>
                     <Icon
                         name="close"
-                        onPress={onDelete}
                         color={themeColor('text')}
                         underlayColor="transparent"
-                        size={16}
+                        size={18}
                     />
                 </TouchableOpacity>
             )}
         </View>
-        <Divider orientation="horizontal" style={{ marginTop: 10 }} />
+        <Divider style={styles.divider} />
     </>
 );
 
@@ -162,39 +163,67 @@ export default class AddContact extends React.Component<
         super(props);
         this.state = {
             contacts: [],
-            lnAddress: [''],
-            bolt12Address: [''],
-            bolt12Offer: [''],
-            onchainAddress: [''],
-            nip05: [''],
-            nostrNpub: [''],
-            pubkey: [''],
+            lnAddress: [],
+            bolt12Address: [],
+            bolt12Offer: [],
+            onchainAddress: [],
+            nip05: [],
+            nostrNpub: [],
+            pubkey: [],
             name: '',
             description: '',
             photo: null,
-            showExtraFieldModal: false,
+            showFieldModal: false,
             confirmDelete: false,
             isFavourite: false,
-            isValidLightningAddress: [true],
-            isValidBolt12Address: [true],
-            isValidBolt12Offer: [true],
-            isValidPubkey: [true],
-            isValidOnchainAddress: [true],
-            isValidNIP05: [true],
-            isValidNpub: [true]
+            isValidLightningAddress: [],
+            isValidBolt12Address: [],
+            isValidBolt12Offer: [],
+            isValidPubkey: [],
+            isValidOnchainAddress: [],
+            isValidNIP05: [],
+            isValidNpub: []
         };
     }
 
-    addExtraField = (field: string) => {
-        this.setState((prevState) => ({
-            [field]: [...prevState[field], '']
-        }));
+    addField = (field: string) => {
+        this.setState((prevState) => {
+            // Add new empty field
+            const updatedFields = [...(prevState[field] || []), ''];
+
+            // Add corresponding validation state
+            const validationKey = `isValid${
+                field.charAt(0).toUpperCase() + field.slice(1)
+            }`;
+            const updatedValidation = [
+                ...(prevState[validationKey] || []),
+                true
+            ];
+
+            return {
+                [field]: updatedFields,
+                [validationKey]: updatedValidation,
+                showFieldModal: false
+            };
+        });
     };
 
-    removeExtraField = (field: string, index: any) => {
-        const updatedAddresses = [...this.state[field]];
-        updatedAddresses.splice(index + 1, 1); // Remove the element at index
-        this.setState({ [field]: updatedAddresses });
+    removeField = (field: string, index: number) => {
+        this.setState((prevState) => {
+            const updatedFields = [...prevState[field]];
+            updatedFields.splice(index, 1);
+
+            const validationKey = `isValid${
+                field.charAt(0).toUpperCase() + field.slice(1)
+            }`;
+            const updatedValidation = [...prevState[validationKey]];
+            updatedValidation.splice(index, 1);
+
+            return {
+                [field]: updatedFields,
+                [validationKey]: updatedValidation
+            };
+        });
     };
 
     saveContact = async () => {
@@ -242,7 +271,7 @@ export default class AddContact extends React.Component<
                                 asset.base64,
                                 'base64'
                             );
-                            console.log('File saved to ', filePath);
+                            // console.log('File saved to ', filePath);
 
                             // Set the local file path in the state
                             this.setState({
@@ -258,10 +287,19 @@ export default class AddContact extends React.Component<
     };
 
     onChangeLightningAddress = (text: string, index: number) => {
+        // For the default Lightning Address field (index 0), maintain invalid state when emptied
         const isValid =
-            AddressUtils.isValidLightningPaymentRequest(text) ||
-            AddressUtils.isValidLightningAddress(text) ||
-            AddressUtils.isValidBitcoinAddress(text, true);
+            index === 0
+                ? text
+                    ? AddressUtils.isValidLightningPaymentRequest(text) ||
+                      AddressUtils.isValidLightningAddress(text) ||
+                      AddressUtils.isValidBitcoinAddress(text, true)
+                    : this.state.lnAddress[0] === '' // Only valid if it was never touched
+                : text
+                ? AddressUtils.isValidLightningPaymentRequest(text) ||
+                  AddressUtils.isValidLightningAddress(text) ||
+                  AddressUtils.isValidBitcoinAddress(text, true)
+                : true; // Additional fields can be empty
 
         this.setState((prevState) => ({
             isValidLightningAddress: Object.assign(
@@ -349,6 +387,11 @@ export default class AddContact extends React.Component<
     };
 
     componentDidMount() {
+        // Initialize with one empty Lightning Address field
+        this.setState({
+            lnAddress: [''],
+            isValidLightningAddress: [true]
+        });
         this.handlePrefillContact();
     }
 
@@ -399,6 +442,195 @@ export default class AddContact extends React.Component<
         }
     };
 
+    // Function to render all added fields
+    renderAddedFields = () => {
+        const allFields: JSX.Element[] = [];
+        // Add default Lightning Address field first
+        allFields.push(
+            <ContactInputField
+                key="default-ln-address"
+                icon={<LightningBolt />}
+                value={this.state.lnAddress[0] || ''}
+                onChangeText={(text) => {
+                    const updatedFields = [...this.state.lnAddress];
+                    updatedFields[0] = text;
+                    this.setState({ lnAddress: updatedFields });
+                }}
+                onValidate={(text) => {
+                    const isValid = text
+                        ? AddressUtils.isValidLightningPaymentRequest(text) ||
+                          AddressUtils.isValidLightningAddress(text) ||
+                          AddressUtils.isValidBitcoinAddress(text, true)
+                        : true;
+
+                    const updatedValidation = [
+                        ...this.state.isValidLightningAddress
+                    ];
+                    updatedValidation[0] = isValid;
+
+                    this.setState({
+                        isValidLightningAddress: updatedValidation
+                    });
+                }}
+                placeholder={localeString(
+                    'views.Settings.AddContact.lnAddress'
+                )}
+                isValid={this.state.isValidLightningAddress[0]}
+                index={0}
+                setValidationState={(idx, isValid) => {
+                    const updatedValidation = [
+                        ...this.state.isValidLightningAddress
+                    ];
+                    updatedValidation[idx] = isValid;
+                    this.setState({
+                        isValidLightningAddress: updatedValidation
+                    });
+                }}
+                isAdditionalField={false}
+            />
+        );
+
+        // Helper function to add fields to the array
+        const addFieldsToArray = (
+            fieldArray: string[],
+            fieldType: string,
+            icon: React.ReactNode,
+            validationArray: boolean[],
+            validationFunction: (text: string, index: number) => void,
+            placeholder: string
+        ) => {
+            if (fieldArray?.length > 0) {
+                // For lnAddress, start from index 1 since index 0 is the default field
+                const startIndex = fieldType === 'lnAddress' ? 1 : 0;
+                fieldArray.slice(startIndex).forEach((value, idx) => {
+                    const actualIndex =
+                        fieldType === 'lnAddress' ? idx + 1 : idx;
+                    allFields.push(
+                        <ContactInputField
+                            key={`${fieldType}-${actualIndex}`}
+                            icon={icon}
+                            value={value}
+                            onChangeText={(text) => {
+                                const updatedFields = [...fieldArray];
+                                updatedFields[actualIndex] = text;
+                                this.setState({ [fieldType]: updatedFields });
+                                validationFunction(text, actualIndex);
+                            }}
+                            onValidate={(text) =>
+                                validationFunction(text, actualIndex)
+                            }
+                            placeholder={placeholder}
+                            isValid={validationArray[actualIndex]}
+                            index={actualIndex}
+                            setValidationState={(idx, isValid) => {
+                                const updatedValidation = [...validationArray];
+                                updatedValidation[idx] = isValid;
+                                this.setState({
+                                    [`isValid${
+                                        fieldType.charAt(0).toUpperCase() +
+                                        fieldType.slice(1)
+                                    }`]: updatedValidation
+                                });
+                            }}
+                            isAdditionalField={true}
+                            onDelete={() =>
+                                this.removeField(fieldType, actualIndex)
+                            }
+                        />
+                    );
+                });
+            }
+        };
+
+        const {
+            lnAddress,
+            bolt12Address,
+            bolt12Offer,
+            onchainAddress,
+            nip05,
+            nostrNpub,
+            pubkey,
+            isValidLightningAddress,
+            isValidBolt12Address,
+            isValidBolt12Offer,
+            isValidPubkey,
+            isValidOnchainAddress,
+            isValidNIP05,
+            isValidNpub
+        } = this.state;
+
+        // Add all fields including additional Lightning Address fields
+        addFieldsToArray(
+            lnAddress,
+            'lnAddress',
+            <LightningBolt />,
+            isValidLightningAddress,
+            this.onChangeLightningAddress,
+            localeString('views.Settings.AddContact.lnAddress')
+        );
+        if (bolt12Address?.length > 0) {
+            addFieldsToArray(
+                bolt12Address,
+                'bolt12Address',
+                <LightningBolt />,
+                isValidBolt12Address,
+                this.onChangeBolt12Address,
+                localeString('views.Settings.Bolt12Address')
+            );
+        }
+        if (bolt12Offer?.length > 0) {
+            addFieldsToArray(
+                bolt12Offer,
+                'bolt12Offer',
+                <LightningBolt />,
+                isValidBolt12Offer,
+                this.onChangeBolt12Offer,
+                localeString('views.Settings.Bolt12Offer')
+            );
+        }
+        if (pubkey?.length > 0) {
+            addFieldsToArray(
+                pubkey,
+                'pubkey',
+                <LightningBolt />,
+                isValidPubkey,
+                this.onChangePubkey,
+                localeString('views.Settings.AddContact.pubkey')
+            );
+        }
+        if (onchainAddress?.length > 0) {
+            addFieldsToArray(
+                onchainAddress,
+                'onchainAddress',
+                <BitcoinIcon />,
+                isValidOnchainAddress,
+                this.onChangeOnchainAddress,
+                localeString('views.Settings.AddContact.onchainAddress')
+            );
+        }
+        if (nip05?.length > 0) {
+            addFieldsToArray(
+                nip05,
+                'nip05',
+                <VerifiedAccount />,
+                isValidNIP05,
+                this.onChangeNIP05,
+                localeString('views.Settings.AddContact.nip05')
+            );
+        }
+        if (nostrNpub?.length > 0) {
+            addFieldsToArray(
+                nostrNpub,
+                'nostrNpub',
+                <KeySecurity />,
+                isValidNpub,
+                this.onChangeNpub,
+                localeString('views.Settings.AddContact.nostrNpub')
+            );
+        }
+        return allFields;
+    };
+
     render() {
         const { navigation, ContactStore } = this.props;
         const {
@@ -421,49 +653,88 @@ export default class AddContact extends React.Component<
             isValidPubkey
         } = this.state;
 
+        const dynamicStyles = {
+            textInput: {
+                ...styles.textInput,
+                color: themeColor('text')
+            },
+            addFieldButton: {
+                ...styles.addFieldButton,
+                backgroundColor: themeColor('secondary')
+            },
+            modalContent: {
+                ...styles.modalContent,
+                backgroundColor: themeColor('background')
+            },
+            modalTitle: {
+                ...styles.modalTitle,
+                color: themeColor('text')
+            },
+            modalItemIcon: {
+                ...styles.modalItemIcon,
+                backgroundColor: themeColor('secondary')
+            },
+            modalItemText: {
+                ...styles.modalItemText,
+                color: themeColor('text')
+            },
+            photoWrapper: {
+                ...styles.photoWrapper,
+                backgroundColor: themeColor('secondaryText')
+            }
+        };
+
         const dropdownValues = [
             {
                 key: 'LN address',
                 translateKey: 'general.lightningAddressCondensed',
-                value: 'lnAddress'
+                value: 'lnAddress',
+                icon: <LightningBolt />
             },
             {
                 key: 'BOLT 12 address',
                 translateKey: 'views.Settings.Bolt12Address',
-                value: 'bolt12Address'
+                value: 'bolt12Address',
+                icon: <LightningBolt />
             },
             {
                 key: 'BOLT 12 offer',
                 translateKey: 'views.Settings.Bolt12Offer',
-                value: 'bolt12Offer'
+                value: 'bolt12Offer',
+                icon: <LightningBolt />
             },
             {
-                key: 'Pubkey',
+                key: 'Public key',
                 translateKey: 'views.NodeInfo.pubkey',
-                value: 'pubkey'
+                value: 'pubkey',
+                icon: <LightningBolt />
             },
+
             {
                 key: 'Onchain address',
                 translateKey: 'views.Settings.AddContact.onchainAddress',
-                value: 'onchainAddress'
+                value: 'onchainAddress',
+                icon: <BitcoinIcon />
             },
             {
                 key: 'NIP-05',
                 translateKey: 'views.Settings.AddContact.nip05',
-                value: 'nip05'
+                value: 'nip05',
+                icon: <VerifiedAccount />
             },
             {
                 key: 'Nostr npub',
                 translateKey: 'views.Settings.AddContact.nostrNpub',
-                value: 'nostrNpub'
+                value: 'nostrNpub',
+                icon: <KeySecurity />
             }
         ];
 
         const AddPhotos = () => (
             <AddIcon
                 fill={themeColor('background')}
-                width="30"
-                height="30"
+                width="24"
+                height="24"
                 style={{ alignSelf: 'center' }}
             />
         );
@@ -504,10 +775,7 @@ export default class AddContact extends React.Component<
         return (
             <Screen>
                 <KeyboardAvoidingView
-                    style={{
-                        flex: 1,
-                        backgroundColor: 'transparent'
-                    }}
+                    style={styles.container}
                     behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 >
                     <Header
@@ -529,11 +797,8 @@ export default class AddContact extends React.Component<
                         }}
                         navigation={navigation}
                     />
-                    <ScrollView
-                        contentContainerStyle={{
-                            flexGrow: 1
-                        }}
-                    >
+                    <ScrollView contentContainerStyle={styles.scrollContent}>
+                        {/* Profile Photo */}
                         <View
                             style={{
                                 justifyContent: 'center',
@@ -547,17 +812,7 @@ export default class AddContact extends React.Component<
                                         : () => this.setState({ photo: null })
                                 }
                             >
-                                <View
-                                    style={{
-                                        backgroundColor:
-                                            themeColor('secondaryText'),
-                                        marginTop: 40,
-                                        width: 136,
-                                        height: 136,
-                                        borderRadius: 68,
-                                        justifyContent: 'center'
-                                    }}
-                                >
+                                <View style={dynamicStyles.photoWrapper}>
                                     {photo ? (
                                         <Image
                                             source={{
@@ -572,17 +827,17 @@ export default class AddContact extends React.Component<
                             </TouchableOpacity>
                         </View>
 
+                        {/* Name Field */}
                         <View
                             style={{
-                                alignSelf: 'center',
-                                marginTop: 22,
-                                padding: Platform.OS === 'ios' ? 8 : 0
+                                width: '100%',
+                                marginTop: 18
                             }}
                         >
                             <TextInput
-                                onChangeText={(text: string) => {
-                                    this.setState({ name: text });
-                                }}
+                                onChangeText={(text) =>
+                                    this.setState({ name: text })
+                                }
                                 value={name}
                                 placeholder={localeString(
                                     'views.Settings.AddContact.name'
@@ -590,29 +845,21 @@ export default class AddContact extends React.Component<
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text')
-                                }}
+                                style={dynamicStyles.textInput}
                                 autoCapitalize="none"
                             />
                         </View>
                         <Divider
                             orientation="horizontal"
-                            style={{ marginTop: 6 }}
+                            style={styles.divider}
                         />
-                        <View
-                            style={{
-                                alignContent: 'center',
-                                alignSelf: 'center',
-                                padding: Platform.OS === 'ios' ? 8 : 0,
-                                width: '100%'
-                            }}
-                        >
+
+                        {/* Description Field */}
+                        <View style={styles.inputWrapper}>
                             <TextInput
-                                onChangeText={(text: string) => {
-                                    this.setState({ description: text });
-                                }}
+                                onChangeText={(text) =>
+                                    this.setState({ description: text })
+                                }
                                 value={description}
                                 multiline
                                 placeholder={localeString(
@@ -621,586 +868,162 @@ export default class AddContact extends React.Component<
                                 placeholderTextColor={themeColor(
                                     'secondaryText'
                                 )}
-                                style={{
-                                    ...styles.textInput,
-                                    color: themeColor('text'),
-                                    paddingHorizontal: 12,
-                                    textAlign: 'center'
-                                }}
+                                style={[dynamicStyles.textInput]}
                                 autoCapitalize="none"
                             />
                         </View>
+                        <Divider
+                            orientation="horizontal"
+                            style={styles.divider}
+                        />
+
+                        {/* Added Fields */}
+                        <View>{this.renderAddedFields()}</View>
+
+                        {/* Add Field Button */}
+                        <TouchableOpacity
+                            onPress={() =>
+                                this.setState({ showFieldModal: true })
+                            }
+                            style={dynamicStyles.addFieldButton}
+                            activeOpacity={0.7}
+                        >
+                            <View style={styles.addFieldContent}>
+                                <Icon
+                                    name="add"
+                                    size={26}
+                                    color={themeColor('text')}
+                                    style={styles.addIcon}
+                                />
+                                <Text
+                                    style={[
+                                        styles.addFieldText,
+                                        { color: themeColor('text') }
+                                    ]}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddContact.addField'
+                                    )}
+                                </Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* Field Selection Modal */}
                         <Modal
                             animationType="slide"
                             transparent={true}
-                            visible={this.state.showExtraFieldModal}
+                            visible={this.state.showFieldModal}
                             onRequestClose={() =>
-                                this.setState({ showExtraFieldModal: false })
+                                this.setState({ showFieldModal: false })
                             }
                         >
                             <View style={styles.modalContainer}>
-                                <View style={styles.modalCenter}>
-                                    {dropdownValues.map(
-                                        (value: any, index: number) => (
-                                            <TouchableOpacity
-                                                key={index}
-                                                onPress={() => {
-                                                    this.setState({
-                                                        showExtraFieldModal:
-                                                            false
-                                                    });
-                                                    this.addExtraField(
-                                                        value.value
-                                                    );
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        ...styles.modalItem,
-                                                        color: themeColor(
-                                                            'secondary'
+                                <View style={dynamicStyles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={dynamicStyles.modalTitle}>
+                                            {localeString(
+                                                'views.Settings.AddContact.selectField'
+                                            )}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                this.setState({
+                                                    showFieldModal: false
+                                                })
+                                            }
+                                        >
+                                            <Icon
+                                                name="close"
+                                                size={24}
+                                                color={themeColor('text')}
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                    <ScrollView style={styles.modalList}>
+                                        {dropdownValues.map((value, index) => (
+                                            <View key={index}>
+                                                <TouchableOpacity
+                                                    style={styles.modalItem}
+                                                    onPress={() =>
+                                                        this.addField(
+                                                            value.value
                                                         )
-                                                    }}
+                                                    }
                                                 >
-                                                    {value.key}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        )
-                                    )}
+                                                    <View
+                                                        style={
+                                                            dynamicStyles.modalItemIcon
+                                                        }
+                                                    >
+                                                        {value.icon}
+                                                    </View>
+                                                    <Text
+                                                        style={
+                                                            dynamicStyles.modalItemText
+                                                        }
+                                                    >
+                                                        {value.key}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                                <Divider
+                                                    orientation="horizontal"
+                                                    style={{
+                                                        marginVertical: 0
+                                                    }}
+                                                />
+                                            </View>
+                                        ))}
+                                    </ScrollView>
                                 </View>
                             </View>
                         </Modal>
-                        <Divider
-                            orientation="horizontal"
-                            style={{
-                                marginTop: 14
-                            }}
-                        />
-
-                        <ContactInputField
-                            icon={<LightningBolt />}
-                            value={lnAddress?.length ? lnAddress[0] : ''}
-                            onChangeText={(text) => {
-                                this.setState({
-                                    lnAddress: Object.assign([...lnAddress], {
-                                        [0]: text
-                                    })
-                                });
-                            }}
-                            onValidate={(text) =>
-                                this.onChangeLightningAddress(text, 0)
-                            }
-                            placeholder={localeString(
-                                'views.Settings.AddContact.lnAddress'
-                            )}
-                            isValid={
-                                isValidLightningAddress?.length > 0 &&
-                                isValidLightningAddress[0]
-                            }
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidLightningAddress: Object.assign(
-                                        [...this.state.isValidLightningAddress],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {lnAddress?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<LightningBolt />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        lnAddress: Object.assign(
-                                            [...lnAddress],
-                                            { [index + 1]: text }
-                                        )
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangeLightningAddress(
-                                        text,
-                                        index + 1
-                                    )
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.AddContact.lnAddress'
-                                )}
-                                isValid={isValidLightningAddress[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidLightningAddress: Object.assign(
-                                            [
-                                                ...this.state
-                                                    .isValidLightningAddress
-                                            ],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField('lnAddress', index)
-                                }
-                            />
-                        ))}
-
-                        <ContactInputField
-                            icon={<LightningBolt />}
-                            value={
-                                bolt12Address?.length ? bolt12Address[0] : ''
-                            }
-                            onChangeText={(text) => {
-                                this.setState({
-                                    bolt12Address: Object.assign(
-                                        [...bolt12Address],
-                                        {
-                                            [0]: text
-                                        }
-                                    )
-                                });
-                            }}
-                            onValidate={(text) =>
-                                this.onChangeBolt12Address(text, 0)
-                            }
-                            placeholder={localeString(
-                                'views.Settings.Bolt12Address'
-                            )}
-                            isValid={
-                                isValidBolt12Address?.length > 0 &&
-                                isValidBolt12Address[0]
-                            }
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidBolt12Address: Object.assign(
-                                        [...this.state.isValidBolt12Address],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {bolt12Address?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<LightningBolt />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        bolt12Address: Object.assign(
-                                            [...bolt12Address],
-                                            { [index + 1]: text }
-                                        )
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangeBolt12Address(text, index + 1)
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.Bolt12Address'
-                                )}
-                                isValid={isValidBolt12Address[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidBolt12Address: Object.assign(
-                                            [
-                                                ...this.state
-                                                    .isValidBolt12Address
-                                            ],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField(
-                                        'bolt12Address',
-                                        index
-                                    )
-                                }
-                            />
-                        ))}
-
-                        <ContactInputField
-                            icon={<LightningBolt />}
-                            value={bolt12Offer?.length ? bolt12Offer[0] : ''}
-                            onChangeText={(text) => {
-                                this.setState({
-                                    bolt12Offer: Object.assign(
-                                        [...bolt12Offer],
-                                        {
-                                            [0]: text
-                                        }
-                                    )
-                                });
-                            }}
-                            onValidate={(text) =>
-                                this.onChangeBolt12Offer(text, 0)
-                            }
-                            placeholder={localeString(
-                                'views.Settings.Bolt12Offer'
-                            )}
-                            isValid={
-                                isValidBolt12Offer?.length > 0 &&
-                                isValidBolt12Offer[0]
-                            }
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidBolt12Offer: Object.assign(
-                                        [...this.state.isValidBolt12Offer],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {bolt12Offer?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<LightningBolt />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        bolt12Offer: Object.assign(
-                                            [...bolt12Offer],
-                                            { [index + 1]: text }
-                                        )
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangeBolt12Offer(text, index + 1)
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.Bolt12Offer'
-                                )}
-                                isValid={isValidBolt12Offer[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidBolt12Offer: Object.assign(
-                                            [...this.state.isValidBolt12Offer],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField('bolt12Offer', index)
-                                }
-                            />
-                        ))}
-
-                        <ContactInputField
-                            icon={<LightningBolt />}
-                            value={pubkey?.length ? pubkey[0] : ''}
-                            onChangeText={(text) => {
-                                this.setState({
-                                    pubkey: Object.assign([...pubkey], {
-                                        [0]: text
-                                    })
-                                });
-                            }}
-                            onValidate={(text) => this.onChangePubkey(text, 0)}
-                            placeholder={localeString(
-                                'views.Settings.AddContact.pubkey'
-                            )}
-                            isValid={
-                                isValidPubkey?.length > 0 && isValidPubkey[0]
-                            }
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidPubkey: Object.assign(
-                                        [...this.state.isValidPubkey],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {pubkey?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<LightningBolt />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        pubkey: Object.assign([...pubkey], {
-                                            [index + 1]: text
-                                        })
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangePubkey(text, index + 1)
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.AddContact.pubkey'
-                                )}
-                                isValid={isValidPubkey[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidPubkey: Object.assign(
-                                            [...this.state.isValidPubkey],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField('pubkey', index)
-                                }
-                            />
-                        ))}
-
-                        <ContactInputField
-                            icon={<BitcoinIcon />}
-                            value={
-                                onchainAddress?.length ? onchainAddress[0] : ''
-                            }
-                            onChangeText={(text) => {
-                                this.setState({
-                                    onchainAddress: Object.assign(
-                                        [...onchainAddress],
-                                        {
-                                            [0]: text
-                                        }
-                                    )
-                                });
-                            }}
-                            onValidate={(text) =>
-                                this.onChangeOnchainAddress(text, 0)
-                            }
-                            placeholder={localeString(
-                                'views.Settings.AddContact.onchainAddress'
-                            )}
-                            isValid={
-                                isValidOnchainAddress?.length > 0 &&
-                                isValidOnchainAddress[0]
-                            }
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidOnchainAddress: Object.assign(
-                                        [...this.state.isValidOnchainAddress],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {onchainAddress?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<BitcoinIcon />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        onchainAddress: Object.assign(
-                                            [...onchainAddress],
-                                            { [index + 1]: text }
-                                        )
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangeOnchainAddress(text, index + 1)
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.AddContact.onchainAddress'
-                                )}
-                                isValid={isValidOnchainAddress[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidOnchainAddress: Object.assign(
-                                            [
-                                                ...this.state
-                                                    .isValidOnchainAddress
-                                            ],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField(
-                                        'onchainAddress',
-                                        index
-                                    )
-                                }
-                            />
-                        ))}
-
-                        <ContactInputField
-                            icon={<VerifiedAccount />}
-                            value={nip05?.length ? nip05[0] : ''}
-                            onChangeText={(text) => {
-                                this.setState({
-                                    nip05: Object.assign([...nip05], {
-                                        [0]: text
-                                    })
-                                });
-                            }}
-                            onValidate={(text) => this.onChangeNIP05(text, 0)}
-                            placeholder={localeString(
-                                'views.Settings.AddContact.nip05'
-                            )}
-                            isValid={
-                                isValidNIP05?.length > 0 && isValidNIP05[0]
-                            }
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidNIP05: Object.assign(
-                                        [...this.state.isValidNIP05],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {nip05?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<VerifiedAccount />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        nip05: Object.assign([...nip05], {
-                                            [index + 1]: text
-                                        })
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangeNIP05(text, index + 1)
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.AddContact.nip05'
-                                )}
-                                isValid={isValidNIP05[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidNIP05: Object.assign(
-                                            [...this.state.isValidNIP05],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField('nip05', index)
-                                }
-                            />
-                        ))}
-
-                        <ContactInputField
-                            icon={<KeySecurity />}
-                            value={nostrNpub?.length ? nostrNpub[0] : ''}
-                            onChangeText={(text) => {
-                                this.setState({
-                                    nostrNpub: Object.assign([...nostrNpub], {
-                                        [0]: text
-                                    })
-                                });
-                            }}
-                            onValidate={(text) => this.onChangeNpub(text, 0)}
-                            placeholder={localeString(
-                                'views.Settings.AddContact.nostrNpub'
-                            )}
-                            isValid={isValidNpub?.length > 0 && isValidNpub[0]}
-                            index={0}
-                            setValidationState={(index, isValid) => {
-                                this.setState({
-                                    isValidNpub: Object.assign(
-                                        [...this.state.isValidNpub],
-                                        { [index]: isValid }
-                                    )
-                                });
-                            }}
-                        />
-                        {nostrNpub?.slice(1).map((address, index) => (
-                            <ContactInputField
-                                key={index}
-                                icon={<KeySecurity />}
-                                value={address}
-                                onChangeText={(text) => {
-                                    this.setState({
-                                        nostrNpub: Object.assign(
-                                            [...nostrNpub],
-                                            { [index + 1]: text }
-                                        )
-                                    });
-                                }}
-                                onValidate={(text) =>
-                                    this.onChangeNpub(text, index + 1)
-                                }
-                                placeholder={localeString(
-                                    'views.Settings.AddContact.nostrNpub'
-                                )}
-                                isValid={isValidNpub[index + 1]}
-                                index={index + 1}
-                                setValidationState={(index, isValid) => {
-                                    this.setState({
-                                        isValidNpub: Object.assign(
-                                            [...this.state.isValidNpub],
-                                            { [index]: isValid }
-                                        )
-                                    });
-                                }}
-                                isAdditionalField
-                                onDelete={() =>
-                                    this.removeExtraField('nostrNpub', index)
-                                }
-                            />
-                        ))}
                     </ScrollView>
-                    <TouchableOpacity
-                        onPress={() =>
-                            this.setState({ showExtraFieldModal: true })
-                        }
-                        style={{
-                            alignSelf: 'center',
-                            marginTop: 10
-                        }}
-                    >
-                        <Text
-                            style={{
-                                ...styles.addExtraFieldText,
-                                color: themeColor('text')
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.AddContact.addExtraField'
-                            )}
-                        </Text>
-                    </TouchableOpacity>
+
+                    {/* Save Button */}
                     <View style={styles.button}>
                         <Button
                             title={localeString(
                                 'views.Settings.AddContact.saveContact'
                             )}
-                            onPress={async () => {
-                                this.saveContact();
-                            }}
+                            onPress={this.saveContact}
                             disabled={
-                                isValidLightningAddress.includes(false) ||
-                                isValidBolt12Address.includes(false) ||
-                                isValidBolt12Offer.includes(false) ||
-                                isValidPubkey.includes(false) ||
-                                isValidOnchainAddress.includes(false) ||
-                                isValidNIP05.includes(false) ||
-                                isValidNpub.includes(false) ||
+                                // Check if any field array has invalid entries
+                                (lnAddress.length > 0 &&
+                                    isValidLightningAddress.includes(false)) ||
+                                (bolt12Address.length > 0 &&
+                                    isValidBolt12Address.includes(false)) ||
+                                (bolt12Offer.length > 0 &&
+                                    isValidBolt12Offer.includes(false)) ||
+                                (pubkey.length > 0 &&
+                                    isValidPubkey.includes(false)) ||
+                                (onchainAddress.length > 0 &&
+                                    isValidOnchainAddress.includes(false)) ||
+                                (nip05.length > 0 &&
+                                    isValidNIP05.includes(false)) ||
+                                (nostrNpub.length > 0 &&
+                                    isValidNpub.includes(false)) ||
                                 !(
-                                    (lnAddress?.length && lnAddress[0]) ||
-                                    (bolt12Address?.length &&
-                                        bolt12Address[0]) ||
-                                    (bolt12Offer?.length && bolt12Offer[0]) ||
-                                    (onchainAddress?.length &&
-                                        onchainAddress[0]) ||
-                                    (pubkey?.length && pubkey[0])
+                                    (lnAddress.length > 0 &&
+                                        lnAddress[0] &&
+                                        isValidLightningAddress[0]) ||
+                                    (bolt12Address.length > 0 &&
+                                        bolt12Address[0] &&
+                                        isValidBolt12Address[0]) ||
+                                    (bolt12Offer.length > 0 &&
+                                        bolt12Offer[0] &&
+                                        isValidBolt12Offer[0]) ||
+                                    (onchainAddress.length > 0 &&
+                                        onchainAddress[0] &&
+                                        isValidOnchainAddress[0]) ||
+                                    (pubkey.length > 0 &&
+                                        pubkey[0] &&
+                                        isValidPubkey[0]) ||
+                                    (nip05.length > 0 &&
+                                        nip05[0] &&
+                                        isValidNIP05[0]) ||
+                                    (nostrNpub.length > 0 &&
+                                        nostrNpub[0] &&
+                                        isValidNpub[0])
                                 )
                             }
                         />
@@ -1237,61 +1060,131 @@ export default class AddContact extends React.Component<
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: 'transparent'
+    },
+    scrollContent: {
+        flexGrow: 1
+    },
+    inputWrapper: {
+        width: '100%'
+    },
+    textInput: {
+        fontSize: 18,
+        paddingVertical: 5,
+        width: '100%',
+        fontFamily: 'PPNeueMontreal-Book',
+        textAlign: 'center'
+    },
+    divider: {
+        marginVertical: Platform.OS === 'ios' ? 16 : 10
+    },
+    addFieldButton: {
+        alignSelf: 'center',
+        width: '90%',
+        marginTop: 24,
+        marginBottom: 16,
+        padding: 10,
+        borderRadius: 12
+    },
+    addFieldContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4
+    },
+    addIcon: {
+        marginRight: 0
+    },
+    addFieldText: {
+        fontSize: 17,
+        fontFamily: 'PPNeueMontreal-Medium',
+        letterSpacing: 0.2
+    },
     modalContainer: {
         flex: 1,
+        justifyContent: 'flex-end',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)'
+    },
+    modalContent: {
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+        paddingTop: 16,
+        paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+        maxHeight: '70%'
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        marginBottom: 12
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600'
+    },
+    modalList: {
+        paddingHorizontal: 16
+    },
+    modalItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12
+    },
+    modalItemIcon: {
+        width: 26,
+        height: 26,
+        borderRadius: 16,
+        marginRight: 12,
+        padding: 10,
         justifyContent: 'center',
         alignItems: 'center'
     },
-    modalCenter: {
-        width: '80%',
-        backgroundColor: 'white',
-        padding: 14
-    },
-    modalItem: {
-        paddingVertical: 10,
-        fontSize: 16
-    },
-    addExtraFieldText: {
-        fontSize: 18,
-        fontWeight: 'bold'
+    modalItemText: {
+        fontSize: 16,
+        fontWeight: '500'
     },
     inputContainer: {
-        paddingTop: Platform.OS === 'ios' ? 9 : 0,
-        paddingBottom: Platform.OS === 'ios' ? 9 : 0,
-        paddingRight: Platform.OS === 'ios' ? 9 : 0,
-        marginHorizontal: 24,
         flexDirection: 'row',
         alignItems: 'center'
     },
     icons: {
-        paddingRight: 14,
-        top: 4,
-        width: 26,
-        height: 26,
+        width: 24,
+        height: 24,
+        justifyContent: 'center',
         alignItems: 'center',
-        justifyContent: 'center'
+        marginHorizontal: 8
+    },
+    fieldInput: {
+        flex: 1,
+        fontSize: 18,
+        paddingVertical: 5
     },
     deleteIcon: {
-        position: 'absolute',
-        right: 20,
-        top: Platform.OS === 'ios' ? 18 : 20
+        padding: 4
     },
-    textInput: {
-        fontSize: 20,
-        width: '100%',
-        fontFamily: 'PPNeueMontreal-Book',
-        top: 5
+    photoContainer: {
+        alignItems: 'center',
+        marginTop: 32,
+        marginBottom: 16
+    },
+    photoWrapper: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: 'center',
+        alignItems: 'center',
+        overflow: 'hidden'
     },
     photo: {
-        alignSelf: 'center',
-        width: 136,
-        height: 136,
-        borderRadius: 68
+        width: '100%',
+        height: '100%',
+        borderRadius: 60
     },
     button: {
-        paddingTop: 10,
-        paddingBottom: 10,
-        width: 350,
-        alignSelf: 'center'
+        paddingHorizontal: 20,
+        paddingVertical: 8
     }
 });
