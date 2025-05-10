@@ -257,7 +257,9 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     titleColor={themeColor('text')}
                                     selectedValue={
                                         CashuStore?.cashuWallets[mintUrl]
-                                            ?.mintInfo?.name || ''
+                                            ?.mintInfo?.name ||
+                                        mintUrl ||
+                                        ''
                                     }
                                     values={mintList}
                                     onValueChange={async (value: string) => {

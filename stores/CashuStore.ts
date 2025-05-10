@@ -20,6 +20,7 @@ import reject from 'lodash/reject';
 import { schnorr } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 import NDK, { NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
+import * as bip39scure from '@scure/bip39';
 
 import Invoice from '../models/Invoice';
 import CashuInvoice from '../models/CashuInvoice';
@@ -35,6 +36,7 @@ import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
 import ModalStore from './ModalStore';
 
 import Base64Utils from '../utils/Base64Utils';
+import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils from '../utils/CashuUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -85,6 +87,9 @@ export default class CashuStore {
     @observable public payments?: Array<CashuPayment>;
     @observable public receivedTokens?: Array<CashuToken>;
     @observable public sentTokens?: Array<CashuToken>;
+    @observable public seedVersion?: string;
+    @observable public seedPhrase?: Array<string>;
+    @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
 
@@ -147,6 +152,9 @@ export default class CashuStore {
         this.payments = undefined;
         this.receivedTokens = undefined;
         this.sentTokens = undefined;
+        this.seedVersion = undefined;
+        this.seedPhrase = undefined;
+        this.seed = undefined;
         this.clearInvoice();
         this.clearPayReq();
         this.shownThresholdModals = [];
@@ -267,6 +275,15 @@ export default class CashuStore {
         this.loading = true;
         this.errorAddingMint = false;
 
+        if (this.mintUrls.length === 0) {
+            const seedVersion = 'v2-bip39';
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-seed-version`,
+                seedVersion
+            );
+            this.seedVersion = seedVersion;
+        }
+
         const wallet = await this.initializeWallet(mintUrl, true);
         if (wallet.errorConnecting) {
             this.errorAddingMint = true;
@@ -328,17 +345,50 @@ export default class CashuStore {
     };
 
     private getSeed = () => {
+        if (this.seed) return this.seed;
+
+        if (this.seedVersion === 'v2-bip39') {
+            const lndSeedPhrase = this.settingsStore.seedPhrase;
+            const mnemonic = lndSeedPhrase.join(' ');
+
+            const seedFromMnemonic = bip39scure.mnemonicToSeedSync(mnemonic);
+            // only need 16 bytes for a 12 word phrase
+            const entropy = seedFromMnemonic.slice(48, 64);
+
+            const cashuSeedPhrase = bip39scure.entropyToMnemonic(
+                entropy,
+                BIP39_WORD_LIST
+            );
+            const seedPhrase = cashuSeedPhrase.split(' ');
+
+            Storage.setItem(
+                `${this.getLndDir()}-cashu-seed-phrase`,
+                seedPhrase
+            );
+            this.seedPhrase = seedPhrase;
+
+            const seed = bip39scure.mnemonicToSeedSync(cashuSeedPhrase);
+
+            Storage.setItem(
+                `${this.getLndDir()}-cashu-seed`,
+                Base64Utils.bytesToBase64(seed)
+            );
+            this.seed = seed;
+            return this.seed;
+        }
+
+        // v1
         const seedPhrase = this.settingsStore.seedPhrase;
         const mnemonic = seedPhrase.join(' ');
         const seed = bip39.mnemonicToSeedSync(mnemonic);
-        const bip39seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
-        return bip39seed;
+        this.seed = new Uint8Array(seed.slice(32, 64)); // limit to 32 bytes
+        return this.seed;
     };
 
     private getSeedString = () => {
         const bip39seed = this.getSeed();
         const bip39seedString = Base64Utils.base64ToHex(
-            Base64Utils.bytesToBase64(bip39seed)
+            Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
         );
         return bip39seedString;
     };
@@ -360,7 +410,7 @@ export default class CashuStore {
         const walletId = `${this.getLndDir()}==${mintUrl}`;
         if (!this.cashuWallets[mintUrl].pubkey) {
             const privkey = Base64Utils.base64ToHex(
-                Base64Utils.bytesToBase64(bip39seed)
+                Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
             );
 
             pubkey = '02' + bytesToHex(schnorr.getPublicKey(privkey));
@@ -631,7 +681,10 @@ export default class CashuStore {
             storedInvoices,
             storedPayments,
             storedReceivedTokens,
-            storedSentTokens
+            storedSentTokens,
+            storedSeedVersion,
+            storedSeedPhrase,
+            storedSeed
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
@@ -639,7 +692,10 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-invoices`),
             Storage.getItem(`${lndDir}-cashu-payments`),
             Storage.getItem(`${lndDir}-cashu-received-tokens`),
-            Storage.getItem(`${lndDir}-cashu-sent-tokens`)
+            Storage.getItem(`${lndDir}-cashu-sent-tokens`),
+            Storage.getItem(`${lndDir}-cashu-seed-version`),
+            Storage.getItem(`${lndDir}-cashu-seed-phrase`),
+            Storage.getItem(`${lndDir}-cashu-seed`)
         ]);
 
         this.mintUrls = storedMintUrls ? JSON.parse(storedMintUrls) : [];
@@ -667,6 +723,13 @@ export default class CashuStore {
                   (token: any) => new CashuToken(token)
               )
             : [];
+        this.seedVersion = storedSeedVersion ? storedSeedVersion : undefined;
+        this.seedPhrase = storedSeedPhrase
+            ? JSON.parse(storedSeedPhrase)
+            : undefined;
+        this.seed = storedSeed
+            ? Base64Utils.base64ToBytes(storedSeed)
+            : undefined;
 
         // Non-blocking parallel wallet initialization
         await Promise.all(
@@ -2208,6 +2271,9 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-payments`);
             await Storage.removeItem(`${lndDir}-cashu-received-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-sent-tokens`);
+            await Storage.removeItem(`${lndDir}-cashu-seed-version`);
+            await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);
+            await Storage.removeItem(`${lndDir}-cashu-seed`);
 
             // Reset store state
             this.reset();
