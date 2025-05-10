@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { Text, Image, View, ScrollView } from 'react-native';
+import { Icon } from 'react-native-elements';
 
-import { themeColor } from './../../utils/ThemeUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayMetadataProps {
     metadata: string;
@@ -44,14 +45,27 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                             source={{ uri: image }}
                         />
                     ) : null}
-                    <Text
+                    <View
                         style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
+                            flexDirection: 'row',
+                            alignItems: 'center'
                         }}
                     >
-                        {text}
-                    </Text>
+                        <Text
+                            style={{
+                                color: themeColor('highlight'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {text}
+                        </Text>
+                        <Icon
+                            name="keyboard-arrow-down"
+                            type="material"
+                            size={15}
+                            color={themeColor('highlight')}
+                        />
+                    </View>
                 </View>
             </ScrollView>
         );

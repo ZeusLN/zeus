@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Icon } from 'react-native-elements';
 import {
     Alert,
     Linking,
@@ -9,7 +10,7 @@ import {
     View
 } from 'react-native';
 import { LNURLPaySuccessAction, decipherAES } from 'js-lnurl';
-import { localeString } from './../../utils/LocaleUtils';
+import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPaySuccessProps {
@@ -142,6 +143,18 @@ export default class LnurlPaySuccess extends React.Component<LnurlPaySuccessProp
                     padding: 15
                 }}
             >
+                <Icon
+                    name="keyboard-arrow-up"
+                    type="material"
+                    size={20}
+                    color={themeColor('text')}
+                    containerStyle={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 10,
+                        zIndex: 1
+                    }}
+                />
                 {body}
                 {domain && servicedBy}
             </View>
