@@ -49,8 +49,6 @@ import Temple from '../assets/images/SVG/Temple.svg';
 import Sync from '../assets/images/SVG/Sync.svg';
 import ZeusPaySVG from '../assets/images/SVG/zeus-pay.svg';
 
-import { balanceStore } from '../stores/Stores';
-
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
 import ToggleButton from './ToggleButton';
@@ -224,6 +222,7 @@ interface WalletHeaderProps {
     PosStore?: PosStore;
     SyncStore?: SyncStore;
     navigation: StackNavigationProp<any, any>;
+    connecting?: boolean;
     loading?: boolean;
     title?: string;
     channels?: boolean;
@@ -282,6 +281,7 @@ export default class WalletHeader extends React.Component<
         const { clipboard } = this.state;
         const {
             navigation,
+            connecting,
             loading,
             title,
             channels,
@@ -300,7 +300,6 @@ export default class WalletHeader extends React.Component<
         const { settings, posStatus, setPosStatus, implementation } =
             SettingsStore!;
         const { paid, redeemingAll } = LightningAddressStore!;
-        const laLoading = LightningAddressStore?.loading;
         const { isSyncing } = SyncStore!;
         const { getOrders } = PosStore!;
         const selectedNode: any =
@@ -533,14 +532,12 @@ export default class WalletHeader extends React.Component<
                     leftComponent={
                         <Row style={{ flex: 1 }}>
                             <MenuBadge navigation={navigation} />
-                            {!loading && paid && paid.length > 0 && (
+                            {!connecting && paid && paid.length > 0 && (
                                 <TouchableOpacity
                                     onPress={() =>
                                         navigation.navigate(
                                             'LightningAddress',
-                                            {
-                                                skipStatus: true
-                                            }
+                                            { skipStatus: true }
                                         )
                                     }
                                     style={{ marginLeft: 20 }}
@@ -588,14 +585,14 @@ export default class WalletHeader extends React.Component<
                             </View>
                         ) : (
                             <Row style={{ alignItems: 'center', flexGrow: 1 }}>
-                                {!loading && <StatusBadges />}
+                                {!connecting && <StatusBadges />}
                             </Row>
                         )
                     }
                     rightComponent={
                         posStatus === 'active' ? (
                             <Row>
-                                {!loading && (
+                                {!connecting && (
                                     <>
                                         <ActivityButton
                                             navigation={navigation}
@@ -616,15 +613,12 @@ export default class WalletHeader extends React.Component<
                                     alignItems: 'center'
                                 }}
                             >
-                                {!loading &&
-                                    (balanceStore.loadingBlockchainBalance ||
-                                        balanceStore.loadingLightningBalance ||
-                                        laLoading) && (
-                                        <View style={{ paddingRight: 15 }}>
-                                            <LoadingIndicator size={35} />
-                                        </View>
-                                    )}
-                                {!loading && !!clipboard && (
+                                {!connecting && loading && (
+                                    <View style={{ paddingRight: 15 }}>
+                                        <LoadingIndicator size={35} />
+                                    </View>
+                                )}
+                                {!connecting && !!clipboard && (
                                     <View style={{ marginRight: 15 }}>
                                         <ClipboardBadge
                                             navigation={navigation}
@@ -632,7 +626,7 @@ export default class WalletHeader extends React.Component<
                                         />
                                     </View>
                                 )}
-                                {!loading && unredeemedTokens?.length > 0 && (
+                                {!connecting && unredeemedTokens?.length > 0 && (
                                     <View style={{ marginRight: 15 }}>
                                         <UnredeemedTokensBadge
                                             navigation={navigation}
@@ -640,7 +634,7 @@ export default class WalletHeader extends React.Component<
                                         />
                                     </View>
                                 )}
-                                {!loading && pendingHTLCs?.length > 0 && (
+                                {!connecting && pendingHTLCs?.length > 0 && (
                                     <View style={{ marginRight: 15 }}>
                                         <PendingHtlcBadge
                                             navigation={navigation}
@@ -648,12 +642,12 @@ export default class WalletHeader extends React.Component<
                                         />
                                     </View>
                                 )}
-                                {!loading && isSyncing && (
+                                {!connecting && isSyncing && (
                                     <View style={{ marginRight: 15 }}>
                                         <SyncBadge navigation={navigation} />
                                     </View>
                                 )}
-                                {!loading && AlertStore?.hasError && (
+                                {!connecting && AlertStore?.hasError && (
                                     <AlertButton />
                                 )}
                                 {posEnabled === PosEnabled.Disabled ? (

@@ -1034,7 +1034,7 @@ export default class LightningAddressStore {
             (!this.serviceDeviceToken ||
                 this.currentDeviceToken !== this.serviceDeviceToken)
         ) {
-            this.update({
+            await this.update({
                 device_token: this.currentDeviceToken,
                 device_platform: Platform.OS
             });

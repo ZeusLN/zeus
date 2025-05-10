@@ -49,6 +49,7 @@ interface KeypadPaneProps {
     SettingsStore?: SettingsStore;
     SyncStore?: SyncStore;
     UnitsStore?: UnitsStore;
+    loading: boolean;
 }
 
 interface KeypadPaneState {
@@ -297,8 +298,14 @@ export default class KeypadPane extends React.PureComponent<
     private modalBoxRef = React.createRef<ModalBox>();
 
     render() {
-        const { CashuStore, UnitsStore, SettingsStore, SyncStore, navigation } =
-            this.props;
+        const {
+            CashuStore,
+            UnitsStore,
+            SettingsStore,
+            SyncStore,
+            navigation,
+            loading
+        } = this.props;
         const {
             amount,
             needInbound,
@@ -320,7 +327,7 @@ export default class KeypadPane extends React.PureComponent<
         return (
             <>
                 <View style={{ flex: 1 }}>
-                    <WalletHeader navigation={navigation} />
+                    <WalletHeader navigation={navigation} loading={loading} />
 
                     {!ecashMode && needInbound && (
                         <TouchableOpacity
