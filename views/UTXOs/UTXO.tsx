@@ -9,29 +9,50 @@ import {
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-
 import Amount from './../../components/Amount';
 import Header from '../../components/Header';
 import KeyValue from './../../components/KeyValue';
 import Screen from './../../components/Screen';
+import Button from '../../components/Button';
 
 import Utxo from './../../models/Utxo';
-
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 import UrlUtils from './../../utils/UrlUtils';
-
 import NodeInfoStore from './../../stores/NodeInfoStore';
+import storage from '../../storage';
 
 interface UTXOProps {
     navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
-    route: Route<'UTXO', { utxo: Utxo }>;
+    route: Route<'UTXO', { utxo: Utxo; onLabelUpdate?: () => void }>;
+}
+
+interface UTXOState {
+    storedLabel: string;
 }
 
 @inject('NodeInfoStore')
 @observer
-export default class UTXO extends React.Component<UTXOProps> {
+export default class UTXO extends React.Component<UTXOProps, UTXOState> {
+    state = {
+        storedLabel: ''
+    };
+
+    async componentDidMount() {
+        const { navigation } = this.props;
+        const { utxo } = this.props.route?.params;
+        const key = utxo.getOutpoint;
+
+        const updateStoredLabel = async () => {
+            const storedLabel = await storage.getItem(key!);
+            this.setState({ storedLabel: storedLabel || '' });
+        };
+
+        navigation.addListener('focus', updateStoredLabel);
+        await updateStoredLabel();
+    }
+
     render() {
         const { NodeInfoStore, navigation, route } = this.props;
         const utxo = route.params?.utxo;
@@ -55,96 +76,165 @@ export default class UTXO extends React.Component<UTXOProps> {
                     }}
                     navigation={navigation}
                 />
-                <ScrollView
-                    style={styles.content}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <View style={styles.center}>
-                        <Amount sats={amount} jumboText toggleable sensitive />
-                    </View>
+                <View style={styles.container}>
+                    <ScrollView
+                        style={styles.content}
+                        keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        <View style={styles.center}>
+                            <Amount
+                                sats={amount}
+                                jumboText
+                                toggleable
+                                sensitive
+                            />
+                        </View>
 
-                    <KeyValue
-                        keyValue={localeString('general.outpoint')}
-                        value={getOutpoint}
-                    />
-
-                    {!!address && (
                         <KeyValue
-                            keyValue={localeString('general.address')}
+                            keyValue={localeString('general.outpoint')}
+                            value={getOutpoint}
+                        />
+
+                        {!!address && (
+                            <KeyValue
+                                keyValue={localeString('general.address')}
+                                value={
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            UrlUtils.goToBlockExplorerAddress(
+                                                address,
+                                                testnet
+                                            )
+                                        }
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.valueWithLink,
+                                                {
+                                                    color: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }
+                                            ]}
+                                        >
+                                            {address}
+                                        </Text>
+                                    </TouchableOpacity>
+                                }
+                                sensitive
+                            />
+                        )}
+
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Transaction.transactionHash'
+                            )}
                             value={
                                 <TouchableOpacity
                                     onPress={() =>
-                                        UrlUtils.goToBlockExplorerAddress(
-                                            address,
+                                        UrlUtils.goToBlockExplorerTXID(
+                                            tx,
                                             testnet
                                         )
                                     }
                                 >
                                     <Text
-                                        style={{
-                                            ...styles.valueWithLink,
-                                            color: themeColor('highlight')
-                                        }}
+                                        style={[
+                                            styles.valueWithLink,
+                                            { color: themeColor('highlight') }
+                                        ]}
                                     >
-                                        {address}
+                                        {tx}
                                     </Text>
                                 </TouchableOpacity>
                             }
                             sensitive
                         />
-                    )}
 
-                    <KeyValue
-                        keyValue={localeString(
-                            'views.Transaction.transactionHash'
+                        {!!getConfs && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.numConf'
+                                )}
+                                value={getConfs}
+                                color={isUnconfirmed ? 'red' : 'green'}
+                                sensitive
+                            />
                         )}
-                        value={
+
+                        {blockheight && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.blockHeight'
+                                )}
+                                value={blockheight}
+                                sensitive
+                            />
+                        )}
+
+                        {this.state.storedLabel && (
                             <TouchableOpacity
                                 onPress={() =>
-                                    UrlUtils.goToBlockExplorerTXID(tx, testnet)
+                                    navigation.navigate('AddNotes', {
+                                        noteKey: utxo.getOutpoint,
+                                        context: 'label'
+                                    })
                                 }
                             >
-                                <Text
-                                    style={{
-                                        ...styles.valueWithLink,
-                                        color: themeColor('highlight')
-                                    }}
-                                >
-                                    {tx}
-                                </Text>
+                                <KeyValue
+                                    keyValue={localeString('views.UTXOs.label')}
+                                    value={this.state.storedLabel}
+                                    sensitive
+                                />
                             </TouchableOpacity>
-                        }
-                        sensitive
-                    />
+                        )}
+                    </ScrollView>
 
-                    {!!getConfs && (
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.numConf')}
-                            value={getConfs}
-                            color={isUnconfirmed ? 'red' : 'green'}
-                            sensitive
-                        />
-                    )}
-
-                    {blockheight && (
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.Transaction.blockHeight'
-                            )}
-                            value={blockheight}
-                            sensitive
-                        />
-                    )}
-                </ScrollView>
+                    <View
+                        style={[
+                            styles.buttonContainer,
+                            { backgroundColor: themeColor('background') }
+                        ]}
+                    >
+                        {utxo.getOutpoint && (
+                            <Button
+                                title={
+                                    this.state.storedLabel
+                                        ? localeString(
+                                              'views.UTXOs.updateLabel'
+                                          )
+                                        : localeString('views.UTXOs.addLabel')
+                                }
+                                onPress={() =>
+                                    navigation.navigate('AddNotes', {
+                                        noteKey: utxo.getOutpoint,
+                                        context: 'label'
+                                    })
+                                }
+                                noUppercase
+                            />
+                        )}
+                    </View>
+                </View>
             </Screen>
         );
     }
 }
 
 const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column'
+    },
     content: {
+        flex: 1,
         paddingLeft: 20,
         paddingRight: 20
+    },
+    scrollContent: {
+        paddingBottom: 20
     },
     center: {
         alignItems: 'center',
@@ -154,5 +244,10 @@ const styles = StyleSheet.create({
     valueWithLink: {
         paddingBottom: 5,
         fontFamily: 'PPNeueMontreal-Book'
+    },
+    buttonContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 15,
+        width: '100%'
     }
 });
