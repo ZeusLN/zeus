@@ -38,6 +38,7 @@ interface BalancePaneProps {
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
+    loading: boolean;
 }
 
 interface BalancePaneState {
@@ -76,7 +77,8 @@ export default class BalancePane extends React.PureComponent<
             CashuStore,
             SettingsStore,
             SyncStore,
-            navigation
+            navigation,
+            loading
         } = this.props;
         const { showBackupPrompt } = this.state;
         const {
@@ -182,6 +184,7 @@ export default class BalancePane extends React.PureComponent<
                     <WalletHeader
                         navigation={navigation}
                         SettingsStore={SettingsStore}
+                        loading={loading}
                     />
                     <View
                         style={{
