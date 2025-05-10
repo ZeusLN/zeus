@@ -1911,14 +1911,61 @@ export default class CashuStore {
                 `Sweep ${mintUrl}: Preparing proofs for sending ${amountToSend} sats`
             );
             const currentCounter = this.cashuWallets[mintUrl].counter;
+            let proofsToSend: Proof[] | undefined;
+            let proofsToKeep: Proof[] | undefined;
+            let newCounterValue: number | undefined;
+            let success = false;
+            const maxAttempts = 100;
 
-            const { proofsToSend, proofsToKeep, newCounterValue } =
-                await this.getSpendingProofsWithPreciseCounter(
-                    wallet,
-                    amountToSend,
-                    allProofs,
-                    currentCounter
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const attemptCounter = currentCounter + attempt;
+                console.log(
+                    `sweepMint: Attempt ${
+                        attempt + 1
+                    }/${maxAttempts} to get spending proofs with counter ${attemptCounter}`
                 );
+                try {
+                    const result =
+                        await this.getSpendingProofsWithPreciseCounter(
+                            wallet,
+                            amountToSend,
+                            allProofs,
+                            attemptCounter
+                        );
+                    proofsToSend = result.proofsToSend;
+                    proofsToKeep = result.proofsToKeep;
+                    newCounterValue = result.newCounterValue;
+                    success = true;
+                    console.log(
+                        `sweepMint: Attempt ${
+                            attempt + 1
+                        } successful with counter ${attemptCounter}`
+                    );
+                    break;
+                } catch (e: any) {
+                    console.warn(
+                        `sweepMint: Attempt ${
+                            attempt + 1
+                        } failed with counter ${attemptCounter}: ${e.message}`
+                    );
+                    if (attempt === maxAttempts - 1) {
+                        throw e; // Re-throw error after last attempt
+                    }
+                }
+            }
+
+            if (
+                !success ||
+                proofsToSend === undefined ||
+                proofsToKeep === undefined ||
+                newCounterValue === undefined
+            ) {
+                throw new Error(
+                    `${localeString(
+                        'stores.CashuStore.sweepError'
+                    )} (${mintUrl}): Failed to get spending proofs after ${maxAttempts} attempts.`
+                );
+            }
 
             console.log(
                 `Sweep ${mintUrl}: Melting ${proofsToSend.length} proofs`
@@ -1969,7 +2016,8 @@ export default class CashuStore {
             );
             this.loading = false;
             return true;
-        } catch (error: any) {
+        } catch (e: any) {
+            const error = e;
             console.error(`Sweep failed for mint ${mintUrl}:`, error);
             // Attempt to restore original proofs if sweep failed mid-way? Complex.
             // For now, just log the error and stop loading.
