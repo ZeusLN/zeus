@@ -702,6 +702,36 @@ export default class LND {
         });
     };
 
+    // Watchtower Client methods
+    addWatchtower = (data: any) =>
+        this.postRequest('/v2/watchtower/client', {
+            pubkey: data.pubkey,
+            address: data.address
+        });
+
+    listWatchtowers = () => this.getRequest('/v2/watchtower/client');
+
+    getWatchtowerInfo = (pubkey: string) =>
+        this.getRequest(`/v2/watchtower/client/info/${pubkey}`);
+
+    deactivateWatchtower = (pubkey: string) =>
+        this.postRequest(`/v2/watchtower/client/deactivate/${pubkey}`);
+
+    removeWatchtower = (pubkey: string) =>
+        this.deleteRequest(`/v2/watchtower/client/${pubkey}`);
+
+    getWatchtowerStats = () => this.getRequest('/v2/watchtower/client/stats');
+
+    getWatchtowerPolicy = () => this.getRequest('/v2/watchtower/client/policy');
+
+    terminateWatchtowerSession = (data: any) =>
+        this.postRequest(
+            `/v2/watchtower/client/sessions/terminate/${data.session_id}`,
+            data
+        );
+
+    supportsWatchtower = () => true;
+
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
