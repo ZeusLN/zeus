@@ -236,6 +236,7 @@ import Accounts from './views/Tools/Accounts/Accounts';
 import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
+import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -1114,6 +1115,12 @@ export default class App extends React.PureComponent {
                                                         name="NWCAddressSettings" // @ts-ignore:next-line
                                                         component={
                                                             NWCAddressSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NodeConfigExportImport" // @ts-ignore:next-line
+                                                        component={
+                                                            NodeConfigExportImport
                                                         }
                                                     />
                                                 </Stack.Navigator>
