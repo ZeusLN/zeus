@@ -927,9 +927,9 @@ export default class CashuStore {
         ].wallet?.checkMintQuote(invoiceQuoteId);
 
         if (quote?.state === 'PAID') {
-            // try up to 21 counters in case we get out of sync (DEBUG)
+            // try up to 100 counters in case we get out of sync (DEBUG)
             let attempts = 0;
-            let retries = 21;
+            let retries = 100;
             let success = false;
 
             // decode bolt11 for metadata
@@ -1416,14 +1416,61 @@ export default class CashuStore {
             });
 
             let currentCount = this.cashuWallets[mintUrl].counter;
+            let proofsToSend: Proof[] | undefined;
+            let proofsToKeep: Proof[] | undefined;
+            let newCounterValue: number | undefined;
+            let success = false;
+            const maxAttempts = 100;
 
-            const { proofsToSend, proofsToKeep, newCounterValue } =
-                await this.getSpendingProofsWithPreciseCounter(
-                    wallet!!,
-                    amountToPay,
-                    this.proofsToUse!!,
-                    currentCount
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const attemptCounter = currentCount + attempt;
+                console.log(
+                    `payLnInvoiceFromEcash: Attempt ${
+                        attempt + 1
+                    }/${maxAttempts} with counter ${attemptCounter}`
                 );
+                try {
+                    const result =
+                        await this.getSpendingProofsWithPreciseCounter(
+                            wallet!!,
+                            amountToPay,
+                            this.proofsToUse!!,
+                            attemptCounter
+                        );
+                    proofsToSend = result.proofsToSend;
+                    proofsToKeep = result.proofsToKeep;
+                    newCounterValue = result.newCounterValue;
+                    success = true;
+                    console.log(
+                        `payLnInvoiceFromEcash: Attempt ${
+                            attempt + 1
+                        } successful with counter ${attemptCounter}`
+                    );
+                    break;
+                } catch (e: any) {
+                    console.warn(
+                        `payLnInvoiceFromEcash: Attempt ${
+                            attempt + 1
+                        } failed with counter ${attemptCounter}: ${e.message}`
+                    );
+                    if (attempt === maxAttempts - 1) {
+                        throw e; // Re-throw error after last attempt
+                    }
+                }
+            }
+
+            if (
+                !success ||
+                proofsToSend === undefined ||
+                proofsToKeep === undefined ||
+                newCounterValue === undefined
+            ) {
+                // This case should ideally be caught by the re-throw in the loop
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice') +
+                        ' (failed all attempts to get spending proofs)'
+                );
+            }
 
             console.log('PROOFS TO SEND:', proofsToSend);
             console.log('PROOFS TO KEEP:', proofsToKeep);
@@ -1864,14 +1911,61 @@ export default class CashuStore {
                 `Sweep ${mintUrl}: Preparing proofs for sending ${amountToSend} sats`
             );
             const currentCounter = this.cashuWallets[mintUrl].counter;
+            let proofsToSend: Proof[] | undefined;
+            let proofsToKeep: Proof[] | undefined;
+            let newCounterValue: number | undefined;
+            let success = false;
+            const maxAttempts = 100;
 
-            const { proofsToSend, proofsToKeep, newCounterValue } =
-                await this.getSpendingProofsWithPreciseCounter(
-                    wallet,
-                    amountToSend,
-                    allProofs,
-                    currentCounter
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const attemptCounter = currentCounter + attempt;
+                console.log(
+                    `sweepMint: Attempt ${
+                        attempt + 1
+                    }/${maxAttempts} to get spending proofs with counter ${attemptCounter}`
                 );
+                try {
+                    const result =
+                        await this.getSpendingProofsWithPreciseCounter(
+                            wallet,
+                            amountToSend,
+                            allProofs,
+                            attemptCounter
+                        );
+                    proofsToSend = result.proofsToSend;
+                    proofsToKeep = result.proofsToKeep;
+                    newCounterValue = result.newCounterValue;
+                    success = true;
+                    console.log(
+                        `sweepMint: Attempt ${
+                            attempt + 1
+                        } successful with counter ${attemptCounter}`
+                    );
+                    break;
+                } catch (e: any) {
+                    console.warn(
+                        `sweepMint: Attempt ${
+                            attempt + 1
+                        } failed with counter ${attemptCounter}: ${e.message}`
+                    );
+                    if (attempt === maxAttempts - 1) {
+                        throw e; // Re-throw error after last attempt
+                    }
+                }
+            }
+
+            if (
+                !success ||
+                proofsToSend === undefined ||
+                proofsToKeep === undefined ||
+                newCounterValue === undefined
+            ) {
+                throw new Error(
+                    `${localeString(
+                        'stores.CashuStore.sweepError'
+                    )} (${mintUrl}): Failed to get spending proofs after ${maxAttempts} attempts.`
+                );
+            }
 
             console.log(
                 `Sweep ${mintUrl}: Melting ${proofsToSend.length} proofs`
@@ -1922,7 +2016,8 @@ export default class CashuStore {
             );
             this.loading = false;
             return true;
-        } catch (error: any) {
+        } catch (e: any) {
+            const error = e;
             console.error(`Sweep failed for mint ${mintUrl}:`, error);
             // Attempt to restore original proofs if sweep failed mid-way? Complex.
             // For now, just log the error and stop loading.
@@ -1962,14 +2057,74 @@ export default class CashuStore {
         const { proofsToUse } = this.getProofsToUse(proofs, Number(value));
 
         try {
-            const { proofsToSend, proofsToKeep, newCounterValue } =
-                await this.getSpendingProofsWithPreciseCounter(
-                    wallet!!,
-                    Number(value),
-                    proofsToUse!!,
-                    counter + proofsToUse.length + 1,
-                    true
+            let proofsToSend: Proof[] | undefined;
+            let proofsToKeep: Proof[] | undefined;
+            let newCounterValue: number | undefined;
+            let success = false;
+            const maxAttempts = 100;
+            const baseCounterForLoop = counter + proofsToUse.length + 1;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const attemptCounter = baseCounterForLoop + attempt;
+                console.log(
+                    `mintToken: Attempt ${
+                        attempt + 1
+                    }/${maxAttempts} with counter ${attemptCounter}`
                 );
+                try {
+                    const result =
+                        await this.getSpendingProofsWithPreciseCounter(
+                            wallet!!,
+                            Number(value),
+                            proofsToUse!!,
+                            attemptCounter,
+                            true
+                        );
+                    proofsToSend = result.proofsToSend;
+                    proofsToKeep = result.proofsToKeep;
+                    newCounterValue = result.newCounterValue;
+                    success = true;
+                    console.log(
+                        `mintToken: Attempt ${
+                            attempt + 1
+                        } successful with counter ${attemptCounter}`
+                    );
+                    break;
+                } catch (e: any) {
+                    console.warn(
+                        `mintToken: Attempt ${
+                            attempt + 1
+                        } failed with counter ${attemptCounter}: ${e.message}`
+                    );
+                    if (attempt === maxAttempts - 1) {
+                        throw e; // Re-throw error after last attempt
+                    }
+                }
+            }
+
+            if (
+                !success ||
+                proofsToSend === undefined ||
+                proofsToKeep === undefined ||
+                newCounterValue === undefined
+            ) {
+                // This case should ideally be caught by the re-throw in the loop
+                throw new Error(
+                    localeString('stores.CashuStore.errorMintingToken') +
+                        ' (failed all attempts)'
+                );
+            }
+
+            // Ensure there are proofs to send before creating the token
+            if (!proofsToSend || proofsToSend.length === 0) {
+                console.error(
+                    'mintToken: No proofs to send, cannot create a valid token.'
+                );
+                throw new Error(
+                    localeString('stores.CashuStore.errorMintingToken') +
+                        ' (no proofs to create token)'
+                );
+            }
 
             if (proofsToKeep.length) {
                 await this.addMintProofs(mintUrl, proofsToKeep);
@@ -2015,12 +2170,13 @@ export default class CashuStore {
             return { token, decoded };
         } catch (e) {
             console.log('Cashu mintToken err', e);
+            const error = e;
             runInAction(() => {
                 this.mintingTokenError = true;
                 this.mintingToken = false;
-                this.error_msg = localeString(
-                    'stores.CashuStore.errorMintingToken'
-                );
+                this.error_msg = error
+                    ? error.toString()
+                    : localeString('stores.CashuStore.errorMintingToken');
             });
         }
     };
