@@ -38,9 +38,11 @@ import ModalStore from './ModalStore';
 import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils from '../utils/CashuUtils';
-import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { localeString } from '../utils/LocaleUtils';
+import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
+
 import NavigationService from '../NavigationService';
 
 const bip39 = require('bip39');
@@ -275,7 +277,7 @@ export default class CashuStore {
         this.loading = true;
         this.errorAddingMint = false;
 
-        if (this.mintUrls.length === 0) {
+        if (this.mintUrls.length === 0 && this.seedVersion !== 'v1') {
             const seedVersion = 'v2-bip39';
             await Storage.setItem(
                 `${this.getLndDir()}-cashu-seed-version`,
@@ -740,6 +742,9 @@ export default class CashuStore {
             this.loadingMsg = undefined;
             this.initializing = false;
         });
+
+        // Run Cashu specific migrations
+        await MigrationsUtils.migrateCashuSeedVersion(this);
 
         // Check status of pending items after initialization
         this.checkPendingItems();

@@ -764,6 +764,28 @@ class MigrationsUtils {
         console.log('storageMigrationV2 completed!', results);
         return results.every((result) => result === true);
     }
+
+    public async migrateCashuSeedVersion(cashuStore: any) {
+        // cashuStore is passed as 'any' to avoid circular dependency issues
+        // but it's an instance of CashuStore
+        // TODO fix circular dependency
+        if (cashuStore.seedVersion === undefined) {
+            console.log('Migrating Cashu seed version to v1');
+            cashuStore.seedVersion = 'v1';
+            try {
+                await Storage.setItem(
+                    `${cashuStore.getLndDir()}-cashu-seed-version`,
+                    'v1'
+                );
+                console.log('Cashu seed version migrated and saved as v1.');
+            } catch (error) {
+                console.error(
+                    'Error saving migrated Cashu seed version:',
+                    error
+                );
+            }
+        }
+    }
 }
 
 const migrationsUtils = new MigrationsUtils();
