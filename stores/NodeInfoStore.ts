@@ -16,6 +16,7 @@ export default class NodeInfoStore {
     @observable public networkInfo: NetworkInfo | any = {};
     @observable public testnet: boolean;
     @observable public regtest: boolean;
+    @observable public supportsOffers: boolean;
     channelsStore: ChannelsStore;
     settingsStore: SettingsStore;
 
@@ -41,6 +42,7 @@ export default class NodeInfoStore {
         this.regtest = false;
         this.testnet = false;
         this.errorMsg = '';
+        this.supportsOffers = false;
     };
 
     @action
@@ -77,6 +79,7 @@ export default class NodeInfoStore {
                         this.regtest = nodeInfo.isRegTest;
                         this.loading = false;
                         this.error = false;
+                        this.supportsOffers = BackendUtils.supportsOffers();
                     });
                     resolve(nodeInfo);
                 })

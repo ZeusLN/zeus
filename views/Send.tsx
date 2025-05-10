@@ -641,6 +641,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             BalanceStore,
             UTXOsStore,
             ContactStore,
+            NodeInfoStore,
             navigation
         } = this.props;
         const {
@@ -673,7 +674,7 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const paymentOptions = [localeString('views.Send.lnPayment')];
 
-        if (BackendUtils.supportsOffers()) {
+        if (NodeInfoStore.supportsOffers) {
             paymentOptions.push(
                 localeString('views.Settings.Bolt12Address'),
                 localeString('views.Settings.Bolt12Offer')
@@ -1208,7 +1209,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </React.Fragment>
                         )}
                     {transactionType === 'BOLT 12' &&
-                        BackendUtils.supportsOffers() && (
+                        NodeInfoStore.supportsOffers && (
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
@@ -1226,7 +1227,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             </React.Fragment>
                         )}
                     {transactionType === 'BOLT 12' &&
-                        !BackendUtils.supportsOffers() && (
+                        !NodeInfoStore.supportsOffers && (
                             <Text
                                 style={{
                                     ...styles.text,
@@ -1468,7 +1469,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}
-                                disabled={!BackendUtils.supportsOffers()}
+                                disabled={!NodeInfoStore.supportsOffers}
                             />
                         </View>
                     )}

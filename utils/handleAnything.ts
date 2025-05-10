@@ -429,7 +429,7 @@ const handleAnything = async (
                 ];
             }
 
-            if (offer && BackendUtils.supportsOffers()) {
+            if (offer && nodeInfoStore.supportsOffers) {
                 return [
                     'Send',
                     {
