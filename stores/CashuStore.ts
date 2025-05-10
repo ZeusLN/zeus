@@ -1416,28 +1416,75 @@ export default class CashuStore {
             });
 
             let currentCount = this.cashuWallets[mintUrl].counter;
+            let proofsToSend: Proof[] | undefined;
+            let proofsToKeep: Proof[] | undefined;
+            let newCounterValue: number | undefined;
+            let success = false;
+            const maxAttempts = 100;
 
-            const { proofsToSend, proofsToKeep, newCounterValue } =
-                await this.getSpendingProofsWithPreciseCounter(
-                    wallet!!,
-                    amountToPay,
-                    this.proofsToUse!!,
-                    currentCount
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                const attemptCounter = currentCount + attempt;
+                console.log(
+                    `payLnInvoiceFromEcash: Attempt ${
+                        attempt + 1
+                    }/${maxAttempts} with counter ${attemptCounter}`
                 );
+                try {
+                    const result =
+                        await this.getSpendingProofsWithPreciseCounter(
+                            wallet!!,
+                            amountToPay,
+                            this.proofsToUse!!,
+                            attemptCounter
+                        );
+                    proofsToSend = result.proofsToSend;
+                    proofsToKeep = result.proofsToKeep;
+                    newCounterValue = result.newCounterValue;
+                    success = true;
+                    console.log(
+                        `payLnInvoiceFromEcash: Attempt ${
+                            attempt + 1
+                        } successful with counter ${attemptCounter}`
+                    );
+                    break;
+                } catch (e: any) {
+                    console.warn(
+                        `payLnInvoiceFromEcash: Attempt ${
+                            attempt + 1
+                        } failed with counter ${attemptCounter}: ${e.message}`
+                    );
+                    if (attempt === maxAttempts - 1) {
+                        throw e; // Re-throw error after last attempt
+                    }
+                }
+            }
+
+            if (
+                !success ||
+                proofsToSend === undefined ||
+                proofsToKeep === undefined ||
+                newCounterValue === undefined
+            ) {
+                // This case should ideally be caught by the re-throw in the loop
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice') +
+                        ' (failed all attempts to get spending proofs)'
+                );
+            }
 
             console.log('PROOFS TO SEND:', proofsToSend);
             console.log('PROOFS TO KEEP:', proofsToKeep);
 
-            proofs = proofsToSend;
+            proofs = proofsToSend; // Ensure 'proofs' variable is updated for subsequent logic
 
             if (proofsToKeep.length)
                 await this.addMintProofs(mintUrl, proofsToKeep);
 
             let meltResponse = await wallet!!.meltProofs(
                 this.meltQuote!!,
-                proofsToSend,
+                proofsToSend, // Use the successfully obtained proofsToSend
                 {
-                    counter: newCounterValue + 1
+                    counter: newCounterValue + 1 // Use the successfully obtained newCounterValue
                 }
             );
             console.log('melt response', meltResponse);
@@ -1445,11 +1492,11 @@ export default class CashuStore {
             if (meltResponse?.change?.length) {
                 await this.setMintCounter(
                     mintUrl,
-                    newCounterValue + meltResponse.change.length + 1
+                    newCounterValue + meltResponse.change.length + 1 // Use the successfully obtained newCounterValue
                 );
                 await this.addMintProofs(mintUrl, meltResponse.change);
             } else {
-                await this.setMintCounter(mintUrl, newCounterValue + 1);
+                await this.setMintCounter(mintUrl, newCounterValue + 1); // Use the successfully obtained newCounterValue
             }
 
             const realFee = Math.max(
