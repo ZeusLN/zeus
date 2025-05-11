@@ -528,7 +528,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         const fiatPriced = item.base_price_money.amount > 0;
 
                         const unitPrice = fiatPriced
-                            ? item.base_price_money.amount
+                            ? // amounts from Square are in cents
+                              settings.pos.posEnabled === PosEnabled.Square
+                                ? new BigNumber(item.base_price_money.amount)
+                                      .div(100)
+                                      .toNumber()
+                                : item.base_price_money.amount
                             : item.base_price_money.sats;
 
                         let unitDisplayValue, totalDisplayValue;
