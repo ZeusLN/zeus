@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "Arată toate zecimalele",
     "views.Settings.Display.removeDecimalSpaces": "Eliminați spațiile zecimale din sumele denominate în Bitcoin",
     "views.Settings.Display.showMillisatoshiAmounts": "Afișați cantitățile de milisatoshi",
-    "views.Settings.Display.selectNodeOnStartup": "Selectați nodul la pornire",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "Intimitate",
     "views.Settings.payments": "Plăți",
     "views.Settings.Privacy.title": "Setări Intimitate",
