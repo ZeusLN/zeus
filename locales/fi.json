@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "Näytä kaikki desimaalit",
     "views.Settings.Display.removeDecimalSpaces": "Poista desimaalivälit Bitcoin-määristä",
     "views.Settings.Display.showMillisatoshiAmounts": "Näytä millisatoshi määrät",
-    "views.Settings.Display.selectNodeOnStartup": "Valitse solmu käynnistyksen yhteydessä",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "Yksityisyys",
     "views.Settings.payments": "Maksut",
     "views.Settings.Privacy.title": "Yksityisyysasetukset",
