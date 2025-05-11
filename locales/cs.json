@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "Zobrazit všechna desetinná místa",
     "views.Settings.Display.removeDecimalSpaces": "Odstranit desetinné mezery v částkách denominovaných v bitcoinech ",
     "views.Settings.Display.showMillisatoshiAmounts": "Zobrazit částky v milisatoshi",
-    "views.Settings.Display.selectNodeOnStartup": "Vybrat uzel při spuštění",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "Soukromí",
     "views.Settings.payments": "Platby",
     "views.Settings.Privacy.title": "Nastavení soukromí",
