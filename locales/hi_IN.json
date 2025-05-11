@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "सभी दशमलव स्थान दिखाएं",
     "views.Settings.Display.removeDecimalSpaces": "बिटकॉइन मूल्य राशियों से दशमलव स्थानों को हटाएं",
     "views.Settings.Display.showMillisatoshiAmounts": "मिलीसैटोशी राशि दिखाएं",
-    "views.Settings.Display.selectNodeOnStartup": "स्टार्टअप पर नोड चुनें",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "गोपनीयता",
     "views.Settings.payments": "भुगतान",
     "views.Settings.Privacy.title": "गोपनीयता सेटिंग्स",
