@@ -271,7 +271,7 @@ export default class AddContact extends React.Component<
                                 asset.base64,
                                 'base64'
                             );
-                            // console.log('File saved to ', filePath);
+                            console.log('File saved to ', filePath);
 
                             // Set the local file path in the state
                             this.setState({
@@ -441,11 +441,8 @@ export default class AddContact extends React.Component<
             });
         }
     };
-
-    // Function to render all added fields
     renderAddedFields = () => {
         const allFields: JSX.Element[] = [];
-        // Add default Lightning Address field first
         allFields.push(
             <ContactInputField
                 key="default-ln-address"
@@ -489,8 +486,6 @@ export default class AddContact extends React.Component<
                 isAdditionalField={false}
             />
         );
-
-        // Helper function to add fields to the array
         const addFieldsToArray = (
             fieldArray: string[],
             fieldType: string,
@@ -558,8 +553,6 @@ export default class AddContact extends React.Component<
             isValidNIP05,
             isValidNpub
         } = this.state;
-
-        // Add all fields including additional Lightning Address fields
         addFieldsToArray(
             lnAddress,
             'lnAddress',
@@ -877,7 +870,7 @@ export default class AddContact extends React.Component<
                             style={styles.divider}
                         />
 
-                        {/* Added Fields */}
+                        {/* Mandatory Fields */}
                         <View>{this.renderAddedFields()}</View>
 
                         {/* Add Field Button */}
