@@ -115,6 +115,7 @@ interface ChannelsSettings {
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
+    enableWatchtower: boolean;
 }
 
 interface LightningAddressSettings {
@@ -1168,7 +1169,8 @@ export default class SettingsStore {
             min_confs: 1,
             privateChannel: true,
             scidAlias: true,
-            simpleTaprootChannel: false
+            simpleTaprootChannel: false,
+            enableWatchtower: false
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
