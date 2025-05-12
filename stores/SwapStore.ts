@@ -512,6 +512,42 @@ export default class SwapStore {
     };
 
     @action
+    updateSwapStatus = async (
+        swapId: string,
+        status: string,
+        isSubmarineSwap: boolean,
+        failureReason?: string
+    ) => {
+        try {
+            let storedSwaps: any;
+            const key = isSubmarineSwap ? 'swaps' : 'reverse-swaps';
+            storedSwaps = await Storage.getItem(key);
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            const updatedSwaps = swaps.map((swap: any) =>
+                swap.id === swapId
+                    ? {
+                          ...swap,
+                          status,
+                          ...(isSubmarineSwap && failureReason
+                              ? { failureReason }
+                              : {})
+                      }
+                    : swap
+            );
+
+            await Storage.setItem(key, JSON.stringify(updatedSwaps));
+            console.log(
+                `Updated ${
+                    isSubmarineSwap ? `swap` : `reverse swap`
+                } status for swap ID ${swapId} to "${status}"`
+            );
+        } catch (error) {
+            console.error('Error updating swap status in storage:', error);
+        }
+    };
+
+    @action
     public updateSwapOnRefund = async (swapId: string, txid: string) => {
         try {
             // Retrieve the swaps from encrypted storage
