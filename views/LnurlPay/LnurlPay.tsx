@@ -447,7 +447,10 @@ export default class LnurlPay extends React.Component<
                         </View>
                     </View>
                     <View style={styles.metadata}>
-                        <LnurlPayMetadata metadata={lnurl.metadata} />
+                        <LnurlPayMetadata
+                            metadata={lnurl.metadata}
+                            showArrow={false}
+                        />
                     </View>
                 </ScrollView>
             </Screen>
