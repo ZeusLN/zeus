@@ -346,11 +346,11 @@ export default class Amount extends React.Component<AmountProps, {}> {
         // TODO: This doesn't feel like the right place for this but it makes the component "reactive"
         const units = fixedUnits ? fixedUnits : UnitsStore.units;
 
-        const unformattedAmount = UnitsStore.getUnformattedAmount(
-            value,
-            units,
-            fiatCurrency
-        );
+        const unformattedAmount = UnitsStore.getUnformattedAmount({
+            sats: value,
+            fixedUnits: units,
+            forceFiatCurrency: fiatCurrency
+        });
 
         // display fiat amounts when rate fetch fails as $N/A
         if (unformattedAmount.error) {

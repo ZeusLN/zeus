@@ -40,6 +40,10 @@ export default class EcashSettings extends React.Component<
     EcashSettingsProps,
     EcashSettingsState
 > {
+    constructor(props: EcashSettingsProps) {
+        super(props);
+        this.props.SettingsStore.resetSelectedForceFiat();
+    }
     state = {
         loading: false,
         enableCashu: false,
@@ -322,6 +326,16 @@ export default class EcashSettings extends React.Component<
                                         )}
                                     </Text>
                                     <AmountInput
+                                        forceFiatCurrency={
+                                            this.props.SettingsStore
+                                                .selectedForceFiat
+                                        }
+                                        setCurrencySelectOpen={() =>
+                                            this.props.SettingsStore.navigateToCurrencySelection(
+                                                this.props.navigation,
+                                                true
+                                            )
+                                        }
                                         amount={sweepThresholdSats}
                                         onAmountChange={
                                             this.handleThresholdChange
