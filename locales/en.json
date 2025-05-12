@@ -837,6 +837,7 @@
     "views.Settings.Currency.enabled": "Enabled",
     "views.Settings.Currency.source": "Source",
     "views.Settings.Currency.selectCurrency": "Select Currency",
+    "views.Settings.Currency.noCurrenciesFound": "No currencies found", 
     "views.Settings.SelectCurrency.title": "Select Currency",
     "views.Settings.Theme.title": "Theme",
     "views.Settings.Theme.dark": "Dark",
