@@ -20,6 +20,7 @@ import CashuStore from '../../stores/CashuStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import UnitsStore from '../../stores/UnitsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import LnurlPayMetadata from './Metadata';
 
@@ -32,6 +33,7 @@ interface LnurlPayProps {
     CashuStore: CashuStore;
     InvoicesStore: InvoicesStore;
     LnurlPayStore: LnurlPayStore;
+    SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     route: Route<
         'LnurlPay',
@@ -55,7 +57,7 @@ export default class LnurlPay extends React.Component<
 > {
     constructor(props: LnurlPayProps) {
         super(props);
-
+        this.props.SettingsStore.resetSelectedForceFiat();
         try {
             this.state = {
                 ...this.stateFromProps(props),
@@ -382,6 +384,12 @@ export default class LnurlPay extends React.Component<
                         </View>
                         <View style={{ marginTop: 0 }}>
                             <AmountInput
+                                setCurrencySelectOpen={() =>
+                                    this.props.SettingsStore.navigateToCurrencySelection(
+                                        this.props.navigation,
+                                        true
+                                    )
+                                }
                                 amount={amount}
                                 locked={
                                     loading ||

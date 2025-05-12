@@ -103,6 +103,7 @@ export default class OpenChannel extends React.Component<
     listener: any;
     constructor(props: any) {
         super(props);
+        this.props.SettingsStore.resetSelectedForceFiat();
         this.state = {
             channelDestination: 'Olympus by ZEUS',
             node_pubkey_string: '',
@@ -567,6 +568,12 @@ export default class OpenChannel extends React.Component<
                         {!connectPeerOnly && (
                             <>
                                 <AmountInput
+                                    setCurrencySelectOpen={() =>
+                                        this.props.SettingsStore.navigateToCurrencySelection(
+                                            this.props.navigation,
+                                            true
+                                        )
+                                    }
                                     amount={
                                         fundMax
                                             ? utxoBalance > 0
@@ -699,6 +706,12 @@ export default class OpenChannel extends React.Component<
                                                 }}
                                             />
                                             <AmountInput
+                                                setCurrencySelectOpen={() =>
+                                                    this.props.SettingsStore.navigateToCurrencySelection(
+                                                        this.props.navigation,
+                                                        true
+                                                    )
+                                                }
                                                 amount={
                                                     channel?.local_funding_amount
                                                 }

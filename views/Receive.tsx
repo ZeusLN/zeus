@@ -7,8 +7,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
-    Platform,
-    Modal
+    Platform
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -68,10 +67,7 @@ import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import PosStore from '../stores/PosStore';
-import SettingsStore, {
-    DEFAULT_FIAT,
-    TIME_PERIOD_KEYS
-} from '../stores/SettingsStore';
+import SettingsStore, { TIME_PERIOD_KEYS } from '../stores/SettingsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -97,7 +93,6 @@ import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
 import AddressSvg from '../assets/images/SVG/DynamicSVG/AddressSvg';
 import Gear from '../assets/images/SVG/Gear.svg';
-import InvoiceCurrencySelector from './Settings/InvoiceCurrencySelector';
 
 interface ReceiveProps {
     exitSetup: any;
@@ -166,8 +161,6 @@ interface ReceiveState {
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
     hideRightHeaderComponent?: boolean;
-    currencySelectOpen: boolean;
-    selectedInvoiceFiatCurrency: string;
 }
 
 enum RouteHintMode {
@@ -192,6 +185,7 @@ export default class Receive extends React.Component<
 > {
     constructor(props: ReceiveProps) {
         super(props);
+        this.props.SettingsStore.resetSelectedForceFiat();
         this.state = {
             selectedIndex: props.route.params?.selectedIndex ?? 0,
             expirationIndex: 1,
@@ -222,16 +216,9 @@ export default class Receive extends React.Component<
             lspIsActive: false,
             flowLspNotConfigured: true,
             routeHintMode: RouteHintMode.Automatic,
-            selectedRouteHintChannels: undefined,
-            currencySelectOpen: false,
-            selectedInvoiceFiatCurrency:
-                this.props.SettingsStore?.settings?.fiat ?? DEFAULT_FIAT
+            selectedRouteHintChannels: undefined
         };
     }
-
-    setCurrencySelectOpen = (open: boolean) => {
-        this.setState({ currencySelectOpen: open });
-    };
 
     listener: any;
     listenerSecondary: any;
@@ -1229,8 +1216,7 @@ export default class Receive extends React.Component<
             blindedPaths,
             hideRightHeaderComponent,
             nfcSupported,
-            advancedSettingsToggle,
-            currencySelectOpen
+            advancedSettingsToggle
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -2310,14 +2296,12 @@ export default class Receive extends React.Component<
                                                     />
                                                 </>
                                             )}
-
                                             <AmountInput
-                                                forceFiatCurrency={
-                                                    this.state
-                                                        .selectedInvoiceFiatCurrency
-                                                }
-                                                setCurrencySelectOpen={
-                                                    this.setCurrencySelectOpen
+                                                setCurrencySelectOpen={() =>
+                                                    this.props.SettingsStore.navigateToCurrencySelection(
+                                                        this.props.navigation,
+                                                        true
+                                                    )
                                                 }
                                                 amount={value}
                                                 title={`${localeString(
@@ -2367,68 +2351,6 @@ export default class Receive extends React.Component<
                                                     });
                                                 }}
                                             />
-                                            {currencySelectOpen && (
-                                                <Modal
-                                                    visible={
-                                                        this.state
-                                                            .currencySelectOpen
-                                                    }
-                                                    transparent={true}
-                                                    animationType="slide"
-                                                    onRequestClose={() =>
-                                                        this.setState({
-                                                            currencySelectOpen:
-                                                                false
-                                                        })
-                                                    }
-                                                >
-                                                    <View
-                                                        style={{
-                                                            flex: 1,
-                                                            height: '80%',
-                                                            backgroundColor:
-                                                                themeColor(
-                                                                    'background'
-                                                                ),
-                                                            borderRadius: 20,
-                                                            padding: 16,
-                                                            justifyContent:
-                                                                'flex-start'
-                                                        }}
-                                                    >
-                                                        <View
-                                                            style={{
-                                                                flex: 1
-                                                            }}
-                                                        >
-                                                            <InvoiceCurrencySelector
-                                                                onCurrencySelect={(
-                                                                    value: string
-                                                                ) =>
-                                                                    this.setState(
-                                                                        {
-                                                                            currencySelectOpen:
-                                                                                false,
-                                                                            selectedInvoiceFiatCurrency:
-                                                                                value
-                                                                        }
-                                                                    )
-                                                                }
-                                                                currencyConverter={
-                                                                    true
-                                                                }
-                                                                SettingsStore={
-                                                                    SettingsStore
-                                                                }
-                                                                selectedValue={
-                                                                    this.state
-                                                                        .selectedInvoiceFiatCurrency
-                                                                }
-                                                            />
-                                                        </View>
-                                                    </View>
-                                                </Modal>
-                                            )}
                                             {needInbound && (
                                                 <TouchableOpacity
                                                     onPress={() =>
