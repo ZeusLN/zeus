@@ -399,7 +399,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
-            SwapStore.updateSwapStatuses();
+            SwapStore.fetchAndUpdateSwaps();
             CashuStore.reset();
         }
 
