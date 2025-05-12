@@ -25,8 +25,6 @@ import { localeString } from '../../utils/LocaleUtils';
 import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import Storage from '../../storage';
-
 interface RefundSwapProps {
     navigation: any;
     route: Route<
@@ -71,6 +69,8 @@ export default class RefundSwap extends React.Component<
         fee: any,
         destinationAddress: string
     ): Promise<void> => {
+        const { SwapStore } = this.props;
+
         try {
             const txid = await createRefundTransaction({
                 endpoint: swapData.endpoint.replace('/v2', ''),
@@ -88,7 +88,7 @@ export default class RefundSwap extends React.Component<
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
 
-            await this.updateSwapInStorage(swapData.id, txid);
+            await SwapStore?.updateSwapOnRefund(swapData.id, txid);
 
             this.setState({
                 loading: false,
@@ -99,39 +99,6 @@ export default class RefundSwap extends React.Component<
         } catch (error: any) {
             this.setState({ loading: false, error: error.message });
             console.error('Error creating refund transaction:', error);
-            throw error;
-        }
-    };
-
-    updateSwapInStorage = async (swapId: string, txid: string) => {
-        try {
-            // Retrieve the swaps from encrypted storage
-            const storedSwaps = await Storage.getItem('swaps');
-            if (!storedSwaps) {
-                throw new Error('No swaps found in storage');
-            }
-
-            // Parse the swaps array
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-
-            // Find the swap by swapId
-            const swapIndex = swaps.findIndex(
-                (swap: any) => swap.id === swapId
-            );
-            if (swapIndex === -1) {
-                throw new Error(`Swap with ID ${swapId} not found`);
-            }
-
-            // Update the swap
-            swaps[swapIndex].status = 'transaction.refunded';
-            swaps[swapIndex].txid = txid;
-
-            // Save the updated swaps back to encrypted storage
-            await Storage.setItem('swaps', JSON.stringify(swaps));
-
-            console.log('Swap updated in storage:', swaps[swapIndex]);
-        } catch (error) {
-            console.error('Error updating swap in storage:', error);
             throw error;
         }
     };
