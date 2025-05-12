@@ -101,6 +101,10 @@ export default class PaymentRequest extends React.Component<
     InvoiceProps,
     InvoiceState
 > {
+    constructor(props: InvoiceProps) {
+        super(props);
+        this.props.SettingsStore.resetSelectedForceFiat();
+    }
     listener: any;
     isComponentMounted: boolean = false;
     state = {
@@ -557,6 +561,16 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                     {isNoAmountInvoice ? (
                                         <AmountInput
+                                            forceFiatCurrency={
+                                                this.props.SettingsStore
+                                                    .selectedForceFiat
+                                            }
+                                            setCurrencySelectOpen={() =>
+                                                this.props.SettingsStore.navigateToCurrencySelection(
+                                                    this.props.navigation,
+                                                    true
+                                                )
+                                            }
                                             amount={customAmount}
                                             title={localeString(
                                                 'views.PaymentRequest.customAmt'

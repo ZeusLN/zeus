@@ -165,6 +165,23 @@ export default class AmountInput extends React.Component<
         this.setState({ satAmount, forceFiat: this.props.forceFiatCurrency });
     }
 
+    componentDidUpdate(prevProps: AmountInputProps) {
+        const { forceFiatCurrency, amount, forceUnit } = this.props;
+
+        if (prevProps.forceFiatCurrency !== forceFiatCurrency) {
+            const newSatAmount = getSatAmount(
+                amount || '',
+                forceUnit,
+                forceFiatCurrency
+            );
+            this.setState({
+                satAmount: newSatAmount,
+                forceFiat: forceFiatCurrency
+            });
+            this.props.onAmountChange?.(amount || '', newSatAmount);
+        }
+    }
+
     UNSAFE_componentWillReceiveProps(
         nextProps: Readonly<AmountInputProps>
     ): void {
@@ -196,9 +213,14 @@ export default class AmountInput extends React.Component<
     }
 
     onChangeUnits = () => {
-        const { amount, onAmountChange, UnitsStore }: any = this.props;
+        const { amount, onAmountChange, UnitsStore, forceFiatCurrency }: any =
+            this.props;
         UnitsStore.changeUnits();
-        const satAmount = getSatAmount(amount, this.props.forceUnit);
+        const satAmount = getSatAmount(
+            amount,
+            this.props.forceUnit,
+            forceFiatCurrency
+        );
         onAmountChange(amount, satAmount);
         this.setState({ satAmount });
     };
@@ -247,44 +269,49 @@ export default class AmountInput extends React.Component<
                         >
                             {title}
                         </Text>
-                        {fiatEnabled && (
-                            <View>
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        this.props.setCurrencySelectOpen?.(true)
-                                    }
-                                    activeOpacity={0.5}
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        paddingVertical: 8,
-                                        paddingHorizontal: 14,
-                                        borderRadius: 16,
-                                        backgroundColor:
-                                            themeColor('secondary'),
-                                        borderWidth: 1,
-                                        borderColor: themeColor('highlight')
-                                    }}
-                                >
-                                    <Text
+                        {fiatEnabled &&
+                            effectiveUnits === 'fiat' &&
+                            this.props.setCurrencySelectOpen && (
+                                <View>
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            this.props.setCurrencySelectOpen?.(
+                                                true
+                                            )
+                                        }
+                                        activeOpacity={0.5}
                                         style={{
-                                            color: themeColor('text'),
-                                            fontSize: 14,
-                                            fontFamily: 'PPNeueMontreal-Medium'
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            paddingVertical: 8,
+                                            paddingHorizontal: 14,
+                                            borderRadius: 16,
+                                            backgroundColor:
+                                                themeColor('secondary'),
+                                            borderWidth: 1,
+                                            borderColor: themeColor('highlight')
                                         }}
                                     >
-                                        {this.props.forceFiatCurrency ||
-                                            settings.fiat}
-                                    </Text>
-                                    <Icon
-                                        name="chevron-right"
-                                        size={14}
-                                        color={themeColor('text')}
-                                        style={{ marginLeft: 5 }}
-                                    />
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontSize: 14,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Medium'
+                                            }}
+                                        >
+                                            {this.props.forceFiatCurrency ||
+                                                settings.fiat}
+                                        </Text>
+                                        <Icon
+                                            name="chevron-right"
+                                            size={14}
+                                            color={themeColor('text')}
+                                            style={{ marginLeft: 5 }}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                     </View>
                 )}
                 <Row>
