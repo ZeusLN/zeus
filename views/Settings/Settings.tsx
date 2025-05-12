@@ -347,7 +347,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                             onPress={() => navigation.navigate('Privacy')}
                         >
                             <View style={styles.icon}>
-                                <PrivacyIcon stroke={themeColor('text')} />
+                                <PrivacyIcon fill={themeColor('text')} />
                             </View>
                             <Text
                                 style={{
@@ -370,7 +370,7 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         >
                             <View style={styles.icon}>
                                 <SecurityIcon
-                                    stroke={themeColor('text')}
+                                    fill={themeColor('text')}
                                     width={26}
                                     height={26}
                                 />

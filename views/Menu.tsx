@@ -650,7 +650,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 <View style={styles.columnField}>
                                     <View style={styles.icon}>
                                         <ContactIcon
-                                            stroke={themeColor('text')}
+                                            fill={themeColor('text')}
                                             width={27}
                                             height={27}
                                         />
