@@ -374,6 +374,45 @@ export default class SwapStore {
         }
     };
 
+    private saveReverseSwaps = async (
+        newSwap: any,
+        keys: any,
+        destinationAddress: string,
+        preimage: any,
+        endpoint: string,
+        implementation: any,
+        nodePubkey: string
+    ) => {
+        try {
+            // Retrieve existing swaps
+            const storedSwaps = await Storage.getItem('reverse-swaps');
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            // Adding the new properties to the swap
+            const enrichedSwap = {
+                ...newSwap,
+                keys,
+                destinationAddress,
+                preimage,
+                endpoint,
+                implementation,
+                nodePubkey
+            };
+
+            // Add the enriched swap to the beginning of array
+            swaps.unshift(enrichedSwap);
+
+            // Save the updated swaps array back to Encrypted Storage
+            await Storage.setItem('reverse-swaps', JSON.stringify(swaps));
+            console.log(
+                'Reverse swap saved successfully to Encrypted Storage.'
+            );
+        } catch (error: any) {
+            console.error('Error saving reverse swap to storage:', error);
+            throw error;
+        }
+    };
+
     @action
     public fetchAndUpdateSwaps = async () => {
         const { implementation } = this.settingsStore;
@@ -472,41 +511,36 @@ export default class SwapStore {
         }
     };
 
-    private saveReverseSwaps = async (
-        newSwap: any,
-        keys: any,
-        destinationAddress: string,
-        preimage: any,
-        endpoint: string,
-        implementation: any,
-        nodePubkey: string
-    ) => {
+    @action
+    public updateSwapOnRefund = async (swapId: string, txid: string) => {
         try {
-            // Retrieve existing swaps
-            const storedSwaps = await Storage.getItem('reverse-swaps');
+            // Retrieve the swaps from encrypted storage
+            const storedSwaps = await Storage.getItem('swaps');
+            if (!storedSwaps) {
+                throw new Error('No swaps found in storage');
+            }
+
+            // Parse the swaps array
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
-            // Adding the new properties to the swap
-            const enrichedSwap = {
-                ...newSwap,
-                keys,
-                destinationAddress,
-                preimage,
-                endpoint,
-                implementation,
-                nodePubkey
-            };
-
-            // Add the enriched swap to the beginning of array
-            swaps.unshift(enrichedSwap);
-
-            // Save the updated swaps array back to Encrypted Storage
-            await Storage.setItem('reverse-swaps', JSON.stringify(swaps));
-            console.log(
-                'Reverse swap saved successfully to Encrypted Storage.'
+            // Find the swap by swapId
+            const swapIndex = swaps.findIndex(
+                (swap: any) => swap.id === swapId
             );
-        } catch (error: any) {
-            console.error('Error saving reverse swap to storage:', error);
+            if (swapIndex === -1) {
+                throw new Error(`Swap with ID ${swapId} not found`);
+            }
+
+            // Update the swap
+            swaps[swapIndex].status = 'transaction.refunded';
+            swaps[swapIndex].txid = txid;
+
+            // Save the updated swaps back to encrypted storage
+            await Storage.setItem('swaps', JSON.stringify(swaps));
+
+            console.log('Swap updated in storage:', swaps[swapIndex]);
+        } catch (error) {
+            console.error('Error updating swap in storage:', error);
             throw error;
         }
     };
