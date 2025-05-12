@@ -20,8 +20,8 @@ export default class SwapStore {
     @observable public reverseInfo = {};
     @observable public loading = true;
     @observable public apiError = '';
-    @observable public swapInfo = {};
-    @observable public reverseSwapInfo = {};
+    @observable public swaps: any = [];
+    @observable public swapsLoading = false;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -230,7 +230,6 @@ export default class SwapStore {
             );
 
             runInAction(() => {
-                this.swapInfo = responseData;
                 this.loading = false;
             });
 
@@ -355,7 +354,6 @@ export default class SwapStore {
             );
 
             runInAction(() => {
-                this.reverseSwapInfo = responseData;
                 this.loading = false;
             });
 
@@ -377,8 +375,12 @@ export default class SwapStore {
     };
 
     @action
-    public updateSwapStatuses = async () => {
-        console.log('Updating swap statuses...');
+    public fetchAndUpdateSwaps = async () => {
+        const { implementation } = this.settingsStore;
+        const { nodeInfo } = this.nodeInfoStore;
+        const pubkey = nodeInfo?.nodeId;
+        console.log('Fetching and updating swaps...');
+        this.swapsLoading = true;
         try {
             const storedSubmarineSwaps = await Storage.getItem('swaps');
             const storedReverseSwaps = await Storage.getItem('reverse-swaps');
@@ -394,6 +396,24 @@ export default class SwapStore {
 
             for (const swap of allSwaps) {
                 if (!swap?.id) continue;
+
+                const skipStatusesForSubmarineSwap = [
+                    'invoice.failedToPay',
+                    'transaction.refunded',
+                    'transaction.claimed',
+                    'swap.expired',
+                    'transaction.refunded'
+                ];
+
+                const skipStatusesForReverseSwap = ['transaction.refunded'];
+
+                const shouldSkip =
+                    (swap.type === 'Submarine' &&
+                        skipStatusesForSubmarineSwap.includes(swap.status)) ||
+                    (swap.type === 'Reverse' &&
+                        skipStatusesForReverseSwap.includes(swap.status));
+
+                if (shouldSkip) continue;
 
                 try {
                     const response = await ReactNativeBlobUtil.fetch(
@@ -429,8 +449,26 @@ export default class SwapStore {
                 'reverse-swaps',
                 JSON.stringify(updatedReverseSwaps)
             );
+
+            // Filter swaps to current pubkey or implementation
+            const swaps = allSwaps.filter((swap: any) => {
+                return swap.nodePubkey
+                    ? swap.nodePubkey === pubkey
+                    : swap.implementation === implementation;
+            });
+
+            swaps.sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+            );
+
+            this.swaps = swaps;
+            this.swapsLoading = false;
         } catch (error) {
-            console.error('Updating swap statuses failed:', error);
+            console.error('Failed to fetch and update swaps:', error);
+        } finally {
+            this.swapsLoading = false;
         }
     };
 

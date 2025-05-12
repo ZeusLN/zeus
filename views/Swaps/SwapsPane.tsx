@@ -5,10 +5,7 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import moment from 'moment';
 
-import {
-    ErrorMessage,
-    WarningMessage
-} from '../../components/SuccessErrorMessage';
+import { WarningMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import Amount from '../../components/Amount';
@@ -21,8 +18,6 @@ import SwapStore from '../../stores/SwapStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import Storage from '../../storage';
-
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
     SwapStore?: SwapStore;
@@ -30,89 +25,16 @@ interface SwapsPaneProps {
     NodeInfoStore?: NodeInfoStore;
 }
 
-interface SwapsPaneState {
-    swaps: Array<any>;
-    error: string | null;
-    loading: boolean;
-}
-
 @inject('SwapStore', 'SettingsStore', 'NodeInfoStore')
 @observer
-export default class SwapsPane extends React.Component<
-    SwapsPaneProps,
-    SwapsPaneState
-> {
-    constructor(props: SwapsPaneProps) {
-        super(props);
-        this.state = {
-            swaps: [],
-            error: null,
-            loading: false
-        };
-    }
-
+export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
     componentDidMount() {
-        const { navigation } = this.props;
+        const { navigation, SwapStore } = this.props;
 
         navigation.addListener('focus', async () => {
-            this.fetchSwaps();
+            SwapStore?.fetchAndUpdateSwaps();
         });
     }
-
-    fetchSwaps = async () => {
-        const { SettingsStore, NodeInfoStore } = this.props;
-        const { implementation } = SettingsStore!;
-        const { nodeInfo } = NodeInfoStore!;
-        const pubkey = nodeInfo?.nodeId;
-
-        this.setState({ loading: true });
-        try {
-            // Fetch submarine swaps
-            const storedSubmarineSwaps = await Storage.getItem('swaps');
-            const submarineSwaps = storedSubmarineSwaps
-                ? JSON.parse(storedSubmarineSwaps)
-                : [];
-            const filteredSubmarineSwaps = submarineSwaps.filter(
-                (swap: any) => {
-                    return swap.nodePubkey
-                        ? swap.nodePubkey === pubkey
-                        : swap.implementation === implementation;
-                }
-            );
-
-            // Fetch reverse swaps
-            const storedReverseSwaps = await Storage.getItem('reverse-swaps');
-            const reverseSwaps = storedReverseSwaps
-                ? JSON.parse(storedReverseSwaps)
-                : [];
-            const filteredReverseSwaps = reverseSwaps.filter((swap: any) => {
-                return swap.nodePubkey
-                    ? swap.nodePubkey === pubkey
-                    : swap.implementation === implementation;
-            });
-
-            // Combine both types of swaps
-            const allSwaps = [
-                ...filteredSubmarineSwaps,
-                ...filteredReverseSwaps
-            ];
-
-            // Sort by creation date (most recent first)
-            const sortedSwaps = allSwaps.sort(
-                (a, b) =>
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime()
-            );
-
-            this.setState({ swaps: sortedSwaps, loading: false });
-        } catch (error) {
-            this.setState({
-                error: localeString('views.Swaps.SwapsPane.failedToLoad'),
-                loading: false
-            });
-            console.error('Error retrieving swaps:', error);
-        }
-    };
 
     handleSwapPress = (swap: any) => {
         const { navigation } = this.props;
@@ -258,8 +180,9 @@ export default class SwapsPane extends React.Component<
     };
 
     render() {
-        const { navigation } = this.props;
-        const { swaps, error, loading } = this.state;
+        const { navigation, SwapStore } = this.props;
+
+        const { swaps, swapsLoading } = SwapStore!;
 
         return (
             <Screen>
@@ -275,10 +198,9 @@ export default class SwapsPane extends React.Component<
                     navigation={navigation}
                 />
 
-                {error && <ErrorMessage message={error} />}
-                {loading ? (
+                {swapsLoading ? (
                     <LoadingIndicator />
-                ) : swaps.length === 0 && !error ? (
+                ) : swaps.length === 0 ? (
                     <View style={{ paddingHorizontal: 15 }}>
                         <WarningMessage
                             message={localeString(
