@@ -7,7 +7,6 @@ import { crypto } from 'bitcoinjs-lib';
 import bolt11 from 'bolt11';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
 const { createClaimTransaction, createReverseClaimTransaction } =
@@ -96,6 +95,11 @@ export default class SwapDetails extends React.Component<
 
             this.getSwapUpdates(swapData, isSubmarineSwap);
         } else {
+            if (swapData?.status === 'transaction.refunded') {
+                this.setState({ updates: 'transaction.refunded' });
+                return;
+            }
+
             this.getReverseSwapUpdates(swapData, isSubmarineSwap);
         }
     }
@@ -130,6 +134,8 @@ export default class SwapDetails extends React.Component<
 
     getSwapUpdates = async (createdResponse: any, isSubmarineSwap: boolean) => {
         const { keys, endpoint, invoice } = this.props.route.params;
+
+        const { SwapStore } = this.props;
 
         if (!createdResponse || !createdResponse.id) {
             console.error('Invalid response:', createdResponse);
@@ -198,7 +204,7 @@ export default class SwapDetails extends React.Component<
             });
 
             // Update the status in Encrypted Storage
-            await this.updateSwapStatusInStorage(
+            await SwapStore?.updateSwapStatus(
                 createdResponse.id,
                 data.status,
                 isSubmarineSwap,
@@ -283,6 +289,8 @@ export default class SwapDetails extends React.Component<
     ) => {
         const { keys, endpoint, swapData, fee } = this.props.route.params;
 
+        const { SwapStore } = this.props;
+
         if (!createdResponse || !createdResponse.id) {
             console.error('Invalid response:', createdResponse);
             this.setState({ error: 'Invalid response received.' });
@@ -346,7 +354,7 @@ export default class SwapDetails extends React.Component<
             this.setState({ updates: data.status, loading: false });
 
             // Update the status in Encrypted Storage
-            await this.updateSwapStatusInStorage(
+            await SwapStore?.updateSwapStatus(
                 createdResponse.id,
                 data.status,
                 isSubmarineSwap
@@ -413,41 +421,6 @@ export default class SwapDetails extends React.Component<
                 webSocket.close();
             }
         };
-    };
-
-    updateSwapStatusInStorage = async (
-        swapId: string,
-        status: string,
-        isSubmarineSwap: boolean,
-        failureReason?: string
-    ) => {
-        try {
-            let storedSwaps: any;
-            const key = isSubmarineSwap ? 'swaps' : 'reverse-swaps';
-            storedSwaps = await EncryptedStorage.getItem(key);
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-
-            const updatedSwaps = swaps.map((swap: any) =>
-                swap.id === swapId
-                    ? {
-                          ...swap,
-                          status,
-                          ...(isSubmarineSwap && failureReason
-                              ? { failureReason }
-                              : {})
-                      }
-                    : swap
-            );
-
-            await EncryptedStorage.setItem(key, JSON.stringify(updatedSwaps));
-            console.log(
-                `Updated ${
-                    isSubmarineSwap ? `swap` : `reverse swap`
-                } status for swap ID ${swapId} to "${status}"`
-            );
-        } catch (error) {
-            console.error('Error updating swap status in storage:', error);
-        }
     };
 
     fetchClaimDetails = async (swapId: string, endpoint: string) => {

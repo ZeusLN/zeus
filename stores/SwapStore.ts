@@ -6,7 +6,6 @@ import { randomBytes } from 'crypto';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 
 import { themeColor } from '../utils/ThemeUtils';
-import EncryptedStorage from 'react-native-encrypted-storage';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -14,13 +13,15 @@ import SettingsStore, {
     DEFAULT_SWAP_HOST_TESTNET
 } from './SettingsStore';
 
+import Storage from '../storage';
+
 export default class SwapStore {
     @observable public subInfo = {};
     @observable public reverseInfo = {};
     @observable public loading = true;
     @observable public apiError = '';
-    @observable public swapInfo = {};
-    @observable public reverseSwapInfo = {};
+    @observable public swaps: any = [];
+    @observable public swapsLoading = false;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -229,7 +230,6 @@ export default class SwapStore {
             );
 
             runInAction(() => {
-                this.swapInfo = responseData;
                 this.loading = false;
             });
 
@@ -259,7 +259,7 @@ export default class SwapStore {
     ) => {
         try {
             // Retrieve existing swaps
-            const storedSwaps = await EncryptedStorage.getItem('swaps');
+            const storedSwaps = await Storage.getItem('swaps');
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             // Adding the new properties to the swap
@@ -276,7 +276,7 @@ export default class SwapStore {
             swaps.unshift(enrichedSwap);
 
             // Save the updated swaps array back to Encrypted Storage
-            await EncryptedStorage.setItem('swaps', JSON.stringify(swaps));
+            await Storage.setItem('swaps', JSON.stringify(swaps));
             console.log('Swap saved successfully to Encrypted Storage.');
         } catch (error: any) {
             console.error('Error saving swap to storage:', error);
@@ -354,7 +354,6 @@ export default class SwapStore {
             );
 
             runInAction(() => {
-                this.reverseSwapInfo = responseData;
                 this.loading = false;
             });
 
@@ -386,7 +385,7 @@ export default class SwapStore {
     ) => {
         try {
             // Retrieve existing swaps
-            const storedSwaps = await EncryptedStorage.getItem('reverse-swaps');
+            const storedSwaps = await Storage.getItem('reverse-swaps');
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             // Adding the new properties to the swap
@@ -404,15 +403,180 @@ export default class SwapStore {
             swaps.unshift(enrichedSwap);
 
             // Save the updated swaps array back to Encrypted Storage
-            await EncryptedStorage.setItem(
-                'reverse-swaps',
-                JSON.stringify(swaps)
-            );
+            await Storage.setItem('reverse-swaps', JSON.stringify(swaps));
             console.log(
                 'Reverse swap saved successfully to Encrypted Storage.'
             );
         } catch (error: any) {
             console.error('Error saving reverse swap to storage:', error);
+            throw error;
+        }
+    };
+
+    @action
+    public fetchAndUpdateSwaps = async () => {
+        const { implementation } = this.settingsStore;
+        const { nodeInfo } = this.nodeInfoStore;
+        const pubkey = nodeInfo?.nodeId;
+        console.log('Fetching and updating swaps...');
+        this.swapsLoading = true;
+        try {
+            const storedSubmarineSwaps = await Storage.getItem('swaps');
+            const storedReverseSwaps = await Storage.getItem('reverse-swaps');
+
+            const submarineSwaps = storedSubmarineSwaps
+                ? JSON.parse(storedSubmarineSwaps)
+                : [];
+            const reverseSwaps = storedReverseSwaps
+                ? JSON.parse(storedReverseSwaps)
+                : [];
+
+            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+
+            for (const swap of allSwaps) {
+                if (!swap?.id) continue;
+
+                const skipStatusesForSubmarineSwap = [
+                    'invoice.failedToPay',
+                    'transaction.refunded',
+                    'transaction.claimed',
+                    'swap.expired',
+                    'transaction.refunded'
+                ];
+
+                const skipStatusesForReverseSwap = ['transaction.refunded'];
+
+                const shouldSkip =
+                    (swap.type === 'Submarine' &&
+                        skipStatusesForSubmarineSwap.includes(swap.status)) ||
+                    (swap.type === 'Reverse' &&
+                        skipStatusesForReverseSwap.includes(swap.status));
+
+                if (shouldSkip) continue;
+
+                try {
+                    const response = await ReactNativeBlobUtil.fetch(
+                        'GET',
+                        `${this.getHost}/swap/${swap.id}`,
+                        this.getHeaders
+                    );
+
+                    const result = await response.json();
+                    if (result?.status) {
+                        swap.status = result.status;
+                    }
+                } catch (err: any) {
+                    console.warn(
+                        `Failed to fetch status for swap ${swap.id}`,
+                        err
+                    );
+                }
+            }
+
+            const updatedSubmarineSwaps = allSwaps.filter(
+                (s) => s.type === 'Submarine'
+            );
+            const updatedReverseSwaps = allSwaps.filter(
+                (s) => s.type === 'Reverse'
+            );
+
+            await Storage.setItem(
+                'swaps',
+                JSON.stringify(updatedSubmarineSwaps)
+            );
+            await Storage.setItem(
+                'reverse-swaps',
+                JSON.stringify(updatedReverseSwaps)
+            );
+
+            // Filter swaps to current pubkey or implementation
+            const swaps = allSwaps.filter((swap: any) => {
+                return swap.nodePubkey
+                    ? swap.nodePubkey === pubkey
+                    : swap.implementation === implementation;
+            });
+
+            swaps.sort(
+                (a, b) =>
+                    new Date(b.createdAt).getTime() -
+                    new Date(a.createdAt).getTime()
+            );
+
+            this.swaps = swaps;
+            this.swapsLoading = false;
+        } catch (error) {
+            console.error('Failed to fetch and update swaps:', error);
+        } finally {
+            this.swapsLoading = false;
+        }
+    };
+
+    @action
+    updateSwapStatus = async (
+        swapId: string,
+        status: string,
+        isSubmarineSwap: boolean,
+        failureReason?: string
+    ) => {
+        try {
+            let storedSwaps: any;
+            const key = isSubmarineSwap ? 'swaps' : 'reverse-swaps';
+            storedSwaps = await Storage.getItem(key);
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            const updatedSwaps = swaps.map((swap: any) =>
+                swap.id === swapId
+                    ? {
+                          ...swap,
+                          status,
+                          ...(isSubmarineSwap && failureReason
+                              ? { failureReason }
+                              : {})
+                      }
+                    : swap
+            );
+
+            await Storage.setItem(key, JSON.stringify(updatedSwaps));
+            console.log(
+                `Updated ${
+                    isSubmarineSwap ? `swap` : `reverse swap`
+                } status for swap ID ${swapId} to "${status}"`
+            );
+        } catch (error) {
+            console.error('Error updating swap status in storage:', error);
+        }
+    };
+
+    @action
+    public updateSwapOnRefund = async (swapId: string, txid: string) => {
+        try {
+            // Retrieve the swaps from encrypted storage
+            const storedSwaps = await Storage.getItem('swaps');
+            if (!storedSwaps) {
+                throw new Error('No swaps found in storage');
+            }
+
+            // Parse the swaps array
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+
+            // Find the swap by swapId
+            const swapIndex = swaps.findIndex(
+                (swap: any) => swap.id === swapId
+            );
+            if (swapIndex === -1) {
+                throw new Error(`Swap with ID ${swapId} not found`);
+            }
+
+            // Update the swap
+            swaps[swapIndex].status = 'transaction.refunded';
+            swaps[swapIndex].txid = txid;
+
+            // Save the updated swaps back to encrypted storage
+            await Storage.setItem('swaps', JSON.stringify(swaps));
+
+            console.log('Swap updated in storage:', swaps[swapIndex]);
+        } catch (error) {
+            console.error('Error updating swap in storage:', error);
             throw error;
         }
     };
