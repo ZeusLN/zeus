@@ -440,7 +440,7 @@ export default class CashuStore {
             await Storage.setItem(`${walletId}-mintInfo`, mintInfo);
 
             const keysets = (await mint.getKeySets()).keysets.filter(
-                (ks) => ks.unit === 'sat'
+                (ks) => ks.unit === 'sat' && ks.active
             );
             const keys = (await mint.getKeys()).keysets.find(
                 (ks) => ks.unit === 'sat'
