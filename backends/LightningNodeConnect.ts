@@ -13,6 +13,7 @@ import { snakeize } from '../utils/DataFormatUtils';
 import VersionUtils from '../utils/VersionUtils';
 
 import { Hash as sha256Hash } from 'fast-sha256';
+import BigNumber from 'bignumber.js';
 
 const ADDRESS_TYPES = [
     'WITNESS_PUBKEY_HASH',
@@ -373,7 +374,9 @@ export default class LightningNodeConnect {
                 ...(this.supportInboundFees() && {
                     inboundFee: {
                         base_fee_msat: data.base_fee_msat_inbound,
-                        fee_rate_ppm: `${Number(data.fee_rate_inbound) * 10000}`
+                        fee_rate_ppm: `${new BigNumber(data.fee_rate_inbound)
+                            .multipliedBy(10000)
+                            .toFixed(0)}`
                     }
                 }),
 
@@ -394,7 +397,9 @@ export default class LightningNodeConnect {
                 ...(this.supportInboundFees() && {
                     inboundFee: {
                         base_fee_msat: data.base_fee_msat_inbound,
-                        fee_rate_ppm: `${Number(data.fee_rate_inbound) * 10000}`
+                        fee_rate_ppm: `${new BigNumber(data.fee_rate_inbound)
+                            .multipliedBy(10000)
+                            .toFixed(0)}`
                     }
                 }),
                 chan_point: {

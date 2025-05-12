@@ -6,6 +6,7 @@ import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
+import BigNumber from 'bignumber.js';
 
 interface Headers {
     macaroon?: string;
@@ -553,7 +554,9 @@ export default class LND {
                 ...(this.supportInboundFees() && {
                     inboundFee: {
                         base_fee_msat: base_fee_msat_inbound,
-                        fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+                        fee_rate_ppm: `${new BigNumber(fee_rate_inbound)
+                            .multipliedBy(10000)
+                            .toFixed(0)}`
                     }
                 }),
                 global: true,
@@ -569,7 +572,9 @@ export default class LND {
             ...(this.supportInboundFees() && {
                 inboundFee: {
                     base_fee_msat: base_fee_msat_inbound,
-                    fee_rate_ppm: `${Number(fee_rate_inbound) * 10000}`
+                    fee_rate_ppm: `${new BigNumber(fee_rate_inbound)
+                        .multipliedBy(10000)
+                        .toFixed(0)}`
                 }
             }),
             chan_point: {
