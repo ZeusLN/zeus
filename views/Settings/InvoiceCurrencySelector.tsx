@@ -125,7 +125,9 @@ class InvoiceCurrencySelector extends React.Component<
                                 marginTop: 40
                             }}
                         >
-                            No currencies found.
+                            {localeString(
+                                'views.Settings.Currency.noCurrenciesFound'
+                            )}
                         </Text>
                     )}
                     renderItem={({ item }) => {
