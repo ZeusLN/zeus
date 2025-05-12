@@ -271,9 +271,8 @@ export default class StandalonePosPane extends React.PureComponent<
                 <TouchableHighlight
                     onPress={() => {
                         if (
-                            getRate({
-                                sats: this.props.UnitsStore?.units == 'sats'
-                            }) === '$N/A'
+                            getRate(this.props.UnitsStore?.units === 'sats') ===
+                            '$N/A'
                         )
                             return;
                         navigation.navigate('Order', {
