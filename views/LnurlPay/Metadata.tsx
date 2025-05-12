@@ -6,11 +6,12 @@ import { themeColor } from '../../utils/ThemeUtils';
 
 interface LnurlPayMetadataProps {
     metadata: string;
+    showArrow?: boolean;
 }
 
 export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataProps> {
     render() {
-        const { metadata } = this.props;
+        const { metadata, showArrow = true } = this.props;
 
         let keypairs: Array<Array<string>>;
         try {
@@ -53,18 +54,22 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
                     >
                         <Text
                             style={{
-                                color: themeColor('highlight'),
+                                color: showArrow
+                                    ? themeColor('highlight')
+                                    : themeColor('text'),
                                 fontFamily: 'PPNeueMontreal-Book'
                             }}
                         >
                             {text}
                         </Text>
-                        <Icon
-                            name="keyboard-arrow-down"
-                            type="material"
-                            size={15}
-                            color={themeColor('highlight')}
-                        />
+                        {showArrow && (
+                            <Icon
+                                name="keyboard-arrow-down"
+                                type="material"
+                                size={15}
+                                color={themeColor('highlight')}
+                            />
+                        )}
                     </View>
                 </View>
             </ScrollView>
