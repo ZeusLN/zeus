@@ -24,13 +24,13 @@ import { Icon } from 'react-native-elements';
 
 import Storage from '../../storage';
 
-interface WithdrawalRequestProps {
+interface CreateWithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     BalanceStore: BalanceStore;
 }
 
-interface WithdrawalRequestState {
+interface CreateWithdrawalRequestState {
     satsAmount: string;
     amount: string;
     description: string;
@@ -43,11 +43,11 @@ interface WithdrawalRequestState {
 
 @inject('InvoicesStore', 'BalanceStore')
 @observer
-export default class WithdrawalRequest extends Component<
-    WithdrawalRequestProps,
-    WithdrawalRequestState
+export default class CreateWithdrawalRequest extends Component<
+    CreateWithdrawalRequestProps,
+    CreateWithdrawalRequestState
 > {
-    constructor(props: WithdrawalRequestProps) {
+    constructor(props: CreateWithdrawalRequestProps) {
         super(props);
         this.state = {
             satsAmount: '',
