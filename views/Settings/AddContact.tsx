@@ -216,8 +216,14 @@ export default class AddContact extends React.Component<
             const validationKey = `isValid${
                 field.charAt(0).toUpperCase() + field.slice(1)
             }`;
-            const updatedValidation = [...prevState[validationKey]];
-            updatedValidation.splice(index, 1);
+
+            const updatedValidation = prevState[validationKey]
+                ? [...prevState[validationKey]]
+                : [];
+
+            if (updatedValidation.length > 0) {
+                updatedValidation.splice(index, 1);
+            }
 
             return {
                 [field]: updatedFields,
