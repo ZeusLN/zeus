@@ -19,20 +19,20 @@ import QR from '../assets/images/SVG/QR.svg';
 import Storage from '../storage';
 import WithdrawalRequest from '../models/WithdrawalRequest';
 
-interface WithdrawalProps {
+interface WithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<'WithdrawalView', { withdrawalRequest: WithdrawalRequest }>;
 }
 
-interface WithdrawalState {
+interface WithdrawalRequestState {
     storedNote: string;
     invreq_time: string | null;
 }
 
 @inject('InvoicesStore')
-export default class WithdrawalView extends React.Component<
-    WithdrawalProps,
-    WithdrawalState
+export default class WithdrawalRequestView extends React.Component<
+    WithdrawalRequestProps,
+    WithdrawalRequestState
 > {
     state = {
         storedNote: '',
