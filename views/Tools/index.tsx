@@ -460,7 +460,9 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         >
                             <TouchableOpacity
                                 onPress={() =>
-                                    navigation.navigate('WithdrawalRequest')
+                                    navigation.navigate(
+                                        'CreateWithdrawalRequest'
+                                    )
                                 }
                             >
                                 <View style={styles.columnField}>

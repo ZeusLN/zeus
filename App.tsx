@@ -248,8 +248,8 @@ import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
-import WithdrawalRequest from './views/Tools/WithdrawalRequest';
-import WithdrawalView from './views/Withdrawal';
+import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
+import WithdrawalRequestView from './views/WithdrawalRequest';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1167,15 +1167,15 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="WithdrawalRequest" // @ts-ignore:next-line
+                                                        name="CreateWithdrawalRequest" // @ts-ignore:next-line
                                                         component={
-                                                            WithdrawalRequest
+                                                            CreateWithdrawalRequest
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="Withdrawal" // @ts-ignore:next-line
+                                                        name="WithdrawalRequestView" // @ts-ignore:next-line
                                                         component={
-                                                            WithdrawalView
+                                                            WithdrawalRequestView
                                                         }
                                                     />
                                                 </Stack.Navigator>
