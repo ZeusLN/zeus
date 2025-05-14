@@ -1703,6 +1703,7 @@ export default class CashuStore {
         try {
             const alreadySpent = await this.checkTokenSpent(decoded);
             if (alreadySpent) {
+                this.loading = false;
                 return {
                     success: false,
                     errorMessage: localeString('stores.CashuStore.alreadySpent')
