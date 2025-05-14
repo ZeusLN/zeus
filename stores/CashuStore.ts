@@ -995,25 +995,27 @@ export default class CashuStore {
             mintUrl
         ].wallet?.checkMintQuote(invoiceQuoteId);
 
-        if (quote?.state === 'PAID') {
-            // try up to 100 counters in case we get out of sync (DEBUG)
-            let attempts = 0;
-            let retries = 100;
-            let success = false;
-
-            // decode bolt11 for metadata
-            let decoded;
+        // decode bolt11 for metadata
+        let decoded;
+        if (quote) {
             try {
                 decoded = bolt11.decode(quote.request);
             } catch (e) {
                 console.log('error decoding Cashu bolt11', quote.request);
             }
+        }
 
-            const updatedInvoice = new CashuInvoice({
-                ...quote,
-                decoded,
-                mintUrl
-            });
+        const updatedInvoice = new CashuInvoice({
+            ...quote,
+            decoded,
+            mintUrl
+        });
+
+        if (quote?.state === 'PAID') {
+            // try up to 100 counters in case we get out of sync (DEBUG)
+            let attempts = 0;
+            let retries = 100;
+            let success = false;
 
             const amtSat = updatedInvoice.getAmount;
 
