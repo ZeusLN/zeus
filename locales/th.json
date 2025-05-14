@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "แสดงจุดทศนิยมทั้งหมด",
     "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
-    "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "ความเป็นส่วนตัว",
     "views.Settings.payments": "การใช้จ่าย",
     "views.Settings.Privacy.title": "การตั้งค่าความเป็นส่วนตัว",

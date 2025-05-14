@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "Zeige alle Dezimalstellen",
     "views.Settings.Display.removeDecimalSpaces": "Bitcoin-Beträge ohne Leerzeichen anzeigen",
     "views.Settings.Display.showMillisatoshiAmounts": "Millisatoshi-Beträge anzeigen",
-    "views.Settings.Display.selectNodeOnStartup": "Node beim Start auswählen",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "Privatsphäre",
     "views.Settings.payments": "Zahlungen",
     "views.Settings.Privacy.title": "Privatsphäre Einstellungen",
