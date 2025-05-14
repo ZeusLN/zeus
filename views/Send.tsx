@@ -903,7 +903,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }
                                     style={{ position: 'absolute', right: 10 }}
                                 >
-                                    <ContactIcon stroke={themeColor('text')} />
+                                    <ContactIcon fill={themeColor('text')} />
                                 </TouchableOpacity>
                             </View>
                         </>
