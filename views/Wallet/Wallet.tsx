@@ -580,7 +580,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         SettingsStore.settings.lightningAddress
                             ?.notifications === 1
                     ) {
-                        await LightningAddressStore.updatePushCredentials();
+                        LightningAddressStore.updatePushCredentials();
                     }
                 } catch (e) {
                     console.error('Lightning address error', e);
