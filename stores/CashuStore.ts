@@ -1111,7 +1111,7 @@ export default class CashuStore {
                 }
             }
         } else {
-            return { isPaid: false };
+            return { isPaid: false, updatedInvoice };
         }
     };
 
