@@ -50,7 +50,7 @@ interface LayerBalancesProps {
     navigation: StackNavigationProp<any, any>;
     onRefresh?: any;
     value?: string;
-    amount?: string;
+    satAmount?: string;
     lightning?: string;
     offer?: string;
     locked?: boolean;
@@ -258,7 +258,7 @@ const SwipeableRow = ({
     index,
     navigation,
     value,
-    amount,
+    satAmount,
     lightning,
     offer,
     locked,
@@ -268,7 +268,7 @@ const SwipeableRow = ({
     index: number;
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    amount?: string;
+    satAmount?: string;
     lightning?: string;
     offer?: string;
     locked?: boolean;
@@ -292,7 +292,7 @@ const SwipeableRow = ({
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
-                amount={amount}
+                satAmount={satAmount}
                 locked={locked}
             >
                 <Row item={item} />
@@ -305,7 +305,6 @@ const SwipeableRow = ({
             <EcashSwipeableRow
                 navigation={navigation}
                 value={value}
-                amount={amount}
                 locked={locked}
                 needsConfig={cashuStore.mintUrls.length === 0}
             >
@@ -354,7 +353,7 @@ const SwipeableRow = ({
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
-                amount={amount}
+                satAmount={satAmount}
                 locked={locked}
                 account={item.layer}
                 hidden={item.hidden}
@@ -375,7 +374,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
             SettingsStore,
             navigation,
             value,
-            amount,
+            satAmount,
             lightning,
             offer,
             onRefresh,
@@ -483,7 +482,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                             navigation={navigation}
                             // select pay method vars
                             value={value}
-                            amount={amount}
+                            satAmount={satAmount}
                             lightning={lightning}
                             offer={offer}
                             locked={locked || editMode}

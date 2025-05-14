@@ -30,7 +30,6 @@ interface EcashSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
     lightning?: string;
     value?: string;
-    amount?: string;
     locked?: boolean;
     account?: string;
     hidden?: boolean;

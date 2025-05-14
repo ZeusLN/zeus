@@ -16,7 +16,7 @@ interface ChoosePaymentMethodProps {
         'ChoosePaymentMethod',
         {
             value: string;
-            amount: string;
+            satAmount: string;
             lightning: string;
             offer: string;
         }
@@ -25,7 +25,7 @@ interface ChoosePaymentMethodProps {
 
 interface ChoosePaymentMethodState {
     value: string;
-    amount: string;
+    satAmount: string;
     lightning: string;
     offer: string;
 }
@@ -36,21 +36,21 @@ export default class ChoosePaymentMethod extends React.Component<
 > {
     state = {
         value: '',
-        amount: '',
+        satAmount: '',
         lightning: '',
         offer: ''
     };
 
     componentDidMount() {
         const { route } = this.props;
-        const { value, amount, lightning, offer } = route.params ?? {};
+        const { value, satAmount, lightning, offer } = route.params ?? {};
 
         if (value) {
             this.setState({ value });
         }
 
-        if (amount) {
-            this.setState({ amount });
+        if (satAmount) {
+            this.setState({ satAmount });
         }
 
         if (lightning) {
@@ -64,7 +64,7 @@ export default class ChoosePaymentMethod extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { value, amount, lightning, offer } = this.state;
+        const { value, satAmount, lightning, offer } = this.state;
 
         return (
             <Screen>
@@ -80,7 +80,7 @@ export default class ChoosePaymentMethod extends React.Component<
                     navigation={navigation}
                     // for payment method selection
                     value={value}
-                    amount={amount}
+                    satAmount={satAmount}
                     lightning={lightning}
                     offer={offer}
                 />

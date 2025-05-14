@@ -317,9 +317,9 @@ export default class ReceiveEcash extends React.Component<
     validateAddress = (text: string) => {
         const { navigation, CashuStore, route } = this.props;
         const { createInvoice } = CashuStore;
-        const amount = getSatAmount(route.params?.amount);
+        const satAmount = getSatAmount(route.params?.amount);
 
-        handleAnything(text, amount.toString())
+        handleAnything(text, satAmount.toString())
             .then((response) => {
                 try {
                     const [route, props] = response;
@@ -329,10 +329,10 @@ export default class ReceiveEcash extends React.Component<
                     // if an amount was entered on the keypad screen before scanning
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
-                    if (Number(amount) > 0) {
+                    if (Number(satAmount) > 0) {
                         createInvoice({
                             memo,
-                            value: amount.toString(),
+                            value: satAmount.toString(),
                             lnurl: lnurlParams
                         })
                             .then(() => {
@@ -340,7 +340,7 @@ export default class ReceiveEcash extends React.Component<
                             })
                             .catch(() => {
                                 navigation.navigate(route, {
-                                    amount,
+                                    satAmount,
                                     ...props
                                 });
                             });

@@ -66,7 +66,7 @@ describe('handleAnything', () => {
             const data = 'test data';
             mockProcessBIP21Uri.mockReturnValue({
                 value: 'some address',
-                amount: 123
+                satAmount: 123
             });
             mockIsValidBitcoinAddress = true;
 
@@ -76,7 +76,7 @@ describe('handleAnything', () => {
                 'Send',
                 {
                     destination: 'some address',
-                    amount: 123,
+                    satAmount: 123,
                     transactionType: 'On-chain',
                     isValid: true
                 }
@@ -87,7 +87,7 @@ describe('handleAnything', () => {
             const data = 'test data';
             mockProcessBIP21Uri.mockReturnValue({
                 value: 'some address',
-                amount: 123
+                satAmount: 123
             });
             mockIsValidBitcoinAddress = true;
 
@@ -176,7 +176,7 @@ describe('handleAnything', () => {
             expect(result).toEqual([
                 'ChoosePaymentMethod',
                 {
-                    amount: undefined,
+                    satAmount: undefined,
                     lightning:
                         'LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF',
                     offer: undefined,
@@ -219,7 +219,7 @@ describe('handleAnything', () => {
             expect(result).toEqual([
                 'ChoosePaymentMethod',
                 {
-                    amount: undefined,
+                    satAmount: undefined,
                     lightning:
                         'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6',
                     offer: undefined,
