@@ -1161,14 +1161,6 @@ const styles = StyleSheet.create({
         fontSize: 18,
         paddingVertical: 5
     },
-    deleteIcon: {
-        padding: 4
-    },
-    photoContainer: {
-        alignItems: 'center',
-        marginTop: 32,
-        marginBottom: 16
-    },
     photoWrapper: {
         width: 120,
         height: 120,
