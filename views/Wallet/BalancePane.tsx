@@ -400,7 +400,7 @@ export default class BalancePane extends React.PureComponent<
                                     >
                                         <View style={{ marginBottom: 10 }}>
                                             <LockIcon
-                                                color={themeColor('highlight')}
+                                                fill={themeColor('highlight')}
                                             />
                                         </View>
                                         <Text
