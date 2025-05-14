@@ -22,7 +22,7 @@ import { nodeInfoStore, settingsStore } from '../../stores/Stores';
 interface PaymentMethodListProps {
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    amount?: string;
+    satAmount?: string;
     lightning?: string;
     ecash?: string;
     offer?: string;
@@ -112,7 +112,7 @@ const SwipeableRow = ({
     item,
     navigation,
     value,
-    amount,
+    satAmount,
     lightning,
     offer
 }: {
@@ -120,7 +120,7 @@ const SwipeableRow = ({
     index: number;
     navigation: StackNavigationProp<any, any>;
     value?: string;
-    amount?: string;
+    satAmount?: string;
     lightning?: string;
     offer?: string;
 }) => {
@@ -168,7 +168,7 @@ const SwipeableRow = ({
             <OnchainSwipeableRow
                 navigation={navigation}
                 value={value}
-                amount={amount}
+                satAmount={satAmount}
                 locked={true}
                 disabled={item.disabled}
             >
@@ -183,7 +183,7 @@ export default class PaymentMethodList extends Component<
     {}
 > {
     render() {
-        const { navigation, value, amount, lightning, offer } = this.props;
+        const { navigation, value, satAmount, lightning, offer } = this.props;
 
         let DATA: DataRow[] = [];
 
@@ -243,7 +243,7 @@ export default class PaymentMethodList extends Component<
                             navigation={navigation}
                             // select pay method vars
                             value={value}
-                            amount={amount}
+                            satAmount={satAmount}
                             lightning={lightning}
                             offer={offer}
                         />

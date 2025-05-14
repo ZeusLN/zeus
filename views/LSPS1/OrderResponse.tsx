@@ -504,9 +504,9 @@ export default class LSPS1OrderResponse extends React.Component<
                                                             destination:
                                                                 payment.onchain
                                                                     ?.address,
-                                                            amount: payment
-                                                                .onchain
-                                                                ?.fee_total_sat,
+                                                            satAmount:
+                                                                payment.onchain
+                                                                    ?.fee_total_sat,
                                                             transactionType:
                                                                 'On-chain'
                                                         }
