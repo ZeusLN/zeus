@@ -621,9 +621,11 @@ export default class KeypadPane extends React.PureComponent<
                                                 this.modalBoxRef.current?.open();
                                             } else {
                                                 navigation.navigate('Send', {
-                                                    amount:
+                                                    satAmount:
                                                         amount !== '0'
-                                                            ? amount
+                                                            ? getSatAmount(
+                                                                  amount
+                                                              )
                                                             : ''
                                                 });
                                             }

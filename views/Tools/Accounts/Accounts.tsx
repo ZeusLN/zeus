@@ -31,7 +31,7 @@ interface AccountsProps {
         'Accounts',
         {
             value: string;
-            amount: string;
+            satAmount: string;
             lightning: string;
             offer: string;
             locked: boolean;
@@ -41,7 +41,7 @@ interface AccountsProps {
 
 interface AccountsState {
     value: string;
-    amount: string;
+    satAmount: string;
     lightning: string;
     offer: string;
     locked: boolean;
@@ -56,7 +56,7 @@ export default class Accounts extends React.Component<
 > {
     state = {
         value: '',
-        amount: '',
+        satAmount: '',
         lightning: '',
         offer: '',
         locked: false,
@@ -70,14 +70,15 @@ export default class Accounts extends React.Component<
 
     componentDidMount() {
         const { route } = this.props;
-        const { value, amount, lightning, offer, locked } = route.params ?? {};
+        const { value, satAmount, lightning, offer, locked } =
+            route.params ?? {};
 
         if (value) {
             this.setState({ value });
         }
 
-        if (amount) {
-            this.setState({ amount });
+        if (satAmount) {
+            this.setState({ satAmount });
         }
 
         if (lightning) {
@@ -95,7 +96,7 @@ export default class Accounts extends React.Component<
 
     render() {
         const { BalanceStore, UnitsStore, UTXOsStore, navigation } = this.props;
-        const { value, amount, lightning, offer, locked, editMode } =
+        const { value, satAmount, lightning, offer, locked, editMode } =
             this.state;
         const { loadingAccounts, accounts } = UTXOsStore;
 
@@ -133,7 +134,7 @@ export default class Accounts extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: amount
+                        text: satAmount
                             ? localeString('views.Accounts.select')
                             : localeString('views.Accounts.title'),
                         style: { color: themeColor('text') }
@@ -185,7 +186,7 @@ export default class Accounts extends React.Component<
                         }
                         // for payment method selection
                         value={value}
-                        amount={amount}
+                        satAmount={satAmount}
                         lightning={lightning}
                         offer={offer}
                         locked={locked}

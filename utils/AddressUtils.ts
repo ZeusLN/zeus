@@ -80,7 +80,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let amount, lightning, offer;
+    let satAmount, lightning, offer;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -93,10 +93,10 @@ const bitcoinQrParser = (input: string, prefix: string) => {
 
     const value = btcAddress;
     if (result.amount || result.AMOUNT) {
-        amount = new BigNumber(result.amount || result.AMOUNT).multipliedBy(
+        satAmount = new BigNumber(result.amount || result.AMOUNT).multipliedBy(
             SATS_PER_BTC
         );
-        amount = amount.toString();
+        satAmount = satAmount.toString();
     }
 
     if (result.lightning || result.LIGHTNING) {
@@ -107,27 +107,27 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         offer = result.lno || result.LNO;
     }
 
-    return [value, amount, lightning, offer];
+    return [value, satAmount, lightning, offer];
 };
 
 class AddressUtils {
     processBIP21Uri = (input: string) => {
-        let value, amount, lightning, offer;
+        let value, satAmount, lightning, offer;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
         if (input.includes('bitcoin:') || input.includes('BITCOIN:')) {
-            const [parsedValue, parsedAmount, parsedLightning, parsedOffer] =
+            const [parsedValue, parsedSatAmount, parsedLightning, parsedOffer] =
                 bitcoinQrParser(
                     input,
                     input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
                 );
             value = parsedValue;
 
-            if (parsedAmount) {
-                amount = parsedAmount;
+            if (parsedSatAmount) {
+                satAmount = parsedSatAmount;
             }
 
             if (parsedLightning) {
@@ -147,7 +147,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, amount, lightning, offer };
+        return { value, satAmount, lightning, offer };
     };
 
     processLNDHubAddress = (input: string) => {

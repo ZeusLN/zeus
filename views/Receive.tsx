@@ -609,9 +609,9 @@ export default class Receive extends React.Component<
         const { navigation, InvoicesStore, route } = this.props;
         const { lspIsActive, receiverName } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const amount = getSatAmount(route.params?.amount);
+        const satAmount = getSatAmount(route.params?.amount);
 
-        handleAnything(text, amount.toString())
+        handleAnything(text, satAmount.toString())
             .then((response) => {
                 try {
                     const [route, props] = response;
@@ -621,14 +621,14 @@ export default class Receive extends React.Component<
                     // if an amount was entered on the keypad screen before scanning
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
-                    if (Number(amount) > 0) {
+                    if (Number(satAmount) > 0) {
                         createUnifiedInvoice({
                             memo: lspIsActive
                                 ? ''
                                 : receiverName
                                 ? `${receiverName}:  ${memo}`
                                 : memo,
-                            value: amount.toString(),
+                            value: satAmount.toString(),
                             expiry: '3600',
                             lnurl: lnurlParams,
                             noLsp: !lspIsActive
@@ -649,7 +649,7 @@ export default class Receive extends React.Component<
                             )
                             .catch(() => {
                                 navigation.navigate(route, {
-                                    amount,
+                                    satAmount,
                                     ...props
                                 });
                             });

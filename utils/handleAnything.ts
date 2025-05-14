@@ -2,12 +2,7 @@ import { Alert } from 'react-native';
 import { getParams as getlnurlParams, findlnurl, decodelnurl } from 'js-lnurl';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import {
-    nodeInfoStore,
-    invoicesStore,
-    unitsStore,
-    settingsStore
-} from '../stores/Stores';
+import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
@@ -105,7 +100,7 @@ const handleAnything = async (
     data = data.trim();
     const { nodeInfo } = nodeInfoStore;
     const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-    const { value, amount, lightning, offer }: any =
+    const { value, satAmount, lightning, offer }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
@@ -130,7 +125,7 @@ const handleAnything = async (
             'ChoosePaymentMethod',
             {
                 value,
-                amount,
+                satAmount,
                 lightning,
                 offer
             }
@@ -195,7 +190,7 @@ const handleAnything = async (
             'Accounts',
             {
                 value,
-                amount,
+                satAmount,
                 lightning,
                 locked: true
             }
@@ -208,12 +203,11 @@ const handleAnything = async (
         )
     ) {
         if (isClipboardValue) return true;
-        if (amount) unitsStore?.resetUnits();
         return [
             'Send',
             {
                 destination: value,
-                amount,
+                satAmount,
                 transactionType: 'On-chain',
                 isValid: true
             }
@@ -408,7 +402,7 @@ const handleAnything = async (
             bolt12 = bolt12.replace(/("|\\|\s+)/g, '');
             bolt12 = bolt12.replace(/bitcoin:b12=/, '');
 
-            const { value, amount, lightning, offer }: any =
+            const { value, satAmount, lightning, offer }: any =
                 AddressUtils.processBIP21Uri(bolt12);
 
             const hasMultiple: boolean =
@@ -421,7 +415,7 @@ const handleAnything = async (
                     'ChoosePaymentMethod',
                     {
                         value,
-                        amount,
+                        satAmount,
                         lightning,
                         offer,
                         locked: true
