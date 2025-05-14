@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "Hiển thị tất cả các chữ số thập phân",
     "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Hiển thị số lượng milli satoshi",
-    "views.Settings.Display.selectNodeOnStartup": "Chọn nút khi khởi động",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "Quyền riêng tư",
     "views.Settings.payments": "Khoản thanh toán",
     "views.Settings.Privacy.title": "Thiết lập quyền riêng tư",

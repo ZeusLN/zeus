@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "Show all decimal places",
     "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
-    "views.Settings.Display.selectNodeOnStartup": "Select node on startup",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "隐私",
     "views.Settings.payments": "付款",
     "views.Settings.Privacy.title": "隐私",

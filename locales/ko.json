@@ -801,7 +801,7 @@
     "views.Settings.Display.showAllDecimalPlaces": "모든 소수점 자리 표시",
     "views.Settings.Display.removeDecimalSpaces": "비트코인 표시 금액에서 소수점 공백 제거",
     "views.Settings.Display.showMillisatoshiAmounts": "밀리사토시 금액 표시",
-    "views.Settings.Display.selectNodeOnStartup": "시작할 때 노드 선택",
+    "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
     "views.Settings.privacy": "개인정보",
     "views.Settings.payments": "결제",
     "views.Settings.Privacy.title": "개인정보 설정",
