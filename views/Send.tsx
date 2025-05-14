@@ -27,13 +27,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
 import BalanceStore from '../stores/BalanceStore';
+import ContactStore from '../stores/ContactStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
+import UnitsStore from '../stores/UnitsStore';
 import UTXOsStore from '../stores/UTXOsStore';
-import ContactStore from '../stores/ContactStore';
 
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
@@ -69,18 +70,19 @@ interface SendProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
+    ContactStore: ContactStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;
     NodeInfoStore: NodeInfoStore;
-    TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
+    TransactionsStore: TransactionsStore;
+    UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
-    ContactStore: ContactStore;
     route: Route<
         'Send',
         {
             destination: string;
-            amount: string;
+            satAmount: string;
             transactionType: string | null;
             bolt12: string | null;
             isValid: boolean;
@@ -117,14 +119,15 @@ interface SendState {
 }
 
 @inject(
+    'BalanceStore',
+    'ContactStore',
     'InvoicesStore',
     'ModalStore',
     'NodeInfoStore',
-    'TransactionsStore',
-    'BalanceStore',
     'SettingsStore',
-    'UTXOsStore',
-    'ContactStore'
+    'TransactionsStore',
+    'UnitsStore',
+    'UTXOsStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -133,10 +136,10 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     constructor(props: SendProps) {
         super(props);
-        const { route } = props;
+        const { route, UnitsStore } = props;
         const {
             destination,
-            amount,
+            satAmount,
             transactionType,
             isValid,
             contactName,
@@ -148,13 +151,19 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.props.InvoicesStore.getPayReq(destination);
         }
 
+        let amount;
+        if (satAmount) {
+            amount =
+                UnitsStore.getUnformattedAmount(satAmount).amount || satAmount;
+        }
+
         this.state = {
             isValid: isValid || false,
             transactionType,
             bolt12,
             destination: destination || '',
             amount: amount || '',
-            satAmount: '0',
+            satAmount: satAmount || '0',
             fee: '',
             utxos: [],
             utxoBalance: 0,
@@ -193,8 +202,8 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
-        const { route } = nextProps;
-        const { destination, bolt12, amount, transactionType, contactName } =
+        const { route, UnitsStore } = nextProps;
+        const { destination, bolt12, satAmount, transactionType, contactName } =
             route.params ?? {};
 
         if (transactionType === 'Lightning') {
@@ -209,9 +218,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             contactName
         });
 
-        if (amount) {
+        if (satAmount) {
+            const amount = UnitsStore.getAmountFromSats(satAmount) || satAmount;
             this.setState({
-                amount
+                amount,
+                satAmount
             });
         }
     }
@@ -331,7 +342,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             isValid: true,
             error_msg: ''
         });
-        handleAnything(text, this.state.amount)
+        handleAnything(text, this.state.satAmount.toString())
             .then((response) => {
                 try {
                     this.setState({

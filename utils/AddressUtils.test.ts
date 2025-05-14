@@ -89,7 +89,7 @@ describe('AddressUtils', () => {
                 )
             ).toEqual({
                 value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                amount: '170003' // amount in sats
+                satAmount: '170003'
             });
             expect(
                 AddressUtils.processBIP21Uri(
@@ -97,7 +97,7 @@ describe('AddressUtils', () => {
                 )
             ).toEqual({
                 value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
-                amount: '170003' // amount in sats
+                satAmount: '170003'
             });
 
             // without fee
@@ -135,7 +135,7 @@ describe('AddressUtils', () => {
                 )
             ).toEqual({
                 value: 'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
-                amount: '170003' // amount in sats
+                satAmount: '170003'
             });
 
             // bolt12 offers
@@ -349,7 +349,7 @@ describe('AddressUtils', () => {
                     )
                 ).toEqual({
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
-                    amount: '170003' // amount in sats
+                    satAmount: '170003'
                 });
 
                 expect(
@@ -358,7 +358,7 @@ describe('AddressUtils', () => {
                     )
                 ).toEqual({
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
-                    amount: '170003' // amount in sats
+                    satAmount: '170003'
                 });
 
                 expect(
@@ -367,7 +367,7 @@ describe('AddressUtils', () => {
                     )
                 ).toEqual({
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
-                    amount: '170003' // amount in sats
+                    satAmount: '170003'
                 });
 
                 expect(
@@ -376,7 +376,7 @@ describe('AddressUtils', () => {
                     )
                 ).toEqual({
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofb',
-                    amount: undefined
+                    satAmount: undefined
                 });
 
                 expect(
@@ -385,7 +385,7 @@ describe('AddressUtils', () => {
                     )
                 ).toEqual({
                     value: '34K6tvoWM7k2ujeXVuimv29WyAsqzhWofd',
-                    amount: undefined
+                    satAmount: undefined
                 });
             });
 
@@ -398,7 +398,7 @@ describe('AddressUtils', () => {
                     value: 'BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U',
                     lightning:
                         'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6',
-                    amount: '1000'
+                    satAmount: '1000'
                 });
             });
 
@@ -411,7 +411,7 @@ describe('AddressUtils', () => {
                     value: 'BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U',
                     lightning:
                         'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6',
-                    amount: '1000'
+                    satAmount: '1000'
                 });
             });
 
@@ -424,7 +424,7 @@ describe('AddressUtils', () => {
                     value: 'BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U',
                     lightning:
                         'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6',
-                    amount: '1000'
+                    satAmount: '1000'
                 });
             });
 
@@ -437,7 +437,7 @@ describe('AddressUtils', () => {
                     value: 'BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U',
                     lightning:
                         'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6',
-                    amount: '1000'
+                    satAmount: '1000'
                 });
             });
         });
