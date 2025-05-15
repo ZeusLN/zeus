@@ -87,7 +87,7 @@ export default class SendingLightning extends React.Component<
             wasSuccessful: false,
             payingDonation: false,
             showDonationInfo: false,
-            donationHandled: true,
+            donationHandled: false,
             donationPreimage: '',
             amountDonated: null,
             paymentType: 'main'
@@ -147,6 +147,23 @@ export default class SendingLightning extends React.Component<
                                                 amount: donationAmount ?? ''
                                             }
                                         );
+
+                                    const { payment_error } = result || {};
+
+                                    if (payment_error) {
+                                        console.log(
+                                            'Donation payment error:',
+                                            payment_error
+                                        );
+                                        this.setState({
+                                            payingDonation: false,
+                                            amountDonated: parseFloat(
+                                                donationAmount ?? ''
+                                            )
+                                        });
+                                        return;
+                                    }
+
                                     console.log('Donation successful:', result);
 
                                     let payment_preimage;
@@ -185,10 +202,12 @@ export default class SendingLightning extends React.Component<
                                 }
                             } else {
                                 console.log('Payment request not available');
+                                this.setState({ payingDonation: false });
                             }
                         })
                         .catch((err) => {
                             console.error('Unexpected error:', err);
+                            this.setState({ payingDonation: false });
                         });
                 }
             );
