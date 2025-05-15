@@ -573,6 +573,51 @@ export default class TransactionsStore {
         }
     };
 
+    public sendPaymentSilently = async ({
+        payment_request,
+        amount,
+        fee_limit_sat,
+        timeout_seconds
+    }: {
+        payment_request: string;
+        amount: string;
+        fee_limit_sat?: number;
+        timeout_seconds?: number;
+    }) => {
+        const data: any = {};
+
+        if (payment_request) {
+            data.payment_request = payment_request;
+        }
+
+        if (typeof amount === 'string') {
+            data.amt = Number(amount);
+        }
+
+        if (fee_limit_sat) {
+            data.fee_limit_sat = Number(fee_limit_sat);
+        }
+
+        if (timeout_seconds) {
+            data.timeout_seconds = Number(timeout_seconds) || 60;
+        }
+
+        if (this.settingsStore.enableTor) {
+            data.no_inflight_updates = true;
+        }
+
+        const payFunc = BackendUtils.payLightningInvoice;
+
+        try {
+            const response = await payFunc(data);
+            console.log('Silent payment response:', response);
+            return response;
+        } catch (err) {
+            console.error('Payment error:', err);
+            throw err;
+        }
+    };
+
     @action
     public handlePayment = (result: any) => {
         this.loading = false;
