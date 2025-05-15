@@ -75,6 +75,7 @@ interface OpenChannelState {
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
+    enableWatchtower: boolean;
     host: string;
     suggestImport: string;
     utxos: Array<string>;
@@ -115,6 +116,7 @@ export default class OpenChannel extends React.Component<
             privateChannel: true,
             scidAlias: true,
             simpleTaprootChannel: false,
+            enableWatchtower: false,
             suggestImport: '',
             utxos: [],
             utxoBalance: 0,
@@ -154,6 +156,10 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel:
                 settings?.channels?.simpleTaprootChannel !== null
                     ? settings.channels.simpleTaprootChannel
+                    : false,
+            enableWatchtower:
+                settings?.channels?.enableWatchtower !== null
+                    ? settings.channels.enableWatchtower
                     : false
         });
     }
@@ -319,7 +325,8 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel,
             connectPeerOnly,
             advancedSettingsToggle,
-            additionalChannels
+            additionalChannels,
+            enableWatchtower
         } = this.state;
         const { implementation } = SettingsStore;
 
@@ -1011,6 +1018,32 @@ export default class OpenChannel extends React.Component<
                                                                     true
                                                             });
                                                         }
+                                                    }}
+                                                />
+                                            </>
+                                        )}
+
+                                        {BackendUtils.supportsWatchtower() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        top: 20,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Channels.enableWatchtower'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={enableWatchtower}
+                                                    onValueChange={() => {
+                                                        this.setState({
+                                                            enableWatchtower:
+                                                                !enableWatchtower
+                                                        });
                                                     }}
                                                 />
                                             </>

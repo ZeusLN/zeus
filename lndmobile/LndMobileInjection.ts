@@ -500,6 +500,16 @@ export interface ILndMobileInjections {
             isTestNet: boolean
         ) => Promise<string>;
     };
+    watchtowerClient: {
+        addTower: (pubkey: string, address: string) => Promise<any>;
+        listTowers: () => Promise<any>;
+        getTowerInfo: (pubkey: string) => Promise<any>;
+        deactivateTower: (pubkey: string) => Promise<any>;
+        removeTower: (pubkey: string) => Promise<any>;
+        stats: () => Promise<any>;
+        policy: () => Promise<any>;
+        terminateSession: (sessionId: string) => Promise<any>;
+    };
 }
 
 // @ts-ignore:next-line
