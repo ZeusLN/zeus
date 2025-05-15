@@ -31,6 +31,7 @@ interface PaymentsSettingsState {
     preferredMempoolRate: string;
     slideToPayThreshold: string;
     mounted?: boolean;
+    enableDonations: boolean;
 }
 
 @inject('SettingsStore')
@@ -47,7 +48,8 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
-        mounted: false
+        mounted: false,
+        enableDonations: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -65,7 +67,8 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
-            mounted: true
+            mounted: true,
+            enableDonations: settings?.privacy?.enableDonations || false
         });
     }
 
@@ -86,7 +89,8 @@ export default class PaymentsSettings extends React.Component<
             enableMempoolRates,
             timeoutSeconds,
             preferredMempoolRate,
-            slideToPayThreshold
+            slideToPayThreshold,
+            enableDonations
         } = this.state;
         const { SettingsStore } = this.props;
         const { updateSettings, settings, implementation } = SettingsStore;
@@ -337,6 +341,40 @@ export default class PaymentsSettings extends React.Component<
                             />
                         </>
                     )}
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 10
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('secondaryText'),
+                                flex: 1
+                            }}
+                        >
+                            {localeString(
+                                'views.PaymentRequest.enableDonations'
+                            )}
+                        </Text>
+                        <View>
+                            <Switch
+                                value={enableDonations}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableDonations: !enableDonations
+                                    });
+                                    await updateSettings({
+                                        privacy: {
+                                            ...settings.privacy,
+                                            enableDonations: !enableDonations
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </View>
                     <View
                         style={{
                             flexDirection: 'row',
