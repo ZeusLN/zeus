@@ -16,7 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import AlertStore from '../stores/AlertStore';
 import CashuStore from '../stores/CashuStore';
-import ChannelsStore from '../stores/ChannelsStore';
+import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import ModalStore from '../stores/ModalStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
@@ -53,6 +53,7 @@ import { balanceStore } from '../stores/Stores';
 
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
+import ViewToggleButton from './ViewToggleButton';
 
 const TorIcon = require('../assets/images/tor.png');
 
@@ -248,7 +249,7 @@ export default class WalletHeader extends React.Component<
     WalletHeaderProps,
     WalletHeaderState
 > {
-    state = {
+    state: WalletHeaderState = {
         clipboard: ''
     };
 
@@ -549,8 +550,27 @@ export default class WalletHeader extends React.Component<
                 }
                 centerComponent={
                     title ? (
-                        <View style={{ flex: 1 }}>
-                            <Body bold>{title}</Body>
+                        <View
+                            style={{
+                                flex: 1,
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            {title.includes(
+                                localeString('views.Wallet.Wallet.channels')
+                            ) ? (
+                                <ViewToggleButton
+                                    ChannelsStore={this.props.ChannelsStore}
+                                    onToggle={(view: 'channels' | 'peers') => {
+                                        this.props.ChannelsStore?.setChannelsView(
+                                            view as ChannelsView
+                                        );
+                                    }}
+                                />
+                            ) : (
+                                <Body>{title}</Body>
+                            )}
                         </View>
                     ) : settings.display && settings.display.displayNickname ? (
                         <View style={{ top: 0 }}>
