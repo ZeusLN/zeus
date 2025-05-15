@@ -151,6 +151,11 @@ export default class WithdrawalRequestView extends React.Component<
                         />
 
                         <KeyValue
+                            color={
+                                active
+                                    ? themeColor('success')
+                                    : themeColor('error')
+                            }
                             keyValue={localeString('general.active')}
                             value={
                                 active
@@ -161,6 +166,11 @@ export default class WithdrawalRequestView extends React.Component<
                         />
 
                         <KeyValue
+                            color={
+                                single_use
+                                    ? themeColor('success')
+                                    : themeColor('error')
+                            }
                             keyValue={localeString('views.PayCode.singleUse')}
                             value={
                                 single_use
@@ -171,6 +181,11 @@ export default class WithdrawalRequestView extends React.Component<
                         />
 
                         <KeyValue
+                            color={
+                                used
+                                    ? themeColor('success')
+                                    : themeColor('error')
+                            }
                             keyValue={localeString('general.used')}
                             value={
                                 used
