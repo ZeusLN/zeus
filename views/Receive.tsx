@@ -67,7 +67,10 @@ import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import InvoicesStore from '../stores/InvoicesStore';
 import PosStore from '../stores/PosStore';
-import SettingsStore, { TIME_PERIOD_KEYS } from '../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_FIAT,
+    TIME_PERIOD_KEYS
+} from '../stores/SettingsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -105,6 +108,7 @@ interface ReceiveProps {
     SettingsStore: SettingsStore;
     UnitsStore: UnitsStore;
     LSPStore: LSPStore;
+    setCurrencySelectOpen?: () => void;
     LightningAddressStore: LightningAddressStore;
     route: Route<
         'Receive',
@@ -160,6 +164,8 @@ interface ReceiveState {
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
     hideRightHeaderComponent?: boolean;
+    currencySelectOpen: boolean;
+    selectedInvoiceFiatCurrency: string;
 }
 
 enum RouteHintMode {
@@ -214,9 +220,26 @@ export default class Receive extends React.Component<
             lspIsActive: false,
             flowLspNotConfigured: true,
             routeHintMode: RouteHintMode.Automatic,
-            selectedRouteHintChannels: undefined
+            selectedRouteHintChannels: undefined,
+            currencySelectOpen: false,
+            selectedInvoiceFiatCurrency:
+                this.props.SettingsStore?.settings?.fiat ?? DEFAULT_FIAT
         };
     }
+
+    setCurrencySelectOpen = () => {
+        const { navigation } = this.props;
+        navigation.navigate('SelectCurrency', {
+            currencyConverter: false,
+            fromReceive: true,
+            selectedCurrency: this.state.selectedInvoiceFiatCurrency,
+            onSelect: (value: string) => {
+                this.setState({
+                    selectedInvoiceFiatCurrency: value
+                });
+            }
+        });
+    };
 
     listener: any;
     listenerSecondary: any;
@@ -2219,8 +2242,14 @@ export default class Receive extends React.Component<
                                                     />
                                                 </>
                                             )}
-
                                             <AmountInput
+                                                forceFiatCurrency={
+                                                    this.state
+                                                        .selectedInvoiceFiatCurrency
+                                                }
+                                                setCurrencySelectOpen={
+                                                    this.setCurrencySelectOpen
+                                                }
                                                 amount={value}
                                                 title={`${localeString(
                                                     'views.Receive.amount'
@@ -2269,7 +2298,6 @@ export default class Receive extends React.Component<
                                                     });
                                                 }}
                                             />
-
                                             {needInbound && (
                                                 <TouchableOpacity
                                                     onPress={() =>

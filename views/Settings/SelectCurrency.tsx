@@ -20,7 +20,15 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface SelectCurrencyProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    route: Route<'SelectCurrency', { currencyConverter: boolean }>;
+    route: Route<
+        'SelectCurrency',
+        {
+            currencyConverter: boolean;
+            fromReceive?: boolean;
+            onSelect?: (value: string) => void;
+            selectedCurrency?: string;
+        }
+    >;
 }
 
 interface SelectCurrencyState {
@@ -139,16 +147,25 @@ export default class SelectCurrency extends React.Component<
                                 }}
                                 onPress={async () => {
                                     if (currencyConverter) {
-                                        navigation.popTo('CurrencyConverter', {
-                                            selectedCurrency: item.value
-                                        });
+                                        navigation.navigate(
+                                            'CurrencyConverter',
+                                            {
+                                                selectedCurrency: item.value
+                                            }
+                                        );
                                     } else {
-                                        await updateSettings({
-                                            fiat: item.value
-                                        }).then(() => {
-                                            getSettings();
+                                        const onSelect = route.params?.onSelect;
+                                        if (onSelect) {
+                                            onSelect(item.value);
                                             navigation.goBack();
-                                        });
+                                        } else {
+                                            await updateSettings({
+                                                fiat: item.value
+                                            }).then(() => {
+                                                getSettings();
+                                                navigation.goBack();
+                                            });
+                                        }
                                     }
                                 }}
                             >
@@ -156,11 +173,19 @@ export default class SelectCurrency extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                (!currencyConverter &&
-                                                    selectedCurrency ===
-                                                        item.value) ||
-                                                (!selectedCurrency &&
-                                                    item.value === DEFAULT_FIAT)
+                                                route.params?.fromReceive &&
+                                                route.params
+                                                    ?.selectedCurrency ===
+                                                    item.value
+                                                    ? themeColor('highlight')
+                                                    : !route.params
+                                                          ?.fromReceive &&
+                                                      ((!currencyConverter &&
+                                                          selectedCurrency ===
+                                                              item.value) ||
+                                                          (!selectedCurrency &&
+                                                              item.value ===
+                                                                  DEFAULT_FIAT))
                                                     ? themeColor('highlight')
                                                     : themeColor('text'),
                                             fontFamily: 'PPNeueMontreal-Book'
@@ -169,9 +194,14 @@ export default class SelectCurrency extends React.Component<
                                         {item.key}
                                     </ListItem.Title>
                                 </ListItem.Content>
-                                {(selectedCurrency === item.value ||
-                                    (!selectedCurrency &&
-                                        item.value === DEFAULT_FIAT)) &&
+
+                                {((!route.params?.fromReceive &&
+                                    (selectedCurrency === item.value ||
+                                        (!selectedCurrency &&
+                                            item.value === DEFAULT_FIAT))) ||
+                                    (route.params?.fromReceive &&
+                                        route.params?.selectedCurrency ===
+                                            item.value)) &&
                                     !currencyConverter && (
                                         <View>
                                             <Icon
