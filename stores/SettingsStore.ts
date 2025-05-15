@@ -832,7 +832,7 @@ export const CURRENCY_KEYS = [
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇺🇿 Uzbekistan Sum (UZS)',
+        key: '🇺🇿 Uzbekistani Sum (UZS)',
         value: 'UZS',
         supportedSources: ['Zeus', 'Yadio']
     },

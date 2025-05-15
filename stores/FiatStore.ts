@@ -470,15 +470,15 @@ export default class FiatStore {
                 separatorSwap: false
             },
             UAH: { symbol: '₴', space: false, rtl: false, separatorSwap: true },
-            UGS: {
-                symbol: 'soʻm',
-                space: true,
-                rtl: true,
-                separatorSwap: false
-            },
             UGX: {
                 symbol: '/=',
                 space: false,
+                rtl: true,
+                separatorSwap: false
+            },
+            UZS: {
+                symbol: 'soʻm',
+                space: true,
                 rtl: true,
                 separatorSwap: false
             },
@@ -604,7 +604,7 @@ export default class FiatStore {
 
     // as of April 17, 2024
     // BTCPAY rates string:
-    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND,BTC_NOK,BTC_AED,BTC_TTD,BTC_PHP,BTC_CDF,BTC_XAF,BTC_KES,BTC_UGX,BTC_ZAR,BTC_CUP,BTC_DOP,BTC_BZD,BTC_BOB,BTC_CRC,BTC_GTQ,BTC_NIO,BTC_PYG,BTC_UYU,BTC_MRU,BTC_ALL,BTC_ANG,BTC_AOA,BTC_BDT,BTC_BGN,BTC_BHD,BTC_BIF,BTC_BMD,BTC_BWP,BTC_DJF,BTC_DZD,BTC_EGP,BTC_ETB,BTC_GEL,BTC_GHS,BTC_GNF,BTC_HNL,BTC_IRR,BTC_JOD,BTC_KGS,BTC_KZT,BTC_LKR,BTC_MAD,BTC_MGA,BTC_NAD,BTC_NPR,BTC_PAB,BTC_PEN,BTC_PKR,BTC_RSD,BTC_RWF,BTC_UGS,BTC_VND,BTC_XAG,BTC_XAU
+    // BTC_USD,BTC_AUD,BTC_BRL,BTC_CAD,BTC_CHF,BTC_CLP,BTC_CNY,BTC_CZK,BTC_DKK,BTC_EUR,BTC_GBP,BTC_HKD,BTC_HUF,BTC_INR,BTC_ISK,BTC_JPY,BTC_KRW,BTC_NZD,BTC_PLN,BTC_RON,BTC_RUB,BTC_SEK,BTC_SGD,BTC_THB,BTC_TRY,BTC_TWD,BTC_ILS,BTC_ARS,BTC_NGN,BTC_LBP,BTC_MYR,BTC_UAH,BTC_JMD,BTC_COP,BTC_MXN,BTC_VES,BTC_TZS,BTC_QAR,BTC_TND,BTC_NOK,BTC_AED,BTC_TTD,BTC_PHP,BTC_CDF,BTC_XAF,BTC_KES,BTC_UGX,BTC_ZAR,BTC_CUP,BTC_DOP,BTC_BZD,BTC_BOB,BTC_CRC,BTC_GTQ,BTC_NIO,BTC_PYG,BTC_UYU,BTC_MRU,BTC_ALL,BTC_ANG,BTC_AOA,BTC_BDT,BTC_BGN,BTC_BHD,BTC_BIF,BTC_BMD,BTC_BWP,BTC_DJF,BTC_DZD,BTC_EGP,BTC_ETB,BTC_GEL,BTC_GHS,BTC_GNF,BTC_HNL,BTC_IRR,BTC_JOD,BTC_KGS,BTC_KZT,BTC_LKR,BTC_MAD,BTC_MGA,BTC_NAD,BTC_NPR,BTC_PAB,BTC_PEN,BTC_PKR,BTC_RSD,BTC_RWF,BTC_UZS,BTC_VND,BTC_XAG,BTC_XAU
     // BTCPAY custom scripting :
     // BTC_USD = coingecko(BTC_USD);
     // BTC_BZD = 2 * coingecko(BTC_USD);
@@ -695,7 +695,7 @@ export default class FiatStore {
     // BTC_PKR = yadio(BTC_PKR);
     // BTC_RSD = yadio(BTC_RSD);
     // BTC_RWF = yadio(BTC_RWF);
-    // BTC_UGS = yadio(BTC_UGS);
+    // BTC_UZS = yadio(BTC_UZS);
     // BTC_VND = yadio(BTC_VND);
     // BTC_XAG = yadio(BTC_XAG);
     // BTC_XAU = yadio(BTC_XAU);
