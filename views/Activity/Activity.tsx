@@ -292,8 +292,8 @@ const ActivityListItem = React.memo(
                                     flexDirection: 'row',
                                     flexWrap: 'wrap',
                                     columnGap: 5,
-                                    rowGap: -5,
-                                    justifyContent: 'flex-end'
+                                    justifyContent: 'flex-end',
+                                    alignItems: 'center'
                                 }}
                             >
                                 <Amount
@@ -311,8 +311,8 @@ const ActivityListItem = React.memo(
                                     flexDirection: 'row',
                                     flexWrap: 'wrap',
                                     columnGap: 5,
-                                    rowGap: -5,
-                                    justifyContent: 'flex-end'
+                                    justifyContent: 'flex-end',
+                                    alignItems: 'center'
                                 }}
                             >
                                 <Amount
