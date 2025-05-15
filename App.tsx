@@ -237,8 +237,8 @@ import Accounts from './views/Tools/Accounts/Accounts';
 import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
-
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import LockDurationSettings from './views/Cashu/LockDurationSettings';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1084,6 +1084,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="AddMint" // @ts-ignore:next-line
                                                         component={AddMint}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="LockDurationSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            LockDurationSettings
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="CashuTools" // @ts-ignore:next-line

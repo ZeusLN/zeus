@@ -486,6 +486,25 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                         disabled={loading}
                                     />
                                 </View>
+                                <View style={{ width: '100%', marginTop: 10 }}>
+                                    <Button
+                                        title={localeString(
+                                            'views.Cashu.LockDurationSettings.title'
+                                        ).toUpperCase()}
+                                        tertiary
+                                        noUppercase
+                                        onPress={() => {
+                                            navigation.navigate(
+                                                'LockDurationSettings',
+                                                {
+                                                    mintUrl: mint?.mintUrl
+                                                }
+                                            );
+                                        }}
+                                        buttonStyle={{ height: 40 }}
+                                        disabled={loading}
+                                    />
+                                </View>
                             </View>
                         ) : (
                             <>
