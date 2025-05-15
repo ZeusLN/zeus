@@ -39,6 +39,11 @@ export enum ChannelsType {
     Closed = 2
 }
 
+export enum ChannelsView {
+    Channels = 'channels',
+    Peers = 'peers'
+}
+
 interface aliases {
     [index: string]: string;
 }
@@ -79,6 +84,7 @@ export default class ChannelsStore {
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
     @observable public channelsType = ChannelsType.Open;
+    @observable public channelsView: ChannelsView = ChannelsView.Channels;
     // enriched
     @observable public enrichedChannels: Array<Channel> = [];
     @observable public enrichedPendingChannels: Array<Channel> = [];
@@ -1120,6 +1126,10 @@ export default class ChannelsStore {
 
     public setChannelsType = (type: ChannelsType) => {
         this.channelsType = type;
+    };
+
+    public setChannelsView = (view: ChannelsView) => {
+        this.channelsView = view;
     };
 
     public toggleSearch = () => {
