@@ -215,6 +215,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.getSettingsAndNavigate();
             SettingsStore.posWasEnabled = false;
             SettingsStore.triggerSettingsRefresh = false;
+        } else if (SettingsStore.triggerBalanceUpdate) {
+            this.updateBalanceAndFiat();
         }
     };
 
@@ -647,6 +649,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
 
         SettingsStore.fetchLock = false;
+    }
+
+    async updateBalanceAndFiat() {
+        const { BalanceStore, FiatStore, SettingsStore } = this.props;
+
+        await BalanceStore.getCombinedBalance();
+
+        if (SettingsStore.settings.fiatEnabled) {
+            FiatStore.getFiatRates();
+        }
+
+        SettingsStore.triggerBalanceUpdate = false;
     }
 
     handleOpenURL = (event: any) => {
