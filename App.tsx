@@ -239,6 +239,8 @@ import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
+import WithdrawalRequestView from './views/WithdrawalRequest';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1119,6 +1121,18 @@ export default class App extends React.PureComponent {
                                                         name="NWCAddressSettings" // @ts-ignore:next-line
                                                         component={
                                                             NWCAddressSettings
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreateWithdrawalRequest" // @ts-ignore:next-line
+                                                        component={
+                                                            CreateWithdrawalRequest
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WithdrawalRequestView" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalRequestView
                                                         }
                                                     />
                                                 </Stack.Navigator>
