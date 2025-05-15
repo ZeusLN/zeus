@@ -796,8 +796,14 @@ export default class LightningAddressStore {
 
                     this.redeeming = false;
 
-                    if (localNotification) fireLocalNotification();
-                    if (!skipStatus) this.status(true);
+                    if (localNotification && response.isPaid) {
+                        fireLocalNotification();
+                    }
+
+                    if (!skipStatus) {
+                        this.status(true);
+                    }
+
                     return true;
                 } catch (error) {
                     const error_msg = error?.toString();
