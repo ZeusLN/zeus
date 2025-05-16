@@ -152,18 +152,21 @@ export default class SendingLightning extends React.Component<
                                     const result =
                                         await TransactionsStore.sendPaymentSilently(
                                             {
-                                                payment_request,
-                                                amount: donationAmount ?? ''
+                                                payment_request
                                             }
                                         );
 
-                                    const { payment_error } = result || {};
+                                    const { payment_error, status } =
+                                        result || {};
 
-                                    if (payment_error) {
-                                        console.log(
-                                            'Donation payment error:',
-                                            payment_error
-                                        );
+                                    const isFailure =
+                                        (typeof status === 'string' &&
+                                            status === 'FAILED') ||
+                                        (typeof payment_error === 'string' &&
+                                            payment_error !== '');
+
+                                    if (isFailure) {
+                                        console.log('Donation payment failed:');
                                         this.setState({
                                             payingDonation: false,
                                             amountDonated: parseFloat(
@@ -178,7 +181,10 @@ export default class SendingLightning extends React.Component<
                                     let payment_preimage;
 
                                     const preimage = result?.payment_preimage;
-                                    const amountDonated = result?.num_satoshis;
+                                    const amountDonated =
+                                        result?.num_satoshis ||
+                                        result?.value_sat ||
+                                        result.amount_msat / 1000;
 
                                     if (preimage) {
                                         if (
