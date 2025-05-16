@@ -569,13 +569,13 @@ export default class TransactionsStore {
 
     public sendPaymentSilently = async ({
         payment_request,
-        amount,
         fee_limit_sat,
+        max_parts,
         timeout_seconds
     }: {
         payment_request: string;
-        amount: string;
         fee_limit_sat?: number;
+        max_parts?: string;
         timeout_seconds?: number;
     }) => {
         const data: any = {};
@@ -584,15 +584,16 @@ export default class TransactionsStore {
             data.payment_request = payment_request;
         }
 
-        if (typeof amount === 'string') {
-            data.amt = Number(amount);
+        if (max_parts) {
+            data.max_parts = max_parts || '16';
         }
 
-        if (fee_limit_sat) {
-            data.fee_limit_sat = Number(fee_limit_sat);
-        }
-
-        if (timeout_seconds) {
+        // payment timeout and fee limit for LND and CLN
+        if (
+            BackendUtils.isLNDBased() ||
+            this.settingsStore.implementation === 'cln-rest'
+        ) {
+            data.fee_limit_sat = Number(fee_limit_sat) || 100;
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 
@@ -600,15 +601,23 @@ export default class TransactionsStore {
             data.no_inflight_updates = true;
         }
 
+        console.log('Sending payment silently with data:', data);
+
         const payFunc = BackendUtils.payLightningInvoice;
 
-        try {
-            const response = await payFunc(data);
-            console.log('Silent payment response:', response);
-            return response;
-        } catch (err) {
-            console.error('Payment error:', err);
-            throw err;
+        if (this.settingsStore.implementation === 'lightning-node-connect') {
+            return payFunc(data);
+        } else {
+            return payFunc(data)
+                .then((response: any) => {
+                    const result = response.result || response;
+                    console.log('Payment response:', result);
+                    return result;
+                })
+                .catch((err: any) => {
+                    console.error('Payment error:', err);
+                    throw err;
+                });
         }
     };
 
