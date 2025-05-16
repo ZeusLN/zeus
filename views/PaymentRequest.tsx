@@ -945,43 +945,50 @@ export default class PaymentRequest extends React.Component<
                                     </TouchableOpacity>
                                 )}
 
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        this.setState({
-                                            donationsToggle: !donationsToggle
-                                        });
-                                    }}
-                                >
-                                    <View
-                                        style={{
-                                            marginTop: 10,
-                                            marginBottom: 10
+                                {enableDonations && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            this.setState({
+                                                donationsToggle:
+                                                    !donationsToggle
+                                            });
                                         }}
                                     >
-                                        <Row justify="space-between">
-                                            <View style={{ width: '95%' }}>
-                                                <KeyValue
-                                                    keyValue={localeString(
-                                                        'views.PaymentRequest.payDonation'
-                                                    )}
-                                                />
-                                            </View>
-                                            {donationsToggle ? (
-                                                <CaretDown
-                                                    fill={themeColor('text')}
-                                                    width="20"
-                                                    height="20"
-                                                />
-                                            ) : (
-                                                <CaretRight
-                                                    fill={themeColor('text')}
-                                                    width="20"
-                                                    height="20"
-                                                />
-                                            )}
-                                        </Row>
-                                    </View>
-                                </TouchableOpacity>
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            <Row justify="space-between">
+                                                <View style={{ width: '95%' }}>
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.PaymentRequest.payDonation'
+                                                        )}
+                                                    />
+                                                </View>
+                                                {donationsToggle ? (
+                                                    <CaretDown
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <CaretRight
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
 
                                 <FeeLimit
                                     satAmount={
