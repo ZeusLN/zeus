@@ -33,6 +33,7 @@ import SettingsStore from '../stores/SettingsStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 import Base64Utils from '../utils/Base64Utils';
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -71,6 +72,8 @@ interface SendingLightningState {
     donationHandled: boolean;
     donationPreimage: string;
     amountDonated: number | null;
+    donationEnhancedPath: any;
+    donationPathExists: boolean;
 }
 
 @inject(
@@ -87,6 +90,8 @@ export default class SendingLightning extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
 
+    focusListener: any;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.state = {
@@ -98,14 +103,17 @@ export default class SendingLightning extends React.Component<
             donationHandled: false,
             donationPreimage: '',
             amountDonated: null,
-            paymentType: 'main'
+            paymentType: 'main',
+            donationEnhancedPath: null,
+            donationPathExists: false
         };
     }
 
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
-        navigation.addListener('focus', () => {
+        this.focusListener = navigation.addListener('focus', () => {
+            this.setState({ showDonationInfo: false });
             const noteKey: string = TransactionsStore.noteKey;
             if (!noteKey) return;
             Storage.getItem(noteKey)
@@ -202,12 +210,38 @@ export default class SendingLightning extends React.Component<
                                         }
                                     }
 
+                                    let donationEnhancedPath = null;
+                                    let donationPathExists = false;
+
+                                    if (BackendUtils.isLNDBased()) {
+                                        const { PaymentsStore } = this.props;
+                                        const payments =
+                                            await PaymentsStore.getPayments({
+                                                maxPayments: 1,
+                                                reversed: true
+                                            });
+
+                                        const lastPayment = payments?.[0];
+                                        donationEnhancedPath =
+                                            lastPayment?.enhancedPath;
+                                        donationPathExists =
+                                            donationEnhancedPath?.length > 0 &&
+                                            donationEnhancedPath[0][0];
+
+                                        console.log(
+                                            'Donation enhancedPath:',
+                                            donationEnhancedPath
+                                        );
+                                    }
+
                                     this.setState({
                                         payingDonation: false,
                                         donationHandled: true,
                                         donationPreimage:
                                             payment_preimage || '',
-                                        amountDonated
+                                        amountDonated,
+                                        donationEnhancedPath,
+                                        donationPathExists
                                     });
                                 } catch (err) {
                                     this.setState({
@@ -263,8 +297,12 @@ export default class SendingLightning extends React.Component<
             showDonationInfo,
             donationPreimage,
             donationHandled,
-            amountDonated
+            amountDonated,
+            donationEnhancedPath,
+            donationPathExists
         } = this.state;
+
+        const { navigation } = this.props;
 
         const amountLabel = `${amountDonated} ${
             amountDonated === 1 ? 'sat' : 'sats'
@@ -347,6 +385,44 @@ export default class SendingLightning extends React.Component<
                                         />
                                     </View>
                                 )}
+                                {donationPathExists && (
+                                    <Button
+                                        title={`${localeString(
+                                            'views.Payment.title'
+                                        )} ${
+                                            donationEnhancedPath?.length > 1
+                                                ? `${localeString(
+                                                      'views.Payment.paths'
+                                                  )} (${
+                                                      donationEnhancedPath.length
+                                                  })`
+                                                : localeString(
+                                                      'views.Payment.path'
+                                                  )
+                                        } `}
+                                        onPress={() => {
+                                            this.setState({
+                                                showDonationInfo: false
+                                            });
+                                            navigation.navigate(
+                                                'PaymentPaths',
+                                                {
+                                                    enhancedPath:
+                                                        donationEnhancedPath
+                                                }
+                                            );
+                                        }}
+                                        secondary
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                        containerStyle={{
+                                            maxWidth: '45%',
+                                            margin: 10
+                                        }}
+                                    />
+                                )}
                             </>
                         ) : (
                             <Text
@@ -407,6 +483,9 @@ export default class SendingLightning extends React.Component<
     }
 
     componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
+        }
         this.backPressSubscription?.remove();
     }
 
