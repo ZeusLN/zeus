@@ -1,11 +1,17 @@
 import React from 'react';
 import { Alert, Platform, View } from 'react-native';
 import { Notifications } from 'react-native-notifications';
+import DeviceInfo from 'react-native-device-info';
+
 import { lightningAddressStore, settingsStore } from './stores/Stores';
 
 export default class PushNotificationManager extends React.Component<any, any> {
-    componentDidMount() {
+    async componentDidMount() {
         if (Platform.OS === 'ios') Notifications.ios.setBadgeCount(0);
+        if (Platform.OS === 'android') {
+            const isPlayServicesAvailable = await DeviceInfo.hasGms();
+            if (!isPlayServicesAvailable) return;
+        }
         this.registerDevice();
         this.registerNotificationEvents();
     }
