@@ -19,6 +19,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import handleAnything from '../../utils/handleAnything';
 import DateTimeUtils from '../../utils/DateTimeUtils';
+import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -110,7 +111,7 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                             <Text
                                 style={{
                                     ...styles.text,
-                                    fontFamily: 'MarlideDisplay_Bold',
+                                    fontFamily: font('marlideBold'),
                                     fontSize: 55,
                                     color: themeColor('text')
                                 }}

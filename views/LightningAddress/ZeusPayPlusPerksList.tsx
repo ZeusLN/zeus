@@ -5,6 +5,7 @@ import { inject, observer } from 'mobx-react';
 import Text from '../../components/Text';
 import { Row } from '../../components/layout/Row';
 
+import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -79,12 +80,12 @@ export default class ZeusPayPlusPerksList extends React.PureComponent {
 
 const styles = StyleSheet.create({
     perk: {
-        fontFamily: 'MarlideDisplay_Regular',
+        fontFamily: font('marlide'),
         fontSize: 30,
         marginBottom: 5
     },
     comingSoon: {
-        fontFamily: 'MarlideDisplay_Bold',
+        fontFamily: font('marlideBold'),
         fontSize: 20
     }
 });
