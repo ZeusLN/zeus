@@ -1710,11 +1710,6 @@
     jsbi "^3.1.5"
     sha.js "^2.4.11"
 
-"@nicolasflamel/secp256k1-zkp-react@0.0.13":
-  version "0.0.13"
-  resolved "https://registry.yarnpkg.com/@nicolasflamel/secp256k1-zkp-react/-/secp256k1-zkp-react-0.0.13.tgz#c584bb53fe714c6287464b29e175ac510898b187"
-  integrity sha512-dcR+nrJzJVL0lSsKgR/+2VNez0KF8s4O7FnJ2Fp5oYbL8C4xt7L38+6GUEW/L94cM4x5dFVIpCLISdHB9v3Arw==
-
 "@nicolo-ribaudo/eslint-scope-5-internals@5.1.1-v1":
   version "5.1.1-v1"
   resolved "https://registry.yarnpkg.com/@nicolo-ribaudo/eslint-scope-5-internals/-/eslint-scope-5-internals-5.1.1-v1.tgz#dbf733a965ca47b1973177dc0bb6c889edcfb129"
