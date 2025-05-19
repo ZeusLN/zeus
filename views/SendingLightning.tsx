@@ -130,6 +130,7 @@ export default class SendingLightning extends React.Component<
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
         const { TransactionsStore, route } = this.props;
+        const { donationIsPaid } = TransactionsStore;
         const wasSuccessful = this.successfullySent(TransactionsStore);
         const { donationAmount, enableDonations } = route.params;
 
@@ -140,7 +141,12 @@ export default class SendingLightning extends React.Component<
             this.setState({ wasSuccessful: false }); // Reset success state if needed
         }
 
-        if (wasSuccessful && !this.state.wasSuccessful && enableDonations) {
+        if (
+            wasSuccessful &&
+            !this.state.wasSuccessful &&
+            enableDonations &&
+            !donationIsPaid
+        ) {
             this.setState(
                 {
                     payingDonation: true,
@@ -176,6 +182,8 @@ export default class SendingLightning extends React.Component<
                                         });
                                         return;
                                     }
+
+                                    TransactionsStore.donationIsPaid = true;
 
                                     let payment_preimage;
                                     let donationEnhancedPath = null;
