@@ -6,7 +6,6 @@ import {
     StyleSheet,
     Text,
     View,
-    Modal,
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
@@ -24,6 +23,7 @@ import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
 import KeyValue from '../components/KeyValue';
 import Amount from '../components/Amount';
+import ModalBox from '../components/ModalBox';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
@@ -43,6 +43,7 @@ import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 import Gift from '../assets/images/SVG/gift.svg';
 import CopyBox from '../components/CopyBox';
 import LoadingIndicator from '../components/LoadingIndicator';
+import BigNumber from 'bignumber.js';
 
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
@@ -71,6 +72,8 @@ interface SendingLightningState {
     amountDonated: number | null;
     donationEnhancedPath: any;
     donationPathExists: boolean;
+    donationFee: string;
+    donationFeePercentage: string;
 }
 
 @inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
@@ -96,7 +99,9 @@ export default class SendingLightning extends React.Component<
             amountDonated: null,
             paymentType: 'main',
             donationEnhancedPath: null,
-            donationPathExists: false
+            donationPathExists: false,
+            donationFee: '',
+            donationFeePercentage: ''
         };
     }
 
@@ -162,7 +167,6 @@ export default class SendingLightning extends React.Component<
                                             payment_error !== '');
 
                                     if (isFailure) {
-                                        console.log('Donation payment failed:');
                                         this.setState({
                                             payingDonation: false,
                                             amountDonated: parseFloat(
@@ -172,15 +176,37 @@ export default class SendingLightning extends React.Component<
                                         return;
                                     }
 
-                                    console.log('Donation successful:', result);
-
                                     let payment_preimage;
+                                    let donationEnhancedPath = null;
+                                    let donationPathExists = false;
+                                    let donationFee = '';
+                                    let donationFeePercentage = '';
+                                    let payment: any;
 
-                                    const preimage = result?.payment_preimage;
                                     const amountDonated =
                                         result?.num_satoshis ||
                                         result?.value_sat ||
                                         result.amount_msat / 1000;
+
+                                    if (
+                                        result?.amount_msat &&
+                                        result?.amount_sent_msat
+                                    ) {
+                                        const msatSent =
+                                            +result.amount_sent_msat
+                                                .toString()
+                                                .replace('msat', '');
+                                        const msat = +result.amount_msat
+                                            .toString()
+                                            .replace('msat', '');
+
+                                        donationFee = (
+                                            (msatSent - msat) /
+                                            1000
+                                        ).toString();
+                                    }
+
+                                    const preimage = result?.payment_preimage;
 
                                     if (preimage) {
                                         if (
@@ -198,28 +224,37 @@ export default class SendingLightning extends React.Component<
                                         }
                                     }
 
-                                    let donationEnhancedPath = null;
-                                    let donationPathExists = false;
+                                    const { PaymentsStore } = this.props;
+                                    const payments =
+                                        await PaymentsStore.getPayments({
+                                            maxPayments: 1,
+                                            reversed: true
+                                        });
+
+                                    payment = payments?.[0];
+
+                                    if (payment?.fee_msat) {
+                                        donationFee = (
+                                            Number(payment.fee_msat) / 1000
+                                        ).toString();
+                                    }
+
+                                    donationFeePercentage =
+                                        Number(
+                                            new BigNumber(donationFee)
+                                                .div(amountDonated)
+                                                .times(100)
+                                                .toFixed(3)
+                                        )
+                                            .toString()
+                                            .replace(/-/g, '') + '%';
 
                                     if (BackendUtils.isLNDBased()) {
-                                        const { PaymentsStore } = this.props;
-                                        const payments =
-                                            await PaymentsStore.getPayments({
-                                                maxPayments: 1,
-                                                reversed: true
-                                            });
-
-                                        const lastPayment = payments?.[0];
                                         donationEnhancedPath =
-                                            lastPayment?.enhancedPath;
+                                            payment?.enhancedPath;
                                         donationPathExists =
                                             donationEnhancedPath?.length > 0 &&
                                             donationEnhancedPath[0][0];
-
-                                        console.log(
-                                            'Donation enhancedPath:',
-                                            donationEnhancedPath
-                                        );
                                     }
 
                                     this.setState({
@@ -229,16 +264,16 @@ export default class SendingLightning extends React.Component<
                                             payment_preimage || '',
                                         amountDonated,
                                         donationEnhancedPath,
-                                        donationPathExists
+                                        donationPathExists,
+                                        donationFee,
+                                        donationFeePercentage
                                     });
                                 } catch (err) {
                                     this.setState({
                                         payingDonation: false
                                     });
-                                    console.log('Payment failed:', err);
                                 }
                             } else {
-                                console.log('Payment request not available');
                                 this.setState({ payingDonation: false });
                             }
                         })
@@ -287,7 +322,9 @@ export default class SendingLightning extends React.Component<
             donationHandled,
             amountDonated,
             donationEnhancedPath,
-            donationPathExists
+            donationPathExists,
+            donationFee,
+            donationFeePercentage
         } = this.state;
 
         const { navigation } = this.props;
@@ -297,13 +334,17 @@ export default class SendingLightning extends React.Component<
         }`;
 
         return (
-            <Modal
-                animationType="slide"
-                transparent
-                visible={showDonationInfo}
-                onRequestClose={() =>
-                    this.setState({ showDonationInfo: false })
-                }
+            <ModalBox
+                isOpen={showDonationInfo}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        showDonationInfo: false
+                    });
+                }}
+                position="center"
             >
                 <View
                     style={{
@@ -327,8 +368,8 @@ export default class SendingLightning extends React.Component<
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Book',
                                         color: themeColor('text'),
+                                        marginBottom: 12,
                                         fontSize: 18,
-                                        marginBottom: 20,
                                         textAlign: 'center'
                                     }}
                                 >
@@ -337,7 +378,10 @@ export default class SendingLightning extends React.Component<
                                     )}
                                 </Text>
                                 <View
-                                    style={{ width: '100%', marginBottom: 10 }}
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: -10
+                                    }}
                                 >
                                     <KeyValue
                                         keyValue={localeString(
@@ -346,17 +390,54 @@ export default class SendingLightning extends React.Component<
                                         value={
                                             <Amount
                                                 sats={amountDonated?.toString()}
-                                                fixedUnits="sats"
+                                                sensitive
+                                                toggleable
                                             />
                                         }
                                     />
                                 </View>
+                                {donationFee && donationFeePercentage && (
+                                    <View
+                                        style={{
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Payment.fee'
+                                            )}
+                                            value={
+                                                <Row>
+                                                    <Amount
+                                                        sats={donationFee}
+                                                        debit
+                                                        sensitive
+                                                        toggleable
+                                                    />
+                                                    {donationFeePercentage && (
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {` (${donationFeePercentage})`}
+                                                        </Text>
+                                                    )}
+                                                </Row>
+                                            }
+                                        />
+                                    </View>
+                                )}
 
                                 {donationPreimage && (
                                     <View
                                         style={{
                                             width: '100%',
-                                            marginBottom: 20
+                                            marginTop: donationFee ? 12 : 16
                                         }}
                                     >
                                         <CopyBox
@@ -400,15 +481,11 @@ export default class SendingLightning extends React.Component<
                                                 }
                                             );
                                         }}
-                                        secondary
                                         buttonStyle={{
                                             height: 40,
                                             width: '100%'
                                         }}
-                                        containerStyle={{
-                                            maxWidth: '45%',
-                                            margin: 10
-                                        }}
+                                        containerStyle={{ marginTop: 30 }}
                                     />
                                 )}
                             </>
@@ -431,11 +508,14 @@ export default class SendingLightning extends React.Component<
                             onPress={() =>
                                 this.setState({ showDonationInfo: false })
                             }
-                            secondary
+                            containerStyle={{
+                                marginTop: donationPathExists ? 14 : 18
+                            }}
+                            tertiary
                         />
                     </View>
                 </View>
-            </Modal>
+            </ModalBox>
         );
     };
 
