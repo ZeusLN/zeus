@@ -37,7 +37,6 @@
     "@keystonehq/bc-ur-registry": "0.7.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.12",
-    "@nicolasflamel/secp256k1-zkp-react": "0.0.13",
     "@noble/secp256k1": "1.6.3",
     "@nostr-dev-kit/ndk": "2.13.0-rc2",
     "@react-native-async-storage/async-storage": "1.23.1",
