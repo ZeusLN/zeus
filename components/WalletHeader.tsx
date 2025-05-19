@@ -253,6 +253,15 @@ export default class WalletHeader extends React.Component<
     };
 
     async UNSAFE_componentWillMount() {
+        this.readClipboard();
+        this.props.navigation.addListener('focus', this.readClipboard);
+    }
+
+    componentWillUnmount(): void {
+        this.props.navigation.removeListener('focus', this.readClipboard);
+    }
+
+    readClipboard = async () => {
         const { SettingsStore } = this.props;
         const { settings } = SettingsStore!;
 
@@ -265,7 +274,7 @@ export default class WalletHeader extends React.Component<
                 });
             }
         }
-    }
+    };
 
     render() {
         const { clipboard } = this.state;
