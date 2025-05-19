@@ -56,6 +56,7 @@ export default class TransactionsStore {
     @observable txid: string | null;
     @observable status: string | number | null;
     @observable noteKey: string;
+    @observable donationIsPaid: boolean = false;
 
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
