@@ -7,9 +7,10 @@ import ModalBox from '../ModalBox';
 
 import ModalStore from '../../stores/ModalStore';
 
+import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import UrlUtils from '../../utils/UrlUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 interface InfoModalProps {
     ModalStore: ModalStore;
@@ -63,7 +64,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                         {infoModalTitle && (
                             <Text
                                 style={{
-                                    fontFamily: 'MarlideDisplay_Bold',
+                                    fontFamily: font('marlideBold'),
                                     color: themeColor('text'),
                                     fontSize: 34,
                                     textAlign: 'center',
