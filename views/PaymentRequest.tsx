@@ -248,6 +248,9 @@ export default class PaymentRequest extends React.Component<
     }: SendPaymentReq) => {
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
             this.props;
+
+        TransactionsStore.donationIsPaid = false;
+
         const { settings } = SettingsStore;
 
         const enableDonations = settings?.privacy?.enableDonations;
@@ -871,51 +874,6 @@ export default class PaymentRequest extends React.Component<
                                     </TouchableOpacity>
                                 )}
 
-                                {enableDonations && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                donationsToggle:
-                                                    !donationsToggle
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ width: '95%' }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.PaymentRequest.payDonation'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {donationsToggle ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-
                                 <FeeLimit
                                     satAmount={
                                         isNoAmountInvoice
@@ -1209,6 +1167,50 @@ export default class PaymentRequest extends React.Component<
                                             </>
                                         )}
                                     </>
+                                )}
+                                {enableDonations && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            this.setState({
+                                                donationsToggle:
+                                                    !donationsToggle
+                                            });
+                                        }}
+                                    >
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            <Row justify="space-between">
+                                                <View style={{ width: '95%' }}>
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.PaymentRequest.payDonation'
+                                                        )}
+                                                    />
+                                                </View>
+                                                {donationsToggle ? (
+                                                    <CaretDown
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <CaretRight
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
                                 )}
                                 {donationsToggle && enableDonations && (
                                     <>
