@@ -9,7 +9,7 @@ import {
     TouchableOpacity,
     TouchableHighlight,
     ViewStyle,
-    Dimensions
+    SafeAreaView
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
@@ -201,7 +201,7 @@ export default class ChannelPicker extends React.Component<
                         this.setState({ showChannelModal: false })
                     }
                 >
-                    <View style={styles.centeredView}>
+                    <SafeAreaView style={styles.centeredView}>
                         <View style={styles.modalBackground}>
                             <View
                                 style={[
@@ -281,7 +281,7 @@ export default class ChannelPicker extends React.Component<
                                 </View>
                             </View>
                         </View>
-                    </View>
+                    </SafeAreaView>
                 </Modal>
 
                 <View style={{ ...containerStyle, ...styles.field }}>
@@ -337,8 +337,6 @@ export default class ChannelPicker extends React.Component<
     }
 }
 
-const screenHeight = Dimensions.get('window').height;
-
 const styles = StyleSheet.create({
     text: {
         fontFamily: 'PPNeueMontreal-Book'
@@ -354,8 +352,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
         paddingBottom: 8,
-        maxHeight: screenHeight * 0.95,
-        minHeight: screenHeight * 0.7
+        height: '100%'
     },
     centeredView: {
         flex: 1,
