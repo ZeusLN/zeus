@@ -38,7 +38,7 @@ export default class SwapStore {
 
     @computed get getHeaders() {
         const settings = this.settingsStore.settings;
-        return settings.proEnabled
+        return settings.swaps?.proEnabled
             ? {
                   'Content-Type': 'application/json',
                   Referral: 'pro'
@@ -48,7 +48,7 @@ export default class SwapStore {
 
     @computed get referralId() {
         const settings = this.settingsStore.settings;
-        return settings.proEnabled ? 'pro' : undefined;
+        return settings.swaps?.proEnabled ? 'pro' : undefined;
     }
 
     /** Returns the API host based on network type */
@@ -58,16 +58,16 @@ export default class SwapStore {
         const settings = this.settingsStore.settings;
 
         if (
-            settings.customSwapHost &&
-            (settings.swapHostTestnet === 'Custom' ||
-                settings.swapHostMainnet === 'Custom')
+            settings.swaps?.customHost &&
+            (settings.swaps?.hostTestnet === 'Custom' ||
+                settings.swaps?.hostMainnet === 'Custom')
         ) {
-            return settings.customSwapHost;
+            return settings.swaps?.customHost;
         }
 
         return isTestnet
-            ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
-            : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+            ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+            : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
     }
 
     @action
