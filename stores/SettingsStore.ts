@@ -141,6 +141,13 @@ interface EcashSettings {
     sweepThresholdSats?: number;
 }
 
+interface SwapsSettings {
+    hostTestnet: string;
+    hostMainnet: string;
+    customHost: string;
+    proEnabled: boolean;
+}
+
 export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
@@ -198,10 +205,7 @@ export interface Settings {
     lsps1Token: string;
     lsps1ShowPurchaseButton: boolean;
     // Swaps
-    swapHostTestnet: string;
-    swapHostMainnet: string;
-    customSwapHost: string;
-    proEnabled: boolean;
+    swaps: SwapsSettings;
     // Lightning Address
     lightningAddress: LightningAddressSettings;
     bolt12Address: Bolt12AddressSettings;
@@ -1260,10 +1264,12 @@ export default class SettingsStore {
         lsps1Token: '',
         lsps1ShowPurchaseButton: true,
         //swaps
-        swapHostTestnet: DEFAULT_SWAP_HOST_TESTNET,
-        swapHostMainnet: DEFAULT_SWAP_HOST_MAINNET,
-        customSwapHost: '',
-        proEnabled: false,
+        swaps: {
+            hostTestnet: DEFAULT_SWAP_HOST_TESTNET,
+            hostMainnet: DEFAULT_SWAP_HOST_MAINNET,
+            customHost: '',
+            proEnabled: false
+        },
         // Lightning Address
         lightningAddress: {
             enabled: false,

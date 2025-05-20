@@ -30,7 +30,7 @@ interface SwapSettingsProps {
 
 interface SwapSettingsState {
     host: string;
-    customSwapHost: string;
+    customHost: string;
     proEnabled: boolean;
 }
 
@@ -48,10 +48,10 @@ export default class SwapSettings extends React.Component<
 
         this.state = {
             host: isTestnet
-                ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
-                : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customSwapHost: settings.customSwapHost || '',
-            proEnabled: settings.proEnabled || false
+                ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+                : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
+            customHost: settings.swaps?.customHost || '',
+            proEnabled: settings.swaps?.proEnabled || false
         };
     }
 
@@ -62,16 +62,16 @@ export default class SwapSettings extends React.Component<
 
         this.setState({
             host: isTestnet
-                ? settings.swapHostTestnet || DEFAULT_SWAP_HOST_TESTNET
-                : settings.swapHostMainnet || DEFAULT_SWAP_HOST_MAINNET,
-            customSwapHost: settings.customSwapHost || '',
-            proEnabled: settings.proEnabled || false
+                ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+                : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
+            customHost: settings.swaps?.customHost || '',
+            proEnabled: settings.swaps?.proEnabled || false
         });
     }
     render() {
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
-        const { customSwapHost, host, proEnabled } = this.state;
-        const { updateSettings } = SettingsStore;
+        const { customHost, host, proEnabled } = this.state;
+        const { updateSettings, settings } = SettingsStore;
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
         const selectedHostKeys = isTestnet
             ? SWAP_HOST_KEYS_TESTNET
@@ -111,12 +111,14 @@ export default class SwapSettings extends React.Component<
                             });
 
                             await updateSettings({
-                                [isTestnet
-                                    ? 'swapHostTestnet'
-                                    : 'swapHostMainnet']: value,
-                                proEnabled: newSelectedHost?.pro
-                                    ? proEnabled
-                                    : false
+                                swaps: {
+                                    ...settings.swaps,
+                                    [isTestnet ? 'hostTestnet' : 'hostMainnet']:
+                                        value,
+                                    proEnabled: newSelectedHost?.pro
+                                        ? proEnabled
+                                        : false
+                                }
                             });
                         }}
                         values={
@@ -137,21 +139,24 @@ export default class SwapSettings extends React.Component<
                                 {localeString('views.OpenChannel.host')}
                             </Text>
                             <TextInput
-                                value={customSwapHost}
+                                value={customHost}
                                 placeholder={
                                     isTestnet
                                         ? DEFAULT_SWAP_HOST_TESTNET
                                         : DEFAULT_SWAP_HOST_MAINNET
                                 }
                                 onChangeText={async (text: string) => {
-                                    this.setState({ customSwapHost: text });
+                                    this.setState({ customHost: text });
 
                                     await updateSettings({
-                                        customSwapHost: text
+                                        swaps: {
+                                            ...settings.swaps,
+                                            customHost: text
+                                        }
                                     });
                                 }}
                                 autoCapitalize="none"
-                                error={!customSwapHost}
+                                error={!customHost}
                             />
                         </>
                     )}
@@ -187,7 +192,10 @@ export default class SwapSettings extends React.Component<
                                             proEnabled: newProEnabled
                                         });
                                         await updateSettings({
-                                            proEnabled: newProEnabled
+                                            swaps: {
+                                                ...settings.swaps,
+                                                proEnabled: newProEnabled
+                                            }
                                         });
                                     }}
                                 />
