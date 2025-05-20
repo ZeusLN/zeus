@@ -96,7 +96,7 @@ export default class SwapSettings extends React.Component<
                 />
                 <View style={{ paddingHorizontal: 20 }}>
                     <DropdownSetting
-                        title="Service Provider"
+                        title={localeString('general.serviceProvider')}
                         selectedValue={host}
                         onValueChange={async (value: string) => {
                             const newSelectedHost = selectedHostKeys.find(
