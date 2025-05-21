@@ -142,8 +142,8 @@ interface EcashSettings {
 }
 
 interface SwapsSettings {
-    hostTestnet: string;
     hostMainnet: string;
+    hostTestnet: string;
     customHost: string;
     proEnabled: boolean;
 }
@@ -270,20 +270,12 @@ export const FEE_ESTIMATOR_KEYS = [
     }
 ];
 
-export const SWAP_HOST_KEYS_TESTNET = [
+export const SWAP_HOST_KEYS_MAINNET = [
     {
-        key: 'Boltz',
-        value: 'https://api.testnet.boltz.exchange/v2',
+        key: 'ZEUS',
+        value: 'https://swaps.zeuslsp.com/api/v2',
         pro: false
     },
-    {
-        key: 'Custom',
-        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
-        value: 'Custom',
-        pro: true
-    }
-];
-export const SWAP_HOST_KEYS_MAINNET = [
     {
         key: 'Boltz',
         value: 'https://api.boltz.exchange/v2',
@@ -297,6 +289,25 @@ export const SWAP_HOST_KEYS_MAINNET = [
     {
         key: 'Eldamar Swaps',
         value: 'https://boltz-api.eldamar.icu/v2',
+        pro: false
+    },
+    {
+        key: 'Custom',
+        translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
+        value: 'Custom',
+        pro: true
+    }
+];
+
+export const SWAP_HOST_KEYS_TESTNET = [
+    {
+        key: 'ZEUS',
+        value: 'https://testnet-swaps.zeuslsp.com/api/v2',
+        pro: false
+    },
+    {
+        key: 'Boltz',
+        value: 'https://api.testnet.boltz.exchange/v2',
         pro: false
     },
     {
@@ -1072,9 +1083,9 @@ export const DEFAULT_LSPS1_HOST_MAINNET = '45.79.192.236:9735';
 export const DEFAULT_LSPS1_HOST_TESTNET = '139.144.22.237:9735';
 
 // Swaps
-export const DEFAULT_SWAP_HOST_MAINNET = 'https://api.boltz.exchange/v2';
+export const DEFAULT_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
 export const DEFAULT_SWAP_HOST_TESTNET =
-    'https://api.testnet.boltz.exchange/v2';
+    'https://testnet-swaps.zeuslsp.com/api/v2';
 
 export const DEFAULT_NOSTR_RELAYS_2023 = [
     'wss://nostr.mutinywallet.com',
@@ -1265,8 +1276,8 @@ export default class SettingsStore {
         lsps1ShowPurchaseButton: true,
         //swaps
         swaps: {
-            hostTestnet: DEFAULT_SWAP_HOST_TESTNET,
             hostMainnet: DEFAULT_SWAP_HOST_MAINNET,
+            hostTestnet: DEFAULT_SWAP_HOST_TESTNET,
             customHost: '',
             proEnabled: false
         },
