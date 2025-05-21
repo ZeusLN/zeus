@@ -36,6 +36,11 @@ export default class SwapStore {
         );
     }
 
+    @action
+    public clearError = () => {
+        this.apiError = '';
+    };
+
     @computed get getHeaders() {
         const settings = this.settingsStore.settings;
         return settings.swaps?.proEnabled
@@ -163,6 +168,9 @@ export default class SwapStore {
 
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
+        runInAction(() => {
+            this.loading = true;
+        });
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
@@ -291,6 +299,9 @@ export default class SwapStore {
         fee: string,
         navigation: any
     ) => {
+        runInAction(() => {
+            this.loading = true;
+        });
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
