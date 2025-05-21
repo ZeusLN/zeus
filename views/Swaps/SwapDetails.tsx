@@ -20,7 +20,7 @@ import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
-import { localeString } from '../../utils/LocaleUtils';
+import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -109,25 +109,41 @@ export default class SwapDetails extends React.Component<
 
         return (
             <View>
-                <KeyValue keyValue="Swap Tree" />
-                {Object.entries(swapTree).map(([key, value]: [string, any]) => (
-                    <View key={key}>
-                        <KeyValue keyValue={key} />
-                        {typeof value === 'object' ? (
-                            Object.entries(value).map(
-                                ([nestedKey, nestedValue]: [string, any]) => (
-                                    <KeyValue
-                                        key={nestedKey}
-                                        keyValue={nestedKey}
-                                        value={nestedValue}
-                                    />
+                <KeyValue
+                    keyValue={localeString('views.SwapDetails.swapTree')}
+                />
+                {Object.entries(swapTree).map(([key, value]: [string, any]) => {
+                    key = pascalToHumanReadable(key);
+                    return (
+                        <View key={key}>
+                            <KeyValue keyValue={key} />
+                            {typeof value === 'object' ? (
+                                Object.entries(value).map(
+                                    ([nestedKey, nestedValue]: [
+                                        string,
+                                        any
+                                    ]) => {
+                                        nestedKey =
+                                            pascalToHumanReadable(nestedKey);
+                                        return (
+                                            <KeyValue
+                                                key={nestedKey}
+                                                keyValue={nestedKey}
+                                                value={nestedValue}
+                                            />
+                                        );
+                                    }
                                 )
-                            )
-                        ) : (
-                            <KeyValue key={key} keyValue={key} value={value} />
-                        )}
-                    </View>
-                ))}
+                            ) : (
+                                <KeyValue
+                                    key={key}
+                                    keyValue={key}
+                                    value={value}
+                                />
+                            )}
+                        </View>
+                    );
+                })}
             </View>
         );
     };
@@ -661,15 +677,10 @@ export default class SwapDetails extends React.Component<
                                     sensitive
                                 />
                             )}
+                            <KeyValue keyValue="BIP21" value={swapData.bip21} />
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.SwapDetails.bip21'
-                                )}
-                                value={swapData.bip21}
-                            />
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.SwapDetails.acceptZerpConf'
+                                    'views.SwapDetails.acceptZeroConf'
                                 )}
                                 value={
                                     swapData.acceptZeroConf
@@ -699,15 +710,19 @@ export default class SwapDetails extends React.Component<
                     {isReverseSwap && (
                         <>
                             <KeyValue
-                                keyValue="Invoice"
+                                keyValue={localeString('views.Invoice.title')}
                                 value={swapData.invoice}
                             />
                             <KeyValue
-                                keyValue="Lockup address"
+                                keyValue={localeString(
+                                    'views.SwapDetails.lockupAddress'
+                                )}
                                 value={swapData.lockupAddress}
                             />
                             <KeyValue
-                                keyValue="Onchain amount"
+                                keyValue={localeString(
+                                    'views.SwapDetails.onchainAmount'
+                                )}
                                 value={
                                     <Amount
                                         sats={swapData?.onchainAmount}
@@ -747,7 +762,9 @@ export default class SwapDetails extends React.Component<
                     )}
                     {isReverseSwap && (
                         <KeyValue
-                            keyValue="Refund public key"
+                            keyValue={localeString(
+                                'views.SwapDetails.refundPublicKey'
+                            )}
                             value={swapData.refundPublicKey}
                         />
                     )}
