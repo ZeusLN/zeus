@@ -124,7 +124,8 @@ export default class SwapPane extends React.PureComponent<
             fee,
             feeSettingToggle
         } = this.state;
-        const { subInfo, reverseInfo, loading, apiError } = SwapStore;
+        const { subInfo, reverseInfo, loading, apiError, clearError } =
+            SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
 
@@ -284,6 +285,9 @@ export default class SwapPane extends React.PureComponent<
                             <SwapsPaneBtn />
                         </Row>
                     }
+                    onBack={() => {
+                        clearError();
+                    }}
                     navigation={navigation}
                 />
                 <ScrollView
