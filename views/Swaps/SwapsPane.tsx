@@ -81,7 +81,8 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                             fontSize: 16
                         }}
                     >
-                        {item?.type}
+                        {item?.type}{' '}
+                        {item?.type === 'Submarine' ? '🔗 → ⚡' : '⚡ → 🔗'}
                     </Text>
                 </View>
 

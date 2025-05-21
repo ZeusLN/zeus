@@ -639,6 +639,16 @@ export default class SwapDetails extends React.Component<
                             }
                         />
                     )}
+                    {swapData.type && (
+                        <KeyValue
+                            keyValue={localeString('general.type')}
+                            value={`${swapData.type} ${
+                                swapData.type === 'Submarine'
+                                    ? '🔗 → ⚡'
+                                    : '⚡ → 🔗'
+                            }`}
+                        />
+                    )}
                     {updates && (
                         <KeyValue
                             keyValue={localeString('views.Channel.status')}
