@@ -1119,7 +1119,7 @@ export default class SwapPane extends React.PureComponent<
                                                 ? SwapStore?.createReverseSwap(
                                                       invoice,
                                                       Number(
-                                                          this.state.outputSats
+                                                          this.state.inputSats
                                                       ),
                                                       this.state.fee,
                                                       navigation
