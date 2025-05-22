@@ -661,7 +661,7 @@
     "views.PaymentRequest.slideToPay": "Slide to Pay",
     "views.PaymentRequest.supportZeus": "Support ZEUS 💜",
     "views.PaymentRequest.enableDonations": "Enable donations",
-    "views.PaymentRequest.payDonation": "Pay donation",
+    "views.PaymentRequest.donateToZEUS": "Donate to ZEUS",
     "views.PaymentRequest.thankYouForDonation": "Thank you for your generous donation!",
     "views.PaymentRequest.amountDonated": "Amount donated",
     "views.Receive.title": "Receive",
