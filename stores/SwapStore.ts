@@ -10,7 +10,9 @@ import { themeColor } from '../utils/ThemeUtils';
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
     DEFAULT_SWAP_HOST_MAINNET,
-    DEFAULT_SWAP_HOST_TESTNET
+    DEFAULT_SWAP_HOST_TESTNET,
+    SWAP_HOST_KEYS_TESTNET,
+    SWAP_HOST_KEYS_MAINNET
 } from './SettingsStore';
 
 import Storage from '../storage';
@@ -73,6 +75,22 @@ export default class SwapStore {
         return isTestnet
             ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
             : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+    }
+
+    /** Returns the name of the swap service based on host and network */
+    @computed
+    public get getServiceProvider() {
+        const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
+        const endpoint = this.getHost;
+
+        const hostKeys = isTestnet
+            ? SWAP_HOST_KEYS_TESTNET
+            : SWAP_HOST_KEYS_MAINNET;
+        const matchingHost = hostKeys.find(
+            (host: any) => host.value === endpoint
+        );
+
+        return matchingHost ? matchingHost.key : endpoint;
     }
 
     @action
@@ -246,6 +264,7 @@ export default class SwapStore {
                 swapData: responseData,
                 keys,
                 endpoint: this.getHost,
+                serviceProvider: this.getServiceProvider,
                 invoice
             });
         } catch (error: any) {
@@ -277,7 +296,8 @@ export default class SwapStore {
                 invoice,
                 endpoint,
                 implementation,
-                nodePubkey
+                nodePubkey,
+                serviceProvider: this.getServiceProvider
             };
 
             // Add the enriched swap to the beginning of array
@@ -374,6 +394,7 @@ export default class SwapStore {
                 swapData: responseData,
                 keys,
                 endpoint: this.getHost,
+                serviceProvider: this.getServiceProvider,
                 invoice: destinationAddress,
                 fee
             });
@@ -408,7 +429,8 @@ export default class SwapStore {
                 preimage,
                 endpoint,
                 implementation,
-                nodePubkey
+                nodePubkey,
+                serviceProvider: this.getServiceProvider
             };
 
             // Add the enriched swap to the beginning of array
