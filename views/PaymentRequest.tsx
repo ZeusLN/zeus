@@ -1261,7 +1261,7 @@ export default class PaymentRequest extends React.Component<
                                                 <View style={{ width: '95%' }}>
                                                     <KeyValue
                                                         keyValue={localeString(
-                                                            'views.PaymentRequest.payDonation'
+                                                            'views.PaymentRequest.donateToZEUS'
                                                         )}
                                                     />
                                                 </View>
@@ -1358,14 +1358,14 @@ export default class PaymentRequest extends React.Component<
                                                     color: themeColor('text')
                                                 }}
                                             >
-                                                {`${requestAmount || 0} + ` +
-                                                    donationAmount +
-                                                    ` ${localeString(
-                                                        'general.sats'
-                                                    )} = ${
-                                                        (requestAmount || 0) +
-                                                        donationAmount
-                                                    } `}
+                                                {`${
+                                                    requestAmount || 0
+                                                } + ${donationAmount} = ${
+                                                    (requestAmount || 0) +
+                                                    donationAmount
+                                                } ${localeString(
+                                                    'general.sats'
+                                                )}`}
                                             </Text>
                                         </Row>
                                     </>
