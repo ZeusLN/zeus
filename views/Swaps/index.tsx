@@ -29,6 +29,8 @@ import BackendUtils from '../../utils/BackendUtils';
 import SwapStore from '../../stores/SwapStore';
 import UnitsStore from '../../stores/UnitsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
+import FiatStore from '../../stores/FiatStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -45,6 +47,8 @@ interface SwapPaneProps {
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;
     InvoicesStore: InvoicesStore;
+    FiatStore: FiatStore;
+    SettingsStore: SettingsStore;
 }
 
 interface SwapPaneState {
@@ -52,6 +56,8 @@ interface SwapPaneState {
     serviceFeeSats: number | BigNumber;
     inputSats: number | BigNumber;
     outputSats: number | BigNumber;
+    inputFiat: string;
+    outputFiat: string;
     invoice: string;
     isValid: boolean;
     error: string;
@@ -62,7 +68,13 @@ interface SwapPaneState {
     feeSettingToggle: boolean;
 }
 
-@inject('SwapStore', 'UnitsStore', 'InvoicesStore')
+@inject(
+    'SwapStore',
+    'UnitsStore',
+    'InvoicesStore',
+    'FiatStore',
+    'SettingsStore'
+)
 @observer
 export default class SwapPane extends React.PureComponent<
     SwapPaneProps,
@@ -73,6 +85,8 @@ export default class SwapPane extends React.PureComponent<
         serviceFeeSats: 0,
         inputSats: 0,
         outputSats: 0,
+        inputFiat: '',
+        outputFiat: '',
         invoice: '',
         isValid: false,
         apiUpdates: '',
@@ -105,18 +119,29 @@ export default class SwapPane extends React.PureComponent<
             inputSats: 0,
             outputSats: 0,
             isValid: false,
+            inputFiat: '',
+            outputFiat: '',
             invoice: '',
             error: ''
         });
     };
 
     render() {
-        const { SwapStore, UnitsStore, navigation, InvoicesStore } = this.props;
+        const {
+            SwapStore,
+            UnitsStore,
+            navigation,
+            InvoicesStore,
+            FiatStore,
+            SettingsStore
+        } = this.props;
         const {
             reverse,
             serviceFeeSats,
             inputSats,
             outputSats,
+            inputFiat,
+            outputFiat,
             error,
             apiUpdates,
             invoice,
@@ -129,6 +154,17 @@ export default class SwapPane extends React.PureComponent<
             SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
+
+        const { fiatRates } = FiatStore;
+        const { settings } = SettingsStore;
+        const { fiat } = settings;
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFee = reverse
@@ -353,6 +389,10 @@ export default class SwapPane extends React.PureComponent<
                                                                         !reverse,
                                                                     inputSats: 0,
                                                                     outputSats: 0,
+                                                                    inputFiat:
+                                                                        '',
+                                                                    outputFiat:
+                                                                        '',
                                                                     serviceFeeSats: 0,
                                                                     invoice: ''
                                                                 });
@@ -379,7 +419,7 @@ export default class SwapPane extends React.PureComponent<
                                                         </TouchableOpacity>
                                                     }
                                                     onAmountChange={(
-                                                        _,
+                                                        amount,
                                                         satAmount:
                                                             | string
                                                             | number
@@ -424,6 +464,22 @@ export default class SwapPane extends React.PureComponent<
                                                                 networkFee
                                                             );
 
+                                                        const outputFiat =
+                                                            outputSats.isGreaterThan(
+                                                                0
+                                                            )
+                                                                ? outputSats
+                                                                      .div(
+                                                                          SATS_PER_BTC
+                                                                      )
+                                                                      .times(
+                                                                          rate
+                                                                      )
+                                                                      .toFixed(
+                                                                          2
+                                                                      )
+                                                                : '';
+
                                                         this.setState({
                                                             serviceFeeSats:
                                                                 calculateServiceFeeOnSend(
@@ -435,11 +491,20 @@ export default class SwapPane extends React.PureComponent<
                                                                 Number(
                                                                     sanitizedSatAmount
                                                                 ),
-                                                            outputSats
+                                                            outputSats,
+                                                            inputFiat:
+                                                                amount &&
+                                                                amount.toString(),
+                                                            outputFiat
                                                         });
                                                     }}
+                                                    {...(units === 'fiat'
+                                                        ? { amount: inputFiat }
+                                                        : {})}
                                                     sats={
-                                                        inputSats
+                                                        units === 'fiat'
+                                                            ? ''
+                                                            : inputSats
                                                             ? units !== 'BTC'
                                                                 ? numberWithCommas(
                                                                       inputSats.toString()
@@ -464,6 +529,8 @@ export default class SwapPane extends React.PureComponent<
                                                         reverse: !reverse,
                                                         inputSats: 0,
                                                         outputSats: 0,
+                                                        inputFiat: '',
+                                                        outputFiat: '',
                                                         serviceFeeSats: 0,
                                                         invoice: ''
                                                     });
@@ -507,6 +574,10 @@ export default class SwapPane extends React.PureComponent<
                                                                                 !reverse,
                                                                             inputSats: 0,
                                                                             outputSats: 0,
+                                                                            inputFiat:
+                                                                                '',
+                                                                            outputFiat:
+                                                                                '',
                                                                             serviceFeeSats: 0,
                                                                             invoice:
                                                                                 ''
@@ -540,7 +611,7 @@ export default class SwapPane extends React.PureComponent<
                                                             </TouchableOpacity>
                                                         }
                                                         onAmountChange={(
-                                                            _,
+                                                            amount,
                                                             satAmount:
                                                                 | string
                                                                 | number
@@ -593,6 +664,26 @@ export default class SwapPane extends React.PureComponent<
                                                                         networkFee
                                                                     );
 
+                                                            const inputFiat =
+                                                                new BigNumber(
+                                                                    input
+                                                                ).isGreaterThan(
+                                                                    0
+                                                                )
+                                                                    ? new BigNumber(
+                                                                          input
+                                                                      )
+                                                                          .div(
+                                                                              SATS_PER_BTC
+                                                                          )
+                                                                          .times(
+                                                                              rate
+                                                                          )
+                                                                          .toFixed(
+                                                                              2
+                                                                          )
+                                                                    : '';
+
                                                             const serviceFeeSats =
                                                                 reverse && input
                                                                     ? input
@@ -620,11 +711,22 @@ export default class SwapPane extends React.PureComponent<
                                                                 outputSats:
                                                                     Number(
                                                                         sanitizedSatAmount
-                                                                    )
+                                                                    ),
+                                                                inputFiat,
+                                                                outputFiat:
+                                                                    amount &&
+                                                                    amount.toString()
                                                             });
                                                         }}
+                                                        {...(units === 'fiat'
+                                                            ? {
+                                                                  amount: outputFiat
+                                                              }
+                                                            : {})}
                                                         sats={
-                                                            outputSats
+                                                            units === 'fiat'
+                                                                ? ''
+                                                                : outputSats
                                                                 ? units !==
                                                                   'BTC'
                                                                     ? numberWithCommas(
@@ -651,7 +753,10 @@ export default class SwapPane extends React.PureComponent<
                                                     UnitsStore.changeUnits();
                                                     this.setState({
                                                         inputSats: 0,
-                                                        outputSats: 0
+                                                        outputSats: 0,
+                                                        serviceFeeSats: 0,
+                                                        inputFiat: '',
+                                                        outputFiat: ''
                                                     });
                                                 }}
                                                 style={{
@@ -727,6 +832,18 @@ export default class SwapPane extends React.PureComponent<
 
                                                     const satAmount = min;
 
+                                                    const inputFiat =
+                                                        new BigNumber(
+                                                            min
+                                                        ).isGreaterThan(0)
+                                                            ? new BigNumber(min)
+                                                                  .div(
+                                                                      SATS_PER_BTC
+                                                                  )
+                                                                  .times(rate)
+                                                                  .toFixed(2)
+                                                            : '';
+
                                                     // remove commas
                                                     const sanitizedSatAmount =
                                                         units !== 'BTC'
@@ -761,6 +878,18 @@ export default class SwapPane extends React.PureComponent<
                                                             networkFee
                                                         );
 
+                                                    const outputFiat =
+                                                        outputSats.isGreaterThan(
+                                                            0
+                                                        )
+                                                            ? outputSats
+                                                                  .div(
+                                                                      SATS_PER_BTC
+                                                                  )
+                                                                  .times(rate)
+                                                                  .toFixed(2)
+                                                            : '';
+
                                                     this.setState({
                                                         serviceFeeSats:
                                                             calculateServiceFeeOnSend(
@@ -772,7 +901,9 @@ export default class SwapPane extends React.PureComponent<
                                                             Number(
                                                                 sanitizedSatAmount
                                                             ),
-                                                        outputSats
+                                                        outputSats,
+                                                        inputFiat,
+                                                        outputFiat
                                                     });
                                                 }}
                                             >
@@ -798,6 +929,18 @@ export default class SwapPane extends React.PureComponent<
 
                                                     const satAmount = max;
 
+                                                    const inputFiat =
+                                                        new BigNumber(
+                                                            max
+                                                        ).isGreaterThan(0)
+                                                            ? new BigNumber(max)
+                                                                  .div(
+                                                                      SATS_PER_BTC
+                                                                  )
+                                                                  .times(rate)
+                                                                  .toFixed(2)
+                                                            : '';
+
                                                     // remove commas
                                                     const sanitizedSatAmount =
                                                         units !== 'BTC'
@@ -832,6 +975,17 @@ export default class SwapPane extends React.PureComponent<
                                                             networkFee
                                                         );
 
+                                                    const outputFiat =
+                                                        outputSats.isGreaterThan(
+                                                            0
+                                                        )
+                                                            ? outputSats
+                                                                  .div(
+                                                                      SATS_PER_BTC
+                                                                  )
+                                                                  .times(rate)
+                                                                  .toFixed(2)
+                                                            : '';
                                                     this.setState({
                                                         serviceFeeSats:
                                                             calculateServiceFeeOnSend(
@@ -843,7 +997,9 @@ export default class SwapPane extends React.PureComponent<
                                                             Number(
                                                                 sanitizedSatAmount
                                                             ),
-                                                        outputSats
+                                                        outputSats,
+                                                        inputFiat,
+                                                        outputFiat
                                                     });
                                                 }}
                                             >
@@ -929,7 +1085,8 @@ export default class SwapPane extends React.PureComponent<
                                                 });
                                                 try {
                                                     const amount =
-                                                        units === 'sats'
+                                                        units === 'sats' ||
+                                                        units === 'fiat'
                                                             ? outputSats
                                                             : units === 'BTC'
                                                             ? new BigNumber(
