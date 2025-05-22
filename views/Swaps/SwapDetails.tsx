@@ -38,6 +38,7 @@ interface SwapDetailsProps {
             swapData: any;
             keys: any;
             endpoint: string;
+            serviceProvider: string;
             invoice: string;
             fee: string;
         }
@@ -592,6 +593,8 @@ export default class SwapDetails extends React.Component<
         const { updates, error, failureReason } = this.state;
         const swapData = this.props.route.params?.swapData ?? '';
 
+        const serviceProvider = this.props.route.params?.serviceProvider ?? '';
+
         const isSubmarineSwap = !!swapData.bip21;
         const isReverseSwap = !!swapData.lockupAddress;
 
@@ -664,6 +667,13 @@ export default class SwapDetails extends React.Component<
                             keyValue={localeString('views.Channel.status')}
                             value={SwapStore?.formatStatus(updates)}
                             color={SwapStore?.statusColor(updates)}
+                        />
+                    )}
+
+                    {(serviceProvider || swapData?.serviceProvider) && (
+                        <KeyValue
+                            keyValue={localeString('general.serviceProvider')}
+                            value={serviceProvider || swapData.serviceProvider}
                         />
                     )}
                     {(failureReason || swapData.failureReason) && (
