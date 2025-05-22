@@ -92,8 +92,9 @@ export default class LnurlPay extends React.Component<
 
         const minSendableSats = Math.floor(lnurl.minSendable / 1000);
 
-        const { amount: unformattedAmount } =
-            getUnformattedAmount(minSendableSats);
+        const { amount: unformattedAmount } = getUnformattedAmount({
+            sats: minSendableSats
+        });
 
         // if amount to pay hasn't been previously specified by the user,
         // fall back to the min sat amount
