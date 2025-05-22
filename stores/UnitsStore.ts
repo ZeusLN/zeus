@@ -69,19 +69,24 @@ export default class UnitsStore {
     public resetUnits = () => (this.units = 'sats');
 
     @action
-    public getUnformattedAmount = (
-        value: string | number = 0,
-        fixedUnits?: string
-    ): ValueDisplayProps => {
+    public getUnformattedAmount = ({
+        sats = 0,
+        fixedUnits,
+        noCommas
+    }: {
+        sats?: string | number;
+        fixedUnits?: string;
+        noCommas?: boolean;
+    }): ValueDisplayProps => {
         const { settings } = this.settingsStore;
         const { fiat, display } = settings;
         const showAllDecimalPlaces: boolean =
             (display && display.showAllDecimalPlaces) || false;
         const units = fixedUnits || this.units;
 
-        const sats = Number(value);
-        const negative = sats < 0;
-        const absValueSats = Math.abs(sats);
+        const satsNumber = Number(sats);
+        const negative = satsNumber < 0;
+        const absValueSats = Math.abs(satsNumber);
 
         if (units === 'BTC') {
             return {
@@ -95,10 +100,12 @@ export default class UnitsStore {
             };
         } else if (units === 'sats') {
             return {
-                amount: numberWithCommas(absValueSats),
+                amount: noCommas
+                    ? absValueSats.toString()
+                    : numberWithCommas(absValueSats),
                 unit: 'sats',
                 negative,
-                plural: !(Number(value) === 1 || Number(value) === -1)
+                plural: !(satsNumber === 1 || satsNumber === -1)
             };
         } else {
             const currency = fiat;
@@ -134,7 +141,9 @@ export default class UnitsStore {
                 ).toFixed(2);
 
                 return {
-                    amount: separatorSwap
+                    amount: noCommas
+                        ? amount
+                        : separatorSwap
                         ? numberWithDecimals(amount)
                         : numberWithCommas(amount),
                     unit: 'fiat',
