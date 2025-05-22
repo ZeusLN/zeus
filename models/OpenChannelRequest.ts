@@ -28,6 +28,7 @@ export default class OpenChannelRequest extends BaseModel {
     public scidAlias?: boolean;
     public simpleTaprootChannel?: boolean;
     public fundMax?: boolean;
+    public close_address?: string;
     // external accoutn funding
     public account?: string;
     public funding_shim?: {
