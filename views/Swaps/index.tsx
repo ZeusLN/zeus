@@ -104,6 +104,7 @@ export default class SwapPane extends React.PureComponent<
         this.setState({
             inputSats: 0,
             outputSats: 0,
+            isValid: false,
             invoice: '',
             error: ''
         });
@@ -1036,78 +1037,84 @@ export default class SwapPane extends React.PureComponent<
                                         />
                                     )}
                                 </View>
-                                <View style={{ paddingHorizontal: 20 }}>
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                feeSettingToggle:
-                                                    !feeSettingToggle
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                marginTop:
-                                                    reverse &&
-                                                    !BackendUtils.supportsOnchainSends()
-                                                        ? 0
-                                                        : 10,
-                                                marginBottom: 20
+                                {reverse && (
+                                    <View style={{ paddingHorizontal: 20 }}>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                this.setState({
+                                                    feeSettingToggle:
+                                                        !feeSettingToggle
+                                                });
                                             }}
                                         >
-                                            <Row justify="space-between">
-                                                <View style={{ width: '95%' }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.Swaps.setFeeRate'
-                                                        )}
-                                                    />
-                                                </View>
-                                                {feeSettingToggle ? (
-                                                    <CaretDown
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
-                                                        )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                    {feeSettingToggle && (
-                                        <>
-                                            <Text
+                                            <View
                                                 style={{
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
+                                                    marginTop:
+                                                        reverse &&
+                                                        !BackendUtils.supportsOnchainSends()
+                                                            ? 0
+                                                            : 10,
+                                                    marginBottom: 20
                                                 }}
                                             >
-                                                {localeString(
-                                                    'views.Send.feeSatsVbyte'
-                                                )}
-                                            </Text>
-                                            <OnchainFeeInput
-                                                fee={fee}
-                                                onChangeFee={(text: string) =>
-                                                    this.setState({
-                                                        fee: text
-                                                    })
-                                                }
-                                                navigation={navigation}
-                                            />
-                                        </>
-                                    )}
-                                </View>
+                                                <Row justify="space-between">
+                                                    <View
+                                                        style={{ width: '95%' }}
+                                                    >
+                                                        <KeyValue
+                                                            keyValue={localeString(
+                                                                'views.Swaps.setFeeRate'
+                                                            )}
+                                                        />
+                                                    </View>
+                                                    {feeSettingToggle ? (
+                                                        <CaretDown
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    ) : (
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    )}
+                                                </Row>
+                                            </View>
+                                        </TouchableOpacity>
+                                        {feeSettingToggle && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Send.feeSatsVbyte'
+                                                    )}
+                                                </Text>
+                                                <OnchainFeeInput
+                                                    fee={fee}
+                                                    onChangeFee={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            fee: text
+                                                        })
+                                                    }
+                                                    navigation={navigation}
+                                                />
+                                            </>
+                                        )}
+                                    </View>
+                                )}
 
                                 <View>
                                     <Button
@@ -1129,6 +1136,13 @@ export default class SwapPane extends React.PureComponent<
                                                       navigation
                                                   );
                                         }}
+                                        {...(!reverse
+                                            ? {
+                                                  containerStyle: {
+                                                      marginTop: 10
+                                                  }
+                                              }
+                                            : {})}
                                         disabled={!isValid}
                                     />
                                 </View>
