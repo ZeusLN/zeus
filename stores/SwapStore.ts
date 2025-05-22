@@ -353,6 +353,7 @@ export default class SwapStore {
             // Add the swap type
             responseData.type = 'Reverse';
             responseData.preimage = preimage;
+            responseData.destinationAddress = destinationAddress;
 
             await this.saveReverseSwaps(
                 responseData,

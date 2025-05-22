@@ -21,6 +21,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
+import { sleep } from '../../utils/SleepUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
@@ -546,30 +547,39 @@ export default class SwapDetails extends React.Component<
                 .map((byte) => byte.toString(16).padStart(2, '0'))
                 .join('');
 
-            try {
-                await createReverseClaimTransaction({
-                    endpoint,
-                    swapId: createdResponse.id,
-                    claimLeaf: createdResponse.swapTree.claimLeaf.output,
-                    refundLeaf: createdResponse.swapTree.refundLeaf.output,
-                    privateKey: privateKeyHex,
-                    servicePubKey: createdResponse.claimPublicKey,
-                    preimageHex: preimage.toString('hex'),
-                    transactionHex,
-                    lockupAddress,
-                    destinationAddress,
-                    feeRate: Number(fee),
-                    isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
-                });
+            // allow some retries in case of alt network
+            // tx propagation issues
+            for (let i = 0; i <= 10; i++) {
+                try {
+                    await sleep(1000);
+                    await createReverseClaimTransaction({
+                        endpoint,
+                        swapId: createdResponse.id,
+                        claimLeaf: createdResponse.swapTree.claimLeaf.output,
+                        refundLeaf: createdResponse.swapTree.refundLeaf.output,
+                        privateKey: privateKeyHex,
+                        servicePubKey: createdResponse.refundPublicKey,
+                        preimageHex: preimage.toString('hex'),
+                        transactionHex,
+                        lockupAddress,
+                        destinationAddress,
+                        feeRate: Number(fee || 2),
+                        isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+                    });
 
-                console.log(
-                    'Reverse claim transaction submitted successfully.'
-                );
-                return true;
-            } catch (error) {
-                console.log('Error submitting reverse claim tx', error);
-                return false;
+                    console.log(
+                        'Reverse claim transaction submitted successfully.',
+                        { attempt: i + 1 }
+                    );
+                    return true;
+                } catch (error) {
+                    console.log('Error submitting reverse claim tx', {
+                        error,
+                        attempt: i + 1
+                    });
+                }
             }
+            return false;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
             return false;
