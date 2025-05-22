@@ -115,6 +115,7 @@ interface ChannelsSettings {
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
+    closeAddress?: string;
 }
 
 interface LightningAddressSettings {
@@ -1232,7 +1233,8 @@ export default class SettingsStore {
             min_confs: 1,
             privateChannel: true,
             scidAlias: true,
-            simpleTaprootChannel: false
+            simpleTaprootChannel: false,
+            closeAddress: ''
         },
         supportedBiometryType: undefined,
         isBiometryEnabled: false,
