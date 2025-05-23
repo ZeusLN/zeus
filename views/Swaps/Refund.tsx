@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
@@ -21,9 +21,11 @@ import Switch from '../../components/Switch';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import BackendUtils from '../../utils/BackendUtils';
 
 import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import InvoicesStore from '../../stores/InvoicesStore';
 
 interface RefundSwapProps {
     navigation: any;
@@ -35,6 +37,7 @@ interface RefundSwapProps {
     >;
     SwapStore?: SwapStore;
     NodeInfoStore?: NodeInfoStore;
+    InvoicesStore?: InvoicesStore;
 }
 
 interface RefundSwapState {
@@ -45,9 +48,10 @@ interface RefundSwapState {
     loading: boolean;
     refundStatus: string;
     cooperative: boolean;
+    fetchingAddress: boolean;
 }
 
-@inject('SwapStore', 'NodeInfoStore')
+@inject('SwapStore', 'NodeInfoStore', 'InvoicesStore')
 @observer
 export default class RefundSwap extends React.Component<
     RefundSwapProps,
@@ -60,7 +64,8 @@ export default class RefundSwap extends React.Component<
         loading: false,
         swapData: this.props.route.params.swapData,
         refundStatus: '',
-        cooperative: false
+        cooperative: true,
+        fetchingAddress: false
     };
 
     createRefundTransaction = async (
@@ -92,19 +97,24 @@ export default class RefundSwap extends React.Component<
 
             this.setState({
                 loading: false,
-                refundStatus: `Refund transaction created successfully. TXID: ${txid}`
+                refundStatus: `Refund transaction created successfully. TXID: ${txid}`,
+                destinationAddress: ''
             });
 
             console.log('Refund transaction created successfully. TXID:', txid);
         } catch (error: any) {
-            this.setState({ loading: false, error: error.message });
+            this.setState({
+                loading: false,
+                error: error.message,
+                destinationAddress: ''
+            });
             console.error('Error creating refund transaction:', error);
             throw error;
         }
     };
 
     render() {
-        const { navigation, SwapStore } = this.props;
+        const { navigation, SwapStore, InvoicesStore } = this.props;
         const {
             fee,
             destinationAddress,
@@ -112,7 +122,8 @@ export default class RefundSwap extends React.Component<
             error,
             loading,
             refundStatus,
-            cooperative
+            cooperative,
+            fetchingAddress
         } = this.state;
         return (
             <Screen>
@@ -151,18 +162,91 @@ export default class RefundSwap extends React.Component<
                     <Text style={{ color: themeColor('secondaryText') }}>
                         {localeString('views.Transaction.destAddress')}
                     </Text>
-                    <TextInput
-                        onChangeText={async (text: string) => {
-                            this.setState({
-                                destinationAddress: text,
-                                error: ''
-                            });
-                        }}
-                        placeholder={localeString(
-                            'views.Swaps.enterRefundAddress'
+
+                    <View>
+                        <TextInput
+                            onChangeText={async (text: string) => {
+                                this.setState({
+                                    destinationAddress: text,
+                                    error: ''
+                                });
+                            }}
+                            placeholder={
+                                fetchingAddress
+                                    ? ''
+                                    : localeString(
+                                          'views.Swaps.enterRefundAddress'
+                                      )
+                            }
+                            value={destinationAddress}
+                        />
+                        {fetchingAddress && (
+                            <View style={styles.loadingOverlay}>
+                                <LoadingIndicator />
+                            </View>
                         )}
-                        value={destinationAddress}
-                    />
+                    </View>
+                    <View
+                        style={{
+                            marginVertical: 5
+                        }}
+                    >
+                        {BackendUtils.supportsOnchainSends() && (
+                            <Button
+                                onPress={async () => {
+                                    this.setState({
+                                        destinationAddress: '',
+                                        fetchingAddress: true
+                                    });
+                                    try {
+                                        if (InvoicesStore) {
+                                            await InvoicesStore.createUnifiedInvoice(
+                                                {
+                                                    memo: '',
+                                                    value: '0',
+                                                    expiry: '3600'
+                                                }
+                                            );
+                                            if (InvoicesStore.onChainAddress) {
+                                                this.setState({
+                                                    destinationAddress:
+                                                        InvoicesStore.onChainAddress,
+                                                    error: '',
+                                                    fetchingAddress: false
+                                                });
+                                            } else {
+                                                this.setState({
+                                                    error: localeString(
+                                                        'views.Swaps.generateOnchainAddressFailed'
+                                                    ),
+                                                    fetchingAddress: false
+                                                });
+                                            }
+                                        }
+
+                                        this.setState({
+                                            fetchingAddress: false
+                                        });
+                                    } catch (e: any) {
+                                        console.error(
+                                            'Error generating invoice:',
+                                            e
+                                        );
+                                        this.setState({
+                                            error: localeString(
+                                                'views.Swaps.generateInvoiceFailed'
+                                            ),
+                                            fetchingAddress: false
+                                        });
+                                    }
+                                }}
+                                title={localeString(
+                                    'views.Swaps.generateOnchainAddress'
+                                )}
+                                disabled={fetchingAddress}
+                            />
+                        )}
+                    </View>
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
@@ -241,9 +325,25 @@ export default class RefundSwap extends React.Component<
                     }}
                     containerStyle={{ marginTop: 20 }}
                     secondary
-                    disabled={!destinationAddress || this.state.loading}
+                    disabled={
+                        !destinationAddress ||
+                        this.state.loading ||
+                        fetchingAddress
+                    }
                 />
             </Screen>
         );
     }
 }
+
+const styles = StyleSheet.create({
+    loadingOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center'
+    }
+});
