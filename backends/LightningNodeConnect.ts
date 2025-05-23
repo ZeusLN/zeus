@@ -528,7 +528,49 @@ export default class LightningNodeConnect {
     subscribeInvoices = () => this.lnc.lnd.lightning.subscribeInvoices();
     subscribeTransactions = () =>
         this.lnc.lnd.lightning.subscribeTransactions();
+    // Watchtower Client methods
+    addWatchtower = async (data: any) =>
+        await this.lnc.lnd.watchtowerClient
+            .addTower({
+                pubkey: Base64Utils.hexToBase64(data.pubkey),
+                address: data.address
+            })
+            .then((data: any) => snakeize(data));
 
+    listWatchtowers = async () =>
+        await this.lnc.lnd.watchtowerClient
+            .listTowers({})
+            .then((data: any) => snakeize(data));
+
+    getWatchtowerInfo = async (pubkey: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .getTowerInfo({ pubkey: Base64Utils.hexToBase64(pubkey) })
+            .then((data: any) => snakeize(data));
+
+    deactivateWatchtower = async (pubkey: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .deactivateTower({ pubkey: Base64Utils.hexToBase64(pubkey) })
+            .then((data: any) => snakeize(data));
+
+    removeWatchtower = async (pubkey: string) =>
+        await this.lnc.lnd.watchtowerClient
+            .removeTower({ pubkey: Base64Utils.hexToBase64(pubkey) })
+            .then((data: any) => snakeize(data));
+
+    getWatchtowerStats = async () =>
+        await this.lnc.lnd.watchtowerClient
+            .stats({})
+            .then((data: any) => snakeize(data));
+
+    getWatchtowerPolicy = async () =>
+        await this.lnc.lnd.watchtowerClient
+            .policy({})
+            .then((data: any) => snakeize(data));
+
+    terminateWatchtowerSession = async (data: any) =>
+        await this.lnc.lnd.watchtowerClient
+            .terminateSession({ sessionId: data.session_id })
+            .then((data: any) => snakeize(data));
     supports = (minVersion: string, eosVersion?: string) => {
         const { nodeInfo } = nodeInfoStore;
         const { version } = nodeInfo;
@@ -576,4 +618,5 @@ export default class LightningNodeConnect {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
+    supportsWatchtower = () => true;
 }

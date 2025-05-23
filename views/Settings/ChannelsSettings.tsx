@@ -25,6 +25,7 @@ interface ChannelsSettingsState {
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
     lsps1ShowPurchaseButton: boolean;
+    enableWatchtower: boolean;
 }
 
 @inject('SettingsStore')
@@ -38,7 +39,8 @@ export default class ChannelsSettings extends React.Component<
         privateChannel: true,
         scidAlias: true,
         simpleTaprootChannel: false,
-        lsps1ShowPurchaseButton: true
+        lsps1ShowPurchaseButton: true,
+        enableWatchtower: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -63,7 +65,11 @@ export default class ChannelsSettings extends React.Component<
             lsps1ShowPurchaseButton:
                 settings?.lsps1ShowPurchaseButton !== null
                     ? settings.lsps1ShowPurchaseButton
-                    : true
+                    : true,
+            enableWatchtower:
+                settings?.channels?.enableWatchtower !== null
+                    ? settings.channels.enableWatchtower
+                    : false
         });
     }
 
@@ -83,7 +89,8 @@ export default class ChannelsSettings extends React.Component<
             privateChannel,
             scidAlias,
             simpleTaprootChannel,
-            lsps1ShowPurchaseButton
+            lsps1ShowPurchaseButton,
+            enableWatchtower
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
 
@@ -289,6 +296,41 @@ export default class ChannelsSettings extends React.Component<
                                         await updateSettings({
                                             lsps1ShowPurchaseButton:
                                                 !lsps1ShowPurchaseButton
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
+                    )}
+                    {BackendUtils.supportsWatchtower() && (
+                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Channels.enableWatchtower'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={enableWatchtower}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            enableWatchtower: !enableWatchtower
+                                        });
+                                        await updateSettings({
+                                            channels: {
+                                                ...settings.channels,
+                                                enableWatchtower:
+                                                    !enableWatchtower
+                                            }
                                         });
                                     }}
                                 />
