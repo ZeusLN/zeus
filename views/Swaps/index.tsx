@@ -31,6 +31,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
+import FeeStore from '../../stores/FeeStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -49,6 +50,7 @@ interface SwapPaneProps {
     InvoicesStore: InvoicesStore;
     FiatStore: FiatStore;
     SettingsStore: SettingsStore;
+    FeeStore: FeeStore;
 }
 
 interface SwapPaneState {
@@ -73,7 +75,8 @@ interface SwapPaneState {
     'UnitsStore',
     'InvoicesStore',
     'FiatStore',
-    'SettingsStore'
+    'SettingsStore',
+    'FeeStore'
 )
 @observer
 export default class SwapPane extends React.PureComponent<
@@ -108,6 +111,36 @@ export default class SwapPane extends React.PureComponent<
             'blur',
             this.resetFields
         );
+    }
+
+    async componentDidUpdate(
+        _prevProps: Readonly<SwapPaneProps>,
+        prevState: Readonly<SwapPaneState>
+    ): Promise<void> {
+        const { FeeStore, SettingsStore } = this.props;
+        const { settings } = SettingsStore;
+
+        if (!prevState.reverse && this.state.reverse) {
+            try {
+                const fees: {
+                    economyFee: number;
+                    fastestFee: number;
+                    halfHourFee: number;
+                    hourFee: number;
+                    minimumFee: number;
+                } = await FeeStore.getOnchainFeesviaMempool();
+
+                const preferredMempoolRate =
+                    settings?.payments?.preferredMempoolRate || 'fastestFee';
+
+                const feeRate =
+                    fees[preferredMempoolRate as keyof typeof fees] ??
+                    fees.fastestFee;
+                this.setState({ fee: feeRate.toString() });
+            } catch (error) {
+                console.error('Failed to fetch mempool fees:', error);
+            }
+        }
     }
 
     componentWillUnmount() {
