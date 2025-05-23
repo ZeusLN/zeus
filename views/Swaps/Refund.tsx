@@ -47,7 +47,7 @@ interface RefundSwapState {
     swapData: any;
     loading: boolean;
     refundStatus: string;
-    cooperative: boolean;
+    uncooperative: boolean;
     fetchingAddress: boolean;
 }
 
@@ -64,7 +64,7 @@ export default class RefundSwap extends React.Component<
         loading: false,
         swapData: this.props.route.params.swapData,
         refundStatus: '',
-        cooperative: true,
+        uncooperative: false,
         fetchingAddress: false
     };
 
@@ -75,6 +75,7 @@ export default class RefundSwap extends React.Component<
         destinationAddress: string
     ): Promise<void> => {
         const { SwapStore } = this.props;
+        const { uncooperative } = this.state;
 
         try {
             const txid = await createRefundTransaction({
@@ -89,7 +90,7 @@ export default class RefundSwap extends React.Component<
                 timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
                 destinationAddress,
                 lockupAddress: swapData.address,
-                cooperative: this.state.cooperative,
+                cooperative: !uncooperative,
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
 
@@ -122,7 +123,7 @@ export default class RefundSwap extends React.Component<
             error,
             loading,
             refundStatus,
-            cooperative,
+            uncooperative,
             fetchingAddress
         } = this.state;
         return (
@@ -171,13 +172,7 @@ export default class RefundSwap extends React.Component<
                                     error: ''
                                 });
                             }}
-                            placeholder={
-                                fetchingAddress
-                                    ? ''
-                                    : localeString(
-                                          'views.Swaps.enterRefundAddress'
-                                      )
-                            }
+                            placeholder={fetchingAddress ? '' : 'bc1...'}
                             value={destinationAddress}
                         />
                         {fetchingAddress && (
@@ -269,7 +264,7 @@ export default class RefundSwap extends React.Component<
                         }}
                         infoModalText={localeString('views.Swaps.infoText')}
                     >
-                        {localeString('views.Swaps.cooperative')}
+                        {localeString('views.Swaps.uncooperative')}
                     </Text>
                     <View
                         style={{
@@ -280,10 +275,10 @@ export default class RefundSwap extends React.Component<
                         }}
                     >
                         <Switch
-                            value={cooperative}
+                            value={uncooperative}
                             onValueChange={async () => {
                                 this.setState({
-                                    cooperative: !cooperative
+                                    uncooperative: !uncooperative
                                 });
                             }}
                         />
