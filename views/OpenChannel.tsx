@@ -3,7 +3,6 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
-    Text,
     View,
     TouchableOpacity
 } from 'react-native';
@@ -15,6 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Tab } from 'react-native-elements';
 
 import AmountInput from '../components/AmountInput';
+import Text from '../components/Text';
 import Button from '../components/Button';
 import DropdownSetting from '../components/DropdownSetting';
 import Header from '../components/Header';
@@ -74,6 +74,7 @@ interface OpenChannelState {
     sat_per_vbyte: string;
     privateChannel: boolean;
     scidAlias: boolean;
+    close_address: string;
     simpleTaprootChannel: boolean;
     host: string;
     suggestImport: string;
@@ -112,6 +113,7 @@ export default class OpenChannel extends React.Component<
             min_confs: 1,
             spend_unconfirmed: false,
             sat_per_vbyte: '',
+            close_address: '',
             privateChannel: true,
             scidAlias: true,
             simpleTaprootChannel: false,
@@ -119,7 +121,7 @@ export default class OpenChannel extends React.Component<
             utxos: [],
             utxoBalance: 0,
             connectPeerOnly: false,
-            advancedSettingsToggle: false,
+            advancedSettingsToggle: true,
             account: 'default',
             additionalChannels: []
         };
@@ -154,7 +156,8 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel:
                 settings?.channels?.simpleTaprootChannel !== null
                     ? settings.channels.simpleTaprootChannel
-                    : false
+                    : false,
+            close_address: settings.channels.closeAddress || ''
         });
     }
 
@@ -312,6 +315,7 @@ export default class OpenChannel extends React.Component<
             min_confs,
             host,
             sat_per_vbyte,
+            close_address,
             suggestImport,
             utxoBalance,
             privateChannel,
@@ -929,6 +933,37 @@ export default class OpenChannel extends React.Component<
                                                 locked={openingChannel}
                                             />
                                         </>
+                                        {BackendUtils.isLNDBased() && (
+                                            <View style={{ marginTop: 10 }}>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                    infoModalText={localeString(
+                                                        'views.OpenChannel.closeAddressExplainer'
+                                                    )}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.closeAddress'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    placeholder={'bc1...'}
+                                                    value={close_address}
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) =>
+                                                        this.setState({
+                                                            close_address: text
+                                                        })
+                                                    }
+                                                    locked={openingChannel}
+                                                />
+                                            </View>
+                                        )}
 
                                         <>
                                             <Text
