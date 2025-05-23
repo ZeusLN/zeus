@@ -19,15 +19,19 @@ import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
 
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
 interface SwapDetailsProps {
@@ -52,6 +56,7 @@ interface SwapDetailsState {
     failureReason: string;
     error: string | { message?: string } | null;
     loading: boolean;
+    swapTreeToggle: boolean;
 }
 
 @inject('NodeInfoStore', 'SwapStore')
@@ -66,7 +71,8 @@ export default class SwapDetails extends React.Component<
             updates: null,
             failureReason: '',
             error: null,
-            loading: false
+            loading: false,
+            swapTreeToggle: false
         };
     }
 
@@ -107,45 +113,85 @@ export default class SwapDetails extends React.Component<
     }
 
     renderSwapTree = (swapTree: any) => {
+        const { swapTreeToggle } = this.state;
         if (!swapTree) return null;
 
         return (
             <View>
-                <KeyValue
-                    keyValue={localeString('views.SwapDetails.swapTree')}
-                />
-                {Object.entries(swapTree).map(([key, value]: [string, any]) => {
-                    key = pascalToHumanReadable(key);
-                    return (
-                        <View key={key}>
-                            <KeyValue keyValue={key} />
-                            {typeof value === 'object' ? (
-                                Object.entries(value).map(
-                                    ([nestedKey, nestedValue]: [
-                                        string,
-                                        any
-                                    ]) => {
-                                        nestedKey =
-                                            pascalToHumanReadable(nestedKey);
-                                        return (
-                                            <KeyValue
-                                                key={nestedKey}
-                                                keyValue={nestedKey}
-                                                value={nestedValue}
-                                            />
-                                        );
-                                    }
-                                )
-                            ) : (
+                <TouchableOpacity
+                    onPress={() => {
+                        this.setState({
+                            swapTreeToggle: !swapTreeToggle
+                        });
+                    }}
+                >
+                    <View
+                        style={{
+                            marginTop: 10,
+                            marginBottom: 10
+                        }}
+                    >
+                        <Row justify="space-between">
+                            <View style={{ width: '95%' }}>
                                 <KeyValue
-                                    key={key}
-                                    keyValue={key}
-                                    value={value}
+                                    keyValue={localeString(
+                                        'views.SwapDetails.swapTree'
+                                    )}
+                                />
+                            </View>
+                            {swapTreeToggle ? (
+                                <CaretDown
+                                    fill={themeColor('text')}
+                                    width="20"
+                                    height="20"
+                                />
+                            ) : (
+                                <CaretRight
+                                    fill={themeColor('text')}
+                                    width="20"
+                                    height="20"
                                 />
                             )}
-                        </View>
-                    );
-                })}
+                        </Row>
+                    </View>
+                </TouchableOpacity>
+                {swapTreeToggle &&
+                    Object.entries(swapTree).map(
+                        ([key, value]: [string, any]) => {
+                            key = pascalToHumanReadable(key);
+                            return (
+                                <View key={key}>
+                                    <KeyValue keyValue={key} />
+                                    {typeof value === 'object' ? (
+                                        Object.entries(value).map(
+                                            ([nestedKey, nestedValue]: [
+                                                string,
+                                                any
+                                            ]) => {
+                                                nestedKey =
+                                                    pascalToHumanReadable(
+                                                        nestedKey
+                                                    );
+                                                return (
+                                                    <KeyValue
+                                                        key={nestedKey}
+                                                        keyValue={nestedKey}
+                                                        value={nestedValue}
+                                                    />
+                                                );
+                                            }
+                                        )
+                                    ) : (
+                                        <KeyValue
+                                            key={key}
+                                            keyValue={key}
+                                            value={value}
+                                        />
+                                    )}
+                                </View>
+                            );
+                        }
+                    )}
             </View>
         );
     };
@@ -598,6 +644,8 @@ export default class SwapDetails extends React.Component<
         const isSubmarineSwap = !!swapData.bip21;
         const isReverseSwap = !!swapData.lockupAddress;
 
+        console.log('swapData', swapData);
+
         const QRButton = () => {
             if (!swapData?.bip21 && !swapData.invoice) {
                 return null;
@@ -662,6 +710,7 @@ export default class SwapDetails extends React.Component<
                             }`}
                         />
                     )}
+
                     {updates && (
                         <KeyValue
                             keyValue={localeString('views.Channel.status')}
@@ -670,12 +719,6 @@ export default class SwapDetails extends React.Component<
                         />
                     )}
 
-                    {(serviceProvider || swapData?.serviceProvider) && (
-                        <KeyValue
-                            keyValue={localeString('general.serviceProvider')}
-                            value={serviceProvider || swapData.serviceProvider}
-                        />
-                    )}
                     {(failureReason || swapData.failureReason) && (
                         <KeyValue
                             keyValue={localeString(
@@ -689,6 +732,19 @@ export default class SwapDetails extends React.Component<
                             )}
                         />
                     )}
+
+                    {(serviceProvider || swapData?.serviceProvider) && (
+                        <KeyValue
+                            keyValue={localeString('general.serviceProvider')}
+                            value={serviceProvider || swapData.serviceProvider}
+                        />
+                    )}
+
+                    <KeyValue
+                        keyValue={localeString('views.SwapDetails.swapId')}
+                        value={swapData.id}
+                    />
+
                     {isSubmarineSwap && (
                         <>
                             {swapData?.txid && (
@@ -763,24 +819,17 @@ export default class SwapDetails extends React.Component<
                             />
                         </>
                     )}
-                    <KeyValue
-                        keyValue={localeString('views.SwapDetails.swapId')}
-                        value={swapData.id}
-                    />
                     {isSubmarineSwap && (
                         <KeyValue
                             keyValue={localeString('general.address')}
                             value={swapData.address}
                         />
                     )}
-
-                    {/* Render Swap Tree */}
-                    {this.renderSwapTree(swapData.swapTree)}
                     <KeyValue
                         keyValue={localeString(
                             'views.SwapDetails.timeoutBlockHeight'
                         )}
-                        value={swapData.timeoutBlockHeight}
+                        value={numberWithCommas(swapData.timeoutBlockHeight)}
                     />
                     {isSubmarineSwap && (
                         <KeyValue
@@ -798,6 +847,9 @@ export default class SwapDetails extends React.Component<
                             value={swapData.refundPublicKey}
                         />
                     )}
+
+                    {/* Render Swap Tree */}
+                    {this.renderSwapTree(swapData.swapTree)}
                 </ScrollView>
                 {(updates === 'invoice.set' || updates === 'swap.created') && (
                     <Button
