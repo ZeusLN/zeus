@@ -371,10 +371,12 @@ export default class SwapDetails extends React.Component<
         };
 
         webSocket.onerror = (error) => {
-            this.setState({
-                error: error.message || error || 'An unknown error occurred',
-                loading: false
-            });
+            if (error.message) {
+                this.setState({
+                    error: error.message,
+                    loading: false
+                });
+            }
             console.error('WebSocket error:', error);
         };
 
