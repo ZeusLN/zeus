@@ -1208,7 +1208,8 @@ export default class SwapPane extends React.PureComponent<
                                                 !!invoice ||
                                                 loading ||
                                                 inputSats === 0 ||
-                                                outputSats === 0
+                                                outputSats === 0 ||
+                                                fetchingInvoice
                                             }
                                         />
                                     )}
