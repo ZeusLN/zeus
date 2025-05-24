@@ -419,7 +419,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                         {lookup ? (
                             <View
                                 style={{
-                                    ...styles.bottom,
+                                    paddingVertical: 10,
                                     backgroundColor: themeColor('background')
                                 }}
                             >
@@ -491,7 +491,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                             <>
                                 <View
                                     style={{
-                                        ...styles.bottom,
+                                        paddingVertical: 10,
                                         backgroundColor:
                                             themeColor('background')
                                     }}
@@ -558,13 +558,5 @@ const styles = StyleSheet.create({
     valueWithLink: {
         paddingBottom: 5,
         fontFamily: 'PPNeueMontreal-Book'
-    },
-    bottom: {
-        flex: 1,
-        flexDirection: 'column',
-        position: 'absolute',
-        bottom: 0,
-        paddingBottom: 10,
-        width: '100%'
     }
 });

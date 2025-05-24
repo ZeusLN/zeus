@@ -155,7 +155,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         let amount;
         if (satAmount) {
             amount =
-                UnitsStore.getUnformattedAmount(satAmount).amount || satAmount;
+                UnitsStore.getUnformattedAmount({
+                    sats: satAmount,
+                    noCommas: true
+                }).amount || satAmount;
         }
 
         this.state = {
@@ -1228,7 +1231,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     : themeColor('background')
                                         }}
                                         onPress={() =>
-                                            this.sendCoins(satAmount)
+                                            this.sendCoins(satAmount || amount)
                                         }
                                         disabled={
                                             totalBlockchainBalanceAccounts ===

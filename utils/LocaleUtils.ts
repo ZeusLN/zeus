@@ -163,3 +163,14 @@ export const bridgeJavaStrings = async (locale: string) => {
     });
     NativeModules.LndMobile.updateTranslationCache(locale, neededTranslations);
 };
+
+export const pascalToHumanReadable = (text: string) => {
+    // remove capital demarcation with spaces, move all to lowercase
+    text = text
+        .split(/(?=[A-Z])/)
+        .join(' ')
+        .toLowerCase();
+    // capitalize first letter
+    text = text.charAt(0).toUpperCase() + text.slice(1);
+    return text;
+};

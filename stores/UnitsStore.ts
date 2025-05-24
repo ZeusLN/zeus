@@ -77,7 +77,7 @@ export default class UnitsStore {
     }: {
         sats?: string | number;
         fixedUnits?: string;
-        noCommas?: boolean;
+        noCommas?: boolean
         forceFiatCurrency?: string;
     }): ValueDisplayProps => {
         const { settings } = this.settingsStore;
