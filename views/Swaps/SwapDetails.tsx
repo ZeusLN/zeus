@@ -761,6 +761,7 @@ export default class SwapDetails extends React.Component<
             (updates === 'invoice.failedToPay' &&
                 failure === 'invoice could not be paid') ||
             updates === 'transaction.lockupFailed' ||
+            (isSubmarineSwap && updates === 'swap.expired') ||
             (failure && error);
 
         return (
