@@ -344,10 +344,6 @@ export default class SwapDetails extends React.Component<
 
                 case 'transaction.lockupFailed':
                     if (isSubmarineSwap) {
-                        webSocket.close();
-                        this.setState({
-                            socketConnected: false
-                        });
                         await SwapStore?.getLockupTransaction(
                             createdResponse.id
                         );
@@ -808,7 +804,7 @@ export default class SwapDetails extends React.Component<
                                 : 'Lightning to on-chain'}
                         </Text>
                     </View>
-                    {this.state.socketConnected && (
+                    {this.state.socketConnected && progressUpdate && (
                         <View
                             style={{
                                 flex: 1,
