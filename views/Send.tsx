@@ -1210,7 +1210,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     : themeColor('background')
                                         }}
                                         onPress={() =>
-                                            this.sendCoins(satAmount)
+                                            this.sendCoins(satAmount || amount)
                                         }
                                         disabled={
                                             totalBlockchainBalanceAccounts ===
