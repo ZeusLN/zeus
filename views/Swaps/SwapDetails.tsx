@@ -30,6 +30,7 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
+import { unitsStore } from '../../stores/Stores';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -80,7 +81,8 @@ export default class SwapDetails extends React.Component<
     componentDidMount() {
         const { swapData } = this.props.route.params;
 
-        console.log(swapData);
+        // reset units to help prevent wrong amount being sent
+        unitsStore.resetUnits();
 
         if (!swapData) {
             console.error('No swap data provided.');
@@ -255,7 +257,8 @@ export default class SwapDetails extends React.Component<
                 }
 
                 this.setState({
-                    error: data.error
+                    error: data.error,
+                    loading: false
                 });
                 webSocket.close();
                 return;
@@ -318,6 +321,15 @@ export default class SwapDetails extends React.Component<
                         );
                     }
                     break;
+
+                case 'transaction.lockupFailed':
+                    if (isSubmarineSwap) {
+                        await SwapStore?.getLockupTransaction(
+                            createdResponse.id
+                        );
+                    }
+                    break;
+
                 case 'transaction.claimed':
                 case 'invoice.failedToPay':
                 case 'swap.expired':
@@ -325,6 +337,7 @@ export default class SwapDetails extends React.Component<
                     data?.failureReason &&
                         this.setState({ error: data?.failureReason });
                     break;
+
                 default:
                     console.log('Unhandled status:', data.status);
             }
@@ -332,7 +345,8 @@ export default class SwapDetails extends React.Component<
 
         webSocket.onerror = (error) => {
             this.setState({
-                error: error.message || error || 'An unknown error occurred'
+                error: error.message || error || 'An unknown error occurred',
+                loading: false
             });
             console.error('WebSocket error:', error);
         };
@@ -409,7 +423,8 @@ export default class SwapDetails extends React.Component<
                 }
 
                 this.setState({
-                    error: data.error
+                    error: data.error,
+                    loading: false
                 });
                 webSocket.close();
                 return;
@@ -472,7 +487,8 @@ export default class SwapDetails extends React.Component<
 
         webSocket.onerror = (error) => {
             this.setState({
-                error: error.message || error || 'An unknown error occurred'
+                error: error.message || error || 'An unknown error occurred',
+                loading: false
             });
             console.error('WebSocket error:', error);
         };
@@ -670,6 +686,14 @@ export default class SwapDetails extends React.Component<
             );
         };
 
+        const failure = failureReason || swapData.failureReason;
+
+        const showRefundButton =
+            (updates === 'invoice.failedToPay' &&
+                failure === 'invoice could not be paid') ||
+            updates === 'transaction.lockupFailed' ||
+            (failure && error);
+
         return (
             <Screen>
                 <Header
@@ -720,17 +744,13 @@ export default class SwapDetails extends React.Component<
                         />
                     )}
 
-                    {(failureReason || swapData.failureReason) && (
+                    {failure && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.SwapSettings.failureReason'
                             )}
-                            value={SwapStore?.formatStatus(
-                                failureReason || swapData.failureReason
-                            )}
-                            color={SwapStore?.statusColor(
-                                failureReason || swapData.failureReason
-                            )}
+                            value={SwapStore?.formatStatus(failure)}
+                            color={SwapStore?.statusColor(failure)}
                         />
                     )}
 
@@ -870,10 +890,7 @@ export default class SwapDetails extends React.Component<
                         secondary
                     />
                 )}
-                {((updates === 'invoice.failedToPay' &&
-                    (swapData?.failureReason === 'invoice could not be paid' ||
-                        failureReason === 'invoice could not be paid')) ||
-                    updates === 'transaction.lockupFailed') && (
+                {showRefundButton && (
                     <Button
                         title={localeString('views.Swaps.refundSwap')}
                         containerStyle={{ paddingVertical: 10 }}
