@@ -120,7 +120,7 @@ export default class SwapStore {
 
     @action
     public formatStatus = (status: string): string => {
-        if (!status) return 'No updates found!';
+        if (!status || typeof status !== 'string') return 'No updates found!';
 
         return status
             .replace(/\./g, ' ') // Replace dots with spaces
@@ -161,6 +161,7 @@ export default class SwapStore {
         this.loading = false;
     };
 
+    @action
     public getLockupTransaction = async (id: string) => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
@@ -170,14 +171,30 @@ export default class SwapStore {
             );
 
             const status = response.info().status;
+            const data = response.json();
             if (status == 200) {
-                const data = response.json();
-                return {
+                const lockupTransaction = {
                     id: data.id,
                     hex: data.hex,
                     timeoutBlockHeight: data.timeoutBlockHeight,
                     timeoutEta: data.timeoutEta
                 };
+                const storedSwaps = await Storage.getItem('swaps');
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                const updatedSwaps = swaps.map((swap: any) =>
+                    swap.id === id
+                        ? {
+                              ...swap,
+                              status,
+                              lockupTransaction
+                          }
+                        : swap
+                );
+
+                await Storage.setItem('swaps', JSON.stringify(updatedSwaps));
+                return lockupTransaction;
+            } else {
+                console.log('getLockupTransaction - not found', data);
             }
         } catch (error) {
             console.error('Error in getLockupTransaction:', error);

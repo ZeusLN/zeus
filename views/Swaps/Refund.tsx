@@ -70,7 +70,6 @@ export default class RefundSwap extends React.Component<
 
     createRefundTransaction = async (
         swapData: any,
-        lockupTransaction: any,
         fee: any,
         destinationAddress: string
     ): Promise<void> => {
@@ -83,7 +82,7 @@ export default class RefundSwap extends React.Component<
                 swapId: swapData.id,
                 claimLeaf: swapData.swapTree.claimLeaf.output,
                 refundLeaf: swapData.swapTree.refundLeaf.output,
-                transactionHex: lockupTransaction.hex,
+                transactionHex: swapData.lockupTransaction.hex,
                 privateKey: swapData.refundPrivateKey,
                 servicePubKey: swapData.claimPublicKey,
                 feeRate: Number(fee),
@@ -106,8 +105,7 @@ export default class RefundSwap extends React.Component<
         } catch (error: any) {
             this.setState({
                 loading: false,
-                error: error.message,
-                destinationAddress: ''
+                error: error.message
             });
             console.error('Error creating refund transaction:', error);
             throw error;
@@ -294,17 +292,16 @@ export default class RefundSwap extends React.Component<
                             refundStatus: ''
                         });
 
-                        try {
-                            // Fetch the lockup transaction
-                            const lockupTransaction =
+                        if (!swapData.lockupTransaction) {
+                            swapData.lockupTransaction =
                                 await SwapStore?.getLockupTransaction(
                                     swapData.id
                                 );
+                        }
 
-                            // Create and submit the refund transaction
+                        try {
                             await this.createRefundTransaction(
                                 swapData,
-                                lockupTransaction,
                                 fee,
                                 destinationAddress
                             );
