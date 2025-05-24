@@ -1117,21 +1117,7 @@ export default class SwapPane extends React.PureComponent<
                                                     fetchingInvoice: true
                                                 });
                                                 try {
-                                                    const amount =
-                                                        units === 'sats' ||
-                                                        units === 'fiat'
-                                                            ? outputSats
-                                                            : units === 'BTC'
-                                                            ? new BigNumber(
-                                                                  outputSats
-                                                              )
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .toFixed(8)
-                                                            : '';
-
-                                                    if (!amount) {
+                                                    if (!outputSats) {
                                                         this.setState({
                                                             error: localeString(
                                                                 'views.Swaps.missingAmount'
@@ -1146,7 +1132,7 @@ export default class SwapPane extends React.PureComponent<
                                                         {
                                                             memo: '',
                                                             value:
-                                                                amount.toString() ||
+                                                                outputSats.toString() ||
                                                                 '0',
                                                             expiry: '3600'
                                                         }
