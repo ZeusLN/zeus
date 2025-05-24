@@ -2,12 +2,14 @@ import * as React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { getRouteStack } from '../NavigationService';
 
 import Button from '../components/Button';
 import CopyBox from '../components/CopyBox';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
+import { Row } from '../components/layout/Row';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -63,6 +65,9 @@ export default class SendingOnChain extends React.Component<
         const { testnet } = NodeInfoStore;
         const { storedNotes } = this.state;
         const windowSize = Dimensions.get('window');
+
+        const stack = getRouteStack();
+        const isSwap = stack.filter((route) => route.name === 'SwapDetails')[0];
 
         if (funded_psbt)
             navigation.navigate('PSBT', {
@@ -250,22 +255,65 @@ export default class SendingOnChain extends React.Component<
                             )}
 
                             {(publishSuccess || error) && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingLightning.goToWallet'
+                                <Row
+                                    align="flex-end"
+                                    style={{
+                                        alignSelf: 'center'
+                                    }}
+                                >
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingLightning.goToWallet'
+                                        )}
+                                        icon={
+                                            isSwap
+                                                ? undefined
+                                                : {
+                                                      name: 'list',
+                                                      size: 25,
+                                                      color: themeColor(
+                                                          'background'
+                                                      )
+                                                  }
+                                        }
+                                        titleStyle={{
+                                            color: themeColor('background')
+                                        }}
+                                        containerStyle={{
+                                            maxWidth: isSwap ? '45%' : '100%',
+                                            margin: 10
+                                        }}
+                                        onPress={() =>
+                                            navigation.popTo('Wallet')
+                                        }
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                    />
+                                    {isSwap && (
+                                        <Button
+                                            title={localeString(
+                                                'views.Sending.goToSwap'
+                                            )}
+                                            titleStyle={{
+                                                color: themeColor('background')
+                                            }}
+                                            containerStyle={{ maxWidth: '45%' }}
+                                            onPress={() =>
+                                                navigation.popTo(
+                                                    'SwapDetails',
+                                                    { ...isSwap.params }
+                                                )
+                                            }
+                                            buttonStyle={{
+                                                height: 40,
+                                                width: '100%'
+                                            }}
+                                            tertiary
+                                        />
                                     )}
-                                    icon={{
-                                        name: 'list',
-                                        size: 25,
-                                        color: themeColor('background')
-                                    }}
-                                    titleStyle={{
-                                        color: themeColor('background')
-                                    }}
-                                    containerStyle={{ width: '100%' }}
-                                    onPress={() => navigation.popTo('Wallet')}
-                                    buttonStyle={{ height: 40 }}
-                                />
+                                </Row>
                             )}
                         </View>
                     </View>

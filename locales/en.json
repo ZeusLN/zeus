@@ -709,6 +709,7 @@
     "views.SendingLightning.AddANote": "Add a note",
     "views.SendingLightning.UpdateNote": "Update note",
     "views.SendingLightning.goToWallet": "Go to Wallet",
+    "views.Sending.goToSwap": "Go to swap",
     "views.SendingLightning.lowFeeLimitMessage": "This payment may have failed due to a low fee limit. Try again with a higher fee limit",
     "views.SendingLightning.tryAgain": "Try Again",
     "views.SendingLightning.copyPaymentHash": "Copy Hash to Clipboard",
