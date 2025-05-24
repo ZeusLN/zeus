@@ -10,7 +10,8 @@ import {
     getChainTransactions,
     getOffchainBalance,
     listPeers,
-    listClosedChannels
+    listClosedChannels,
+    listPeerChannels
 } from './CoreLightningRequestHandler';
 import { localeString } from '../utils/LocaleUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -203,7 +204,23 @@ export default class CLNRest {
     getTransactions = async () => await getChainTransactions();
     getChannels = async () => {
         const channels = await this.postRequest('/v1/listpeerchannels');
-        return await listPeers(channels);
+        return await listPeerChannels(channels);
+    };
+    listPeers = async () => {
+        const data = await this.postRequest('/v1/listpeers');
+        return (await listPeers(data)).peersWithAliases;
+    };
+    disconnectPeer = async (pubkey: string) => {
+        try {
+            await this.postRequest('/v1/disconnect', {
+                id: pubkey,
+                force: true
+            });
+            return true;
+        } catch (error) {
+            console.error(`Error disconnecting peer ${pubkey}:`, error);
+            return null;
+        }
     };
     getBlockchainBalance = () =>
         this.postRequest('/v1/listfunds').then((res) => {
@@ -432,6 +449,7 @@ export default class CLNRest {
         });
     };
 
+    supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
