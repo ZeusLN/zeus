@@ -102,6 +102,7 @@ export default class SwapDetails extends React.Component<
                 'invoice.failedToPay',
                 'transaction.refunded',
                 'transaction.claimed',
+                'transaction.lockupFailed',
                 'swap.expired'
             ];
 
@@ -343,6 +344,10 @@ export default class SwapDetails extends React.Component<
 
                 case 'transaction.lockupFailed':
                     if (isSubmarineSwap) {
+                        webSocket.close();
+                        this.setState({
+                            socketConnected: false
+                        });
                         await SwapStore?.getLockupTransaction(
                             createdResponse.id
                         );
@@ -709,6 +714,18 @@ export default class SwapDetails extends React.Component<
         const isSubmarineSwap = !!swapData.bip21;
         const isReverseSwap = !!swapData.lockupAddress;
 
+        const progressUpdate = isSubmarineSwap
+            ? updates === 'invoice.set'
+                ? localeString('views.SwapDetails.waitingForOnchainTx')
+                : updates === 'transaction.mempool'
+                ? localeString('views.SwapDetails.waitingForConf')
+                : ''
+            : updates === 'swap.created'
+            ? localeString('views.SwapDetails.waitingForInvoicePayment')
+            : updates === 'transaction.mempool'
+            ? localeString('views.SwapDetails.waitingForConf')
+            : '';
+
         const QRButton = () => {
             if (!swapData?.bip21 && !swapData.invoice) {
                 return null;
@@ -758,7 +775,7 @@ export default class SwapDetails extends React.Component<
                             )}
                             {!this.state.loading &&
                                 (updates === 'invoice.set' ||
-                                    (swapData.type === 'reverse' &&
+                                    (swapData.type === 'Reverse' &&
                                         updates === 'swap.created')) && (
                                     <QRButton />
                                 )}
@@ -790,8 +807,26 @@ export default class SwapDetails extends React.Component<
                         </Text>
                     </View>
                     {this.state.socketConnected && (
-                        <View style={{ margin: 15 }}>
+                        <View
+                            style={{
+                                flex: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                margin: 15,
+                                gap: 4
+                            }}
+                        >
                             <LinearProgress color={themeColor('highlight')} />
+                            <Text
+                                style={{
+                                    textAlign: 'center',
+                                    fontSize: 14,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    marginTop: 10
+                                }}
+                            >
+                                {progressUpdate}
+                            </Text>
                         </View>
                     )}
                     {error && (
