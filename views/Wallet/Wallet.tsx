@@ -408,7 +408,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
-            SwapStore.fetchAndUpdateSwaps();
             CashuStore.reset();
         }
 
@@ -604,6 +603,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (connecting) {
                 CashuStore.checkAndSweepMints();
             }
+        }
+
+        // check for swaps after node info is fetched
+        if (connecting) {
+            SwapStore.fetchAndUpdateSwaps();
         }
 
         if (connecting && start != null) {
