@@ -72,12 +72,19 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         marginBottom: 5
                     }}
                 >
-                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            fontSize: 16
+                        }}
+                    >
                         {`${localeString('general.type')} `}
                     </Text>
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: 16
                         }}
                     >
@@ -93,12 +100,19 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         marginBottom: 5
                     }}
                 >
-                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            fontSize: 16
+                        }}
+                    >
                         {`${localeString('views.Channel.status')}`}
                     </Text>
                     <Text
                         style={{
                             color: SwapStore?.statusColor(item.status),
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: 16
                         }}
                     >
@@ -112,12 +126,19 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         marginBottom: 5
                     }}
                 >
-                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            fontSize: 16
+                        }}
+                    >
                         {`${localeString('views.SwapDetails.swapId')}`}
                     </Text>
                     <Text
                         style={{
                             color: themeColor('secondaryText'),
+                            fontFamily: 'PPNeueMontreal-Book',
                             fontSize: 16
                         }}
                     >
@@ -132,7 +153,13 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         marginBottom: 5
                     }}
                 >
-                    <Text style={{ color: themeColor('text'), fontSize: 16 }}>
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            fontSize: 16
+                        }}
+                    >
                         {item?.type === 'Submarine'
                             ? `${localeString(
                                   'views.SwapDetails.expectedAmount'
@@ -160,13 +187,18 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         }}
                     >
                         <Text
-                            style={{ color: themeColor('text'), fontSize: 16 }}
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16
+                            }}
                         >
                             {`${localeString('general.createdAt')}`}
                         </Text>
                         <Text
                             style={{
                                 color: themeColor('secondaryText'),
+                                fontFamily: 'PPNeueMontreal-Book',
                                 fontSize: 16
                             }}
                         >
