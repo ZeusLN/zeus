@@ -281,7 +281,7 @@ export default class SendingOnChain extends React.Component<
                                         }}
                                         containerStyle={{
                                             maxWidth: isSwap ? '45%' : '100%',
-                                            margin: 10
+                                            paddingRight: isSwap ? 5 : 0
                                         }}
                                         onPress={() =>
                                             navigation.popTo('Wallet')
@@ -299,7 +299,10 @@ export default class SendingOnChain extends React.Component<
                                             titleStyle={{
                                                 color: themeColor('background')
                                             }}
-                                            containerStyle={{ maxWidth: '45%' }}
+                                            containerStyle={{
+                                                maxWidth: '45%',
+                                                paddingLeft: isSwap ? 5 : 0
+                                            }}
                                             onPress={() =>
                                                 navigation.popTo(
                                                     'SwapDetails',
