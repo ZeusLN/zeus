@@ -64,6 +64,7 @@ interface SwapDetailsState {
     loading: boolean;
     socketConnected: boolean;
     swapTreeToggle: boolean;
+    swapData: any;
 }
 
 @inject('NodeInfoStore', 'SwapStore')
@@ -80,12 +81,13 @@ export default class SwapDetails extends React.Component<
             error: null,
             loading: false,
             socketConnected: true,
-            swapTreeToggle: false
+            swapTreeToggle: false,
+            swapData: props.route.params.swapData
         };
     }
 
     componentDidMount() {
-        const { swapData } = this.props.route.params;
+        const { swapData } = this.state;
 
         // reset units to help prevent wrong amount being sent
         unitsStore.resetUnits();
@@ -344,9 +346,15 @@ export default class SwapDetails extends React.Component<
 
                 case 'transaction.lockupFailed':
                     if (isSubmarineSwap) {
-                        await SwapStore?.getLockupTransaction(
+                        const lockupTx = await SwapStore?.getLockupTransaction(
                             createdResponse.id
                         );
+                        this.setState((prevState) => ({
+                            swapData: {
+                                ...prevState.swapData,
+                                lockupTransaction: lockupTx
+                            }
+                        }));
                     }
                     break;
 
@@ -391,7 +399,8 @@ export default class SwapDetails extends React.Component<
         createdResponse: any,
         isSubmarineSwap: boolean
     ) => {
-        const { keys, endpoint, swapData, fee } = this.props.route.params;
+        const { keys, endpoint, fee } = this.props.route.params;
+        const { swapData } = this.state;
 
         const { SwapStore } = this.props;
 
@@ -686,7 +695,7 @@ export default class SwapDetails extends React.Component<
     };
 
     timelockIndicator = () => {
-        const swapData = this.props.route.params?.swapData ?? '';
+        const { swapData } = this.state;
 
         if (!nodeInfoStore.nodeInfo.currentBlockHeight) return '';
 
@@ -704,8 +713,7 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
-        const { updates, error, failureReason } = this.state;
-        const swapData = this.props.route.params?.swapData ?? '';
+        const { updates, error, failureReason, swapData } = this.state;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
@@ -982,9 +990,15 @@ export default class SwapDetails extends React.Component<
                     <Button
                         title={localeString('views.Swaps.refundSwap')}
                         containerStyle={{ paddingVertical: 10 }}
-                        onPress={() =>
-                            navigation.navigate('RefundSwap', { swapData })
-                        }
+                        onPress={() => {
+                            const { endpoint } = this.props.route.params;
+                            navigation.navigate('RefundSwap', {
+                                swapData: {
+                                    ...swapData,
+                                    endpoint
+                                }
+                            });
+                        }}
                         secondary
                     />
                 )}
