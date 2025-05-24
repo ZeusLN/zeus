@@ -391,8 +391,7 @@ export default class SendingLightning extends React.Component<
                         <Row
                             align="flex-end"
                             style={{
-                                marginLeft: paymentPathExists ? 10 : 0,
-                                marginRight: paymentPathExists ? 10 : 0,
+                                marginBottom: 5,
                                 bottom: 25,
                                 alignSelf: 'center'
                             }}
@@ -417,7 +416,7 @@ export default class SendingLightning extends React.Component<
                                     buttonStyle={{ height: 40, width: '100%' }}
                                     containerStyle={{
                                         maxWidth: '45%',
-                                        margin: 10
+                                        paddingRight: 5
                                     }}
                                 />
                             )}
@@ -443,7 +442,7 @@ export default class SendingLightning extends React.Component<
                                         maxWidth: paymentPathExists
                                             ? '45%'
                                             : '100%',
-                                        margin: 10
+                                        paddingLeft: paymentPathExists ? 5 : 0
                                     }}
                                 />
                             )}
@@ -533,7 +532,7 @@ export default class SendingLightning extends React.Component<
                                         }}
                                         containerStyle={{
                                             maxWidth: isSwap ? '45%' : '100%',
-                                            margin: 10
+                                            paddingRight: isSwap ? 5 : 0
                                         }}
                                     />
                                     {isSwap && (
@@ -546,7 +545,7 @@ export default class SendingLightning extends React.Component<
                                             }}
                                             containerStyle={{
                                                 maxWidth: '45%',
-                                                margin: 10
+                                                paddingLeft: isSwap ? 5 : 0
                                             }}
                                             onPress={() =>
                                                 navigation.popTo(
