@@ -22,10 +22,12 @@ import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
+import Text from '../../components/Text';
 
 import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
+import { font } from '../../utils/FontUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -742,16 +744,39 @@ export default class SwapDetails extends React.Component<
                         }
                     }}
                     rightComponent={
-                        updates === 'invoice.set' || isReverseSwap ? (
-                            <QRButton />
-                        ) : (
-                            <></>
-                        )
+                        <Row>
+                            {this.state.loading && (
+                                <LoadingIndicator size={25} />
+                            )}
+                            {updates === 'invoice.set' ||
+                                (isReverseSwap && <QRButton />)}
+                        </Row>
                     }
                     navigation={navigation}
                 />
                 <ScrollView style={{ marginHorizontal: 20 }}>
-                    {this.state.loading && <LoadingIndicator />}
+                    <View style={{ marginBottom: 15 }}>
+                        <Text
+                            style={{
+                                textAlign: 'center',
+                                fontFamily: font('marlideBold'),
+                                fontSize: 28
+                            }}
+                        >
+                            {swapData.type}
+                        </Text>
+                        <Text
+                            style={{
+                                textAlign: 'center',
+                                fontFamily: font('marlide'),
+                                fontSize: 22
+                            }}
+                        >
+                            {swapData.type === 'Submarine'
+                                ? 'on-chain to Lightning'
+                                : 'Lightning to on-chain'}
+                        </Text>
+                    </View>
                     {this.state.socketConnected && (
                         <View style={{ margin: 15 }}>
                             <LinearProgress color={themeColor('highlight')} />
@@ -764,16 +789,6 @@ export default class SwapDetails extends React.Component<
                                     ? error?.message
                                     : String(error)
                             }
-                        />
-                    )}
-                    {swapData.type && (
-                        <KeyValue
-                            keyValue={localeString('general.type')}
-                            value={`${swapData.type} ${
-                                swapData.type === 'Submarine'
-                                    ? '🔗 → ⚡'
-                                    : '⚡ → 🔗'
-                            }`}
                         />
                     )}
 
@@ -809,6 +824,22 @@ export default class SwapDetails extends React.Component<
 
                     {isSubmarineSwap && (
                         <>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.SwapDetails.expectedAmount'
+                                )}
+                                value={
+                                    <Amount
+                                        sats={swapData?.expectedAmount}
+                                        sensitive
+                                        toggleable
+                                    />
+                                }
+                            />
+                            <KeyValue
+                                keyValue={localeString('general.address')}
+                                value={swapData.address}
+                            />
                             {swapData?.txid && (
                                 <KeyValue
                                     keyValue={localeString(
@@ -825,34 +856,6 @@ export default class SwapDetails extends React.Component<
                                     sensitive
                                 />
                             )}
-                            <KeyValue keyValue="BIP21" value={swapData.bip21} />
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.SwapDetails.acceptZeroConf'
-                                )}
-                                value={
-                                    swapData.acceptZeroConf
-                                        ? localeString('general.true')
-                                        : localeString('general.false')
-                                }
-                                color={
-                                    swapData.acceptZeroConf
-                                        ? 'green'
-                                        : '#808000'
-                                }
-                            />
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.SwapDetails.expectedAmount'
-                                )}
-                                value={
-                                    <Amount
-                                        sats={swapData?.expectedAmount}
-                                        sensitive
-                                        toggleable
-                                    />
-                                }
-                            />
                         </>
                     )}
                     {isReverseSwap && (
@@ -880,12 +883,6 @@ export default class SwapDetails extends React.Component<
                                 }
                             />
                         </>
-                    )}
-                    {isSubmarineSwap && (
-                        <KeyValue
-                            keyValue={localeString('general.address')}
-                            value={swapData.address}
-                        />
                     )}
                     <KeyValue
                         keyValue={localeString(
