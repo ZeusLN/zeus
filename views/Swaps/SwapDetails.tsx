@@ -5,6 +5,7 @@ import { LinearProgress } from 'react-native-elements';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { crypto } from 'bitcoinjs-lib';
+import BigNumber from 'bignumber.js';
 import bolt11 from 'bolt11';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
@@ -31,7 +32,7 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
-import { unitsStore } from '../../stores/Stores';
+import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -671,6 +672,22 @@ export default class SwapDetails extends React.Component<
         }
     };
 
+    timelockIndicator = () => {
+        const swapData = this.props.route.params?.swapData ?? '';
+
+        if (!nodeInfoStore.nodeInfo.currentBlockHeight) return '';
+
+        if (
+            new BigNumber(swapData.timeoutBlockHeight).gt(
+                nodeInfoStore.nodeInfo.currentBlockHeight
+            )
+        ) {
+            return '🔒';
+        }
+
+        return '';
+    };
+
     render() {
         const { navigation, SwapStore } = this.props;
 
@@ -681,8 +698,6 @@ export default class SwapDetails extends React.Component<
 
         const isSubmarineSwap = !!swapData.bip21;
         const isReverseSwap = !!swapData.lockupAddress;
-
-        console.log('swapData', swapData);
 
         const QRButton = () => {
             if (!swapData?.bip21 && !swapData.invoice) {
@@ -876,7 +891,12 @@ export default class SwapDetails extends React.Component<
                         keyValue={localeString(
                             'views.SwapDetails.timeoutBlockHeight'
                         )}
-                        value={numberWithCommas(swapData.timeoutBlockHeight)}
+                        infoModalText={localeString(
+                            'views.SwapDetails.timeoutBlockHeight.explainer'
+                        )}
+                        value={`${numberWithCommas(
+                            swapData.timeoutBlockHeight
+                        )} ${this.timelockIndicator()}`}
                     />
                     {isSubmarineSwap && (
                         <KeyValue
