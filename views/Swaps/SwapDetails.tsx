@@ -1,5 +1,6 @@
 import React from 'react';
 import { ScrollView, View, TouchableOpacity } from 'react-native';
+import { LinearProgress } from 'react-native-elements';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
@@ -58,6 +59,7 @@ interface SwapDetailsState {
     failureReason: string;
     error: string | { message?: string } | null;
     loading: boolean;
+    socketConnected: boolean;
     swapTreeToggle: boolean;
 }
 
@@ -74,6 +76,7 @@ export default class SwapDetails extends React.Component<
             failureReason: '',
             error: null,
             loading: false,
+            socketConnected: true,
             swapTreeToggle: false
         };
     }
@@ -100,7 +103,10 @@ export default class SwapDetails extends React.Component<
             ];
 
             if (failedStatus.includes(swapData?.status)) {
-                this.setState({ updates: swapData.status });
+                this.setState({
+                    updates: swapData.status,
+                    socketConnected: false
+                });
                 return;
             }
 
@@ -250,7 +256,8 @@ export default class SwapDetails extends React.Component<
                 if (data.error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
-                        loading: false
+                        loading: false,
+                        socketConnected: false
                     });
                     webSocket.close();
                     return;
@@ -258,7 +265,8 @@ export default class SwapDetails extends React.Component<
 
                 this.setState({
                     error: data.error,
-                    loading: false
+                    loading: false,
+                    socketConnected: false
                 });
                 webSocket.close();
                 return;
@@ -335,7 +343,10 @@ export default class SwapDetails extends React.Component<
                 case 'swap.expired':
                     webSocket.close();
                     data?.failureReason &&
-                        this.setState({ error: data?.failureReason });
+                        this.setState({
+                            error: data?.failureReason,
+                            socketConnected: false
+                        });
                     break;
 
                 default:
@@ -416,7 +427,8 @@ export default class SwapDetails extends React.Component<
                 if (data.error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
-                        loading: false
+                        loading: false,
+                        socketConnected: false
                     });
                     webSocket.close();
                     return;
@@ -424,7 +436,8 @@ export default class SwapDetails extends React.Component<
 
                 this.setState({
                     error: data.error,
-                    loading: false
+                    loading: false,
+                    socketConnected: false
                 });
                 webSocket.close();
                 return;
@@ -471,12 +484,18 @@ export default class SwapDetails extends React.Component<
                 case 'swap.expired':
                     webSocket.close();
                     data?.failureReason &&
-                        this.setState({ error: data?.failureReason });
+                        this.setState({
+                            error: data?.failureReason,
+                            socketConnected: false
+                        });
                     break;
 
                 case 'invoice.settled':
                     console.log('Swap successful');
                     webSocket.close();
+                    this.setState({
+                        socketConnected: false
+                    });
                     break;
 
                 default:
@@ -486,10 +505,12 @@ export default class SwapDetails extends React.Component<
         };
 
         webSocket.onerror = (error) => {
-            this.setState({
-                error: error.message || error || 'An unknown error occurred',
-                loading: false
-            });
+            if (error.message) {
+                this.setState({
+                    error: error.message,
+                    loading: false
+                });
+            }
             console.error('WebSocket error:', error);
         };
 
@@ -716,6 +737,11 @@ export default class SwapDetails extends React.Component<
                 />
                 <ScrollView style={{ marginHorizontal: 20 }}>
                     {this.state.loading && <LoadingIndicator />}
+                    {this.state.socketConnected && (
+                        <View style={{ margin: 15 }}>
+                            <LinearProgress color={themeColor('highlight')} />
+                        </View>
+                    )}
                     {error && (
                         <ErrorMessage
                             message={
