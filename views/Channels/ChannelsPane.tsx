@@ -550,12 +550,17 @@ export default class ChannelsPane extends React.PureComponent<
                 <WalletHeader
                     navigation={navigation}
                     title={
-                        BackendUtils.supportsPendingChannels()
-                            ? localeString('views.Wallet.Wallet.channels')
-                            : `${localeString(
-                                  'views.Wallet.Wallet.channels'
-                              )} (${filteredChannels?.length || 0})`
+                        ChannelsStore?.channelsView === ChannelsView.Channels
+                            ? BackendUtils.supportsPendingChannels()
+                                ? localeString('views.Wallet.Wallet.channels')
+                                : `${localeString(
+                                      'views.Wallet.Wallet.channels'
+                                  )} (${filteredChannels?.length || 0})`
+                            : `${localeString('general.peers')} (${
+                                  ChannelsStore?.peers?.length || 0
+                              })`
                     }
+                    peers={true}
                     channels
                 />
                 {ChannelsStore?.channelsView === ChannelsView.Channels &&
@@ -728,7 +733,10 @@ export default class ChannelsPane extends React.PureComponent<
                                 )}
                             </View>
                             <FlatList
-                                style={{ padding: 20 }}
+                                style={{
+                                    paddingHorizontal: 20,
+                                    paddingBottom: 20
+                                }}
                                 data={ChannelsStore?.peers}
                                 renderItem={({ item }) => {
                                     const peer = new Peer(item);
