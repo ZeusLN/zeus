@@ -115,8 +115,16 @@ export default class SwapDetails extends React.Component<
 
             this.getSwapUpdates(swapData, isSubmarineSwap);
         } else {
-            if (swapData?.status === 'transaction.refunded') {
-                this.setState({ updates: 'transaction.refunded' });
+            const failedStatus = [
+                'invoice.expired',
+                'transaction.refunded',
+                'swap.expired'
+            ];
+            if (failedStatus.includes(swapData?.status)) {
+                this.setState({
+                    updates: swapData.status,
+                    socketConnected: false
+                });
                 return;
             }
 
@@ -744,12 +752,16 @@ export default class SwapDetails extends React.Component<
                         }
                     }}
                     rightComponent={
-                        <Row>
+                        <Row style={{ gap: 10 }}>
                             {this.state.loading && (
-                                <LoadingIndicator size={25} />
+                                <LoadingIndicator size={35} />
                             )}
-                            {updates === 'invoice.set' ||
-                                (isReverseSwap && <QRButton />)}
+                            {!this.state.loading &&
+                                (updates === 'invoice.set' ||
+                                    (swapData.type === 'reverse' &&
+                                        updates === 'swap.created')) && (
+                                    <QRButton />
+                                )}
                         </Row>
                     }
                     navigation={navigation}
