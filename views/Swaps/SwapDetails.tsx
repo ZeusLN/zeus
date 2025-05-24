@@ -21,6 +21,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
+import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -857,14 +858,15 @@ export default class SwapDetails extends React.Component<
                         containerStyle={{
                             paddingVertical: 10
                         }}
-                        onPress={() => {
-                            navigation.navigate('Send', {
-                                destination: isSubmarineSwap
+                        onPress={() =>
+                            handleAnything(
+                                isSubmarineSwap
                                     ? swapData?.bip21
-                                    : swapData?.invoice,
-                                transactionType: isSubmarineSwap && 'On-chain'
-                            });
-                        }}
+                                    : swapData?.invoice
+                            ).then(([route, props]) => {
+                                navigation.navigate(route, props);
+                            })
+                        }
                         secondary
                     />
                 )}
