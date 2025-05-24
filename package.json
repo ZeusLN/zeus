@@ -28,11 +28,10 @@
     "gen-proto": "pbjs -t static-module --keep-case -w es6 --force-long -o proto/lightning.js proto/*.proto proto/*/*.proto && pbts -o proto/lightning.d.ts proto/lightning.js",
     "gradlew": "cd android && ./gradlew",
     "android:clean": "yarn gradlew clean",
-    "fetch-libraries": "bash fetch-libraries.sh",
-    "fix-all": "yarn prettier-write && yarn lint-fix",
-    "lint-fix": "eslint --ext .js,.ts,.tsx \"*.@(js|ts|tsx)\" . --fix"
+    "fetch-libraries": "bash fetch-libraries.sh"
   },
   "dependencies": {
+    "@bitcoinerlab/secp256k1": "1.1.1",
     "@cashu/cashu-ts": "2.4.1",
     "@getalby/sdk": "3.9.0",
     "@keystonehq/bc-ur-registry": "0.7.0",
@@ -54,6 +53,7 @@
     "@types/humanize-duration": "3.27.1",
     "aez": "1.0.1",
     "assert": "1.5.0",
+    "asyncstorage-down": "4.2.0",
     "bech32": "2.0.0",
     "bignumber.js": "9.0.2",
     "bip32": "3.0.1",
@@ -71,7 +71,7 @@
     "dateformat": "5.0.3",
     "dns.js": "1.0.1",
     "domain-browser": "1.2.0",
-    "ecpair": "2.0.1",
+    "ecpair": "3.0.0-rc.0",
     "elliptic": "6.6.1",
     "events": "1.1.1",
     "fast-crc32c": "2.0.0",
@@ -175,7 +175,7 @@
     "@types/sha.js": "2.4.1",
     "@types/uuid": "9.0.7",
     "@typescript-eslint/eslint-plugin": "6.13.1",
-    "@typescript-eslint/parser": "6.13.1",
+    "@typescript-eslint/parser": "8.20.0",
     "babel-jest": "29.7.0",
     "compressing": "1.10.0",
     "concurrently": "9.1.2",
@@ -196,7 +196,7 @@
     "react-native-url-polyfill": "2.0.0",
     "react-test-renderer": "18.2.0",
     "rn-nodeify": "10.3.0",
-    "typescript": "4.8.4"
+    "typescript": "5.7.3"
   },
   "resolutions": {
     "@types/react": "18.3.11",

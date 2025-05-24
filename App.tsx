@@ -29,6 +29,7 @@ import {
     paymentsStore,
     posStore,
     settingsStore,
+    swapStore,
     syncStore,
     transactionsStore,
     unitsStore,
@@ -159,6 +160,11 @@ import AddContact from './views/Settings/AddContact';
 import ContactDetails from './views/ContactDetails';
 
 import PendingHTLCs from './views/PendingHTLCs';
+import Swaps from './views/Swaps/index';
+import SwapDetails from './views/Swaps/SwapDetails';
+import SwapsPane from './views/Swaps/SwapsPane';
+import RefundSwap from './views/Swaps/Refund';
+import SwapSettings from './views/Swaps/Settings';
 
 // POS
 import Order from './views/Order';
@@ -289,6 +295,7 @@ export default class App extends React.PureComponent {
                 PaymentsStore={paymentsStore}
                 PosStore={posStore}
                 SettingsStore={settingsStore}
+                SwapStore={swapStore}
                 SyncStore={syncStore}
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
@@ -312,6 +319,7 @@ export default class App extends React.PureComponent {
                                                 ref={(nav) => {
                                                     if (nav != null) {
                                                         NavigationService.setTopLevelNavigator(
+                                                            // @ts-ignore:next-line
                                                             nav
                                                         );
                                                     }
@@ -1120,6 +1128,26 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             NWCAddressSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Swaps" // @ts-ignore:next-line
+                                                        component={Swaps}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapDetails" // @ts-ignore:next-line
+                                                        component={SwapDetails}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapsPane" // @ts-ignore:next-line
+                                                        component={SwapsPane}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="RefundSwap" // @ts-ignore:next-line
+                                                        component={RefundSwap}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="SwapSettings" // @ts-ignore:next-line
+                                                        component={SwapSettings}
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
