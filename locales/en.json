@@ -153,6 +153,7 @@
     "general.min": "Min",
     "general.max": "Max",
     "general.encrypt": "Encrypt",
+    "general.signature": "Signature",
     "channel.status.good": "Good",
     "channel.status.stable": "Stable",
     "channel.status.unstable": "Unstable",
