@@ -18,6 +18,8 @@ import { themeColor } from './../../utils/ThemeUtils';
 import UTXOsStore from './../../stores/UTXOsStore';
 import storage from '../../storage';
 
+import { reaction } from 'mobx';
+
 interface CoinControlProps {
     navigation: StackNavigationProp<any, any>;
     UTXOsStore: UTXOsStore;
@@ -35,6 +37,8 @@ export default class CoinControl extends React.Component<
     CoinControlProps,
     CoinControlState
 > {
+    reactionDisposer: (() => void) | null = null;
+
     constructor(props: CoinControlProps) {
         super(props);
 
@@ -50,30 +54,49 @@ export default class CoinControl extends React.Component<
         };
     }
 
+    loadUtxoLabels = async () => {
+        const { UTXOsStore } = this.props;
+        const { utxos } = UTXOsStore;
+        const utxoLabels: Record<string, string> = {};
+
+        for (const utxo of utxos) {
+            const key = utxo.getOutpoint;
+            const label = await storage.getItem(key!);
+            if (label) {
+                utxoLabels[key] = label;
+            }
+        }
+
+        this.setState({ utxoLabels });
+    };
+
     async componentDidMount() {
         const { UTXOsStore, navigation } = this.props;
         const { account } = this.state;
         const { getUTXOs, listAccounts } = UTXOsStore;
 
         getUTXOs({ account });
+
         if (BackendUtils.supportsAccounts()) {
             listAccounts();
         }
 
-        navigation.addListener('focus', async () => {
-            const { utxos } = UTXOsStore;
-            const utxoLabels: Record<string, string> = {};
-
-            for (const utxo of utxos) {
-                const key = utxo.getOutpoint;
-                const label = await storage.getItem(key!);
-                if (label) {
-                    utxoLabels[key] = label;
+        this.reactionDisposer = reaction(
+            () => UTXOsStore.utxos.slice(),
+            async (utxos) => {
+                if (utxos.length > 0) {
+                    await this.loadUtxoLabels();
                 }
             }
+        );
 
-            this.setState({ utxoLabels });
+        navigation.addListener('focus', async () => {
+            await this.loadUtxoLabels();
         });
+    }
+
+    componentWillUnmount() {
+        this.reactionDisposer?.();
     }
 
     renderSeparator = () => (
@@ -87,7 +110,7 @@ export default class CoinControl extends React.Component<
 
     render() {
         const { navigation, UTXOsStore } = this.props;
-        const { account } = this.state;
+        const { account, utxoLabels } = this.state;
         const { loading, utxos, getUTXOs, accounts } = UTXOsStore;
 
         return (
@@ -108,6 +131,7 @@ export default class CoinControl extends React.Component<
                     }}
                     navigation={navigation}
                 />
+
                 {BackendUtils.supportsAccounts() && accounts?.length > 0 && (
                     <AccountFilter
                         default={account}
@@ -129,7 +153,7 @@ export default class CoinControl extends React.Component<
                         data={utxos}
                         renderItem={({ item }) => {
                             const key = item.getOutpoint;
-                            const message = this.state.utxoLabels[key!];
+                            const message = utxoLabels[key!];
                             const subTitle = item.address;
 
                             return (
@@ -160,6 +184,7 @@ export default class CoinControl extends React.Component<
                                         >
                                             {subTitle}
                                         </ListItem.Subtitle>
+
                                         {message && (
                                             <ListItem.Subtitle
                                                 right
