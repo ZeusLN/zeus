@@ -22,6 +22,7 @@ import { themeColor } from '../utils/ThemeUtils';
 
 import { utxosStore } from '../stores/Stores';
 import UTXOsStore from '../stores/UTXOsStore';
+import storage from '../storage';
 
 interface UTXOPickerProps {
     title?: string;
@@ -37,6 +38,7 @@ interface UTXOPickerState {
     selectedBalance: number;
     setBalance: number;
     account: string;
+    utxoLabels: Record<string, string>;
 }
 
 const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
@@ -53,12 +55,32 @@ export default class UTXOPicker extends React.Component<
         showUtxoModal: false,
         selectedBalance: 0,
         setBalance: 0,
-        account: 'default'
+        account: 'default',
+        utxoLabels: {} as Record<string, string>
     };
 
-    UNSAFE_componentWillMount() {
-        if (BackendUtils.supportsAccounts())
-            this.props.UTXOsStore.listAccounts();
+    async componentDidMount() {
+        const { UTXOsStore } = this.props;
+        const { account } = this.state;
+        const { getUTXOs, listAccounts } = UTXOsStore;
+
+        getUTXOs({ account });
+        if (BackendUtils.supportsAccounts()) {
+            listAccounts();
+        }
+
+        const { utxos } = UTXOsStore;
+        const utxoLabels: Record<string, string> = {};
+
+        for (const utxo of utxos) {
+            const key = utxo.getOutpoint;
+            const label = await storage.getItem(key!);
+            if (label) {
+                utxoLabels[key] = label;
+            }
+        }
+
+        this.setState({ utxoLabels });
     }
 
     openPicker() {
@@ -229,60 +251,85 @@ export default class UTXOPicker extends React.Component<
                                     {!loading && utxos.length > 0 && (
                                         <FlatList
                                             data={utxos}
-                                            renderItem={({ item }: any) => (
-                                                <ListItem
-                                                    containerStyle={{
-                                                        flex: 1,
-                                                        flexDirection: 'column',
-                                                        borderBottomWidth: 0,
-                                                        backgroundColor:
-                                                            themeColor(
-                                                                'background'
-                                                            )
-                                                    }}
-                                                    onPress={() =>
-                                                        this.toggleItem(item)
-                                                    }
-                                                >
-                                                    <Text
-                                                        style={{
-                                                            alignSelf:
-                                                                'flex-start',
-                                                            color: utxosPicked.includes(
-                                                                item.getOutpoint
-                                                            )
-                                                                ? themeColor(
-                                                                      'highlight'
-                                                                  )
-                                                                : themeColor(
-                                                                      'text'
-                                                                  )
+                                            renderItem={({ item }) => {
+                                                const key = item.getOutpoint;
+                                                const message =
+                                                    this.state.utxoLabels[key!];
+
+                                                return (
+                                                    <ListItem
+                                                        containerStyle={{
+                                                            flex: 1,
+                                                            flexDirection:
+                                                                'column',
+                                                            borderBottomWidth: 0,
+                                                            backgroundColor:
+                                                                themeColor(
+                                                                    'background'
+                                                                )
                                                         }}
+                                                        onPress={() =>
+                                                            this.toggleItem(
+                                                                item
+                                                            )
+                                                        }
                                                     >
-                                                        {item.getOutpoint}
-                                                    </Text>
-                                                    <View
-                                                        style={{
-                                                            alignSelf:
-                                                                'flex-start'
-                                                        }}
-                                                    >
-                                                        <Amount
-                                                            sats={
-                                                                item.getAmount
-                                                            }
-                                                            sensitive={true}
-                                                            color={
-                                                                utxosPicked.includes(
+                                                        <Text
+                                                            style={{
+                                                                alignSelf:
+                                                                    'flex-start',
+                                                                color: utxosPicked.includes(
                                                                     item.getOutpoint
                                                                 )
-                                                                    ? 'highlight'
-                                                                    : 'secondaryText'
-                                                            }
-                                                        />
-                                                    </View>
-                                                </ListItem>
-                                            )}
+                                                                    ? themeColor(
+                                                                          'highlight'
+                                                                      )
+                                                                    : themeColor(
+                                                                          'text'
+                                                                      )
+                                                            }}
+                                                        >
+                                                            {key}
+                                                        </Text>
+                                                        <View
+                                                            style={{
+                                                                alignSelf:
+                                                                    'flex-start'
+                                                            }}
+                                                        >
+                                                            <Amount
+                                                                sats={
+                                                                    item.getAmount
+                                                                }
+                                                                sensitive={true}
+                                                                color={
+                                                                    utxosPicked.includes(
+                                                                        item.getOutpoint
+                                                                    )
+                                                                        ? 'highlight'
+                                                                        : 'secondaryText'
+                                                                }
+                                                            />
+                                                        </View>
+                                                        {message && (
+                                                            <Text
+                                                                style={{
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontSize: 13,
+                                                                    alignSelf:
+                                                                        'flex-start'
+                                                                }}
+                                                            >
+                                                                {`${localeString(
+                                                                    'general.label'
+                                                                )}: ${message}`}
+                                                            </Text>
+                                                        )}
+                                                    </ListItem>
+                                                );
+                                            }}
                                             keyExtractor={(
                                                 item: any,
                                                 index: number
