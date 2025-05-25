@@ -12,6 +12,12 @@ export default class WithdrawalRequest extends BaseModel {
     public used: boolean;
     public offer_description: string;
     public invreq_amount_msat: string;
+    public signature: string;
+    public valid: boolean;
+    public invreq_chain: string;
+    public invreq_payer_id: string;
+    public invreq_metadata: string;
+    public type: string;
 
     @computed public get model(): string {
         return localeString('general.withdrawalRequest');
