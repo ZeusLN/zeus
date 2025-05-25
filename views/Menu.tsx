@@ -110,7 +110,7 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
 
         const OlympusButton = () => (
             <TouchableOpacity
-                onPress={() => UrlUtils.goToUrl('https://olympusln.com')}
+                onPress={() => UrlUtils.goToUrl('https://zeuslsp.com')}
                 accessibilityLabel={localeString('views.Settings.olympus')}
             >
                 <Olympus fill={themeColor('text')} />
