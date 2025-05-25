@@ -155,6 +155,7 @@
     "general.encrypt": "Encrypt",
     "general.qr": "QR",
     "general.text": "Text",
+    "general.signature": "Signature",
     "channel.status.good": "Good",
     "channel.status.stable": "Stable",
     "channel.status.unstable": "Unstable",
