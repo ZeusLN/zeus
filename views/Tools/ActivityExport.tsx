@@ -524,7 +524,7 @@ export default class ActivityExport extends React.Component<
                                 onPress={() => this.openModal('invoice')}
                             >
                                 <Icon
-                                    name="download"
+                                    name="upload"
                                     size={24}
                                     color={themeColor('text')}
                                 />
@@ -548,7 +548,7 @@ export default class ActivityExport extends React.Component<
                                 onPress={() => this.openModal('payment')}
                             >
                                 <Icon
-                                    name="download"
+                                    name="upload"
                                     size={24}
                                     color={themeColor('text')}
                                 />
@@ -572,7 +572,7 @@ export default class ActivityExport extends React.Component<
                                 onPress={() => this.openModal('transaction')}
                             >
                                 <Icon
-                                    name="download"
+                                    name="upload"
                                     size={24}
                                     color={themeColor('text')}
                                 />
