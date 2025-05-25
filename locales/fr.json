@@ -753,7 +753,7 @@
     "views.Settings.confirmPin": "Confirmez votre code PIN",
     "views.Settings.newDuressPin": "Créez votre code PIN de détresse",
     "views.Settings.confirmDuressPin": "Confirmez votre code PIN de détresse",
-    "views.Settings.olympus": "Aller à olympusln.com",
+    "views.Settings.olympus": "Go to ZEUS LSP website",
     "views.Settings.SignMessage.title": "Signer ou vérifier un message",
     "views.Settings.SignMessage.sign": "Signer",
     "views.Settings.SignMessage.verify": "Vérifier",
