@@ -249,6 +249,7 @@ import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
+import WithdrawalRequestRedemption from './views/WithdrawalRequestRedemption';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1169,6 +1170,12 @@ export default class App extends React.PureComponent {
                                                         name="WithdrawalRequestView" // @ts-ignore:next-line
                                                         component={
                                                             WithdrawalRequestView
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WithdrawalRequestRedemption" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalRequestRedemption
                                                         }
                                                     />
                                                 </Stack.Navigator>

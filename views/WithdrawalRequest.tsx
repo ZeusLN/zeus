@@ -21,7 +21,10 @@ import WithdrawalRequest from '../models/WithdrawalRequest';
 
 interface WithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'WithdrawalView', { withdrawalRequest: WithdrawalRequest }>;
+    route: Route<
+        'WithdrawalRequestView',
+        { withdrawalRequest: WithdrawalRequest }
+    >;
 }
 
 interface WithdrawalRequestState {
