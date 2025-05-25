@@ -103,6 +103,62 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
     private _unsubscribe?: () => void;
 
+    checkIsValid = () => {
+        const { reverse, invoice, inputSats, outputSats } = this.state;
+        const { SwapStore } = this.props;
+
+        if (SwapStore.loading || !SwapStore.subInfo || !SwapStore.reverseInfo) {
+            if (this.state.isValid) {
+                this.setState({ isValid: false });
+            }
+            return;
+        }
+
+        const { subInfo, reverseInfo } = SwapStore;
+        const info: any = reverse ? reverseInfo : subInfo;
+
+        const minThreshold = info?.limits?.minimal || 0;
+        const maxThreshold = info?.limits?.maximal || 0;
+
+        const minSendAmount = this.calculateLimit(minThreshold);
+        const maxSendAmount = this.calculateLimit(maxThreshold);
+
+        const currentInputSatsBN = new BigNumber(inputSats || 0);
+        const currentOutputSatsBN = new BigNumber(outputSats || 0);
+
+        let invoiceAddressValid = false;
+        if (invoice && invoice.trim() !== '') {
+            if (reverse) {
+                invoiceAddressValid = AddressUtils.isValidBitcoinAddress(
+                    invoice,
+                    true
+                );
+            } else {
+                invoiceAddressValid =
+                    AddressUtils.isValidLightningPaymentRequest(invoice);
+            }
+        }
+
+        const inputGreaterThanZero = currentInputSatsBN.isGreaterThan(0);
+        const outputGreaterThanZero = currentOutputSatsBN.isGreaterThan(0);
+
+        const inputAmountValidAndWithinLimits =
+            inputGreaterThanZero &&
+            currentInputSatsBN.isGreaterThanOrEqualTo(minSendAmount) &&
+            (maxSendAmount === 0
+                ? true
+                : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
+
+        const newIsValid =
+            invoiceAddressValid &&
+            inputAmountValidAndWithinLimits &&
+            outputGreaterThanZero;
+
+        if (this.state.isValid !== newIsValid) {
+            this.setState({ isValid: newIsValid });
+        }
+    };
+
     async UNSAFE_componentWillMount() {
         this.props.SwapStore.getSwapFees();
     }
@@ -222,35 +278,36 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         networkFee
                     );
 
-                    const isValidInvoice = initialInvoice
-                        ? initialReverse
-                            ? AddressUtils.isValidBitcoinAddress(
-                                  initialInvoice,
-                                  true
-                              )
-                            : AddressUtils.isValidLightningPaymentRequest(
-                                  initialInvoice
-                              )
-                        : false;
-
-                    this.setState({
-                        invoice: initialInvoice,
-                        reverse: initialReverse,
-                        outputSats: newOutputSats,
-                        outputFiat:
-                            units === 'fiat'
-                                ? newOutputFiat
-                                : this.state.outputFiat,
-                        inputSats: newInputSats,
-                        inputFiat:
-                            units === 'fiat'
-                                ? newInputFiat
-                                : this.state.inputFiat,
-                        serviceFeeSats: newServiceFeeSats,
-                        isValid: isValidInvoice
-                    });
+                    this.setState(
+                        {
+                            invoice: initialInvoice,
+                            reverse: initialReverse,
+                            outputSats: newOutputSats,
+                            outputFiat:
+                                units === 'fiat'
+                                    ? newOutputFiat
+                                    : this.state.outputFiat,
+                            inputSats: newInputSats,
+                            inputFiat:
+                                units === 'fiat'
+                                    ? newInputFiat
+                                    : this.state.inputFiat,
+                            serviceFeeSats: newServiceFeeSats
+                        },
+                        () => this.checkIsValid()
+                    );
                 });
             }
+        }
+        // Call checkIsValid whenever relevant state that it depends on might have changed.
+        // This ensures `isValid` is kept up-to-date.
+        if (
+            prevState.inputSats !== this.state.inputSats ||
+            prevState.outputSats !== this.state.outputSats ||
+            prevState.invoice !== this.state.invoice ||
+            prevState.reverse !== this.state.reverse
+        ) {
+            this.checkIsValid();
         }
     }
 
@@ -259,16 +316,19 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     }
 
     resetFields = () => {
-        this.setState({
-            inputSats: 0,
-            outputSats: 0,
-            isValid: false,
-            inputFiat: '',
-            outputFiat: '',
-            invoice: '',
-            error: '',
-            paramsProcessed: false
-        });
+        this.setState(
+            {
+                inputSats: 0,
+                outputSats: 0,
+                isValid: false,
+                inputFiat: '',
+                outputFiat: '',
+                invoice: '',
+                error: '',
+                paramsProcessed: false
+            },
+            () => this.checkIsValid()
+        );
     };
 
     bigCeil = (big: BigNumber): BigNumber => {
@@ -553,18 +613,23 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     prefix={
                                                         <TouchableOpacity
                                                             onPress={() => {
-                                                                this.setState({
-                                                                    reverse:
-                                                                        !reverse,
-                                                                    inputSats: 0,
-                                                                    outputSats: 0,
-                                                                    inputFiat:
-                                                                        '',
-                                                                    outputFiat:
-                                                                        '',
-                                                                    serviceFeeSats: 0,
-                                                                    invoice: ''
-                                                                });
+                                                                this.setState(
+                                                                    {
+                                                                        reverse:
+                                                                            !reverse,
+                                                                        inputSats: 0,
+                                                                        outputSats: 0,
+                                                                        inputFiat:
+                                                                            '',
+                                                                        outputFiat:
+                                                                            '',
+                                                                        serviceFeeSats: 0,
+                                                                        invoice:
+                                                                            ''
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
+                                                                );
                                                             }}
                                                             style={{
                                                                 marginLeft: -10
@@ -649,23 +714,27 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                       )
                                                                 : '';
 
-                                                        this.setState({
-                                                            serviceFeeSats:
-                                                                this.calculateServiceFeeOnSend(
-                                                                    satAmountNew,
-                                                                    serviceFeePct,
-                                                                    networkFee
-                                                                ),
-                                                            inputSats:
-                                                                Number(
-                                                                    sanitizedSatAmount
-                                                                ),
-                                                            outputSats,
-                                                            inputFiat:
-                                                                amount &&
-                                                                amount.toString(),
-                                                            outputFiat
-                                                        });
+                                                        this.setState(
+                                                            {
+                                                                serviceFeeSats:
+                                                                    this.calculateServiceFeeOnSend(
+                                                                        satAmountNew,
+                                                                        serviceFeePct,
+                                                                        networkFee
+                                                                    ),
+                                                                inputSats:
+                                                                    Number(
+                                                                        sanitizedSatAmount
+                                                                    ),
+                                                                outputSats,
+                                                                inputFiat:
+                                                                    amount &&
+                                                                    amount.toString(),
+                                                                outputFiat
+                                                            },
+                                                            () =>
+                                                                this.checkIsValid()
+                                                        );
                                                     }}
                                                     {...(units === 'fiat'
                                                         ? { amount: inputFiat }
@@ -750,7 +819,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             serviceFeeSats: 0,
                                                                             invoice:
                                                                                 ''
-                                                                        }
+                                                                        },
+                                                                        () =>
+                                                                            this.checkIsValid()
                                                                     );
                                                                 }}
                                                                 style={{
@@ -870,22 +941,26 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                               100
                                                                           );
 
-                                                            this.setState({
-                                                                serviceFeeSats:
-                                                                    this.bigCeil(
-                                                                        serviceFeeSats
-                                                                    ),
-                                                                inputSats:
-                                                                    input,
-                                                                outputSats:
-                                                                    Number(
-                                                                        sanitizedSatAmount
-                                                                    ),
-                                                                inputFiat,
-                                                                outputFiat:
-                                                                    amount &&
-                                                                    amount.toString()
-                                                            });
+                                                            this.setState(
+                                                                {
+                                                                    serviceFeeSats:
+                                                                        this.bigCeil(
+                                                                            serviceFeeSats
+                                                                        ),
+                                                                    inputSats:
+                                                                        input,
+                                                                    outputSats:
+                                                                        Number(
+                                                                            sanitizedSatAmount
+                                                                        ),
+                                                                    inputFiat,
+                                                                    outputFiat:
+                                                                        amount &&
+                                                                        amount.toString()
+                                                                },
+                                                                () =>
+                                                                    this.checkIsValid()
+                                                            );
                                                         }}
                                                         {...(units === 'fiat'
                                                             ? {
@@ -1192,27 +1267,14 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                 <View>
                                     <TextInput
                                         onChangeText={(text: string) => {
-                                            let isValid;
-                                            if (reverse) {
-                                                isValid = text
-                                                    ? AddressUtils.isValidBitcoinAddress(
-                                                          text,
-                                                          true
-                                                      )
-                                                    : false;
-                                            } else {
-                                                isValid = text
-                                                    ? AddressUtils.isValidLightningPaymentRequest(
-                                                          text
-                                                      )
-                                                    : false;
-                                            }
-                                            this.setState({
-                                                invoice: text,
-                                                error: '',
-                                                apiUpdates: '',
-                                                isValid
-                                            });
+                                            this.setState(
+                                                {
+                                                    invoice: text,
+                                                    error: '',
+                                                    apiUpdates: ''
+                                                },
+                                                () => this.checkIsValid()
+                                            );
                                         }}
                                         placeholder={
                                             fetchingInvoice
@@ -1278,12 +1340,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         if (
                                                             InvoicesStore.onChainAddress
                                                         ) {
-                                                            this.setState({
-                                                                invoice:
-                                                                    InvoicesStore.onChainAddress,
-                                                                error: '',
-                                                                isValid: true
-                                                            });
+                                                            this.setState(
+                                                                {
+                                                                    invoice:
+                                                                        InvoicesStore.onChainAddress,
+                                                                    error: ''
+                                                                },
+                                                                () =>
+                                                                    this.checkIsValid()
+                                                            );
                                                         } else {
                                                             this.setState({
                                                                 error: localeString(
@@ -1297,12 +1362,15 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         if (
                                                             InvoicesStore.payment_request
                                                         ) {
-                                                            this.setState({
-                                                                invoice:
-                                                                    InvoicesStore.payment_request,
-                                                                isValid: true,
-                                                                error: ''
-                                                            });
+                                                            this.setState(
+                                                                {
+                                                                    invoice:
+                                                                        InvoicesStore.payment_request,
+                                                                    error: ''
+                                                                },
+                                                                () =>
+                                                                    this.checkIsValid()
+                                                            );
                                                         } else {
                                                             this.setState({
                                                                 error: localeString(
