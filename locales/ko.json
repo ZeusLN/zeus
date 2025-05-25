@@ -753,7 +753,7 @@
     "views.Settings.confirmPin": "PIN 확인",
     "views.Settings.newDuressPin": "비상 PIN 생성",
     "views.Settings.confirmDuressPin": "비상 PIN 확인",
-    "views.Settings.olympus": "olympusln.com 사이트로 이동",
+    "views.Settings.olympus": "Go to ZEUS LSP website",
     "views.Settings.SignMessage.title": "메시지 서명 또는 인증",
     "views.Settings.SignMessage.sign": "서명",
     "views.Settings.SignMessage.verify": "인증",
