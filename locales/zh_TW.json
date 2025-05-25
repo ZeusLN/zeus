@@ -1256,7 +1256,7 @@
     "views.Settings.LightningAddress.switchToNWC": "Switch to NWC Lightning address",
     "views.Settings.LightningAddress.switchToZaplocker": "Switch to Zaplocker Lightning address",
     "views.Settings.LightningAddress.nostrKeys.changeWarning": "Warning: changing your Nostr keys will delete your pending payments. Please redeem your pending payments before submitting new keys.",
-    "views.Settings.LightningAddress.explainer1": "你必須先和 ZEUS LSP 建立一個有可流入資金的管道才能夠使用閃電網位址。",
+    "views.Settings.LightningAddress.explainer1": "你必須先和 ZEUS LSP 建立一個有可流入資金的管道，才能夠使用閃電網位址。",
     "views.Settings.LightningAddress.explainer2": "The easiest way to do so is to purchase a 0-conf channel. Just generate an invoice and pay yourself from another lightning wallet.",
     "views.Settings.LightningAddress.explainer3": "購買標準管道後，需要再等待幾次主鏈的區塊確認，才能夠開始使用。",
     "views.Settings.LightningAddress.get0ConfChan": "Get 0-conf channel",
