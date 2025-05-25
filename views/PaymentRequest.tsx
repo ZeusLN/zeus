@@ -46,6 +46,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import QR from '../assets/images/SVG/QR.svg';
+import SwapIcon from '../assets/images/SVG/Swap.svg';
 
 const zaplockerDestinations = [
     // OLYMPUS
@@ -431,7 +432,34 @@ export default class PaymentRequest extends React.Component<
                     })
                 }
             >
-                <QR fill={themeColor('text')} style={{ alignSelf: 'center' }} />
+                <QR fill={themeColor('text')} />
+            </TouchableOpacity>
+        );
+
+        const SwapButton = () => (
+            <TouchableOpacity
+                onPress={() => {
+                    const amountToSwap = isNoAmountInvoice
+                        ? this.state.satAmount
+                        : requestAmount;
+                    if (paymentRequest && amountToSwap) {
+                        navigation.navigate('Swaps', {
+                            initialInvoice: paymentRequest,
+                            initialAmountSats: amountToSwap.toString(),
+                            initialReverse: false // OnChain -> LN for paying a LN invoice
+                        });
+                    }
+                }}
+                disabled={
+                    !paymentRequest || (!isNoAmountInvoice && !requestAmount)
+                }
+            >
+                <SwapIcon
+                    fill={themeColor('text')}
+                    width="36"
+                    height="26"
+                    style={{ marginRight: 10 }}
+                />
             </TouchableOpacity>
         );
 
@@ -449,7 +477,12 @@ export default class PaymentRequest extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
-                    rightComponent={<QRButton />}
+                    rightComponent={
+                        <Row>
+                            <SwapButton />
+                            <QRButton />
+                        </Row>
+                    }
                     navigation={navigation}
                 />
 
