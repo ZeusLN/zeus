@@ -753,7 +753,7 @@
     "views.Settings.confirmPin": "Vahvista PIN-koodisi",
     "views.Settings.newDuressPin": "Luo Duress PIN-koodisi",
     "views.Settings.confirmDuressPin": "Vahvista Duress PIN-koodisi",
-    "views.Settings.olympus": "Mene osoitteeseen olympusln.com",
+    "views.Settings.olympus": "Go to ZEUS LSP website",
     "views.Settings.SignMessage.title": "Allekirjoita tai vahvista viesti",
     "views.Settings.SignMessage.sign": "Allekirjoita",
     "views.Settings.SignMessage.verify": "Vahvista",
