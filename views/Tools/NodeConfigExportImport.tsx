@@ -83,10 +83,6 @@ export default class NodeConfigExportImport extends React.Component<
         importPasswordHidden: true
     };
 
-    private get isLight() {
-        return isLightTheme();
-    }
-
     private resetExportState = () => {
         this.setState({
             activeModal: 'none',
@@ -118,7 +114,7 @@ export default class NodeConfigExportImport extends React.Component<
                 <View style={styles.modalOverlay}>
                     <View
                         style={{
-                            backgroundColor: this.isLight
+                            backgroundColor: isLightTheme()
                                 ? '#ffffff'
                                 : themeColor('secondary'),
                             borderRadius: 24,
@@ -182,7 +178,7 @@ export default class NodeConfigExportImport extends React.Component<
                             styles.modalContent,
                             {
                                 maxHeight: '80%',
-                                backgroundColor: this.isLight
+                                backgroundColor: isLightTheme()
                                     ? '#ffffff'
                                     : themeColor('background')
                             }
@@ -379,7 +375,7 @@ export default class NodeConfigExportImport extends React.Component<
                         style={[
                             styles.modalContent,
                             {
-                                backgroundColor: this.isLight
+                                backgroundColor: isLightTheme()
                                     ? '#ffffff'
                                     : themeColor('background')
                             }
@@ -487,7 +483,7 @@ export default class NodeConfigExportImport extends React.Component<
             );
 
             const timestamp = moment().format('YYYYMMDD-HHmmss');
-            const filename = `zeus-node-configs-${timestamp}.backup`;
+            const filename = `${timestamp}.zeus-wallet-config-backup`;
 
             await saveNodeConfigExportFile(filename, exportFileContent);
             this.setState({ isLoading: false });
@@ -584,7 +580,7 @@ export default class NodeConfigExportImport extends React.Component<
                         style={[
                             styles.modalContent,
                             {
-                                backgroundColor: this.isLight
+                                backgroundColor: isLightTheme()
                                     ? '#ffffff'
                                     : themeColor('background')
                             }
