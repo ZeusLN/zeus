@@ -738,6 +738,16 @@ const handleAnything = async (
                 decoded
             }
         ];
+    } else if (
+        BackendUtils.supportsWithdrawalRequests() &&
+        AddressUtils.isValidWithdrawalRequest(value)
+    ) {
+        return [
+            'WithdrawalRequestRedemption',
+            {
+                bolt12: value
+            }
+        ];
     } else {
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));
