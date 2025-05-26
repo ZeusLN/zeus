@@ -674,8 +674,23 @@ export default class WalletHeader extends React.Component<
                 {this.props.peers && (
                     <View style={{ paddingTop: 10, paddingHorizontal: 30 }}>
                         <ToggleButton
-                            ChannelsStore={this.props.ChannelsStore}
-                            onToggle={(view: 'channels' | 'peers') => {
+                            options={[
+                                {
+                                    key: 'channels',
+                                    label: localeString(
+                                        'views.Wallet.Wallet.channels'
+                                    )
+                                },
+                                {
+                                    key: 'peers',
+                                    label: localeString('general.peers')
+                                }
+                            ]}
+                            value={
+                                this.props.ChannelsStore?.channelsView ||
+                                'channels'
+                            }
+                            onToggle={(view: string) => {
                                 this.props.ChannelsStore?.setChannelsView(
                                     view as ChannelsView
                                 );

@@ -11,7 +11,6 @@ import { inject, observer } from 'mobx-react';
 import NfcManager, { NfcEvents, TagEvent } from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Tab } from 'react-native-elements';
 
 import AmountInput from '../components/AmountInput';
 import Text from '../components/Text';
@@ -50,6 +49,7 @@ import { AdditionalChannel } from '../models/OpenChannelRequest';
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
+import ToggleButton from '../components/ToggleButton';
 
 interface OpenChannelProps {
     exitSetup: any;
@@ -367,57 +367,41 @@ export default class OpenChannel extends React.Component<
                     keyboardShouldPersistTaps="handled"
                     ref={this.scrollViewRef}
                 >
-                    <Tab
-                        value={connectPeerOnly ? 1 : 0}
-                        onChange={(e) => {
-                            // Clear error messages when switching tabs to prevent them from persisting
-                            ChannelsStore.errorMsgPeer = null;
-                            ChannelsStore.errorMsgChannel = null;
-
-                            this.setState({
-                                connectPeerOnly: e === 0 ? false : true
-                            });
-                        }}
-                        indicatorStyle={{
-                            backgroundColor: themeColor('text'),
-                            height: 3
-                        }}
-                        variant="primary"
-                    >
-                        <Tab.Item
-                            title={
-                                additionalChannels.length > 0
-                                    ? localeString(
-                                          'views.OpenChannel.openChannels'
-                                      )
-                                    : localeString(
-                                          'views.OpenChannel.openChannel'
-                                      )
+                    <View style={{ paddingTop: 15 }}>
+                        <ToggleButton
+                            options={[
+                                {
+                                    key: 'channels',
+                                    label:
+                                        this.state.additionalChannels.length > 0
+                                            ? localeString(
+                                                  'views.OpenChannel.openChannels'
+                                              )
+                                            : localeString(
+                                                  'views.OpenChannel.openChannel'
+                                              )
+                                },
+                                {
+                                    key: 'peers',
+                                    label: localeString(
+                                        'views.OpenChannel.connectPeer'
+                                    )
+                                }
+                            ]}
+                            value={
+                                this.state.connectPeerOnly
+                                    ? 'peers'
+                                    : 'channels'
                             }
-                            titleStyle={{
-                                ...styles.tabTitleStyle,
-                                color: themeColor('text')
+                            onToggle={(key) => {
+                                this.props.ChannelsStore.errorMsgPeer = null;
+                                this.props.ChannelsStore.errorMsgChannel = null;
+                                this.setState({
+                                    connectPeerOnly: key === 'peers'
+                                });
                             }}
-                            containerStyle={{
-                                backgroundColor: themeColor('secondary')
-                            }}
-                            disabled={loading}
                         />
-                        <Tab.Item
-                            title={localeString(
-                                'views.OpenChannel.connectPeer'
-                            )}
-                            titleStyle={{
-                                ...styles.tabTitleStyle,
-                                color: themeColor('text')
-                            }}
-                            containerStyle={{
-                                backgroundColor: themeColor('secondary')
-                            }}
-                            disabled={loading}
-                        />
-                    </Tab>
-
+                    </View>
                     {!!suggestImport && (
                         <View style={styles.clipboardImport}>
                             <Text style={styles.textWhite}>
