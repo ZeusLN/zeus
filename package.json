@@ -53,7 +53,6 @@
     "@types/humanize-duration": "3.27.1",
     "aez": "1.0.1",
     "assert": "1.5.0",
-    "asyncstorage-down": "4.2.0",
     "bech32": "2.0.0",
     "bignumber.js": "9.0.2",
     "bip32": "3.0.1",
