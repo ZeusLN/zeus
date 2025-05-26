@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RouteProp } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';
 
 import Amount from '../../components/Amount';
@@ -43,8 +44,9 @@ import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import OrderList from '../../assets/images/SVG/order-list.svg';
 import { Icon } from 'react-native-elements';
 
-interface SwapPaneProps {
-    navigation: StackNavigationProp<any, any>;
+interface SwapProps {
+    navigation: StackNavigationProp<any, 'Swaps'>;
+    route: RouteProp<any, 'Swaps'>;
     SwapStore: SwapStore;
     UnitsStore: UnitsStore;
     InvoicesStore: InvoicesStore;
@@ -53,7 +55,7 @@ interface SwapPaneProps {
     FeeStore: FeeStore;
 }
 
-interface SwapPaneState {
+interface SwapState {
     reverse: boolean;
     serviceFeeSats: number | BigNumber;
     inputSats: number | BigNumber;
@@ -68,6 +70,7 @@ interface SwapPaneState {
     fetchingInvoice: boolean;
     fee: string;
     feeSettingToggle: boolean;
+    paramsProcessed?: boolean;
 }
 
 @inject(
@@ -79,10 +82,7 @@ interface SwapPaneState {
     'FeeStore'
 )
 @observer
-export default class SwapPane extends React.PureComponent<
-    SwapPaneProps,
-    SwapPaneState
-> {
+export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     state = {
         reverse: false,
         serviceFeeSats: 0,
@@ -97,10 +97,67 @@ export default class SwapPane extends React.PureComponent<
         response: null,
         fetchingInvoice: false,
         fee: '',
-        feeSettingToggle: false
+        feeSettingToggle: false,
+        paramsProcessed: false
     };
 
     private _unsubscribe?: () => void;
+
+    checkIsValid = () => {
+        const { reverse, invoice, inputSats, outputSats } = this.state;
+        const { SwapStore } = this.props;
+
+        if (SwapStore.loading || !SwapStore.subInfo || !SwapStore.reverseInfo) {
+            if (this.state.isValid) {
+                this.setState({ isValid: false });
+            }
+            return;
+        }
+
+        const { subInfo, reverseInfo } = SwapStore;
+        const info: any = reverse ? reverseInfo : subInfo;
+
+        const minThreshold = info?.limits?.minimal || 0;
+        const maxThreshold = info?.limits?.maximal || 0;
+
+        const minSendAmount = this.calculateLimit(minThreshold);
+        const maxSendAmount = this.calculateLimit(maxThreshold);
+
+        const currentInputSatsBN = new BigNumber(inputSats || 0);
+        const currentOutputSatsBN = new BigNumber(outputSats || 0);
+
+        let invoiceAddressValid = false;
+        if (invoice && invoice.trim() !== '') {
+            if (reverse) {
+                invoiceAddressValid = AddressUtils.isValidBitcoinAddress(
+                    invoice,
+                    true
+                );
+            } else {
+                invoiceAddressValid =
+                    AddressUtils.isValidLightningPaymentRequest(invoice);
+            }
+        }
+
+        const inputGreaterThanZero = currentInputSatsBN.isGreaterThan(0);
+        const outputGreaterThanZero = currentOutputSatsBN.isGreaterThan(0);
+
+        const inputAmountValidAndWithinLimits =
+            inputGreaterThanZero &&
+            currentInputSatsBN.isGreaterThanOrEqualTo(minSendAmount) &&
+            (maxSendAmount === 0
+                ? true
+                : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
+
+        const newIsValid =
+            invoiceAddressValid &&
+            inputAmountValidAndWithinLimits &&
+            outputGreaterThanZero;
+
+        if (this.state.isValid !== newIsValid) {
+            this.setState({ isValid: newIsValid });
+        }
+    };
 
     async UNSAFE_componentWillMount() {
         this.props.SwapStore.getSwapFees();
@@ -114,15 +171,23 @@ export default class SwapPane extends React.PureComponent<
     }
 
     async componentDidUpdate(
-        _prevProps: Readonly<SwapPaneProps>,
-        prevState: Readonly<SwapPaneState>
+        _: Readonly<SwapProps>,
+        prevState: Readonly<SwapState>
     ): Promise<void> {
-        const { FeeStore, SettingsStore } = this.props;
+        const {
+            FeeStore,
+            SettingsStore,
+            SwapStore,
+            route,
+            UnitsStore,
+            FiatStore
+        } = this.props;
         const { settings } = SettingsStore;
 
+        // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
             try {
-                const fees: {
+                const feesObj: {
                     economyFee: number;
                     fastestFee: number;
                     halfHourFee: number;
@@ -134,12 +199,115 @@ export default class SwapPane extends React.PureComponent<
                     settings?.payments?.preferredMempoolRate || 'fastestFee';
 
                 const feeRate =
-                    fees[preferredMempoolRate as keyof typeof fees] ??
-                    fees.fastestFee;
+                    feesObj[preferredMempoolRate as keyof typeof feesObj] ??
+                    feesObj.fastestFee;
                 this.setState({ fee: feeRate.toString() });
             } catch (error) {
                 console.error('Failed to fetch mempool fees:', error);
             }
+        }
+
+        // Logic for handling route params
+        if (!SwapStore.loading && !this.state.paramsProcessed && route.params) {
+            const { initialInvoice, initialAmountSats, initialReverse } =
+                route.params;
+
+            if (
+                initialInvoice !== undefined &&
+                initialAmountSats !== undefined &&
+                initialReverse !== undefined
+            ) {
+                this.setState({ paramsProcessed: true }, async () => {
+                    // Use callback to ensure paramsProcessed is set before further calcs
+                    const { units } = UnitsStore;
+                    const { fiatRates } = FiatStore;
+                    const { fiat } = settings;
+                    const fiatEntry =
+                        fiat && fiatRates
+                            ? fiatRates.filter(
+                                  (entry: any) => entry.code === fiat
+                              )[0]
+                            : null;
+                    const rate =
+                        fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+                    const info: any = initialReverse
+                        ? SwapStore.reverseInfo
+                        : SwapStore.subInfo;
+                    const serviceFeePct = info?.fees?.percentage || 0;
+                    const networkFeeBigNum = initialReverse
+                        ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+                              info?.fees?.minerFees?.lockup || 0
+                          )
+                        : new BigNumber(info?.fees?.minerFees || 0);
+                    const networkFee = networkFeeBigNum.toNumber();
+
+                    const newOutputSats = new BigNumber(initialAmountSats || 0);
+                    let newOutputFiat = '';
+                    if (
+                        units === 'fiat' &&
+                        rate > 0 &&
+                        newOutputSats.isGreaterThan(0)
+                    ) {
+                        newOutputFiat = newOutputSats
+                            .div(SATS_PER_BTC)
+                            .times(rate)
+                            .toFixed(2);
+                    }
+
+                    const newInputSats = this.calculateSendAmount(
+                        newOutputSats,
+                        serviceFeePct,
+                        networkFee
+                    );
+                    let newInputFiat = '';
+                    if (
+                        units === 'fiat' &&
+                        rate > 0 &&
+                        newInputSats.isGreaterThan(0)
+                    ) {
+                        newInputFiat = newInputSats
+                            .div(SATS_PER_BTC)
+                            .times(rate)
+                            .toFixed(2);
+                    }
+
+                    const newServiceFeeSats = this.calculateServiceFeeOnSend(
+                        newInputSats,
+                        serviceFeePct,
+                        networkFee
+                    );
+
+                    this.setState(
+                        {
+                            invoice: initialInvoice,
+                            reverse: initialReverse,
+                            outputSats: newOutputSats,
+                            outputFiat:
+                                units === 'fiat'
+                                    ? newOutputFiat
+                                    : this.state.outputFiat,
+                            inputSats: newInputSats,
+                            inputFiat:
+                                units === 'fiat'
+                                    ? newInputFiat
+                                    : this.state.inputFiat,
+                            serviceFeeSats: newServiceFeeSats
+                        },
+                        () => this.checkIsValid()
+                    );
+                });
+            }
+        }
+        // Call checkIsValid whenever relevant state that it depends on might have changed.
+        // This ensures `isValid` is kept up-to-date.
+        if (
+            prevState.inputSats !== this.state.inputSats ||
+            prevState.outputSats !== this.state.outputSats ||
+            prevState.invoice !== this.state.invoice ||
+            prevState.reverse !== this.state.reverse
+        ) {
+            this.checkIsValid();
         }
     }
 
@@ -148,15 +316,130 @@ export default class SwapPane extends React.PureComponent<
     }
 
     resetFields = () => {
-        this.setState({
-            inputSats: 0,
-            outputSats: 0,
-            isValid: false,
-            inputFiat: '',
-            outputFiat: '',
-            invoice: '',
-            error: ''
-        });
+        this.setState(
+            {
+                inputSats: 0,
+                outputSats: 0,
+                isValid: false,
+                inputFiat: '',
+                outputFiat: '',
+                invoice: '',
+                error: '',
+                paramsProcessed: false
+            },
+            () => this.checkIsValid()
+        );
+    };
+
+    bigCeil = (big: BigNumber): BigNumber => {
+        return big.integerValue(BigNumber.ROUND_CEIL);
+    };
+
+    bigFloor = (big: BigNumber): BigNumber => {
+        return big.integerValue(BigNumber.ROUND_FLOOR);
+    };
+
+    calculateReceiveAmount = (
+        sendAmount: BigNumber,
+        serviceFee: number,
+        minerFee: number
+    ): BigNumber => {
+        const receiveAmount = this.state.reverse
+            ? sendAmount
+                  .minus(this.bigCeil(sendAmount.times(serviceFee).div(100)))
+                  .minus(minerFee)
+            : sendAmount
+                  .minus(minerFee)
+                  .div(
+                      new BigNumber(1).plus(new BigNumber(serviceFee).div(100))
+                  );
+        return BigNumber.maximum(this.bigFloor(receiveAmount), 0);
+    };
+
+    calculateServiceFeeOnSend = (
+        sendAmount: BigNumber,
+        serviceFee: number,
+        minerFee: number
+    ): BigNumber => {
+        if (sendAmount.isNaN() || sendAmount.isLessThanOrEqualTo(0)) {
+            return new BigNumber(0);
+        }
+
+        let feeNum: BigNumber;
+
+        if (this.state.reverse) {
+            feeNum = this.bigCeil(sendAmount.times(serviceFee).div(100));
+        } else {
+            const receiveAmt = this.calculateReceiveAmount(
+                sendAmount,
+                serviceFee,
+                minerFee
+            );
+            if (sendAmount.isLessThanOrEqualTo(receiveAmt.plus(minerFee))) {
+                // If send amount isn't enough to cover receive + miner
+                feeNum = new BigNumber(0);
+            } else {
+                feeNum = sendAmount.minus(receiveAmt).minus(minerFee);
+            }
+
+            if (sendAmount.toNumber() < minerFee) {
+                feeNum = new BigNumber(0);
+            }
+        }
+        return this.bigCeil(BigNumber.maximum(feeNum, 0)); // Ensure fee is not negative
+    };
+
+    calculateSendAmount = (
+        receiveAmount: BigNumber,
+        serviceFee: number,
+        minerFee: number
+    ): BigNumber => {
+        if (receiveAmount.isNaN() || receiveAmount.isLessThanOrEqualTo(0)) {
+            return new BigNumber(0);
+        }
+        return this.state.reverse
+            ? this.bigCeil(
+                  receiveAmount
+                      .plus(minerFee)
+                      .div(
+                          new BigNumber(1).minus(
+                              new BigNumber(serviceFee).div(100)
+                          )
+                      )
+              )
+            : this.bigCeil(
+                  // ensure enough is sent
+                  receiveAmount
+                      .plus(
+                          this.bigCeil(
+                              // service fee is on receiveAmount for submarine
+                              receiveAmount.times(
+                                  new BigNumber(serviceFee).div(100)
+                              )
+                          )
+                      )
+                      .plus(minerFee)
+              );
+    };
+
+    calculateLimit = (limit: number): number => {
+        const { subInfo, reverseInfo } = this.props.SwapStore;
+        const info: any = this.state.reverse ? reverseInfo : subInfo;
+        const serviceFeePct = info?.fees?.percentage || 0;
+        const networkFeeBigNum = this.state.reverse
+            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+                  info?.fees?.minerFees?.lockup || 0
+              )
+            : new BigNumber(info?.fees?.minerFees || 0);
+        const networkFee = networkFeeBigNum.toNumber();
+
+        return !this.state.reverse
+            ? this.calculateSendAmount(
+                  new BigNumber(limit),
+                  serviceFeePct,
+                  networkFee
+              ).toNumber()
+            : limit;
     };
 
     render() {
@@ -200,24 +483,19 @@ export default class SwapPane extends React.PureComponent<
         const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
         const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFee = reverse
+        const networkFeeBigNum = reverse
             ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
                   info?.fees?.minerFees?.lockup || 0
               )
-            : info?.fees?.minerFees || 0;
-
-        const bigCeil = (big: BigNumber): BigNumber => {
-            return big.integerValue(BigNumber.ROUND_CEIL);
-        };
-
-        const bigFloor = (big: BigNumber): BigNumber => {
-            return big.integerValue(BigNumber.ROUND_FLOOR);
-        };
+            : new BigNumber(info?.fees?.minerFees || 0);
+        const networkFee = networkFeeBigNum.toNumber();
 
         const SwapsPaneBtn = () => (
             <TouchableOpacity
                 style={{ marginTop: -10 }}
                 onPress={() => {
+                    // Reset paramsProcessed when navigating to clear previous prefill
+                    this.setState({ paramsProcessed: false });
                     navigation.navigate('SwapsPane');
                 }}
                 accessibilityLabel={localeString('general.add')}
@@ -245,97 +523,15 @@ export default class SwapPane extends React.PureComponent<
             </TouchableOpacity>
         );
 
-        const calculateReceiveAmount = (
-            sendAmount: BigNumber,
-            serviceFee: number,
-            minerFee: number
-        ): BigNumber => {
-            const receiveAmount = reverse
-                ? sendAmount
-                      .minus(bigCeil(sendAmount.times(serviceFee).div(100)))
-                      .minus(minerFee)
-                : sendAmount
-                      .minus(minerFee)
-                      .div(
-                          new BigNumber(1).plus(
-                              new BigNumber(serviceFee).div(100)
-                          )
-                      );
-            return BigNumber.maximum(bigFloor(receiveAmount), 0);
-        };
+        const min = this.calculateLimit(info?.limits?.minimal || 0);
+        const max = this.calculateLimit(info?.limits?.maximal || 0);
 
-        const calculateServiceFeeOnSend = (
-            sendAmount: BigNumber,
-            serviceFee: number,
-            minerFee: number
-        ): BigNumber => {
-            if (sendAmount.isNaN()) {
-                return new BigNumber(0);
-            }
-
-            let fee: BigNumber;
-
-            if (reverse) {
-                fee = bigCeil(sendAmount.times(serviceFee).div(100));
-            } else {
-                fee = sendAmount
-                    .minus(
-                        calculateReceiveAmount(sendAmount, serviceFee, minerFee)
-                    )
-                    .minus(minerFee);
-
-                if (sendAmount.toNumber() < minerFee) {
-                    fee = new BigNumber(0);
-                }
-            }
-
-            return bigCeil(fee);
-        };
-
-        const calculateSendAmount = (
-            receiveAmount: BigNumber,
-            serviceFee: number,
-            minerFee: number
-        ): BigNumber => {
-            return reverse
-                ? bigCeil(
-                      receiveAmount
-                          .plus(minerFee)
-                          .div(
-                              new BigNumber(1).minus(
-                                  new BigNumber(serviceFee).div(100)
-                              )
-                          )
-                  )
-                : bigFloor(
-                      receiveAmount
-                          .plus(
-                              bigCeil(
-                                  receiveAmount.times(
-                                      new BigNumber(serviceFee).div(100)
-                                  )
-                              )
-                          )
-                          .plus(minerFee)
-                  );
-        };
-
-        const calculateLimit = (limit: number): number => {
-            return !reverse
-                ? calculateSendAmount(
-                      new BigNumber(limit),
-                      serviceFeePct,
-                      networkFee
-                  ).toNumber()
-                : limit;
-        };
-
-        const min = calculateLimit(info?.limits?.minimal || 0);
-        const max = calculateLimit(info?.limits?.maximal || 0);
-
+        const currentInputSats = new BigNumber(inputSats || 0);
         const errorInput =
-            (inputSats !== 0 && inputSats < min) || inputSats > max;
-        const errorOutput = outputSats < 0;
+            (currentInputSats.isGreaterThan(0) &&
+                currentInputSats.isLessThan(min)) ||
+            currentInputSats.isGreaterThan(max);
+        const errorOutput = new BigNumber(outputSats || 0).isLessThan(0);
         const errorMsg = errorInput || errorOutput;
 
         return (
@@ -417,18 +613,23 @@ export default class SwapPane extends React.PureComponent<
                                                     prefix={
                                                         <TouchableOpacity
                                                             onPress={() => {
-                                                                this.setState({
-                                                                    reverse:
-                                                                        !reverse,
-                                                                    inputSats: 0,
-                                                                    outputSats: 0,
-                                                                    inputFiat:
-                                                                        '',
-                                                                    outputFiat:
-                                                                        '',
-                                                                    serviceFeeSats: 0,
-                                                                    invoice: ''
-                                                                });
+                                                                this.setState(
+                                                                    {
+                                                                        reverse:
+                                                                            !reverse,
+                                                                        inputSats: 0,
+                                                                        outputSats: 0,
+                                                                        inputFiat:
+                                                                            '',
+                                                                        outputFiat:
+                                                                            '',
+                                                                        serviceFeeSats: 0,
+                                                                        invoice:
+                                                                            ''
+                                                                    },
+                                                                    () =>
+                                                                        this.checkIsValid()
+                                                                );
                                                             }}
                                                             style={{
                                                                 marginLeft: -10
@@ -491,7 +692,7 @@ export default class SwapPane extends React.PureComponent<
                                                             );
 
                                                         const outputSats =
-                                                            calculateReceiveAmount(
+                                                            this.calculateReceiveAmount(
                                                                 satAmountNew,
                                                                 serviceFeePct,
                                                                 networkFee
@@ -513,23 +714,27 @@ export default class SwapPane extends React.PureComponent<
                                                                       )
                                                                 : '';
 
-                                                        this.setState({
-                                                            serviceFeeSats:
-                                                                calculateServiceFeeOnSend(
-                                                                    satAmountNew,
-                                                                    serviceFeePct,
-                                                                    networkFee
-                                                                ),
-                                                            inputSats:
-                                                                Number(
-                                                                    sanitizedSatAmount
-                                                                ),
-                                                            outputSats,
-                                                            inputFiat:
-                                                                amount &&
-                                                                amount.toString(),
-                                                            outputFiat
-                                                        });
+                                                        this.setState(
+                                                            {
+                                                                serviceFeeSats:
+                                                                    this.calculateServiceFeeOnSend(
+                                                                        satAmountNew,
+                                                                        serviceFeePct,
+                                                                        networkFee
+                                                                    ),
+                                                                inputSats:
+                                                                    Number(
+                                                                        sanitizedSatAmount
+                                                                    ),
+                                                                outputSats,
+                                                                inputFiat:
+                                                                    amount &&
+                                                                    amount.toString(),
+                                                                outputFiat
+                                                            },
+                                                            () =>
+                                                                this.checkIsValid()
+                                                        );
                                                     }}
                                                     {...(units === 'fiat'
                                                         ? { amount: inputFiat }
@@ -614,7 +819,9 @@ export default class SwapPane extends React.PureComponent<
                                                                             serviceFeeSats: 0,
                                                                             invoice:
                                                                                 ''
-                                                                        }
+                                                                        },
+                                                                        () =>
+                                                                            this.checkIsValid()
                                                                     );
                                                                 }}
                                                                 style={{
@@ -691,7 +898,7 @@ export default class SwapPane extends React.PureComponent<
                                                                 input = 0;
                                                             } else
                                                                 input =
-                                                                    calculateSendAmount(
+                                                                    this.calculateSendAmount(
                                                                         satAmountNew,
                                                                         serviceFeePct,
                                                                         networkFee
@@ -734,22 +941,26 @@ export default class SwapPane extends React.PureComponent<
                                                                               100
                                                                           );
 
-                                                            this.setState({
-                                                                serviceFeeSats:
-                                                                    bigCeil(
-                                                                        serviceFeeSats
-                                                                    ),
-                                                                inputSats:
-                                                                    input,
-                                                                outputSats:
-                                                                    Number(
-                                                                        sanitizedSatAmount
-                                                                    ),
-                                                                inputFiat,
-                                                                outputFiat:
-                                                                    amount &&
-                                                                    amount.toString()
-                                                            });
+                                                            this.setState(
+                                                                {
+                                                                    serviceFeeSats:
+                                                                        this.bigCeil(
+                                                                            serviceFeeSats
+                                                                        ),
+                                                                    inputSats:
+                                                                        input,
+                                                                    outputSats:
+                                                                        Number(
+                                                                            sanitizedSatAmount
+                                                                        ),
+                                                                    inputFiat,
+                                                                    outputFiat:
+                                                                        amount &&
+                                                                        amount.toString()
+                                                                },
+                                                                () =>
+                                                                    this.checkIsValid()
+                                                            );
                                                         }}
                                                         {...(units === 'fiat'
                                                             ? {
@@ -905,7 +1116,7 @@ export default class SwapPane extends React.PureComponent<
                                                         );
 
                                                     const outputSats =
-                                                        calculateReceiveAmount(
+                                                        this.calculateReceiveAmount(
                                                             satAmountNew,
                                                             serviceFeePct,
                                                             networkFee
@@ -925,7 +1136,7 @@ export default class SwapPane extends React.PureComponent<
 
                                                     this.setState({
                                                         serviceFeeSats:
-                                                            calculateServiceFeeOnSend(
+                                                            this.calculateServiceFeeOnSend(
                                                                 satAmountNew,
                                                                 serviceFeePct,
                                                                 networkFee
@@ -1002,7 +1213,7 @@ export default class SwapPane extends React.PureComponent<
                                                         );
 
                                                     const outputSats =
-                                                        calculateReceiveAmount(
+                                                        this.calculateReceiveAmount(
                                                             satAmountNew,
                                                             serviceFeePct,
                                                             networkFee
@@ -1021,7 +1232,7 @@ export default class SwapPane extends React.PureComponent<
                                                             : '';
                                                     this.setState({
                                                         serviceFeeSats:
-                                                            calculateServiceFeeOnSend(
+                                                            this.calculateServiceFeeOnSend(
                                                                 satAmountNew,
                                                                 serviceFeePct,
                                                                 networkFee
@@ -1056,27 +1267,14 @@ export default class SwapPane extends React.PureComponent<
                                 <View>
                                     <TextInput
                                         onChangeText={(text: string) => {
-                                            let isValid;
-                                            if (reverse) {
-                                                isValid = text
-                                                    ? AddressUtils.isValidBitcoinAddress(
-                                                          text,
-                                                          true
-                                                      )
-                                                    : false;
-                                            } else {
-                                                isValid = text
-                                                    ? AddressUtils.isValidLightningPaymentRequest(
-                                                          text
-                                                      )
-                                                    : false;
-                                            }
-                                            this.setState({
-                                                invoice: text,
-                                                error: '',
-                                                apiUpdates: '',
-                                                isValid
-                                            });
+                                            this.setState(
+                                                {
+                                                    invoice: text,
+                                                    error: '',
+                                                    apiUpdates: ''
+                                                },
+                                                () => this.checkIsValid()
+                                            );
                                         }}
                                         placeholder={
                                             fetchingInvoice
@@ -1142,12 +1340,15 @@ export default class SwapPane extends React.PureComponent<
                                                         if (
                                                             InvoicesStore.onChainAddress
                                                         ) {
-                                                            this.setState({
-                                                                invoice:
-                                                                    InvoicesStore.onChainAddress,
-                                                                error: '',
-                                                                isValid: true
-                                                            });
+                                                            this.setState(
+                                                                {
+                                                                    invoice:
+                                                                        InvoicesStore.onChainAddress,
+                                                                    error: ''
+                                                                },
+                                                                () =>
+                                                                    this.checkIsValid()
+                                                            );
                                                         } else {
                                                             this.setState({
                                                                 error: localeString(
@@ -1161,12 +1362,15 @@ export default class SwapPane extends React.PureComponent<
                                                         if (
                                                             InvoicesStore.payment_request
                                                         ) {
-                                                            this.setState({
-                                                                invoice:
-                                                                    InvoicesStore.payment_request,
-                                                                isValid: true,
-                                                                error: ''
-                                                            });
+                                                            this.setState(
+                                                                {
+                                                                    invoice:
+                                                                        InvoicesStore.payment_request,
+                                                                    error: ''
+                                                                },
+                                                                () =>
+                                                                    this.checkIsValid()
+                                                            );
                                                         } else {
                                                             this.setState({
                                                                 error: localeString(
