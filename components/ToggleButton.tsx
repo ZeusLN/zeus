@@ -1,3 +1,4 @@
+// components/ToggleButton.tsx
 import React from 'react';
 import {
     StyleSheet,
@@ -8,131 +9,88 @@ import {
     Easing,
     Dimensions
 } from 'react-native';
-import { inject, observer } from 'mobx-react';
 
-import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
 
-type ToggleButtonView = 'channels' | 'peers';
+interface ToggleOption {
+    key: string;
+    label: string;
+}
 
 interface ToggleButtonProps {
-    ChannelsStore?: ChannelsStore;
-    onToggle: (view: ToggleButtonView) => void;
+    options: ToggleOption[];
+    value: string;
+    onToggle: (key: string) => void;
 }
 
-interface ToggleButtonState {
-    animation: Animated.Value;
-}
+export default class ToggleButton extends React.Component<ToggleButtonProps> {
+    animation = new Animated.Value(
+        this.props.options.findIndex((opt) => opt.key === this.props.value)
+    );
 
-@inject('ChannelsStore')
-@observer
-class ToggleButton extends React.Component<
-    ToggleButtonProps,
-    ToggleButtonState
-> {
-    constructor(props: ToggleButtonProps) {
-        super(props);
-
-        const initialAnimationValue =
-            this.props.ChannelsStore?.channelsView === ChannelsView.Channels
-                ? 0
-                : 1;
-
-        this.state = {
-            animation: new Animated.Value(initialAnimationValue)
-        };
-    }
-
-    toggleView = (view: ToggleButtonView) => {
-        const { ChannelsStore, onToggle } = this.props;
-        const currentView = ChannelsStore?.channelsView;
-
-        if (view !== currentView) {
-            ChannelsStore?.setChannelsView(view as ChannelsView);
-
-            Animated.timing(this.state.animation, {
-                toValue: view === 'channels' ? 0 : 1,
+    componentDidUpdate(prevProps: ToggleButtonProps) {
+        if (prevProps.value !== this.props.value) {
+            const idx = this.props.options.findIndex(
+                (opt) => opt.key === this.props.value
+            );
+            Animated.timing(this.animation, {
+                toValue: idx,
                 duration: 200,
                 easing: Easing.out(Easing.cubic),
                 useNativeDriver: true
             }).start();
-
-            onToggle(view);
         }
-    };
+    }
 
     render() {
-        const { animation } = this.state;
-        const activeView = this.props.ChannelsStore?.channelsView;
-
+        const { options, value, onToggle } = this.props;
         const screenWidth = Dimensions.get('window').width;
         const horizontalPadding = 32;
         const toggleWidth = screenWidth - horizontalPadding;
-        const thumbWidth = toggleWidth / 2;
+        const thumbWidth = toggleWidth / options.length;
 
-        const theme = {
-            secondary: themeColor('secondary'),
-            highlight: themeColor('highlight'),
-            background: themeColor('background'),
-            secondaryText: themeColor('secondaryText'),
-            text: themeColor('text')
-        };
+        const styles = getStyles(toggleWidth, thumbWidth);
 
-        const styles = getStyles(theme, toggleWidth, thumbWidth);
-
-        const translateX = animation.interpolate({
-            inputRange: [0, 1],
-            outputRange: [2, thumbWidth + 2]
+        const translateX = this.animation.interpolate({
+            inputRange: options.map((_, i) => i),
+            outputRange: options.map((_, i) => i * thumbWidth + 2)
         });
 
         return (
             <View style={styles.container}>
-                <TouchableOpacity
-                    style={styles.toggleButton}
-                    activeOpacity={0.8}
-                    onPress={() =>
-                        this.toggleView(
-                            activeView === ChannelsView.Channels
-                                ? ChannelsView.Peers
-                                : ChannelsView.Channels
-                        )
-                    }
-                >
+                <View style={styles.toggleButton}>
                     <Animated.View
-                        style={[styles.thumb, { transform: [{ translateX }] }]}
+                        style={[
+                            styles.thumb,
+                            { width: thumbWidth, transform: [{ translateX }] }
+                        ]}
                     />
                     <View style={styles.labelContainer}>
-                        <View style={styles.label}>
-                            <Text
-                                style={[
-                                    styles.toggleText,
-                                    activeView === ChannelsView.Channels &&
-                                        styles.activeText
-                                ]}
+                        {options.map((opt, _idx) => (
+                            <TouchableOpacity
+                                key={opt.key}
+                                style={styles.label}
+                                activeOpacity={0.8}
+                                onPress={() => onToggle(opt.key)}
                             >
-                                {localeString('views.Wallet.Wallet.channels')}
-                            </Text>
-                        </View>
-                        <View style={styles.label}>
-                            <Text
-                                style={[
-                                    styles.toggleText,
-                                    activeView === ChannelsView.Peers &&
-                                        styles.activeText
-                                ]}
-                            >
-                                {localeString('general.peers')}
-                            </Text>
-                        </View>
+                                <Text
+                                    style={[
+                                        styles.toggleText,
+                                        value === opt.key && styles.activeText
+                                    ]}
+                                >
+                                    {opt.label}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
                     </View>
-                </TouchableOpacity>
+                </View>
             </View>
         );
     }
 }
 
-const getStyles = (theme: any, toggleWidth: number, thumbWidth: number) =>
+const getStyles = (toggleWidth: number, thumbWidth: number) =>
     StyleSheet.create({
         container: {
             alignItems: 'center',
@@ -143,21 +101,20 @@ const getStyles = (theme: any, toggleWidth: number, thumbWidth: number) =>
             width: toggleWidth,
             height: 40,
             borderRadius: 8,
-            backgroundColor: theme.secondary,
+            backgroundColor: themeColor('secondary'),
             position: 'relative',
             justifyContent: 'center',
             overflow: 'hidden'
         },
         thumb: {
             position: 'absolute',
-            width: thumbWidth,
             height: 36,
             borderRadius: 8,
-            backgroundColor: theme.text,
+            backgroundColor: themeColor('text'),
             top: 2,
             left: 0,
             elevation: 2,
-            shadowColor: theme.background,
+            shadowColor: themeColor('background'),
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.2,
             shadowRadius: 1
@@ -174,13 +131,11 @@ const getStyles = (theme: any, toggleWidth: number, thumbWidth: number) =>
         toggleText: {
             fontSize: 16,
             fontFamily: 'PPNeueMontreal-Book',
-            color: theme.secondaryText,
+            color: themeColor('secondaryText'),
             textAlign: 'center'
         },
         activeText: {
-            color: theme.background,
+            color: themeColor('background'),
             fontFamily: 'PPNeueMontreal-Medium'
         }
     });
-
-export default ToggleButton;
