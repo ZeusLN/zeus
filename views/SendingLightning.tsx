@@ -49,7 +49,7 @@ interface SendingLightningState {
     currentPayment: any;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
+@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore', 'SettingsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
@@ -88,12 +88,13 @@ export default class SendingLightning extends React.Component<
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
-        const { TransactionsStore } = this.props;
+        const { TransactionsStore, SettingsStore } = this.props;
         const wasSuccessful = this.successfullySent(TransactionsStore);
 
         if (wasSuccessful && !this.state.wasSuccessful) {
             this.fetchPayments();
             this.setState({ wasSuccessful: true }); // Update success state
+            SettingsStore.triggerBalanceUpdate = true;
         } else if (!wasSuccessful && this.state.wasSuccessful) {
             this.setState({ wasSuccessful: false }); // Reset success state if needed
         }
