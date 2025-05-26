@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, useState } from 'react';
 import {
     FlatList,
     StyleSheet,
@@ -29,6 +29,9 @@ import CashuStore from '../../stores/CashuStore';
 import UnitsStore from '../../stores/UnitsStore';
 import UTXOsStore from '../../stores/UTXOsStore';
 import SettingsStore from '../../stores/SettingsStore';
+import LSPStore from '../../stores/LSPStore';
+import SwapStore from '../../stores/SwapStore';
+import InvoicesStore from '../../stores/InvoicesStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -47,6 +50,9 @@ interface LayerBalancesProps {
     SettingsStore?: SettingsStore;
     UTXOsStore?: UTXOsStore;
     UnitsStore?: UnitsStore;
+    LSPStore?: LSPStore;
+    SwapStore?: SwapStore;
+    InvoicesStore?: InvoicesStore;
     navigation: StackNavigationProp<any, any>;
     onRefresh?: any;
     value?: string;
@@ -364,67 +370,202 @@ const SwipeableRow = ({
     );
 };
 
-@inject('BalanceStore', 'CashuStore', 'UTXOsStore', 'SettingsStore')
-@observer
-export default class LayerBalances extends Component<LayerBalancesProps, {}> {
-    render() {
-        const {
-            BalanceStore,
-            CashuStore,
-            SettingsStore,
-            navigation,
-            value,
-            satAmount,
-            lightning,
-            offer,
-            onRefresh,
-            locked,
-            consolidated,
-            editMode,
-            refreshing
-        } = this.props;
+const LayerBalancesWrapper = (props: LayerBalancesProps) => {
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const {
+        BalanceStore,
+        CashuStore,
+        SettingsStore,
+        LSPStore,
+        SwapStore,
+        InvoicesStore,
+        navigation,
+        value,
+        satAmount,
+        lightning,
+        offer,
+        onRefresh,
+        locked,
+        consolidated,
+        editMode,
+        refreshing
+    } = props;
 
-        const { settings } = SettingsStore!;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
-        const { totalBalanceSats, mintUrls } = CashuStore!;
+    const { settings } = SettingsStore!;
+    const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+    const { totalBalanceSats: cashuTotalBalanceSats, mintUrls } = CashuStore!;
 
-        const otherAccounts = editMode
-            ? this.props.UTXOsStore?.accounts
-            : this.props.UTXOsStore?.accounts.filter(
-                  (item: any) => !item.hidden
-              );
+    const handleMoveFundsToLn = async () => {
+        setLoading(true);
+        setError(null);
 
-        let DATA: DataRow[] = [
-            {
-                layer: 'Lightning',
-                balance: Number(lightningBalance).toFixed(3)
+        try {
+            if (!SwapStore?.reverseInfo || SwapStore?.loading) {
+                await SwapStore?.getSwapFees();
+                if (!SwapStore?.reverseInfo) {
+                    throw new Error(
+                        'Swap service information not available. Please try again.'
+                    );
+                }
             }
-        ];
 
-        // Only show on-chain balance for non-Lnbank accounts
-        if (BackendUtils.supportsOnchainReceiving()) {
+            if (!LSPStore?.info || !LSPStore?.info.pubkey) {
+                await LSPStore?.getLSPInfo();
+                if (!LSPStore?.info || !LSPStore?.info.pubkey) {
+                    throw new Error('LSP information not available.');
+                }
+            }
+
+            const totalOnchainSatsBn = new BigNumber(totalBlockchainBalance);
+            if (totalOnchainSatsBn.isLessThanOrEqualTo(0)) {
+                throw new Error('No on-chain balance to transfer.');
+            }
+
+            const { reverseInfo }: { reverseInfo: any } = SwapStore;
+
+            // Calculate swap fees
+            const swapServiceFeePct = new BigNumber(
+                reverseInfo?.fees?.percentage
+            ).div(100);
+            const swapMinerFeeSats = new BigNumber(
+                reverseInfo?.fees?.minerFees?.claim || 0
+            ).plus(reverseInfo?.fees?.minerFees?.lockup || 0);
+
+            // Amount available for LN after swap fees
+            const serviceFeeForSwap = totalOnchainSatsBn
+                .times(swapServiceFeePct)
+                .integerValue(BigNumber.ROUND_CEIL);
+            let amountPostSwapSats = totalOnchainSatsBn
+                .minus(serviceFeeForSwap)
+                .minus(swapMinerFeeSats);
+
+            if (amountPostSwapSats.isLessThanOrEqualTo(0)) {
+                throw new Error(
+                    `Insufficient funds to cover swap fees. Required: > ${serviceFeeForSwap
+                        .plus(swapMinerFeeSats)
+                        .toString()} sats. Available: ${totalOnchainSatsBn.toString()} sats.`
+                );
+            }
+
+            // Get LSP fee for this amount
+            const amountPostSwapMsats = amountPostSwapSats
+                .times(1000)
+                .toNumber();
+            const lspFeeMsatsRaw = await LSPStore.getZeroConfFee(
+                amountPostSwapMsats
+            );
+
+            if (LSPStore.flow_error || typeof lspFeeMsatsRaw === 'undefined') {
+                throw new Error(
+                    `LSP Error getting fee: ${
+                        LSPStore.flow_error_msg ||
+                        'Fee could not be determined.'
+                    }`
+                );
+            }
+            const lspFeeSats = new BigNumber(lspFeeMsatsRaw)
+                .div(1000)
+                .integerValue(BigNumber.ROUND_CEIL);
+
+            // Final amount for the user's Lightning node invoice (after swap and LSP fees)
+            const finalInvoiceAmountForUserNodeSats =
+                amountPostSwapSats.minus(lspFeeSats);
+
+            if (finalInvoiceAmountForUserNodeSats.isLessThanOrEqualTo(0)) {
+                throw new Error(
+                    `Insufficient funds to cover LSP fee (${lspFeeSats.toString()} sats) after swap. Amount after swap: ${amountPostSwapSats.toString()} sats. Total on-chain: ${totalOnchainSatsBn.toString()} sats.`
+                );
+            }
+
+            // Create an internal invoice for the final amount
+            await InvoicesStore?.createUnifiedInvoice({
+                memo: '', // memo must be empty for wrapped invoices
+                value: finalInvoiceAmountForUserNodeSats.toString(),
+                expiry: settings.invoices?.expirySeconds || '3600'
+            });
+            const userGeneratedBolt11 = InvoicesStore?.payment_request;
+
+            if (!userGeneratedBolt11) {
+                throw new Error(
+                    'Failed to generate internal Lightning invoice for LSP.'
+                );
+            }
+
+            // Get JIT invoice from LSP to pay our internal invoice
+            const jitBolt11 = await LSPStore.getZeroConfInvoice(
+                userGeneratedBolt11
+            );
+
+            if (LSPStore.flow_error || !jitBolt11) {
+                throw new Error(
+                    `LSP Error creating JIT invoice: ${
+                        LSPStore.flow_error_msg || 'JIT invoice not received.'
+                    }`
+                );
+            }
+
+            // Navigate to Swaps screen
+            navigation.navigate('Swaps', {
+                initialInvoice: jitBolt11, // This is the LSP's invoice we need to pay on-chain
+                initialAmountSats: totalOnchainSatsBn.toNumber(), // This is the total on-chain amount we are sending
+                initialReverse: true,
+                isJitInvoiceForOutput: true // Indicate that initialInvoice's amount is the target output
+            });
+        } catch (e: any) {
+            setError(
+                e.message ||
+                    'An unknown error occurred while preparing the transfer.'
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const otherAccounts = editMode
+        ? utxosStore?.accounts
+        : utxosStore?.accounts.filter((item: any) => !item.hidden);
+
+    let DATA: DataRow[] = [
+        {
+            layer: 'Lightning',
+            balance: Number(lightningBalance).toFixed(3)
+        }
+    ];
+
+    if (BackendUtils.supportsOnchainReceiving()) {
+        DATA.push({
+            layer: 'On-chain',
+            balance: Number(totalBlockchainBalance).toFixed(3)
+        });
+    }
+
+    if (BackendUtils.supportsCashuWallet() && settings?.ecash?.enableCashu) {
+        DATA.push({
+            layer: 'Ecash',
+            custodial: true,
+            needsConfig: mintUrls?.length === 0,
+            balance: Number(cashuTotalBalanceSats).toFixed(3) // Use renamed var
+        });
+    }
+
+    if (Object.keys(otherAccounts).length > 0 && !consolidated) {
+        for (let i = 0; i < otherAccounts.length; i++) {
+            if (!editMode && otherAccounts[i].hidden) i++;
             DATA.push({
-                layer: 'On-chain',
-                balance: Number(totalBlockchainBalance).toFixed(3)
+                layer: otherAccounts[i].name,
+                subtitle: otherAccounts[i].XFP,
+                balance: otherAccounts[i].balance || 0,
+                watchOnly: otherAccounts[i].watch_only || false,
+                hidden: otherAccounts[i].hidden || false
             });
         }
+    }
 
-        // Only show on-chain balance for non-Lnbank accounts
-        if (
-            BackendUtils.supportsCashuWallet() &&
-            settings?.ecash?.enableCashu
-        ) {
-            DATA.push({
-                layer: 'Ecash',
-                custodial: true,
-                needsConfig: mintUrls?.length === 0,
-                balance: Number(totalBalanceSats).toFixed(3)
-            });
-        }
-
-        if (Object.keys(otherAccounts).length > 0 && !consolidated) {
-            for (let i = 0; i < otherAccounts.length; i++) {
-                if (!editMode && otherAccounts[i].hidden) i++;
+    if (Object.keys(otherAccounts).length > 0 && consolidated) {
+        let n = 0;
+        for (let i = 0; i < otherAccounts.length; i++) {
+            while (n < 1) {
                 DATA.push({
                     layer: otherAccounts[i].name,
                     subtitle: otherAccounts[i].XFP,
@@ -432,70 +573,96 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
                     watchOnly: otherAccounts[i].watch_only || false,
                     hidden: otherAccounts[i].hidden || false
                 });
+                n++;
             }
         }
+    }
 
-        if (Object.keys(otherAccounts).length > 0 && consolidated) {
-            let n = 0;
-            for (let i = 0; i < otherAccounts.length; i++) {
-                while (n < 1) {
-                    DATA.push({
-                        layer: otherAccounts[i].name,
-                        subtitle: otherAccounts[i].XFP,
-                        balance: otherAccounts[i].balance || 0,
-                        watchOnly: otherAccounts[i].watch_only || false,
-                        hidden: otherAccounts[i].hidden || false
-                    });
-                    n++;
-                }
-            }
-        }
+    if (Object.keys(otherAccounts).length > 1 && consolidated) {
+        DATA.push({
+            layer: localeString('components.LayerBalances.moreAccounts'),
+            count: Object.keys(otherAccounts).length,
+            balance: 0
+        });
+    }
 
-        if (Object.keys(otherAccounts).length > 1 && consolidated) {
-            DATA.push({
-                layer: localeString('components.LayerBalances.moreAccounts'),
-                count: Object.keys(otherAccounts).length,
-                balance: 0
-            });
-        }
-
-        return (
-            <View style={{ flex: 1 }}>
-                {lightningBalance === 0 && totalBlockchainBalance !== 0 && (
-                    <Button
-                        title={localeString(
-                            'components.LayerBalances.moveFundsToLn'
-                        )}
-                        onPress={() => navigation.navigate('OpenChannel')}
-                        secondary
+    return (
+        <View style={{ flex: 1 }}>
+            {error && (
+                <View style={{ paddingHorizontal: 15, paddingVertical: 10 }}>
+                    <Text
+                        style={{
+                            color: themeColor('error'),
+                            textAlign: 'center'
+                        }}
+                    >
+                        {error}
+                    </Text>
+                </View>
+            )}
+            {lightningBalance === 0 &&
+                Number(totalBlockchainBalance) > 0 &&
+                BackendUtils.supportsFlowLSP() &&
+                BackendUtils.supportsOnchainSends() && (
+                    <View
+                        style={{
+                            marginHorizontal: 15,
+                            marginBottom: DATA.length > 0 ? 20 : 0
+                        }}
+                    >
+                        <Button
+                            title={
+                                loading
+                                    ? localeString('general.processing')
+                                    : localeString(
+                                          'components.LayerBalances.moveFundsToLn'
+                                      )
+                            }
+                            onPress={handleMoveFundsToLn}
+                            secondary
+                            disabled={loading || totalBlockchainBalance === 0}
+                        />
+                    </View>
+                )}
+            <FlatList
+                data={DATA}
+                ItemSeparatorComponent={() => <View style={styles.separator} />}
+                renderItem={({ item, index }) => (
+                    <SwipeableRow
+                        item={item}
+                        index={index}
+                        navigation={navigation}
+                        // select pay method vars
+                        value={value}
+                        satAmount={satAmount}
+                        lightning={lightning}
+                        offer={offer}
+                        locked={locked || editMode}
+                        editMode={editMode}
                     />
                 )}
-                <FlatList
-                    data={DATA}
-                    ItemSeparatorComponent={() => (
-                        <View style={styles.separator} />
-                    )}
-                    renderItem={({ item, index }) => (
-                        <SwipeableRow
-                            item={item}
-                            index={index}
-                            navigation={navigation}
-                            // select pay method vars
-                            value={value}
-                            satAmount={satAmount}
-                            lightning={lightning}
-                            offer={offer}
-                            locked={locked || editMode}
-                            editMode={editMode}
-                        />
-                    )}
-                    keyExtractor={(_item, index) => `message ${index}`}
-                    style={{ marginTop: 20 }}
-                    onRefresh={() => onRefresh()}
-                    refreshing={refreshing ? refreshing : false}
-                />
-            </View>
-        );
+                keyExtractor={(_item, index) => `message ${index}`}
+                style={{ marginTop: 20 }}
+                onRefresh={() => onRefresh()}
+                refreshing={refreshing ? refreshing : false}
+            />
+        </View>
+    );
+};
+
+@inject(
+    'BalanceStore',
+    'CashuStore',
+    'UTXOsStore',
+    'SettingsStore',
+    'LSPStore',
+    'SwapStore',
+    'InvoicesStore'
+)
+@observer
+export default class LayerBalances extends Component<LayerBalancesProps, {}> {
+    render() {
+        return <LayerBalancesWrapper {...this.props} />;
     }
 }
 
