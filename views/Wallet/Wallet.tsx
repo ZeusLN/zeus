@@ -943,7 +943,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     {posEnabled !== PosEnabled.Disabled &&
                                     posStatus === 'active' ? (
                                         <Tab.Screen
-                                            name="POS"
+                                            name="Products"
                                             component={PosScreen}
                                         />
                                     ) : (
