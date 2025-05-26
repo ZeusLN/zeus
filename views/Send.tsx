@@ -60,6 +60,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import Scan from '../assets/images/SVG/Scan.svg';
+import SwapIcon from '../assets/images/SVG/Swap.svg';
 
 import Contact from '../models/Contact';
 import TransactionRequest, {
@@ -728,10 +729,46 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         >
                             {loading && (
-                                <View style={{ paddingRight: 15 }}>
+                                <View>
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
+                            {transactionType === 'On-chain' &&
+                                BackendUtils.supportsOnchainSends() && (
+                                    <View
+                                        style={{
+                                            marginLeft: 10,
+                                            marginRight: 13
+                                        }}
+                                    >
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                // For "all", actual satAmount might be resolved later or be 0 initially.
+                                                // Swaps might need a concrete amount.
+                                                // For now, send what we have. If "all", it might be 0 or a balance.
+                                                const amountForSwap =
+                                                    fundMax &&
+                                                    implementation ===
+                                                        'cln-rest' &&
+                                                    amount === 'all'
+                                                        ? '0' // CLN 'all' is symbolic, swap needs a number or let user input
+                                                        : satAmount || '0';
+                                                navigation.navigate('Swaps', {
+                                                    initialInvoice: destination,
+                                                    initialAmountSats:
+                                                        amountForSwap.toString(),
+                                                    initialReverse: true // LN -> OnChain for sending to an OnChain address
+                                                });
+                                            }}
+                                        >
+                                            <SwapIcon
+                                                fill={themeColor('text')}
+                                                width="36"
+                                                height="26"
+                                            />
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
                             <View style={{ marginRight: 15 }}>
                                 <TouchableOpacity
                                     onPress={() => this.enableNfc()}
