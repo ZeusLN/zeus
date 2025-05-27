@@ -691,11 +691,11 @@ export default class ChannelsStore {
                 this.loading = false;
             });
         } catch (error: any) {
-            console.error('Error fetching peers:', error);
-
             runInAction(() => {
                 this.error = true;
-                this.errorListPeers = error.message ?? 'Failed to fetch peers';
+                this.errorListPeers =
+                    error.message ??
+                    localeString('views.OpenChannel.peersFetchFailed');
                 this.loading = false;
             });
         }
@@ -713,12 +713,14 @@ export default class ChannelsStore {
             );
 
             if (!isPeer) {
-                throw new Error('Peer not found');
+                throw new Error(localeString('views.OpenChannel.peerNotFound'));
             }
             const res = await BackendUtils.disconnectPeer(pubkey);
 
             if (!res) {
-                throw new Error('Failed to disconnect peer');
+                throw new Error(
+                    localeString('views.OpenChannel.peerNotConnected')
+                );
             }
 
             runInAction(() => {
@@ -730,13 +732,12 @@ export default class ChannelsStore {
 
             return true;
         } catch (error: any) {
-            console.error('Error disconnecting peer:', error, error.message);
-            runInAction(() => {
-                this.error = true;
-                this.errorDisconnectPeer =
-                    error.message || 'Failed to disconnect peer';
-                this.loading = false;
-            });
+            this.error = true;
+            this.errorDisconnectPeer =
+                error?.message?.message ||
+                error?.message ||
+                localeString('views.OpenChannel.disconnectPeerFailed');
+            this.loading = false;
 
             return false;
         }
