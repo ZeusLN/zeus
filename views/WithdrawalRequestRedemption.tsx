@@ -14,6 +14,7 @@ import Screen from '../components/Screen';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
 import { Row } from '../components/layout/Row';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 import InvoicesStore from '../stores/InvoicesStore';
 
@@ -70,7 +71,8 @@ export default class WithdrawalRequestRedemption extends React.Component<
     }
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, InvoicesStore } = this.props;
+        const { loading } = InvoicesStore;
         const { bolt12 } = route.params;
         const { withdrawalReqResult } = this.state;
 
@@ -108,62 +110,65 @@ export default class WithdrawalRequestRedemption extends React.Component<
                     }
                     navigation={navigation}
                 />
-                <ScrollView keyboardShouldPersistTaps="handled">
-                    <View style={styles.center}>
-                        <Amount
-                            sats={(
-                                Number(
-                                    withdrawalReqResult?.invreq_amount_msat
-                                ) / 1000
-                            ).toString()}
-                            sensitive
-                            jumboText
-                            toggleable
-                        />
-                    </View>
+                {loading && <LoadingIndicator />}
+                {!loading && (
+                    <ScrollView keyboardShouldPersistTaps="handled">
+                        <View style={styles.center}>
+                            <Amount
+                                sats={(
+                                    Number(
+                                        withdrawalReqResult?.invreq_amount_msat
+                                    ) / 1000
+                                ).toString()}
+                                sensitive
+                                jumboText
+                                toggleable
+                            />
+                        </View>
 
-                    <View style={styles.content}>
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.PaymentRequest.description'
-                            )}
-                            value={withdrawalReqResult?.offer_description}
-                            sensitive
-                            color={themeColor('text')}
-                        />
-                    </View>
+                        <View style={styles.content}>
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.PaymentRequest.description'
+                                )}
+                                value={withdrawalReqResult?.offer_description}
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        </View>
 
-                    <View style={styles.content}>
-                        <KeyValue
-                            keyValue={localeString('general.valid')}
-                            value={
-                                withdrawalReqResult?.valid
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            sensitive
-                            color={themeColor('text')}
-                        />
-                    </View>
+                        <View style={styles.content}>
+                            <KeyValue
+                                keyValue={localeString('general.valid')}
+                                value={
+                                    withdrawalReqResult?.valid
+                                        ? localeString('general.true')
+                                        : localeString('general.false')
+                                }
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        </View>
 
-                    <View style={styles.content}>
-                        <KeyValue
-                            keyValue={localeString('general.signature')}
-                            value={withdrawalReqResult?.signature}
-                            sensitive
-                            color={themeColor('text')}
-                        />
-                    </View>
+                        <View style={styles.content}>
+                            <KeyValue
+                                keyValue={localeString('general.signature')}
+                                value={withdrawalReqResult?.signature}
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        </View>
 
-                    <View style={styles.content}>
-                        <KeyValue
-                            keyValue={localeString('views.PayCode.bolt12')}
-                            value={bolt12}
-                            sensitive
-                            color={themeColor('text')}
-                        />
-                    </View>
-                </ScrollView>
+                        <View style={styles.content}>
+                            <KeyValue
+                                keyValue={localeString('views.PayCode.bolt12')}
+                                value={bolt12}
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        </View>
+                    </ScrollView>
+                )}
                 <View style={styles.button}>
                     <Button
                         title={localeString(
