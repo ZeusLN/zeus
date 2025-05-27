@@ -16,6 +16,9 @@ import BackendUtils from './../../utils/BackendUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import UTXOsStore from './../../stores/UTXOsStore';
+import storage from '../../storage';
+
+import { reaction } from 'mobx';
 
 interface CoinControlProps {
     navigation: StackNavigationProp<any, any>;
@@ -25,6 +28,7 @@ interface CoinControlProps {
 
 interface CoinControlState {
     account: string;
+    utxoLabels: Record<string, string>;
 }
 
 @inject('UTXOsStore')
@@ -33,6 +37,8 @@ export default class CoinControl extends React.Component<
     CoinControlProps,
     CoinControlState
 > {
+    reactionDisposer: (() => void) | null = null;
+
     constructor(props: CoinControlProps) {
         super(props);
 
@@ -43,18 +49,54 @@ export default class CoinControl extends React.Component<
                 : accountParam;
 
         this.state = {
-            account: account || 'default'
+            account: account || 'default',
+            utxoLabels: {}
         };
     }
 
-    async UNSAFE_componentWillMount() {
+    loadUtxoLabels = async () => {
         const { UTXOsStore } = this.props;
+        const { utxos } = UTXOsStore;
+        const utxoLabels: Record<string, string> = {};
+
+        for (const utxo of utxos) {
+            const key = utxo.getOutpoint;
+            const label = await storage.getItem(key!);
+            if (label) {
+                utxoLabels[key] = label;
+            }
+        }
+
+        this.setState({ utxoLabels });
+    };
+
+    async componentDidMount() {
+        const { UTXOsStore, navigation } = this.props;
         const { account } = this.state;
         const { getUTXOs, listAccounts } = UTXOsStore;
+
         getUTXOs({ account });
+
         if (BackendUtils.supportsAccounts()) {
             listAccounts();
         }
+
+        this.reactionDisposer = reaction(
+            () => UTXOsStore.utxos.slice(),
+            async (utxos) => {
+                if (utxos.length > 0) {
+                    await this.loadUtxoLabels();
+                }
+            }
+        );
+
+        navigation.addListener('focus', async () => {
+            await this.loadUtxoLabels();
+        });
+    }
+
+    componentWillUnmount() {
+        this.reactionDisposer?.();
     }
 
     renderSeparator = () => (
@@ -68,7 +110,7 @@ export default class CoinControl extends React.Component<
 
     render() {
         const { navigation, UTXOsStore } = this.props;
-        const { account } = this.state;
+        const { account, utxoLabels } = this.state;
         const { loading, utxos, getUTXOs, accounts } = UTXOsStore;
 
         return (
@@ -89,6 +131,7 @@ export default class CoinControl extends React.Component<
                     }}
                     navigation={navigation}
                 />
+
                 {BackendUtils.supportsAccounts() && accounts?.length > 0 && (
                     <AccountFilter
                         default={account}
@@ -100,6 +143,7 @@ export default class CoinControl extends React.Component<
                         showAll
                     />
                 )}
+
                 {loading ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
@@ -108,26 +152,40 @@ export default class CoinControl extends React.Component<
                     <FlatList
                         data={utxos}
                         renderItem={({ item }) => {
+                            const key = item.getOutpoint;
+                            const message = utxoLabels[key!];
                             const subTitle = item.address;
 
                             return (
-                                <React.Fragment>
-                                    <ListItem
-                                        containerStyle={{
-                                            borderBottomWidth: 0,
-                                            backgroundColor: 'transparent'
-                                        }}
-                                        onPress={() => {
-                                            navigation.navigate('Utxo', {
-                                                utxo: item
-                                            });
-                                        }}
-                                    >
-                                        <ListItem.Content>
-                                            <Amount
-                                                sats={item.getAmount}
-                                                sensitive
-                                            />
+                                <ListItem
+                                    containerStyle={{
+                                        borderBottomWidth: 0,
+                                        backgroundColor: 'transparent'
+                                    }}
+                                    onPress={() => {
+                                        navigation.navigate('Utxo', {
+                                            utxo: item
+                                        });
+                                    }}
+                                >
+                                    <ListItem.Content>
+                                        <Amount
+                                            sats={item.getAmount}
+                                            sensitive
+                                        />
+                                        <ListItem.Subtitle
+                                            right
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 10
+                                            }}
+                                        >
+                                            {subTitle}
+                                        </ListItem.Subtitle>
+
+                                        {message && (
                                             <ListItem.Subtitle
                                                 right
                                                 style={{
@@ -137,23 +195,22 @@ export default class CoinControl extends React.Component<
                                                     fontSize: 10
                                                 }}
                                             >
-                                                {subTitle}
+                                                {`${localeString(
+                                                    'general.label'
+                                                )}: ${message}`}
                                             </ListItem.Subtitle>
-                                        </ListItem.Content>
-                                        {/*
-                                        <ListItem.Content right>
-                                            <FrozenPill />
-                                        </ListItem.Content>
-                                        */}
-                                    </ListItem>
-                                </React.Fragment>
+                                        )}
+                                    </ListItem.Content>
+                                </ListItem>
                             );
                         }}
                         keyExtractor={(_, index) => `utxo-${index}`}
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() => getUTXOs({ account })}
+                        onRefresh={() => {
+                            getUTXOs({ account });
+                        }}
                     />
                 ) : (
                     <Button
@@ -163,7 +220,9 @@ export default class CoinControl extends React.Component<
                             size: 25,
                             color: themeColor('text')
                         }}
-                        onPress={() => getUTXOs({ account })}
+                        onPress={async () => {
+                            getUTXOs({ account });
+                        }}
                         buttonStyle={{
                             backgroundColor: 'transparent',
                             borderRadius: 30
