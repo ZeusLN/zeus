@@ -4,10 +4,9 @@ import {
     StyleSheet,
     View,
     Text,
-    TouchableHighlight,
-    TextInput
+    TouchableHighlight
 } from 'react-native';
-import { ListItem } from 'react-native-elements';
+import { ListItem, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { chain } from 'lodash';
 
@@ -18,12 +17,16 @@ import LoadingIndicator from './LoadingIndicator';
 import Screen from './Screen';
 import DropdownSetting from './DropdownSetting';
 import { Body } from './text/Body';
+import { Row } from './layout/Row';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import AddressUtils from '../utils/AddressUtils';
 
 import MessageSignStore from '../stores/MessageSignStore';
+
+import CaretDown from '../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../assets/images/SVG/Caret Right.svg';
 
 interface AddressPickerProps {
     navigation: any;
@@ -42,6 +45,8 @@ interface AddressPickerState {
     hideZeroBalance: boolean;
     hideChangeAddresses: boolean;
     sortBy: SortBy;
+    allAddressGroups: AddressGroup[]; // Store all address groups
+    filteredAddressGroups: AddressGroup[]; // Store filtered address groups for display
 }
 
 enum SortBy {
@@ -73,7 +78,7 @@ export default class AddressPicker extends React.Component<
     AddressPickerProps,
     AddressPickerState
 > {
-    private searchInputRef = React.createRef<TextInput>();
+    private searchInputRef = React.createRef<any>();
     private localSearchText = '';
 
     state = {
@@ -82,14 +87,146 @@ export default class AddressPicker extends React.Component<
         searchText: '',
         hideZeroBalance: false,
         hideChangeAddresses: false,
-        sortBy: SortBy.balanceDescending
+        sortBy: SortBy.balanceDescending,
+        allAddressGroups: [],
+        filteredAddressGroups: []
     };
 
     componentDidMount() {
         const { MessageSignStore } = this.props;
+        const { route } = this.props;
+
+        // If an address was selected and passed via navigation params, use it
+        const selectedAddress =
+            route?.params?.selectedAddress || this.props.selectedAddress || '';
+
+        this.setState({
+            selectedAddress
+        });
+
         if (MessageSignStore.addresses.length === 0) {
             MessageSignStore.loadAddresses();
         }
+    }
+
+    // Process addresses and update address groups when addresses are loaded or filters change
+    static getDerivedStateFromProps(
+        props: AddressPickerProps,
+        state: AddressPickerState
+    ) {
+        const { addresses } = props.MessageSignStore;
+        const { hideZeroBalance, hideChangeAddresses, sortBy, searchText } =
+            state;
+
+        if (!addresses || addresses.length === 0) {
+            return null;
+        }
+
+        // Process and sort addresses based on current sort setting
+        let sortedAddresses = [...addresses];
+        switch (sortBy) {
+            case SortBy.alphabeticalAscending:
+                sortedAddresses.sort((a, b) =>
+                    a.address.localeCompare(b.address)
+                );
+                break;
+            case SortBy.alphabeticalDescending:
+                sortedAddresses.sort((a, b) =>
+                    b.address.localeCompare(a.address)
+                );
+                break;
+            case SortBy.balanceAscending:
+                sortedAddresses.sort(
+                    (a: any, b: any) =>
+                        Number(a.balance || 0) - Number(b.balance || 0)
+                );
+                break;
+            case SortBy.balanceDescending:
+                sortedAddresses.sort(
+                    (a: any, b: any) =>
+                        Number(b.balance || 0) - Number(a.balance || 0)
+                );
+                break;
+        }
+
+        // Group addresses by account and type
+        const groupedAddresses = chain(sortedAddresses)
+            .groupBy(function (addr: Address) {
+                const accountName =
+                    addr.accountName ||
+                    localeString('general.defaultNodeNickname');
+                const addressType =
+                    addr.addressType || localeString('general.unknown');
+                const isInternal =
+                    addr.isInternal !== undefined
+                        ? String(addr.isInternal)
+                        : 'false';
+                return `${accountName};${addressType};${isInternal}`;
+            })
+            .value();
+
+        // Create address groups
+        let addressGroups = Object.entries(groupedAddresses).map(
+            ([key, addrGroup]) => {
+                const [accountName, addressType, isInternalStr] =
+                    key.split(';');
+                return {
+                    accountName:
+                        accountName ||
+                        localeString('general.defaultNodeNickname'),
+                    addressType: addressType || localeString('general.unknown'),
+                    changeAddresses: isInternalStr === 'true',
+                    addresses: addrGroup
+                };
+            }
+        );
+
+        // Apply zero balance filter
+        if (hideZeroBalance) {
+            addressGroups.forEach((acc) => {
+                acc.addresses = acc.addresses.filter(
+                    (addr: any) => addr.balance && Number(addr.balance) > 0
+                );
+            });
+            // Remove empty groups after filtering
+            addressGroups = addressGroups.filter(
+                (group) => group.addresses.length > 0
+            );
+        }
+
+        // Apply change addresses filter
+        if (hideChangeAddresses) {
+            addressGroups = addressGroups.filter((a) => !a.changeAddresses);
+        }
+
+        // Store these as the complete set of address groups
+        const allAddressGroups = addressGroups;
+
+        // Now filter by search text if needed
+        let filteredAddressGroups = [...allAddressGroups];
+        if (searchText) {
+            filteredAddressGroups = allAddressGroups
+                .map((group) => {
+                    const filteredGroup = { ...group };
+                    filteredGroup.addresses = group.addresses.filter(
+                        (addr) =>
+                            addr.address
+                                .toLowerCase()
+                                .includes(searchText.toLowerCase()) ||
+                            (addr.accountName &&
+                                addr.accountName
+                                    .toLowerCase()
+                                    .includes(searchText.toLowerCase()))
+                    );
+                    return filteredGroup;
+                })
+                .filter((group) => group.addresses.length > 0);
+        }
+
+        return {
+            allAddressGroups,
+            filteredAddressGroups
+        };
     }
 
     handleSearchSubmit = () => {
@@ -102,6 +239,12 @@ export default class AddressPicker extends React.Component<
                 });
             }
         }
+    };
+
+    // Update search text as the user types and filter results immediately
+    updateSearch = (text: string) => {
+        this.setState({ searchText: text });
+        // The filtering now happens automatically in getDerivedStateFromProps
     };
 
     selectAddress = (address: string) => {
@@ -177,31 +320,20 @@ export default class AddressPicker extends React.Component<
                     onPress={() => this.toggleGroupCollapse(groupId)}
                 >
                     <ListItem.Content>
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center'
-                            }}
-                        >
+                        <Row>
                             <View style={{ marginRight: 10 }}>
                                 {!isCollapsed ? (
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 18
-                                        }}
-                                    >
-                                        ▼
-                                    </Text>
+                                    <CaretDown
+                                        fill={themeColor('text')}
+                                        width="30"
+                                        height="30"
+                                    />
                                 ) : (
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            fontSize: 18
-                                        }}
-                                    >
-                                        ▶
-                                    </Text>
+                                    <CaretRight
+                                        fill={themeColor('text')}
+                                        width="30"
+                                        height="30"
+                                    />
                                 )}
                             </View>
                             <View style={{ flex: 1 }}>
@@ -227,318 +359,248 @@ export default class AddressPicker extends React.Component<
                                             )}
                                 </ListItem.Title>
                             </View>
-                        </View>
+                        </Row>
                     </ListItem.Content>
                 </ListItem>
 
                 {!isCollapsed &&
-                    item.addresses.map((address: Address) => (
-                        <ListItem
-                            key={`address-${address.address}`}
-                            containerStyle={{
-                                borderBottomWidth: 0,
-                                backgroundColor:
-                                    address.address === selectedAddress
-                                        ? themeColor('highlight') + '30' // 30% opacity
+                    item.addresses.map((address: Address) => {
+                        const isSelected = address.address === selectedAddress;
+                        return (
+                            <ListItem
+                                key={`address-${address.address}`}
+                                containerStyle={{
+                                    borderBottomWidth: 0,
+                                    backgroundColor: isSelected
+                                        ? themeColor('secondary') // Use secondary color for better contrast
                                         : 'transparent'
-                            }}
-                            onPress={() => this.selectAddress(address.address)}
-                        >
-                            <ListItem.Content>
-                                {address.balance !== undefined && (
-                                    <Amount sats={address.balance} sensitive />
-                                )}
-                                <ListItem.Subtitle
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 14
-                                    }}
-                                >
-                                    {address.address}
-                                </ListItem.Subtitle>
-                            </ListItem.Content>
-                            {address.address === selectedAddress && (
-                                <View style={{ marginLeft: 10 }}>
-                                    <Text
+                                }}
+                                onPress={() =>
+                                    this.selectAddress(address.address)
+                                }
+                            >
+                                <ListItem.Content>
+                                    {address.balance !== undefined && (
+                                        <Amount
+                                            sats={address.balance}
+                                            sensitive
+                                            colorOverride={
+                                                isSelected
+                                                    ? themeColor('highlight')
+                                                    : undefined
+                                            }
+                                        />
+                                    )}
+                                    <ListItem.Subtitle
                                         style={{
-                                            color: themeColor('highlight'),
-                                            fontSize: 16
+                                            color: isSelected
+                                                ? themeColor('highlight')
+                                                : themeColor('secondaryText'),
+                                            fontSize: 14
                                         }}
                                     >
-                                        ✓
-                                    </Text>
-                                </View>
-                            )}
-                        </ListItem>
-                    ))}
+                                        {address.address}
+                                    </ListItem.Subtitle>
+                                </ListItem.Content>
+                            </ListItem>
+                        );
+                    })}
             </React.Fragment>
         );
     };
 
     render() {
         const { MessageSignStore, navigation } = this.props;
-        const { addresses, loading } = MessageSignStore;
+        const { loading } = MessageSignStore;
         const {
             selectedAddress,
             searchText,
             hideZeroBalance,
             hideChangeAddresses,
-            sortBy
+            sortBy,
+            filteredAddressGroups
         } = this.state;
-
-        let addressGroups: AddressGroup[] = [];
-
-        if (addresses && addresses.length > 0) {
-            let sortedAddresses = [...addresses];
-
-            switch (sortBy) {
-                case SortBy.alphabeticalAscending:
-                    sortedAddresses.sort((a, b) =>
-                        a.address.localeCompare(b.address)
-                    );
-                    break;
-                case SortBy.alphabeticalDescending:
-                    sortedAddresses.sort((a, b) =>
-                        b.address.localeCompare(a.address)
-                    );
-                    break;
-                case SortBy.balanceAscending:
-                    sortedAddresses.sort(
-                        (a: any, b: any) =>
-                            Number(a.balance || 0) - Number(b.balance || 0)
-                    );
-                    break;
-                case SortBy.balanceDescending:
-                    sortedAddresses.sort(
-                        (a: any, b: any) =>
-                            Number(b.balance || 0) - Number(a.balance || 0)
-                    );
-                    break;
-            }
-
-            if (searchText) {
-                sortedAddresses = sortedAddresses.filter(
-                    (addr) =>
-                        addr.address
-                            .toLowerCase()
-                            .includes(searchText.toLowerCase()) ||
-                        (addr.accountName &&
-                            addr.accountName
-                                .toLowerCase()
-                                .includes(searchText.toLowerCase()))
-                );
-            }
-
-            const groupedAddresses = chain(sortedAddresses)
-                .groupBy(function (addr: Address) {
-                    const accountName =
-                        addr.accountName ||
-                        localeString('general.defaultNodeNickname');
-                    const addressType =
-                        addr.addressType || localeString('general.unknown');
-                    const isInternal =
-                        addr.isInternal !== undefined
-                            ? String(addr.isInternal)
-                            : 'false';
-                    return `${accountName};${addressType};${isInternal}`;
-                })
-                .value();
-
-            addressGroups = Object.entries(groupedAddresses).map(
-                ([key, addrGroup]) => {
-                    const [accountName, addressType, isInternalStr] =
-                        key.split(';');
-                    return {
-                        accountName:
-                            accountName ||
-                            localeString('general.defaultNodeNickname'),
-                        addressType:
-                            addressType || localeString('general.unknown'),
-                        changeAddresses: isInternalStr === 'true',
-                        addresses: addrGroup
-                    };
-                }
-            );
-
-            // Apply zero balance filter
-            if (hideZeroBalance) {
-                addressGroups.forEach(
-                    (acc) =>
-                        (acc.addresses = acc.addresses.filter(
-                            (addr: any) =>
-                                addr.balance && Number(addr.balance) > 0
-                        ))
-                );
-                // Remove empty groups after filtering
-                addressGroups = addressGroups.filter(
-                    (group) => group.addresses.length > 0
-                );
-            }
-
-            // Apply change addresses filter
-            if (hideChangeAddresses) {
-                addressGroups = addressGroups.filter((a) => !a.changeAddresses);
-            }
-        }
-
-        const FilterAndSortingOptions = () => (
-            <View style={styles.filterContainer}>
-                <View style={styles.searchContainer}>
-                    <TextInput
-                        ref={this.searchInputRef}
-                        style={[
-                            styles.searchInput,
-                            {
-                                backgroundColor: themeColor('secondary'),
-                                color: themeColor('text')
-                            }
-                        ]}
-                        placeholder={localeString('general.search')}
-                        placeholderTextColor={themeColor('secondaryText')}
-                        defaultValue={searchText}
-                        onChangeText={(text) => {
-                            this.localSearchText = text;
-                        }}
-                        onSubmitEditing={this.handleSearchSubmit}
-                        underlineColorAndroid="transparent"
-                        returnKeyType="search"
-                        blurOnSubmit={false}
-                        autoCapitalize="none"
-                    />
-                </View>
-
-                <DropdownSetting
-                    title={localeString('general.sorting')}
-                    values={Object.keys(SortBy).map((s) => ({
-                        key: s,
-                        translateKey: `views.AddressPicker.sortBy.${s}`,
-                        value: s
-                    }))}
-                    selectedValue={sortBy}
-                    onValueChange={(value) =>
-                        this.setState({ sortBy: value as SortBy })
-                    }
-                />
-
-                <View style={styles.filterButtons}>
-                    <TouchableHighlight
-                        activeOpacity={0.7}
-                        style={[
-                            styles.filterButton,
-                            { backgroundColor: themeColor('secondary') }
-                        ]}
-                        underlayColor={themeColor('disabled')}
-                        onPress={() =>
-                            this.setState({
-                                hideZeroBalance: !hideZeroBalance
-                            })
-                        }
-                    >
-                        <View>
-                            <Body
-                                small
-                                bold
-                                color={hideZeroBalance ? 'highlight' : 'text'}
-                            >
-                                {localeString(
-                                    'views.OnChainAddresses.hideZeroBalanance'
-                                )}
-                            </Body>
-                        </View>
-                    </TouchableHighlight>
-
-                    <TouchableHighlight
-                        activeOpacity={0.7}
-                        style={[
-                            styles.filterButton,
-                            { backgroundColor: themeColor('secondary') }
-                        ]}
-                        underlayColor={themeColor('disabled')}
-                        onPress={() =>
-                            this.setState({
-                                hideChangeAddresses: !hideChangeAddresses
-                            })
-                        }
-                    >
-                        <View>
-                            <Body
-                                small
-                                bold
-                                color={
-                                    hideChangeAddresses ? 'highlight' : 'text'
-                                }
-                            >
-                                {localeString(
-                                    'views.OnChainAddresses.hideChangeAddresses'
-                                )}
-                            </Body>
-                        </View>
-                    </TouchableHighlight>
-                </View>
-            </View>
-        );
 
         return (
             <Screen>
-                <Header
-                    leftComponent={{
-                        icon: 'arrow-back',
-                        color: themeColor('text'),
-                        onPress: this.handleBackPress
-                    }}
-                    centerComponent={{
-                        text: localeString(
-                            'views.Settings.SignMessage.selectAddress'
-                        ),
-                        style: {
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }
-                    }}
-                    navigation={navigation}
-                />
-
-                <View style={styles.container}>
-                    {loading ? (
-                        <LoadingIndicator />
-                    ) : (
-                        <>
-                            <FilterAndSortingOptions />
-
-                            {addressGroups.length > 0 ? (
-                                <FlatList
-                                    data={addressGroups}
-                                    renderItem={this.renderAddressGroup}
-                                    keyExtractor={(_item, index) =>
-                                        `group-${index}`
-                                    }
-                                />
-                            ) : (
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        textAlign: 'center',
-                                        marginTop: 20
-                                    }}
-                                >
-                                    {searchText
-                                        ? localeString(
-                                              'general.noSearchResults'
-                                          )
-                                        : localeString(
-                                              'views.Settings.SignMessage.noAddressesAvailable'
-                                          )}
-                                </Text>
-                            )}
-                        </>
+                <View style={{ flex: 1 }}>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString(
+                                'views.Settings.SignMessage.selectAddress'
+                            ),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
+                    {!loading && (
+                        <SearchBar
+                            ref={this.searchInputRef}
+                            placeholder={localeString('general.search')}
+                            // @ts-ignore:next-line
+                            onChangeText={this.updateSearch}
+                            value={searchText}
+                            inputStyle={{
+                                color: themeColor('text')
+                            }}
+                            placeholderTextColor={themeColor('secondaryText')}
+                            containerStyle={{
+                                backgroundColor: 'transparent',
+                                borderTopWidth: 0,
+                                borderBottomWidth: 0
+                            }}
+                            inputContainerStyle={{
+                                borderRadius: 15,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                            // @ts-ignore:next-line
+                            searchIcon={{
+                                importantForAccessibility:
+                                    'no-hide-descendants',
+                                accessibilityElementsHidden: true
+                            }}
+                        />
                     )}
 
-                    <View style={styles.buttonContainer}>
-                        <Button
-                            title={localeString('general.confirm')}
-                            onPress={this.confirmSelection}
-                            disabled={!selectedAddress}
-                        />
+                    <View style={styles.container}>
+                        {loading ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <>
+                                <View>
+                                    <DropdownSetting
+                                        title={localeString('general.sorting')}
+                                        values={Object.keys(SortBy).map(
+                                            (s) => ({
+                                                key: s,
+                                                translateKey: `views.AddressPicker.sortBy.${s}`,
+                                                value: s
+                                            })
+                                        )}
+                                        selectedValue={sortBy}
+                                        onValueChange={(value) =>
+                                            this.setState({
+                                                sortBy: value as SortBy
+                                            })
+                                        }
+                                    />
+
+                                    <View style={styles.filterButtons}>
+                                        <TouchableHighlight
+                                            activeOpacity={0.7}
+                                            style={[
+                                                styles.filterButton,
+                                                {
+                                                    backgroundColor:
+                                                        themeColor('secondary')
+                                                }
+                                            ]}
+                                            underlayColor={themeColor(
+                                                'disabled'
+                                            )}
+                                            onPress={() =>
+                                                this.setState({
+                                                    hideZeroBalance:
+                                                        !hideZeroBalance
+                                                })
+                                            }
+                                        >
+                                            <View>
+                                                <Body
+                                                    small
+                                                    bold
+                                                    color={
+                                                        hideZeroBalance
+                                                            ? 'highlight'
+                                                            : 'text'
+                                                    }
+                                                >
+                                                    {localeString(
+                                                        'views.OnChainAddresses.hideZeroBalanance'
+                                                    )}
+                                                </Body>
+                                            </View>
+                                        </TouchableHighlight>
+
+                                        <TouchableHighlight
+                                            activeOpacity={0.7}
+                                            style={[
+                                                styles.filterButton,
+                                                {
+                                                    backgroundColor:
+                                                        themeColor('secondary')
+                                                }
+                                            ]}
+                                            underlayColor={themeColor(
+                                                'disabled'
+                                            )}
+                                            onPress={() =>
+                                                this.setState({
+                                                    hideChangeAddresses:
+                                                        !hideChangeAddresses
+                                                })
+                                            }
+                                        >
+                                            <View>
+                                                <Body
+                                                    small
+                                                    bold
+                                                    color={
+                                                        hideChangeAddresses
+                                                            ? 'highlight'
+                                                            : 'text'
+                                                    }
+                                                >
+                                                    {localeString(
+                                                        'views.OnChainAddresses.hideChangeAddresses'
+                                                    )}
+                                                </Body>
+                                            </View>
+                                        </TouchableHighlight>
+                                    </View>
+                                </View>
+
+                                {filteredAddressGroups.length > 0 ? (
+                                    <FlatList
+                                        data={filteredAddressGroups}
+                                        renderItem={this.renderAddressGroup}
+                                        keyExtractor={(_item, index) =>
+                                            `group-${index}`
+                                        }
+                                    />
+                                ) : (
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            textAlign: 'center',
+                                            marginTop: 20
+                                        }}
+                                    >
+                                        {searchText
+                                            ? localeString(
+                                                  'general.noSearchResults'
+                                              )
+                                            : localeString(
+                                                  'views.Settings.SignMessage.noAddressesAvailable'
+                                              )}
+                                    </Text>
+                                )}
+                            </>
+                        )}
+
+                        <View style={styles.buttonContainer}>
+                            {!loading && filteredAddressGroups.length > 0 && (
+                                <Button
+                                    title={localeString('general.confirm')}
+                                    onPress={this.confirmSelection}
+                                    disabled={!selectedAddress}
+                                />
+                            )}
+                        </View>
                     </View>
                 </View>
             </Screen>
@@ -552,7 +614,7 @@ const styles = StyleSheet.create({
         padding: 10
     },
     buttonContainer: {
-        padding: 20
+        padding: 10
     },
     text: {
         fontFamily: 'PPNeueMontreal-Book'
@@ -571,7 +633,8 @@ const styles = StyleSheet.create({
     },
     filterButtons: {
         flexDirection: 'row',
-        marginTop: 10
+        marginTop: 10,
+        marginBottom: 10
     },
     filterButton: {
         paddingHorizontal: 15,

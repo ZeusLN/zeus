@@ -796,6 +796,7 @@
     "views.Settings.SignMessage.error": "Verification failed. Please double check message and signature.",
     "views.Settings.SignMessage.signingMethod": "Signing Method",
     "views.Settings.SignMessage.selectAddressSigning": "Select Address for Signing",
+    "views.Settings.SignMessage.selectAddressVerification": "Select Address for Verification",
     "views.Settings.SignMessage.loadingAddresses": "Loading addresses...",
     "views.Settings.SignMessage.fullAddress": "Full Address",
     "views.Settings.SignMessage.tapToSelectAddress": "Tap here to select an address",
