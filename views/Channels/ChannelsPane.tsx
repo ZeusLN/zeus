@@ -446,8 +446,6 @@ export default class ChannelsPane extends React.PureComponent<
 
         const { ChannelsStore, SettingsStore, navigation } = this.props;
         const {
-            errorDisconnectPeer,
-            errorListPeers,
             loading,
             getChannels,
             totalInbound,
@@ -724,59 +722,94 @@ export default class ChannelsPane extends React.PureComponent<
                     </>
                 ) : (
                     <View style={{ flex: 1 }}>
-                        <SafeAreaView style={{ flex: 1, paddingBottom: 20 }}>
-                            <View style={styles.content}>
-                                {(errorDisconnectPeer || errorListPeers) && (
+                        <SafeAreaView style={{ flex: 1 }}>
+                            <View>
+                                {ChannelsStore?.error && (
                                     <ErrorMessage
-                                        message={localeString('general.error')}
+                                        message={
+                                            ChannelsStore?.errorDisconnectPeer ||
+                                            ChannelsStore?.errorListPeers ||
+                                            localeString('general.error')
+                                        }
+                                        dismissable
                                     />
                                 )}
                             </View>
-                            <FlatList
-                                style={{
-                                    paddingHorizontal: 20,
-                                    paddingBottom: 20
-                                }}
-                                data={ChannelsStore?.peers}
-                                renderItem={({ item }) => {
-                                    const peer = new Peer(item);
+                            {ChannelsStore?.loading ? (
+                                <View style={{ marginTop: 40 }}>
+                                    <LoadingIndicator />
+                                </View>
+                            ) : (
+                                <FlatList
+                                    style={{
+                                        paddingHorizontal: 20,
+                                        paddingBottom: 20,
+                                        paddingTop: ChannelsStore?.error
+                                            ? 0
+                                            : 20
+                                    }}
+                                    onRefresh={() => ChannelsStore?.getPeers()}
+                                    refreshing={ChannelsStore?.loading}
+                                    data={ChannelsStore?.peers}
+                                    renderItem={({ item }) => {
+                                        const peer = new Peer(item);
 
-                                    return (
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                this.openDisconnectModal(peer);
-                                                this.scrollViewRef.current?.scrollTo(
-                                                    {
-                                                        y: 0,
-                                                        animated: true
-                                                    }
-                                                );
-                                            }}
-                                            style={[
-                                                styles.peerItem,
-                                                {
-                                                    backgroundColor:
-                                                        themeColor('secondary')
-                                                }
-                                            ]}
-                                        >
-                                            <View style={{ flex: 1 }}>
-                                                <Text
-                                                    style={[
-                                                        styles.text,
+                                        return (
+                                            <TouchableOpacity
+                                                onPress={() => {
+                                                    this.openDisconnectModal(
+                                                        peer
+                                                    );
+                                                    this.scrollViewRef.current?.scrollTo(
                                                         {
-                                                            color: themeColor(
-                                                                'text'
-                                                            ),
-                                                            fontSize: 20
+                                                            y: 0,
+                                                            animated: true
                                                         }
-                                                    ]}
-                                                    numberOfLines={3}
-                                                >
-                                                    {peer.pubkey}
-                                                </Text>
+                                                    );
+                                                }}
+                                                style={[
+                                                    styles.peerItem,
+                                                    {
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'secondary'
+                                                            )
+                                                    }
+                                                ]}
+                                            >
+                                                <View style={{ flex: 1 }}>
+                                                    <Text
+                                                        style={[
+                                                            styles.text,
+                                                            {
+                                                                color: themeColor(
+                                                                    'text'
+                                                                ),
+                                                                fontSize: 20
+                                                            }
+                                                        ]}
+                                                        numberOfLines={3}
+                                                    >
+                                                        {peer.pubkey}
+                                                    </Text>
 
-                                                {peer.alias && (
+                                                    {peer.alias && (
+                                                        <Text
+                                                            style={[
+                                                                styles.text,
+                                                                {
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontSize: 16,
+                                                                    marginTop: 4
+                                                                }
+                                                            ]}
+                                                        >
+                                                            {peer.alias}
+                                                        </Text>
+                                                    )}
+
                                                     <Text
                                                         style={[
                                                             styles.text,
@@ -789,164 +822,155 @@ export default class ChannelsPane extends React.PureComponent<
                                                             }
                                                         ]}
                                                     >
-                                                        {peer.alias}
+                                                        {peer.address}
                                                     </Text>
-                                                )}
 
-                                                <Text
-                                                    style={[
-                                                        styles.text,
-                                                        {
-                                                            color: themeColor(
-                                                                'secondaryText'
-                                                            ),
-                                                            fontSize: 16,
-                                                            marginTop: 4
-                                                        }
-                                                    ]}
-                                                >
-                                                    {peer.address}
-                                                </Text>
-
-                                                <View style={{ marginTop: 8 }}>
-                                                    {peer.ping_time && (
-                                                        <Text
-                                                            style={[
-                                                                styles.peerStatsText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {`${localeString(
-                                                                'views.OpenChannel.pingTime'
-                                                            )}: ${
-                                                                peer.ping_time
-                                                            }ms`}
-                                                        </Text>
-                                                    )}
-                                                    {peer.sats_sent && (
-                                                        <Text
-                                                            style={[
-                                                                styles.peerStatsText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {`${localeString(
-                                                                'views.OpenChannel.satsSent'
-                                                            )}: ${
-                                                                peer.sats_sent
-                                                            }`}
-                                                        </Text>
-                                                    )}
-                                                    {peer.sats_recv && (
-                                                        <Text
-                                                            style={[
-                                                                styles.peerStatsText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {`${localeString(
-                                                                'views.OpenChannel.satsRecv'
-                                                            )}: ${
-                                                                peer.sats_recv
-                                                            }`}
-                                                        </Text>
-                                                    )}
-                                                    {peer.connected && (
-                                                        <Text
-                                                            style={[
-                                                                styles.peerStatsText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {`${localeString(
-                                                                'views.OpenChannel.connected'
-                                                            )}: ${
-                                                                peer.connected
-                                                                    ? localeString(
-                                                                          'general.true'
-                                                                      )
-                                                                    : localeString(
-                                                                          'general.false'
-                                                                      )
-                                                            }`}
-                                                        </Text>
-                                                    )}
-                                                    {peer.num_channels !=
-                                                        null && (
-                                                        <Text
-                                                            style={[
-                                                                styles.peerStatsText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {`${localeString(
-                                                                'views.OpenChannel.numChannels'
-                                                            )}: ${
-                                                                peer.num_channels
-                                                            }`}
-                                                        </Text>
-                                                    )}
+                                                    <View
+                                                        style={{ marginTop: 8 }}
+                                                    >
+                                                        {peer.ping_time && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.OpenChannel.pingTime'
+                                                                )}: ${
+                                                                    peer.ping_time
+                                                                }ms`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.sats_sent && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.OpenChannel.satsSent'
+                                                                )}: ${
+                                                                    peer.sats_sent
+                                                                }`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.sats_recv && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.OpenChannel.satsRecv'
+                                                                )}: ${
+                                                                    peer.sats_recv
+                                                                }`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.connected && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.OpenChannel.connected'
+                                                                )}: ${
+                                                                    peer.connected
+                                                                        ? localeString(
+                                                                              'general.true'
+                                                                          )
+                                                                        : localeString(
+                                                                              'general.false'
+                                                                          )
+                                                                }`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.num_channels !=
+                                                            null && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.OpenChannel.numChannels'
+                                                                )}: ${
+                                                                    peer.num_channels
+                                                                }`}
+                                                            </Text>
+                                                        )}
+                                                    </View>
                                                 </View>
-                                            </View>
 
-                                            <View
-                                                style={styles.peerIconContainer}
-                                            >
-                                                <Icon
-                                                    name="minus-circle"
-                                                    size={20}
-                                                    color={themeColor('error')}
-                                                />
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                }}
-                                keyExtractor={(item, index) =>
-                                    `peer-${item.pubkey}-${index}`
-                                }
-                                ListEmptyComponent={
-                                    <Text
-                                        style={[
-                                            styles.text,
-                                            {
-                                                fontSize: 20,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                ),
-                                                textAlign: 'center',
-                                                padding: 20
-                                            }
-                                        ]}
-                                    >
-                                        {localeString(
-                                            'views.OpenChannel.noPeers'
-                                        )}
-                                    </Text>
-                                }
-                                ItemSeparatorComponent={() => (
-                                    <View style={styles.separator} />
-                                )}
-                            />
+                                                <View
+                                                    style={
+                                                        styles.peerIconContainer
+                                                    }
+                                                >
+                                                    <Icon
+                                                        name="minus-circle"
+                                                        size={20}
+                                                        color={themeColor(
+                                                            'error'
+                                                        )}
+                                                    />
+                                                </View>
+                                            </TouchableOpacity>
+                                        );
+                                    }}
+                                    keyExtractor={(item, index) =>
+                                        `peer-${item.pubkey}-${index}`
+                                    }
+                                    ListEmptyComponent={
+                                        <Text
+                                            style={[
+                                                styles.text,
+                                                {
+                                                    fontSize: 20,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    textAlign: 'center',
+                                                    padding: 20
+                                                }
+                                            ]}
+                                        >
+                                            {localeString(
+                                                'views.OpenChannel.noPeers'
+                                            )}
+                                        </Text>
+                                    }
+                                    ItemSeparatorComponent={() => (
+                                        <View style={styles.separator} />
+                                    )}
+                                />
+                            )}
                         </SafeAreaView>
                         <ModalBox
                             isOpen={this.state.disconnectModalVisible}
@@ -969,7 +993,7 @@ export default class ChannelsPane extends React.PureComponent<
                             <View style={{ padding: 20 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('white'),
+                                        color: themeColor('text'),
                                         fontSize: 20,
                                         fontWeight: 'bold',
                                         marginBottom: 12,
