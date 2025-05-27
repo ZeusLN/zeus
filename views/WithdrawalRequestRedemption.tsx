@@ -1,22 +1,25 @@
 import * as React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
+import { themeColor } from '../utils/ThemeUtils';
+import { localeString } from '../utils/LocaleUtils';
+
+import Amount from '../components/Amount';
+import Button from '../components/Button';
 import Screen from '../components/Screen';
 import Header from '../components/Header';
-import InvoicesStore from '../stores/InvoicesStore';
-import { localeString } from '../utils/LocaleUtils';
-import { themeColor } from '../utils/ThemeUtils';
+import KeyValue from '../components/KeyValue';
 import { Row } from '../components/layout/Row';
+
+import InvoicesStore from '../stores/InvoicesStore';
+
 import WithdrawalRequest from '../models/WithdrawalRequest';
 
 import QR from '../assets/images/SVG/QR.svg';
-import { ScrollView } from 'react-native-gesture-handler';
-import Amount from '../components/Amount';
-import KeyValue from '../components/KeyValue';
-import Button from '../components/Button';
 
 interface WithdrawalRequestRedemptionProps {
     InvoicesStore: InvoicesStore;
@@ -35,6 +38,28 @@ export default class WithdrawalRequestRedemption extends React.Component<
 > {
     state: WithdrawalRequestRedemptionState = {
         withdrawalReqResult: null
+    };
+
+    handleRedemption = async ({
+        invreq,
+        label
+    }: {
+        invreq: string;
+        label: string;
+    }) => {
+        const { InvoicesStore } = this.props;
+        const uniqueLabel = `${label}-${Date.now()}`;
+        try {
+            const result = await InvoicesStore.redeemWithdrawalRequest({
+                invreq,
+                label: uniqueLabel
+            });
+            Alert.alert('Success', `Invoice: ${JSON.stringify(result)}`);
+            return result;
+        } catch (error: any) {
+            Alert.alert('Redemption failed');
+            throw error;
+        }
     };
 
     async componentDidMount() {
@@ -148,7 +173,13 @@ export default class WithdrawalRequestRedemption extends React.Component<
                             name: 'send',
                             size: 25
                         }}
-                        onPress={() => navigation.navigate('PaymentRequest')}
+                        onPress={() =>
+                            this.handleRedemption({
+                                invreq: bolt12,
+                                label:
+                                    withdrawalReqResult?.offer_description ?? ''
+                            })
+                        }
                     />
                 </View>
             </Screen>
