@@ -717,7 +717,9 @@ export default class ChannelsStore {
             const res = await BackendUtils.disconnectPeer(pubkey);
 
             if (!res) {
-                throw new Error('Failed to disconnect peer');
+                throw new Error(
+                    'Failed to disconnect peer. Peer not connected'
+                );
             }
 
             runInAction(() => {
@@ -730,12 +732,13 @@ export default class ChannelsStore {
             return true;
         } catch (error: any) {
             console.error('Error disconnecting peer:', error, error.message);
-            runInAction(() => {
-                this.error = true;
-                this.errorDisconnectPeer =
-                    error.message || 'Failed to disconnect peer';
-                this.loading = false;
-            });
+            this.error = true;
+            this.errorDisconnectPeer =
+                error?.message?.message ||
+                error?.message ||
+                'Failed to disconnect peer';
+            console.log('disconnect: ', this.errorDisconnectPeer);
+            this.loading = false;
 
             return false;
         }

@@ -48,7 +48,6 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
         const horizontalPadding = 32;
         const toggleWidth = screenWidth - horizontalPadding;
         const thumbWidth = toggleWidth / options.length;
-
         const styles = getStyles(toggleWidth, thumbWidth);
 
         const translateX = this.animation.interpolate({

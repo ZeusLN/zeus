@@ -446,8 +446,6 @@ export default class ChannelsPane extends React.PureComponent<
 
         const { ChannelsStore, SettingsStore, navigation } = this.props;
         const {
-            errorDisconnectPeer,
-            errorListPeers,
             loading,
             getChannels,
             totalInbound,
@@ -726,9 +724,13 @@ export default class ChannelsPane extends React.PureComponent<
                     <View style={{ flex: 1 }}>
                         <SafeAreaView style={{ flex: 1, paddingBottom: 20 }}>
                             <View style={styles.content}>
-                                {(errorDisconnectPeer || errorListPeers) && (
+                                {ChannelsStore?.error && (
                                     <ErrorMessage
-                                        message={localeString('general.error')}
+                                        message={
+                                            ChannelsStore?.errorDisconnectPeer ||
+                                            ChannelsStore?.errorListPeers ||
+                                            localeString('general.error')
+                                        }
                                     />
                                 )}
                             </View>
@@ -969,7 +971,7 @@ export default class ChannelsPane extends React.PureComponent<
                             <View style={{ padding: 20 }}>
                                 <Text
                                     style={{
-                                        color: themeColor('white'),
+                                        color: themeColor('text'),
                                         fontSize: 20,
                                         fontWeight: 'bold',
                                         marginBottom: 12,
