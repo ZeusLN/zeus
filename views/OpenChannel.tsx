@@ -38,7 +38,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import BalanceStore from '../stores/BalanceStore';
-import ChannelsStore from '../stores/ChannelsStore';
+import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
@@ -118,7 +118,8 @@ export default class OpenChannel extends React.Component<
             suggestImport: '',
             utxos: [],
             utxoBalance: 0,
-            connectPeerOnly: false,
+            connectPeerOnly:
+                props.ChannelsStore.channelsView === ChannelsView.Peers,
             advancedSettingsToggle: false,
             account: 'default',
             additionalChannels: []
@@ -158,8 +159,12 @@ export default class OpenChannel extends React.Component<
         });
     }
 
-    async componentDidMount() {
+    componentDidMount() {
         this.initFromProps(this.props);
+
+        if (this.props.ChannelsStore.channelsView === ChannelsView.Peers) {
+            this.setState({ connectPeerOnly: true });
+        }
     }
 
     disableNfc = () => {
