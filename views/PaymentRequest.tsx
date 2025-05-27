@@ -44,6 +44,7 @@ import BackendUtils from '../utils/BackendUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -1345,7 +1346,9 @@ export default class PaymentRequest extends React.Component<
                                                     )
                                                 }}
                                             >
-                                                {donationAmount +
+                                                {numberWithCommas(
+                                                    donationAmount
+                                                ) +
                                                     ` ${localeString(
                                                         'general.sats'
                                                     )}`}
@@ -1358,12 +1361,14 @@ export default class PaymentRequest extends React.Component<
                                                     color: themeColor('text')
                                                 }}
                                             >
-                                                {`${
+                                                {`${numberWithCommas(
                                                     requestAmount || 0
-                                                } + ${donationAmount} = ${
-                                                    (requestAmount || 0) +
+                                                )} + ${numberWithCommas(
                                                     donationAmount
-                                                } ${localeString(
+                                                )} = ${numberWithCommas(
+                                                    (requestAmount || 0) +
+                                                        donationAmount
+                                                )} ${localeString(
                                                     'general.sats'
                                                 )}`}
                                             </Text>
