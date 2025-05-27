@@ -164,6 +164,46 @@ export default class InvoicesStore {
     };
 
     @action
+    public redeemWithdrawalRequest = async ({
+        invreq,
+        label
+    }: {
+        invreq: string;
+        label: string;
+    }) => {
+        this.loading = true;
+        this.error = false;
+        this.error_msg = null;
+        try {
+            console.log('before');
+            const response = await BackendUtils.redeemWithdrawalRequest({
+                invreq,
+                label
+            });
+            console.log('after', response);
+            runInAction(() => {
+                this.loading = false;
+                this.error = false;
+                this.error_msg = null;
+            });
+            return response;
+        } catch (error: any) {
+            console.log(error);
+            const error_msg = error?.toString();
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+                this.error_msg =
+                    error_msg ||
+                    localeString(
+                        'stores.InvoicesStore.errorRedeemingWithdrawalRequest'
+                    );
+            });
+            throw new Error(error);
+        }
+    };
+
+    @action
     public createUnifiedInvoice = ({
         memo,
         value,
