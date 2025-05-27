@@ -657,7 +657,7 @@ export default class Activity extends React.PureComponent<
                     )}
                 >
                     <Icon
-                        name="download"
+                        name="upload"
                         type="feather"
                         color={themeColor('text')}
                         underlayColor="transparent"
