@@ -32,6 +32,7 @@ export default class MessageSignStore {
         this.valid = null;
         this.error = false;
         this.errorMessage = '';
+        this.selectedAddress = '';
     }
 
     @action
