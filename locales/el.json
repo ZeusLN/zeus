@@ -753,7 +753,7 @@
     "views.Settings.confirmPin": "Επιβεβαιώστε το PIN σας",
     "views.Settings.newDuressPin": "Δημιουργήστε τον κωδικό Εξαναγκασμού",
     "views.Settings.confirmDuressPin": "Επιβεβαιώστε το PIN Εξαναγκασμού",
-    "views.Settings.olympus": "Μετάβαση στο olympusln.com",
+    "views.Settings.olympus": "Go to ZEUS LSP website",
     "views.Settings.SignMessage.title": "Υπογράψτε ή επιβεβαιώστε το μήνυμα",
     "views.Settings.SignMessage.sign": "Υπογραφή",
     "views.Settings.SignMessage.verify": "Επιβεβαίωση",

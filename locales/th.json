@@ -753,7 +753,7 @@
     "views.Settings.confirmPin": "ยืนยันรหัส PIN",
     "views.Settings.newDuressPin": "สร้างรหัส PIN ทำลายตนเอง",
     "views.Settings.confirmDuressPin": "ยืนยันรหัส PIN ทำลายตนเอง",
-    "views.Settings.olympus": "ไปยัง olympusln.com",
+    "views.Settings.olympus": "Go to ZEUS LSP website",
     "views.Settings.SignMessage.title": "เซ็น หรือตรวจสอบข้อความ",
     "views.Settings.SignMessage.sign": "เซ็นต์",
     "views.Settings.SignMessage.verify": "ตรวจสอบ",
