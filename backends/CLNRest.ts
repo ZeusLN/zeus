@@ -452,6 +452,18 @@ export default class CLNRest {
         });
     };
     listWithdrawalRequests = () => this.postRequest('/v1/listinvoicerequests');
+    redeemWithdrawalRequest = ({
+        invreq,
+        label
+    }: {
+        invreq: string;
+        label: string;
+    }) => {
+        return this.postRequest('/v1/sendinvoice', {
+            invreq,
+            label
+        });
+    };
     createOffer = ({
         description,
         label,

@@ -1247,6 +1247,7 @@
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
+    "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Error redeeming withdrawal request",
     "stores.SettingsStore.btcPayImplementationSupport": "Sorry, we currently only support BTCPay instances using LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Error fetching BTCPay configuration",
     "stores.SettingsStore.olympianFetchError": "Error fetching Olympians",
