@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { inject, observer } from 'mobx-react';
 import DatePicker from 'react-native-date-picker';
 import { CheckBox } from 'react-native-elements';
+import { AbortController, AbortSignal } from 'abort-controller';
 
 import Header from '../../components/Header';
 import Button from '../../components/Button';
@@ -62,6 +63,8 @@ export default class ActivityExport extends React.Component<
     ActivityExportProps,
     ActivityExportState
 > {
+    private readonly abortController = new AbortController();
+
     constructor(props: ActivityExportProps) {
         super(props);
         this.state = {
@@ -79,16 +82,20 @@ export default class ActivityExport extends React.Component<
     }
 
     componentDidMount() {
-        this.fetchAndFilterActivity();
+        this.fetchAndFilterActivity(this.abortController.signal);
     }
 
-    fetchAndFilterActivity = async () => {
+    componentWillUnmount(): void {
+        this.abortController.abort();
+    }
+
+    fetchAndFilterActivity = async (abortSignal: AbortSignal) => {
         const { SettingsStore, ActivityStore } = this.props;
         const { locale } = SettingsStore.settings;
 
         try {
             // Call getActivityAndFilter to fetch and filter activity data
-            await ActivityStore.getActivityAndFilter(locale);
+            await ActivityStore.getActivityAndFilter(abortSignal, locale);
 
             // Update filteredActivity in state
             this.setState({

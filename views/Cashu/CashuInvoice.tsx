@@ -3,6 +3,7 @@ import { StyleSheet, ScrollView, View, TouchableOpacity } from 'react-native';
 import { inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { AbortController } from 'abort-controller';
 
 import CashuStore from '../../stores/CashuStore';
 import SettingsStore from '../../stores/SettingsStore';
@@ -40,6 +41,8 @@ export default class CashuInvoiceView extends React.Component<
     CashuInvoiceProps,
     CashuInvoiceState
 > {
+    private readonly abortController = new AbortController();
+
     state = {
         updatedInvoice: undefined,
         storedNote: ''
@@ -78,6 +81,7 @@ export default class CashuInvoiceView extends React.Component<
                     });
                     clearInterval(checkInterval); // Stop checking once paid
                     activityStore.getActivityAndFilter(
+                        this.abortController.signal,
                         settingsStore.settings.locale
                     );
                 } else {
@@ -85,6 +89,10 @@ export default class CashuInvoiceView extends React.Component<
                 }
             }, 5000);
         }
+    }
+
+    componentWillUnmount(): void {
+        this.abortController.abort();
     }
 
     render() {
