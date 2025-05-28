@@ -46,6 +46,10 @@ import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas } from '../utils/UnitsUtils';
+import {
+    calculateDonationAmount,
+    findDonationPercentageIndex
+} from '../utils/DonationUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -486,8 +490,9 @@ export default class PaymentRequest extends React.Component<
 
         const handleButtonPress = (index: number) => {
             const percentage = donationPercentageOptions[index];
-            const donationAmount = Math.round(
-                ((requestAmount || 0) * percentage) / 100
+            const donationAmount = calculateDonationAmount(
+                requestAmount ?? 0,
+                percentage
             );
             this.setState({
                 donationPercentage: percentage,
@@ -497,14 +502,19 @@ export default class PaymentRequest extends React.Component<
         };
 
         const handleSliderChange = (value: number) => {
-            const donationAmount = Math.round(
-                ((requestAmount || 0) * value) / 100
+            const donationAmount = calculateDonationAmount(
+                requestAmount ?? 0,
+                value
             );
-            const index = donationPercentageOptions.indexOf(value);
+            const index = findDonationPercentageIndex(
+                value,
+                donationPercentageOptions
+            );
+
             this.setState({
                 donationPercentage: value,
                 donationAmount,
-                selectedIndex: index === -1 ? null : index
+                selectedIndex: index
             });
         };
 
