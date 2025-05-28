@@ -405,6 +405,16 @@ export default class Activity extends React.PureComponent<
         isCsvModalVisible: false
     };
 
+    async componentDidMount() {
+        const { ActivityStore, SettingsStore, navigation } = this.props;
+        const { getActivityAndFilter } = ActivityStore;
+        await getActivityAndFilter(SettingsStore.settings.locale);
+        this.subscribeEvents();
+        navigation.addListener('focus', async () => {
+            await getActivityAndFilter(SettingsStore.settings.locale);
+        });
+    }
+
     async UNSAFE_componentWillMount() {
         const {
             ActivityStore: { getActivityAndFilter, getFilters },
