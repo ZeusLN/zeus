@@ -10,6 +10,7 @@ import {
 import { inject, observer } from 'mobx-react';
 import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { ButtonGroup } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -93,6 +94,7 @@ interface InvoiceState {
     donationsToggle: boolean;
     donationPercentage: any;
     donationAmount: any;
+    selectedIndex: number | null;
 }
 
 @inject(
@@ -133,7 +135,8 @@ export default class PaymentRequest extends React.Component<
         validAmountToSwap: false,
         donationsToggle: false,
         donationPercentage: 0,
-        donationAmount: 0
+        donationAmount: 0,
+        selectedIndex: null
     };
 
     async UNSAFE_componentWillMount() {
@@ -353,9 +356,10 @@ export default class PaymentRequest extends React.Component<
 
         navigation.navigate('SendingLightning', {
             enableDonations,
-            ...(enableDonations && {
-                donationAmount: donationAmount.toString()
-            })
+            ...(enableDonations &&
+                donationAmount > 0 && {
+                    donationAmount: donationAmount.toString()
+                })
         });
     };
 
@@ -477,6 +481,53 @@ export default class PaymentRequest extends React.Component<
         const timestamp = pay_req && pay_req.timestamp;
         const getMemo = pay_req && pay_req.getMemo;
         const getNameDescReceiver = pay_req && pay_req.getNameDescReceiver;
+
+        const donationPercentageOptions = [20, 25, 30];
+
+        const handleButtonPress = (index: number) => {
+            const percentage = donationPercentageOptions[index];
+            const donationAmount = Math.round(
+                ((requestAmount || 0) * percentage) / 100
+            );
+            this.setState({
+                donationPercentage: percentage,
+                donationAmount,
+                selectedIndex: index
+            });
+        };
+
+        const handleSliderChange = (value: number) => {
+            const donationAmount = Math.round(
+                ((requestAmount || 0) * value) / 100
+            );
+            const index = donationPercentageOptions.indexOf(value);
+            this.setState({
+                donationPercentage: value,
+                donationAmount,
+                selectedIndex: index === -1 ? null : index
+            });
+        };
+
+        const renderButton = (label: string, index: number) => () =>
+            (
+                <Text
+                    style={{
+                        fontFamily: 'PPNeueMontreal-Book',
+                        color:
+                            this.state.selectedIndex === index
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    {label}
+                </Text>
+            );
+
+        const buttons: any = donationPercentageOptions.map(
+            (percent, index) => ({
+                element: renderButton(`${percent}%`, index)
+            })
+        );
 
         let lockAtomicMultiPathPayment = false;
         if (
@@ -1301,6 +1352,30 @@ export default class PaymentRequest extends React.Component<
                                                 )}
                                             </Text>
                                         </Row>
+                                        <ButtonGroup
+                                            selectedIndex={
+                                                this.state.selectedIndex
+                                            }
+                                            onPress={handleButtonPress}
+                                            buttons={buttons}
+                                            selectedButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
+                                            }}
+                                            containerStyle={{
+                                                marginTop: 20,
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary')
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                        />
+
                                         <Slider
                                             style={{
                                                 width: '100%',
@@ -1310,16 +1385,7 @@ export default class PaymentRequest extends React.Component<
                                             maximumValue={100}
                                             step={1}
                                             value={donationPercentage}
-                                            onValueChange={(value: any) =>
-                                                this.setState({
-                                                    donationPercentage: value,
-                                                    donationAmount: Math.round(
-                                                        ((requestAmount || 0) *
-                                                            value) /
-                                                            100
-                                                    )
-                                                })
-                                            }
+                                            onValueChange={handleSliderChange}
                                             minimumTrackTintColor={themeColor(
                                                 'highlight'
                                             )}
