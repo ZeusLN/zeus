@@ -158,6 +158,7 @@ export default class SendingLightning extends React.Component<
             wasSuccessful &&
             !this.state.wasSuccessful &&
             enableDonations &&
+            donationAmount &&
             !donationIsPaid
         ) {
             this.setState(
