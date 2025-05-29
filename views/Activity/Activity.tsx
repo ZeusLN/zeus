@@ -398,6 +398,7 @@ export default class Activity extends React.PureComponent<
 > {
     private transactionListener: EmitterSubscription;
     private invoicesListener: EmitterSubscription;
+    private focusListener?: () => void;
 
     state = {
         loading: false,
@@ -406,26 +407,28 @@ export default class Activity extends React.PureComponent<
     };
 
     async componentDidMount() {
-        const { ActivityStore, SettingsStore, navigation } = this.props;
-        const { getActivityAndFilter } = ActivityStore;
-        await getActivityAndFilter(SettingsStore.settings.locale);
-        this.subscribeEvents();
-        navigation.addListener('focus', async () => {
-            await getActivityAndFilter(SettingsStore.settings.locale);
-        });
-    }
-
-    async UNSAFE_componentWillMount() {
         const {
             ActivityStore: { getActivityAndFilter, getFilters },
-            SettingsStore
+            SettingsStore,
+            navigation
         } = this.props;
         this.setState({ loading: true });
+
         const filters = await getFilters();
         await getActivityAndFilter(SettingsStore.settings.locale, filters);
+
         if (SettingsStore.implementation === 'lightning-node-connect') {
             this.subscribeEvents();
         }
+
+        this.focusListener = navigation.addListener('focus', async () => {
+            const refilters = await getFilters();
+            await getActivityAndFilter(
+                SettingsStore.settings.locale,
+                refilters
+            );
+        });
+
         this.setState({ loading: false });
     }
 
@@ -438,6 +441,7 @@ export default class Activity extends React.PureComponent<
     componentWillUnmount() {
         if (this.transactionListener) this.transactionListener.remove();
         if (this.invoicesListener) this.invoicesListener.remove();
+        if (this.focusListener) this.focusListener();
     }
 
     subscribeEvents = () => {
