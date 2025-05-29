@@ -19,6 +19,7 @@ import CashuToken from '../models/CashuToken';
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
 // @ts-ignore:next-line
 import { relayInit, nip05, nip19 } from 'nostr-tools';
+import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
     handleAnything(data, undefined, true);
@@ -95,7 +96,8 @@ const nostrProfileLookup = async (data: string) => {
 const handleAnything = async (
     data: string,
     setAmount?: string,
-    isClipboardValue?: boolean
+    isClipboardValue?: boolean,
+    wif?: boolean
 ): Promise<any> => {
     data = data.trim();
     const { nodeInfo } = nodeInfoStore;
@@ -110,6 +112,22 @@ const handleAnything = async (
     const ecash =
         BackendUtils.supportsCashuWallet() &&
         settingsStore?.settings?.ecash?.enableCashu;
+
+    // Check if the value is a valid WIF
+    if (wif) {
+        try {
+            const { isValid, error } = wifUtils.validateWIF(data);
+            if (isValid) {
+                return ['WIFSweeper', { p: data }];
+            } else {
+                const err = new Error();
+                err.message = error || localeString('views.Wif.invalidWif');
+                throw err;
+            }
+        } catch (err: any) {
+            throw err;
+        }
+    }
 
     let lnurl;
     // if the value is from clipboard and looks like a url we don't want to decode it
