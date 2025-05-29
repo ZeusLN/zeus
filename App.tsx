@@ -258,7 +258,6 @@ import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 import WIFSweeper from './views/wif';
-import HandlePrivateKeyQRScanner from './views/HandlePrivateKeyQRScanner';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -642,12 +641,6 @@ export default class App extends React.PureComponent {
                                                         name="HandleAnythingQRScanner" // @ts-ignore:next-line
                                                         component={
                                                             HandleAnythingQRScanner
-                                                        }
-                                                    />
-                                                    <Stack.Screen
-                                                        name="HandlePrivateKeyQRScanner" // @ts-ignore:next-line
-                                                        component={
-                                                            HandlePrivateKeyQRScanner
                                                         }
                                                     />
                                                     <Stack.Screen
