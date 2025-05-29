@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -24,6 +24,8 @@ import { Text } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import ShowHideToggle from '../../components/ShowHideToggle';
+import wifUtils from '../../utils/WIFUtils';
+import AddressUtils from '../../utils/AddressUtils';
 
 interface SweepProps {
     exitSetup: any;
@@ -41,9 +43,12 @@ interface SweepProps {
 interface SweepState {
     privateKey: string;
     hidden: boolean;
+    isValid: boolean;
+    destination: string;
+    error: string;
 }
 
-@inject('NodeInfoStore', 'SettingsStore', 'SweepStore')
+@inject('NodeInfoStore', 'SettingsStore', 'SweepStore', 'InvoicesStore')
 @observer
 export default class WIFSweeper extends React.Component<
     SweepProps,
@@ -51,7 +56,10 @@ export default class WIFSweeper extends React.Component<
 > {
     state = {
         privateKey: '',
-        hidden: true
+        hidden: true,
+        isValid: false,
+        destination: '',
+        error: ''
     };
 
     componentDidMount() {
@@ -77,13 +85,17 @@ export default class WIFSweeper extends React.Component<
     }
 
     render() {
-        const { navigation, SweepStore } = this.props;
-        const { privateKey, hidden } = this.state;
-        const { sweepError, sweepErrorMsg, loading, isValidWif } = SweepStore;
+        const { navigation, SweepStore, InvoicesStore } = this.props;
+        const { privateKey, hidden, destination } = this.state;
+        const { sweepError, sweepErrorMsg, loading } = SweepStore;
 
         const ScanButton = () => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('HandlePrivateKeyQRScanner')}
+                onPress={() =>
+                    navigation.navigate('HandleAnythingQRScanner', {
+                        wif: true
+                    })
+                }
             >
                 <Scan fill={themeColor('text')} width={30} height={30} />
             </TouchableOpacity>
@@ -148,18 +160,105 @@ export default class WIFSweeper extends React.Component<
                         </View>
                     </View>
 
-                    <View style={{ padding: 20, paddingBottom: 30 }}>
+                    <View>
+                        <View>
+                            <TextInput
+                                onChangeText={async (text: string) => {
+                                    let isValid;
+                                    isValid = text
+                                        ? AddressUtils.isValidBitcoinAddress(
+                                              text,
+                                              true
+                                          )
+                                        : false;
+                                    this.setState({
+                                        destination: text,
+                                        isValid,
+                                        error: ''
+                                    });
+                                }}
+                                placeholder={localeString(
+                                    'views.Wif.destinationOnChainAddress'
+                                )}
+                                style={{
+                                    marginHorizontal: 20
+                                }}
+                                value={destination}
+                            />
+                        </View>
+
+                        <View
+                            style={{
+                                paddingBottom: 40,
+                                marginVertical: 5
+                            }}
+                        >
+                            <Button
+                                onPress={async () => {
+                                    try {
+                                        this.setState({
+                                            destination: ''
+                                        });
+                                        await SweepStore.fetchOnChainBalance(
+                                            this.state.privateKey
+                                        );
+                                        await InvoicesStore.createUnifiedInvoice(
+                                            {
+                                                memo: '',
+                                                value:
+                                                    SweepStore.onChainBalance ??
+                                                    '10',
+                                                expiry: '3600'
+                                            }
+                                        );
+                                        if (InvoicesStore.onChainAddress) {
+                                            this.setState({
+                                                destination:
+                                                    InvoicesStore.onChainAddress,
+                                                error: '',
+                                                isValid: true
+                                            });
+                                        } else {
+                                            Alert.alert('hiello');
+                                            this.setState({
+                                                error: localeString(
+                                                    'views.Wif.generateOnChainAddressFailed'
+                                                )
+                                            });
+                                        }
+                                    } catch (e: any) {
+                                        this.setState({
+                                            error: localeString(
+                                                'views.Wif.generateOnChainAddressFailed'
+                                            )
+                                        });
+                                    }
+                                }}
+                                title={localeString(
+                                    'views.Wif.generateOnChainAddress'
+                                )}
+                                secondary
+                                disabled={!privateKey}
+                            />
+                        </View>
                         <Button
                             title={localeString('views.Wif.sweep')}
                             onPress={() => {
-                                const valid = this.props.SweepStore.isValidWif(
+                                const { isValid, error } = wifUtils.validateWIF(
                                     this.state.privateKey
                                 );
-                                if (valid) {
-                                    isValidWif(this.state.privateKey);
+                                if (isValid) {
+                                    // Continue with sweep process
+                                    // this.props.SweepStore.sweepBtc(this.state.privateKey);
+                                } else {
+                                    this.props.SweepStore.sweepError = true;
+                                    this.props.SweepStore.sweepErrorMsg =
+                                        error ||
+                                        localeString('views.Wif.invalidWif');
                                 }
                             }}
-                            disabled={!privateKey || loading}
+                            disabled={!privateKey || loading || !destination}
+                            containerStyle={{ paddingBottom: 30 }}
                         />
                     </View>
                 </View>
