@@ -1,15 +1,20 @@
 import { action, observable } from 'mobx';
-import NodeInfoStore from './NodeInfoStore';
+import { decode as wifDecode } from 'wif';
 import * as bitcoin from 'bitcoinjs-lib';
+import { getPublicKey } from '@noble/secp256k1';
+
+import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
-const EC = require('elliptic').ec;
-const ec = new EC('secp256k1');
+import ecc from '../zeus_modules/noble_ecc';
+import ECPairFactory from 'ecpair';
+const ECPair = ECPairFactory(ecc);
 
 export default class SweepStore {
     @observable loading: boolean = false;
     @observable sweepErrorMsg: string | null = null;
     @observable sweepError: boolean = false;
     @observable sweepTxHex: string | null = null;
+    @observable onChainBalance: string;
 
     nodeInfoStore: NodeInfoStore;
 
@@ -29,55 +34,33 @@ export default class SweepStore {
     }
 
     @action
-    isValidWif(wif: string): boolean {
-        try {
-            if (!['K', 'L', '5'].includes(wif[0])) {
-                throw new Error(localeString('views.Wif.invalidPrefix'));
-            }
-
-            if (wif.length !== 51 && wif.length !== 52) {
-                throw new Error(localeString('views.Wif.invalidLength'));
-            }
-
-            const checksum = wif.slice(-4);
-            if (checksum.length !== 4) {
-                throw new Error(localeString('views.Wif.invalidChecksum'));
-            }
-
-            this.sweepError = false;
-            this.sweepErrorMsg = null;
-            return true;
-        } catch (err: any) {
-            console.error('Error validating WIF:', err);
-            this.sweepError = true;
-            this.sweepErrorMsg =
-                err.message || localeString('views.Wif.invalidWif');
-            return false;
-        }
-    }
-
-    @action
     async sweepBtc(wif: string, destination: string) {
-        const { nodeInfo } = this.nodeInfoStore;
-        const network = nodeInfo?.isTestNet
-            ? nodeInfo?.isRegTest
-                ? bitcoin.networks.regtest
-                : bitcoin.networks.testnet
-            : bitcoin.networks.bitcoin;
-
         try {
-            const keyPair = ec.fromWIF(wif);
-            const { address } = bitcoin.payments.p2pkh({
-                pubkey: keyPair.publicKey
+            const { nodeInfo } = this.nodeInfoStore;
+            const network = nodeInfo?.isTestNet
+                ? nodeInfo?.isRegTest
+                    ? bitcoin.networks.regtest
+                    : bitcoin.networks.testnet
+                : bitcoin.networks.bitcoin;
+
+            const networkStr = nodeInfo?.isTestNet ? 'testnet' : 'mainnet';
+
+            const { privateKey } = wifDecode(wif);
+            const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey), {
+                network
+            });
+
+            const publicKey = getPublicKey(privateKey, true);
+            const { address } = bitcoin.payments.p2wpkh({
+                pubkey: Buffer.from(publicKey),
+                network
             });
 
             if (!address) {
-                throw new Error(
-                    localeString('views.Wif.addressFromPrivKeyError')
-                );
+                throw new Error('Unable to derive address from WIF.');
             }
 
-            const utxos = await this.getUTXOs(address);
+            const utxos = await this.getUtxosFromAddress(address, networkStr);
 
             if (!utxos || utxos.length === 0) {
                 throw new Error(
@@ -87,19 +70,23 @@ export default class SweepStore {
 
             const psbt = new bitcoin.Psbt({ network });
 
-            utxos.forEach((utxo: any) => {
+            for (const utxo of utxos) {
+                if (!utxo.rawTx) {
+                    throw new Error('Missing rawTx for UTXO input.');
+                }
+
                 psbt.addInput({
                     hash: utxo.txid,
-                    index: utxo.index,
+                    index: utxo.vout ?? utxo.index,
                     nonWitnessUtxo: Buffer.from(utxo.rawTx, 'hex')
                 });
-            });
+            }
 
             const totalValue = utxos.reduce(
-                (total: any, utxo: any) => total + utxo.value,
+                (total: number, utxo: any) => total + utxo.value,
                 0
             );
-            const fee = 1000; // change this to a dynamic fee calculation
+            const fee = 1000;
             const sendValue = totalValue - fee;
 
             if (sendValue <= 0) {
@@ -116,6 +103,7 @@ export default class SweepStore {
             });
 
             psbt.finalizeAllInputs();
+
             const txHex = psbt.extractTransaction().toHex();
 
             this.sweepError = false;
@@ -132,20 +120,60 @@ export default class SweepStore {
         }
     }
 
-    private async getUTXOs(address: string) {
+    async getUtxosFromAddress(address: string, network: string) {
+        const baseUrl =
+            network === 'mainnet'
+                ? 'https://blockstream.info/api'
+                : 'https://blockstream.info/testnet/api';
+
+        const res = await fetch(`${baseUrl}/address/${address}/utxo`);
+        if (!res.ok) {
+            throw new Error(`Error fetching UTXOs`);
+        }
+
+        const utxos = await res.json();
+        return utxos;
+    }
+
+    getOnChainBalanceFromUtxos(utxos: any[]) {
+        if (!utxos || utxos.length === 0) {
+            throw new Error(localeString('views.UTXOs.CoinControl.noUTXOs'));
+        }
+
+        return utxos.reduce((sum, utxo) => sum + utxo.value, 0);
+    }
+
+    @action
+    async fetchOnChainBalance(wif: string) {
         try {
-            const res = await fetch(
-                `https://blockstream.info/api/address/${address}/utxo`
-            );
-            if (!res.ok) {
-                throw new Error(`HTTP error! Status: ${res.status}`);
+            const { nodeInfo } = this.nodeInfoStore;
+            const networkObj = nodeInfo?.isTestNet
+                ? nodeInfo?.isRegTest
+                    ? bitcoin.networks.regtest
+                    : bitcoin.networks.testnet
+                : bitcoin.networks.bitcoin;
+
+            const networkStr = nodeInfo?.isTestNet ? 'testnet' : 'mainnet';
+
+            const { privateKey } = wifDecode(wif);
+            const publicKey = getPublicKey(privateKey, true);
+
+            const { address } = bitcoin.payments.p2wpkh({
+                pubkey: Buffer.from(publicKey),
+                network: networkObj
+            });
+
+            if (!address) {
+                throw new Error('Unable to derive address from WIF.');
             }
 
-            const data = await res.json();
-            return data;
-        } catch (err) {
-            console.error('Error fetching UTXOs:', err);
-            throw new Error('Failed to fetch UTXOs');
+            const utxos = await this.getUtxosFromAddress(address, networkStr);
+            const totalSats = this.getOnChainBalanceFromUtxos(utxos);
+
+            this.onChainBalance = totalSats.toString();
+        } catch (err: any) {
+            this.sweepError = true;
+            this.sweepErrorMsg = err.message;
         }
     }
 }
