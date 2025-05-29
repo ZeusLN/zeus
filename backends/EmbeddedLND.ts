@@ -222,13 +222,15 @@ export default class EmbeddedLND extends LND {
     getNodeInfo = async (urlParams?: Array<string>) =>
         await getNodeInfo((urlParams && urlParams[0]) || '');
     signMessage = async (msg: any) => {
-        return await signMessageNodePubkey(Base64Utils.stringToUint8Array(msg));
+        return await signMessageNodePubkey(
+            Base64Utils.textToCharCodeBytes(msg)
+        );
     };
     verifyMessage = async (data: any) => {
         const { signature, msg } = data;
         return await verifyMessageNodePubkey(
             signature,
-            Base64Utils.stringToUint8Array(msg)
+            Base64Utils.textToCharCodeBytes(msg)
         );
     };
 
