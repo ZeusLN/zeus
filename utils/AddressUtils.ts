@@ -71,6 +71,8 @@ const nestedWpkhDescriptor =
 
 const snakeCase = /^[a-zA-Z]+(?:_[a-zA-Z]+)*$/;
 
+const withdrawalRequest = /^lnr1qqg[a-z0-9]+$/;
+
 export const CUSTODIAL_LNDHUBS = [
     'https://lndhub.io',
     'https://lndhub.herokuapp.com',
@@ -201,6 +203,8 @@ class AddressUtils {
         lndHubAddress.test(input) || blueWalletAddress.test(input);
 
     isValidLightningAddress = (input: string) => lightningAddress.test(input);
+
+    isValidWithdrawalRequest = (input: string) => withdrawalRequest.test(input);
 
     isValidNpub = (input: string) => npubFormat.test(input);
 

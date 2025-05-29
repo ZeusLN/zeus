@@ -246,6 +246,9 @@ import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
+import WithdrawalRequestView from './views/WithdrawalRequest';
+import WithdrawalRequestRedemption from './views/WithdrawalRequestRedemption';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1154,6 +1157,24 @@ export default class App extends React.PureComponent {
                                                         name="NodeConfigExportImport" // @ts-ignore:next-line
                                                         component={
                                                             NodeConfigExportImport
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CreateWithdrawalRequest" // @ts-ignore:next-line
+                                                        component={
+                                                            CreateWithdrawalRequest
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WithdrawalRequestView" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalRequestView
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WithdrawalRequestRedemption" // @ts-ignore:next-line
+                                                        component={
+                                                            WithdrawalRequestRedemption
                                                         }
                                                     />
                                                 </Stack.Navigator>
