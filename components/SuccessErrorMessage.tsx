@@ -9,6 +9,7 @@ interface MessageProps {
     mainStyle?: any;
     dismissable?: boolean;
     onPress?: () => void;
+    top: number;
 }
 
 const Message = ({
@@ -17,14 +18,20 @@ const Message = ({
     link,
     mainStyle,
     dismissable,
-    onPress
+    onPress,
+    top
 }: MessageProps) => {
     const [isDismissed, setDismissed] = useState(false);
     if (isDismissed) return <></>;
     return onPress ? (
         <TouchableOpacity style={[styles.field]} onPress={onPress}>
             <Text
-                style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
+                style={[
+                    styles.field,
+                    mainStyle,
+                    { fontSize: fontSize || 20 },
+                    { top: top || 10 }
+                ]}
             >
                 {message}
             </Text>
@@ -35,7 +42,12 @@ const Message = ({
             onPress={() => setDismissed(true)}
         >
             <Text
-                style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
+                style={[
+                    styles.field,
+                    mainStyle,
+                    { fontSize: fontSize || 20 },
+                    { top: top || 10 }
+                ]}
             >
                 {message}
             </Text>
@@ -46,13 +58,25 @@ const Message = ({
             onPress={() => UrlUtils.goToUrl(link)}
         >
             <Text
-                style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}
+                style={[
+                    styles.field,
+                    mainStyle,
+                    { fontSize: fontSize || 20 },
+                    { top: top || 10 }
+                ]}
             >
                 {message}
             </Text>
         </TouchableOpacity>
     ) : (
-        <Text style={[styles.field, mainStyle, { fontSize: fontSize || 20 }]}>
+        <Text
+            style={[
+                styles.field,
+                mainStyle,
+                { fontSize: fontSize || 20 },
+                { top: top || 10 }
+            ]}
+        >
             {message}
         </Text>
     );
@@ -63,7 +87,8 @@ const SuccessMessage = ({
     fontSize,
     link,
     dismissable,
-    onPress
+    onPress,
+    top
 }: MessageProps) => (
     <Message
         message={message}
@@ -72,6 +97,7 @@ const SuccessMessage = ({
         mainStyle={styles.successField}
         dismissable={dismissable}
         onPress={onPress}
+        top={top}
     />
 );
 
@@ -80,7 +106,8 @@ const WarningMessage = ({
     fontSize,
     link,
     dismissable,
-    onPress
+    onPress,
+    top
 }: MessageProps) => (
     <Message
         message={message}
@@ -89,6 +116,7 @@ const WarningMessage = ({
         mainStyle={styles.warningField}
         dismissable={dismissable}
         onPress={onPress}
+        top={top}
     />
 );
 
@@ -97,7 +125,8 @@ const ErrorMessage = ({
     fontSize,
     link,
     dismissable,
-    onPress
+    onPress,
+    top
 }: MessageProps) => (
     <Message
         message={message}
@@ -106,6 +135,7 @@ const ErrorMessage = ({
         mainStyle={styles.errorField}
         dismissable={dismissable}
         onPress={onPress}
+        top={top}
     />
 );
 
