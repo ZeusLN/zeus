@@ -554,9 +554,12 @@ export default class LND {
                 ...(this.supportInboundFees() && {
                     inboundFee: {
                         base_fee_msat: base_fee_msat_inbound,
-                        fee_rate_ppm: `${new BigNumber(fee_rate_inbound)
-                            .multipliedBy(10000)
-                            .toFixed(0)}`
+                        fee_rate_ppm:
+                            fee_rate_inbound !== ''
+                                ? `${new BigNumber(fee_rate_inbound)
+                                      .multipliedBy(10000)
+                                      .toFixed(0)}`
+                                : ''
                     }
                 }),
                 global: true,
@@ -572,9 +575,12 @@ export default class LND {
             ...(this.supportInboundFees() && {
                 inboundFee: {
                     base_fee_msat: base_fee_msat_inbound,
-                    fee_rate_ppm: `${new BigNumber(fee_rate_inbound)
-                        .multipliedBy(10000)
-                        .toFixed(0)}`
+                    fee_rate_ppm:
+                        fee_rate_inbound !== ''
+                            ? `${new BigNumber(fee_rate_inbound)
+                                  .multipliedBy(10000)
+                                  .toFixed(0)}`
+                            : ''
                 }
             }),
             chan_point: {
