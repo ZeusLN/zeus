@@ -1535,7 +1535,7 @@
     "zeuspay.intro.prosAndCons.settledUponPayment": "Payments settle on Lightning at time of payment",
     "zeuspay.intro.prosAndCons.settledUponRedemption": "Payments settle on Lightning when redeemed in the ZEUS app",
     "zeuspay.intro.prosAndCons.24hrs": "Payments must be redeemed within 24 hours or the payment is returned to the sender",
-    "zeuspay.intro.prosAndCons.channelRequired": "Requires a channel with the ZEUS LSP, with inbound liquidity",
+    "zeuspay.intro.prosAndCons.channelRequired": "需要和 ZEUS LSP 間建立一個有可流入資金的管道",
     "zeuspay.intro.prosAndCons.automaticallyAccepted": "Payments automatically accepted. No need to redeem manually in the ZEUS app.",
     "zeuspay.intro.prosAndCons.noLspChannelNeeded": "No need for a channel with the ZEUS LSP",
     "zeuspay.intro.prosAndCons.remotePlusNwc": "Requires a remote node with Nostr Wallet Connect",
