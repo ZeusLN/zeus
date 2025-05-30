@@ -1786,11 +1786,48 @@ export default class CashuStore {
                 let isLockedToWallet = false;
                 const walletPubkey = this.cashuWallets[mintUrl].pubkey;
                 if (isLocked) {
-                    const lockedPubkey = CashuUtils.getP2PKPubkeySecret(
+                    // Checking if all proofs are locked to the same pubkey
+                    const firstLockedPubkey = CashuUtils.getP2PKPubkeySecret(
                         decoded.proofs[0].secret
                     );
-                    isLockedToWallet = lockedPubkey === walletPubkey;
+                    const allProofsLockedToSamePubkey = decoded.proofs.every(
+                        (proof) => {
+                            const proofPubkey = CashuUtils.getP2PKPubkeySecret(
+                                proof.secret
+                            );
+                            return proofPubkey === firstLockedPubkey;
+                        }
+                    );
+                    if (!allProofsLockedToSamePubkey) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.CashuStore.claimError.inconsistentLocking'
+                            )
+                        };
+                    }
+
+                    isLockedToWallet = firstLockedPubkey === walletPubkey;
+
+                    // Check if lock time has expired (if present)
+                    const currentLockTime = CashuUtils.getP2PKLocktime(
+                        decoded.proofs[0].secret
+                    );
+                    if (
+                        currentLockTime &&
+                        currentLockTime > Math.floor(Date.now() / 1000)
+                    ) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.CashuStore.claimError.lockTimeNotExpired'
+                            )
+                        };
+                    }
                 }
+
                 if (!isLockedToWallet) {
                     this.loading = false;
                     return {
@@ -1800,15 +1837,17 @@ export default class CashuStore {
                         )
                     };
                 }
+
                 const counter =
                     this.cashuWallets[mintUrl].counter + decoded.proofs.length;
-                const bip39seed = this.getSeed();
-                const privkey = Base64Utils.base64ToHex(
-                    Base64Utils.bytesToBase64(bip39seed.slice(0, 32))
+                const currentSeed = this.getSeed();
+                const currentPrivkey = Base64Utils.base64ToHex(
+                    Base64Utils.bytesToBase64(currentSeed.slice(0, 32))
                 );
-                const derivedPubkey =
-                    '02' + bytesToHex(schnorr.getPublicKey(privkey));
-                if (derivedPubkey !== walletPubkey) {
+                const currentDerivedPubkey =
+                    '02' + bytesToHex(schnorr.getPublicKey(currentPrivkey));
+
+                if (currentDerivedPubkey !== walletPubkey) {
                     this.loading = false;
                     return {
                         success: false,
@@ -1817,9 +1856,10 @@ export default class CashuStore {
                         )
                     };
                 }
-                const newProofs = await wallet!!.receive(encodedToken, {
+
+                const newProofs = await wallet.receive(encodedToken, {
                     keysetId: wallet.keysetId,
-                    privkey,
+                    privkey: currentPrivkey,
                     counter
                 });
                 const amtSat = CashuUtils.sumProofsValue(newProofs);
