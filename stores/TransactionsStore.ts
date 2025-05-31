@@ -1,6 +1,6 @@
 const bitcoin = require('bitcoinjs-lib');
 
-import { action, reaction, observable, runInAction } from 'mobx';
+import { action, observable, runInAction } from 'mobx';
 import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -76,15 +76,6 @@ export default class TransactionsStore {
         this.settingsStore = settingsStore;
         this.nodeInfoStore = nodeInfoStore;
         this.channelsStore = channelsStore;
-
-        reaction(
-            () => this.settingsStore.settings,
-            () => {
-                if (this.settingsStore.hasCredentials()) {
-                    this.getTransactions();
-                }
-            }
-        );
     }
 
     @action
