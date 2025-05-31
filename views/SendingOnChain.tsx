@@ -44,7 +44,9 @@ export default class SendingOnChain extends React.Component<
             if (!TransactionsStore.txid) return;
             Storage.getItem('note-' + TransactionsStore.txid)
                 .then((storedNotes) => {
-                    this.setState({ storedNotes });
+                    if (storedNotes) {
+                        this.setState({ storedNotes });
+                    }
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);
