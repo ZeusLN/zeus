@@ -1410,17 +1410,22 @@ export default class CashuStore {
         amountToPay: number,
         proofs: Proof[],
         currentCounter: number,
-        swap?: boolean
+        swap?: boolean,
+        p2pk?: { pubkey: string; locktime?: number; refundKeys?: Array<string> }
     ) => {
         try {
             const { keep: proofsToKeep, send: proofsToSend } = swap
                 ? await wallet.swap(amountToPay, proofs, {
-                      counter: currentCounter,
-                      includeFees: true
+                      keysetId: wallet.keysetId,
+                      counter: p2pk ? undefined : currentCounter,
+                      includeFees: true,
+                      p2pk
                   })
                 : await wallet.send(amountToPay, proofs, {
-                      counter: currentCounter,
-                      includeFees: true
+                      keysetId: wallet.keysetId,
+                      counter: p2pk ? undefined : currentCounter,
+                      includeFees: true,
+                      p2pk
                   });
 
             const existingProofsIds = proofs.map((p) => p.secret);
@@ -1777,14 +1782,87 @@ export default class CashuStore {
 
                 await wallet.meltProofs(meltQuote, proofsToSend);
             } else {
+                const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
+                let isLockedToWallet = false;
+                const walletPubkey = this.cashuWallets[mintUrl].pubkey;
+                if (isLocked) {
+                    // Checking if all proofs are locked to the same pubkey
+                    const firstLockedPubkey = CashuUtils.getP2PKPubkeySecret(
+                        decoded.proofs[0].secret
+                    );
+                    const allProofsLockedToSamePubkey = decoded.proofs.every(
+                        (proof) => {
+                            const proofPubkey = CashuUtils.getP2PKPubkeySecret(
+                                proof.secret
+                            );
+                            return proofPubkey === firstLockedPubkey;
+                        }
+                    );
+                    if (!allProofsLockedToSamePubkey) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.CashuStore.claimError.inconsistentLocking'
+                            )
+                        };
+                    }
+
+                    isLockedToWallet = firstLockedPubkey === walletPubkey;
+
+                    // Check if lock time has expired (if present)
+                    const currentLockTime = CashuUtils.getP2PKLocktime(
+                        decoded.proofs[0].secret
+                    );
+                    if (
+                        currentLockTime &&
+                        currentLockTime > Math.floor(Date.now() / 1000)
+                    ) {
+                        this.loading = false;
+                        return {
+                            success: false,
+                            errorMessage: localeString(
+                                'stores.CashuStore.claimError.lockTimeNotExpired'
+                            )
+                        };
+                    }
+                }
+
+                if (!isLockedToWallet) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.claimError.lockedToWallet'
+                        )
+                    };
+                }
+
                 const counter =
                     this.cashuWallets[mintUrl].counter + decoded.proofs.length;
+                const currentSeed = this.getSeed();
+                const currentPrivkey = Base64Utils.base64ToHex(
+                    Base64Utils.bytesToBase64(currentSeed.slice(0, 32))
+                );
+                const currentDerivedPubkey =
+                    '02' + bytesToHex(schnorr.getPublicKey(currentPrivkey));
 
-                const newProofs = await wallet!!.receive(encodedToken, {
+                if (currentDerivedPubkey !== walletPubkey) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.claimError.keyMismatch'
+                        )
+                    };
+                }
+
+                const newProofs = await wallet.receive(encodedToken, {
+                    keysetId: wallet.keysetId,
+                    privkey: currentPrivkey,
                     counter
                 });
                 const amtSat = CashuUtils.sumProofsValue(newProofs);
-
                 const totalBalanceSats = new BigNumber(
                     this.totalBalanceSats || 0
                 )
@@ -1805,7 +1883,6 @@ export default class CashuStore {
                     mintUrl,
                     this.cashuWallets[mintUrl].proofs
                 );
-
                 // record received token activity
                 this.receivedTokens?.push(
                     new CashuToken({
@@ -2111,16 +2188,33 @@ export default class CashuStore {
     @action
     public mintToken = async ({
         memo,
-        value
+        value,
+        pubkey,
+        lockTime
     }: {
         memo: string;
         value: string;
+        pubkey?: string; //  pubkey for lock token
+        lockTime?: number; //  lock time for lock token
     }): Promise<{ token: string; decoded: CashuToken } | undefined> => {
         runInAction(() => {
             this.mintingToken = true;
             this.mintingTokenError = false;
             this.error_msg = undefined;
         });
+        if (pubkey) {
+            if (pubkey.length === 64) {
+                pubkey = '02' + pubkey;
+            } else if (pubkey.length === 66) {
+                pubkey = pubkey;
+            }
+        }
+        const p2pk = pubkey
+            ? {
+                  pubkey,
+                  locktime: lockTime ?? 0
+              }
+            : undefined;
 
         const mintUrl = this.selectedMintUrl;
 
@@ -2154,7 +2248,8 @@ export default class CashuStore {
                             Number(value),
                             proofsToUse!!,
                             attemptCounter,
-                            true
+                            true,
+                            p2pk
                         );
                     proofsToSend = result.proofsToSend;
                     proofsToKeep = result.proofsToKeep;
@@ -2217,13 +2312,14 @@ export default class CashuStore {
                 this.cashuWallets[mintUrl].balanceSats - Number(value)
             );
 
-            const tokenObj = {
+            const tokenObj: any = {
                 mint: mintUrl,
                 proofs: proofsToSend,
                 memo,
                 unit: 'sat'
             };
             const token = getEncodedToken(tokenObj);
+
             const decoded = new CashuToken({
                 ...tokenObj,
                 sent: true,
