@@ -25,8 +25,9 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
-import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
+import BackendUtils from '../utils/BackendUtils';
 import FiatStore from '../stores/FiatStore';
+import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import RNPrint from 'react-native-print';
@@ -50,7 +51,6 @@ interface OrderState {
     customAmount: string;
     customType: string;
     bitcoinUnits: string;
-    print: boolean;
 }
 
 @inject('FiatStore', 'SettingsStore', 'UnitsStore', 'PosStore')
@@ -59,7 +59,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
     constructor(props: OrderProps) {
         super(props);
         const { SettingsStore, route } = props;
-        const { order, print } = route.params ?? {};
+        const { order, orderId, print } = route.params ?? {};
 
         const { settings } = SettingsStore;
         const disableTips: boolean =
@@ -71,36 +71,390 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             customPercentage: disableTips ? '0' : '',
             customAmount: '',
             customType: 'percentage',
-            bitcoinUnits: 'sats',
-            print
+            bitcoinUnits: 'sats'
         };
+
+        const { PosStore } = this.props;
+        if (orderId && print) {
+            PosStore.getOrderPaymentById(orderId).then(
+                (payment: any | undefined) => {
+                    if (payment) {
+                        order.payment = payment;
+
+                        this.setState({
+                            order
+                        });
+
+                        if (print) {
+                            this.printReceipt();
+                        }
+                    }
+                }
+            );
+        }
     }
 
     componentDidUpdate(prevProps: OrderProps) {
         // print and order id are passed from the paid screen
         // we update the order so it includes payment details
         // which will enable the receipt printing
+
         if (this.props.route.params?.print !== prevProps.route.params?.print) {
-            const { orderId, print } = this.props.route.params ?? {};
+            const { order, orderId, print } = this.props.route.params ?? {};
 
             const { PosStore } = this.props;
             if (orderId) {
                 PosStore.getOrderPaymentById(orderId).then(
                     (payment: any | undefined) => {
                         if (payment) {
-                            const order = this.state.order;
                             order.payment = payment;
 
                             this.setState({
-                                order,
-                                print
+                                order
                             });
+
+                            if (print) {
+                                this.printReceipt();
+                            }
                         }
                     }
                 );
             }
         }
     }
+
+    public printReceipt = () => {
+        const { FiatStore, SettingsStore, UnitsStore } = this.props;
+        const {
+            order,
+            selectedIndex,
+            customPercentage,
+            customAmount,
+            customType,
+            bitcoinUnits
+        } = this.state;
+
+        const { fiatRates, getRate }: any = FiatStore;
+        const { settings } = SettingsStore;
+        const { fiatEnabled } = settings;
+        const { units } = UnitsStore;
+        const fiat = settings.fiat;
+        const disableTips: boolean = settings?.pos?.disableTips || false;
+        const merchantName = settings?.pos?.merchantName;
+        const taxPercentage = settings?.pos?.taxPercentage;
+
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+
+        const isPaid: boolean = !!order?.payment;
+
+        const rate = isPaid
+            ? order.payment.rate
+            : fiat && fiatRates && fiatEntry
+            ? fiatEntry.rate.toFixed(2)
+            : 0;
+
+        const exchangeRate = isPaid ? order?.payment.exchangeRate : getRate();
+
+        const lineItems = order?.line_items;
+
+        let subTotalSats: string;
+        if (settings.pos.posEnabled === PosEnabled.Square) {
+            subTotalSats = new BigNumber(order.total_money.amount)
+                // subtract tax for subtotal if using Square
+                .minus(order.total_tax_money.amount)
+                .div(100)
+                .div(rate)
+                .multipliedBy(SATS_PER_BTC)
+                .toFixed(0);
+        } else {
+            subTotalSats =
+                order.total_money.sats > 0
+                    ? order.total_money.sats
+                    : new BigNumber(order.total_money.amount)
+                          .div(100)
+                          .div(rate)
+                          .multipliedBy(SATS_PER_BTC)
+                          .toFixed(0);
+        }
+
+        const subTotalFiat: string = new BigNumber(subTotalSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+
+        const taxSats = fiatEnabled // Use the defined fiatEnabled
+            ? new BigNumber(order.total_tax_money.amount)
+                  .div(100)
+                  .div(rate)
+                  .multipliedBy(SATS_PER_BTC)
+                  .toFixed(0)
+            : new BigNumber(subTotalSats)
+                  .multipliedBy(new BigNumber(taxPercentage || '0'))
+                  .dividedBy(100)
+                  .toFixed(0);
+
+        // sats
+        // total amount is subtotal + tip + tax
+        let totalSats = '0';
+        let tipSats = '0';
+        if (!isPaid) {
+            switch (selectedIndex) {
+                case 0:
+                    totalSats = new BigNumber(subTotalSats)
+                        .multipliedBy(1.2)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
+                        .multipliedBy(0.2)
+                        .toFixed(0);
+                    break;
+                case 1:
+                    totalSats = new BigNumber(subTotalSats)
+                        .multipliedBy(1.25)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
+                        .multipliedBy(0.25)
+                        .toFixed(0);
+                    break;
+                case 2:
+                    totalSats = new BigNumber(subTotalSats)
+                        .multipliedBy(1.3)
+                        .plus(taxSats)
+                        .toFixed(0);
+                    tipSats = new BigNumber(subTotalSats)
+                        .multipliedBy(0.3)
+                        .toFixed(0);
+                    break;
+                default:
+                    if (customType === 'percentage') {
+                        const effectivePercentage =
+                            customPercentage === ''
+                                ? DEFAULT_CUSTOM_TIP_PERCENTAGE
+                                : customPercentage;
+                        totalSats = new BigNumber(subTotalSats)
+                            .multipliedBy(`1.${effectivePercentage}`)
+                            .plus(taxSats)
+                            .toFixed(0);
+                        tipSats = new BigNumber(subTotalSats)
+                            .multipliedBy(
+                                new BigNumber(effectivePercentage).dividedBy(
+                                    100
+                                )
+                            )
+                            .toFixed(0);
+                    } else if (customType === 'amount') {
+                        const effectiveAmount =
+                            customAmount === ''
+                                ? new BigNumber(subTotalSats)
+                                      .multipliedBy(0.21)
+                                      .integerValue(BigNumber.ROUND_HALF_UP)
+                                      .toFixed(0)
+                                : customAmount;
+                        if (units === 'fiat') {
+                            const customSats = new BigNumber(effectiveAmount)
+                                .div(rate)
+                                .multipliedBy(SATS_PER_BTC)
+                                .toFixed(0);
+
+                            totalSats = new BigNumber(subTotalSats)
+                                .plus(customSats)
+                                .plus(taxSats)
+                                .toFixed(0);
+
+                            tipSats = new BigNumber(customSats).toFixed(0);
+                        } else {
+                            const customSats =
+                                units === 'sats'
+                                    ? new BigNumber(effectiveAmount)
+                                    : new BigNumber(
+                                          effectiveAmount
+                                      ).multipliedBy(SATS_PER_BTC);
+
+                            totalSats = new BigNumber(subTotalSats)
+                                .plus(customSats)
+                                .plus(taxSats)
+                                .toFixed(0);
+
+                            tipSats = Number(customSats).toFixed(0);
+                        }
+                    }
+            }
+        } else {
+            tipSats = order.payment.orderTip;
+            totalSats = order.payment.orderTotal;
+        }
+
+        const totalFiat: string = new BigNumber(totalSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+
+        const tipFiat: string = new BigNumber(tipSats)
+            .multipliedBy(rate)
+            .dividedBy(SATS_PER_BTC)
+            .toFixed(2);
+
+        // Original printReceipt function body starts here
+        if (!RNPrint) {
+            return;
+        }
+
+        const receiptFormatAmount = (unitsArg: string, amount: number) => {
+            return this.props.UnitsStore.getFormattedAmount(amount, unitsArg);
+        };
+
+        const title =
+            merchantName && merchantName.length
+                ? merchantName
+                : isPaid
+                ? localeString('pos.print.taxReceipt')
+                : localeString('pos.print.invoice');
+
+        let templateHtml = `<html>
+            <body style="margin-left:0px;margin-right:0px;padding-left:0px;padding-right:0px;">
+                <h4 style="text-align:center;font-family:Garamond">${title}</h4>
+                <table border="0" cellpadding="1" cellspacing="0" width="100%">`;
+
+        lineItems.forEach((item: any) => {
+            const keyValue =
+                item.quantity > 1
+                    ? `${item.name} (x${item.quantity})`
+                    : item.name;
+
+            const fiatPriced = item.base_price_money.amount > 0;
+
+            const unitPrice = fiatPriced
+                ? item.base_price_money.amount
+                : item.base_price_money.sats;
+
+            let displayValue;
+            if (fiatPriced) {
+                displayValue = this.props.UnitsStore.getFormattedAmount(
+                    unitPrice,
+                    'fiat'
+                );
+            } else {
+                displayValue = this.props.UnitsStore.getFormattedAmount(
+                    unitPrice,
+                    'sats'
+                );
+            }
+
+            templateHtml += receiptHtmlRow(keyValue, displayValue);
+        });
+
+        templateHtml += receiptDivider();
+        templateHtml += receiptHtmlRow(
+            localeString('general.conversionRate'),
+            exchangeRate
+        );
+        templateHtml += receiptHtmlRow(
+            localeString('pos.views.Order.subtotalFiat'),
+            this.props.FiatStore.formatAmountForDisplay(subTotalFiat)
+        );
+        templateHtml += receiptHtmlRow(
+            localeString('pos.views.Order.subtotalBitcoin'),
+            receiptFormatAmount(bitcoinUnits, Number(subTotalSats))
+        );
+
+        templateHtml += receiptDivider();
+
+        if (!disableTips) {
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.tipFiat'),
+                this.props.FiatStore.formatAmountForDisplay(tipFiat)
+            );
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.tipBitcoin'),
+                receiptFormatAmount(bitcoinUnits, Number(tipSats))
+            );
+        }
+
+        if (isPaid) {
+            templateHtml += receiptHtmlRow(
+                localeString('pos.views.Order.paymentType'),
+                order.payment.type === 'ln'
+                    ? localeString('general.lightning')
+                    : localeString('general.onchain')
+            );
+
+            templateHtml += receiptHtmlRows(
+                order.payment.type === 'ln'
+                    ? localeString('views.Send.rPreimage')
+                    : localeString('views.SendingOnChain.txid'),
+                order.payment.preimage ?? order.payment.tx
+            );
+        }
+
+        templateHtml += receiptHtmlRow(
+            `${localeString('pos.views.Order.tax')}${
+                taxPercentage && Number(taxPercentage) > 0
+                    ? ` (${taxPercentage}%)`
+                    : ''
+            }`,
+            order.getTaxMoneyDisplay
+        );
+
+        templateHtml += receiptHtmlRow(
+            localeString('pos.views.Order.totalFiat'),
+            this.props.FiatStore.formatAmountForDisplay(totalFiat)
+        );
+
+        templateHtml += receiptHtmlRow(
+            localeString('pos.views.Order.totalBitcoin'),
+            receiptFormatAmount(bitcoinUnits, Number(totalSats))
+        );
+
+        const poweredByHtml = `
+        <tr><td colspan="2" style="text-align:center; padding-top:20px;">
+            <p style="font-family:Garamond;font-size:10px;margin-bottom:5px;color:black;">Powered by ZEUS</p>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 258.12 100" width="100" height="38.74" style="display:block; margin-left:auto; margin-right:auto;">
+              <g>
+                <path fill="black" d="m13.83,27.6L0,0h46.47C29.48,4.39,19.86,16.16,13.83,27.6Zm12.86,72.4h46.47l-13.83-27.6c-6.03,11.43-15.65,23.21-32.64,27.6ZM50.12,0L0,100h23.05L73.17,0h-23.05Zm59.33,27.59L123.28,0h-46.47c16.99,4.39,26.62,16.16,32.64,27.6Zm-32.64,72.4h46.47l-13.83-27.6c-6.03,11.43-15.65,23.21-32.64,27.6Zm-3.14-89.97l-11.52,22.98,8.51,16.99-8.51,16.98,11.52,22.98,20.03-39.96-20.03-39.97ZM179.43.01h-23.05s25.06,49.99,25.06,49.99l-25.06,50h23.04l25.06-50L179.43.01Zm-75.68,49.99l25.06,50h23.04s-25.06-50-25.06-50L151.85,0h-23.04s-25.06,50-25.06,50Zm140.53-22.4L258.12,0h-46.47c16.99,4.39,26.62,16.16,32.64,27.6Zm-45.5,44.81l-13.83,27.6h46.47c-16.99-4.39-26.62-16.16-32.64-27.6ZM184.95,0l50.12,100h23.05S208.01.01,208.01.01h-23.06Z"/>
+              </g>
+            </svg>
+        </td></tr>`;
+        templateHtml += poweredByHtml;
+
+        templateHtml += `</table></body></html>`;
+
+        RNPrint.print({
+            html: templateHtml
+        });
+
+        // Helper functions, now part of the class method's scope
+        function receiptHtmlRow(key: string, value: any) {
+            return `
+        <tr>
+            <td style="text-align:left;font-family:Garamond;font-size:8px;font-weight:bold;padding-bottom:5px">${key}</td>
+            <td style="text-align:right;font-family:Garamond;font-size:8px;font-weight:bold;padding-bottom:5px;word-break: break-word">${value}</td>
+        </tr>
+        `;
+        }
+
+        function receiptHtmlRows(key: string, value: any) {
+            return `
+        <tr>
+            <td style="text-align:left;font-family:Garamond;font-size:8px;font-weight:bold;padding-bottom:5px" colspan="2">${key}</td>
+        </tr>
+        <tr>
+            <td style="text-align:right;font-family:Garamond;font-size:8px;font-weight:bold;padding-bottom:20px;word-break: break-word" colspan="2">${value}</td>
+        </tr>
+        `;
+        }
+
+        function receiptDivider() {
+            return `
+        <tr>
+            <td colspan="2"><hr></td>
+        </tr>
+        `;
+        }
+    };
 
     render() {
         const { navigation, FiatStore, SettingsStore, UnitsStore } = this.props;
@@ -128,37 +482,37 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                 ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
                 : null;
 
-        const isPaid: boolean = order.payment;
+        const isPaid: boolean = !!order?.payment;
 
         const rate = isPaid
-            ? order.payment.rate
+            ? order?.payment?.rate
             : fiat && fiatRates && fiatEntry
             ? fiatEntry.rate.toFixed(2)
             : 0;
 
         const exchangeRate = isPaid ? order.payment.exchangeRate : getRate();
 
-        const lineItems = order.line_items;
+        const lineItems = order?.line_items;
 
         const memo = merchantName
-            ? `${merchantName} POS powered by ZEUS - Order ${order.id}`
-            : `ZEUS POS - Order ${order.id}`;
+            ? `${merchantName} POS powered by ZEUS - Order ${order?.id}`
+            : `ZEUS POS - Order ${order?.id}`;
 
         // round to nearest sat
         let subTotalSats: string;
         if (settings.pos.posEnabled === PosEnabled.Square) {
-            subTotalSats = new BigNumber(order.total_money.amount)
+            subTotalSats = new BigNumber(order?.total_money.amount)
                 // subtract tax for subtotal if using Square
-                .minus(order.total_tax_money.amount)
+                .minus(order?.total_tax_money.amount)
                 .div(100)
                 .div(rate)
                 .multipliedBy(SATS_PER_BTC)
                 .toFixed(0);
         } else {
             subTotalSats =
-                order.total_money.sats > 0
+                order?.total_money?.sats > 0
                     ? order.total_money.sats
-                    : new BigNumber(order.total_money.amount)
+                    : new BigNumber(order?.total_money.amount)
                           .div(100)
                           .div(rate)
                           .multipliedBy(SATS_PER_BTC)
@@ -171,7 +525,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .toFixed(2);
 
         const taxSats = fiatEnabled
-            ? new BigNumber(order.total_tax_money.amount)
+            ? new BigNumber(order?.total_tax_money.amount)
                   .div(100)
                   .div(rate)
                   .multipliedBy(SATS_PER_BTC)
@@ -356,156 +710,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        const receiptHtmlRow = (key: string, value: any) => {
-            return `
-            <tr>
-                <td style="text-align:left;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px">${key}</td>
-                <td style="text-align:right;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px;word-break: break-word">${value}</td>
-            </tr>
-            `;
-        };
-
-        const receiptHtmlRows = (key: string, value: any) => {
-            return `
-            <tr>
-                <td style="text-align:left;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:5px" colspan="2">${key}</td>
-            </tr>
-            <tr>
-                <td style="text-align:right;font-family:Garamond;font-size:12px;font-weight:bold;padding-bottom:20px;word-break: break-word" colspan="2">${value}</td>
-            </tr>
-            `;
-        };
-
-        const receiptDivider = () => {
-            return `
-            <tr>
-                <td colspan="2"><hr></td>
-            </tr>
-            `;
-        };
-
-        const receiptFormatAmount = (units: string, amount: number) => {
-            return UnitsStore.getFormattedAmount(amount, units);
-        };
-
-        const printReceipt = () => {
-            if (!RNPrint) {
-                return;
-            }
-
-            const title =
-                merchantName && merchantName.length
-                    ? merchantName
-                    : isPaid
-                    ? localeString('pos.print.taxReceipt')
-                    : localeString('pos.print.invoice');
-
-            let templateHtml = `<html>
-                <body style="margin-left:0px;margin-right:0px;padding-left:0px;padding-right:0px;">
-                    <h4 style="text-align:center;font-family:Garamond">${title}</h4>
-                    <table border="0" cellpadding="1" cellspacing="0" width="100%">`;
-
-            lineItems.forEach((item: any) => {
-                const keyValue =
-                    item.quantity > 1
-                        ? `${item.name} (x${item.quantity})`
-                        : item.name;
-
-                const fiatPriced = item.base_price_money.amount > 0;
-
-                const unitPrice = fiatPriced
-                    ? item.base_price_money.amount
-                    : item.base_price_money.sats;
-
-                let displayValue;
-                if (fiatPriced) {
-                    displayValue = UnitsStore.getFormattedAmount(
-                        unitPrice,
-                        'fiat'
-                    );
-                } else {
-                    displayValue = UnitsStore.getFormattedAmount(
-                        unitPrice,
-                        'sats'
-                    );
-                }
-
-                templateHtml += receiptHtmlRow(keyValue, displayValue);
-            });
-
-            templateHtml += receiptDivider();
-            templateHtml += receiptHtmlRow(
-                localeString('general.conversionRate'),
-                exchangeRate
-            );
-            templateHtml += receiptHtmlRow(
-                localeString('pos.views.Order.subtotalFiat'),
-                FiatStore.formatAmountForDisplay(subTotalFiat)
-            );
-            templateHtml += receiptHtmlRow(
-                localeString('pos.views.Order.subtotalBitcoin'),
-                receiptFormatAmount(bitcoinUnits, Number(subTotalSats))
-            );
-
-            templateHtml += receiptDivider();
-
-            if (!disableTips) {
-                templateHtml += receiptHtmlRow(
-                    localeString('pos.views.Order.tipFiat'),
-                    FiatStore.formatAmountForDisplay(tipFiat)
-                );
-                templateHtml += receiptHtmlRow(
-                    localeString('pos.views.Order.tipBitcoin'),
-                    receiptFormatAmount(bitcoinUnits, Number(tipSats))
-                );
-            }
-
-            if (isPaid) {
-                templateHtml += receiptHtmlRow(
-                    localeString('pos.views.Order.paymentType'),
-                    order.payment.type === 'ln'
-                        ? localeString('general.lightning')
-                        : localeString('general.onchain')
-                );
-
-                templateHtml += receiptHtmlRows(
-                    order.payment.type === 'ln'
-                        ? localeString('views.Send.rPreimage')
-                        : localeString('views.SendingOnChain.txid'),
-                    order.payment.preimage ?? order.payment.tx
-                );
-            }
-
-            templateHtml += receiptHtmlRow(
-                `${localeString('pos.views.Order.tax')}${
-                    taxPercentage && Number(taxPercentage) > 0
-                        ? ` (${taxPercentage}%)`
-                        : ''
-                }`,
-                order.getTaxMoneyDisplay
-            );
-
-            templateHtml += receiptHtmlRow(
-                localeString('pos.views.Order.totalFiat'),
-                FiatStore.formatAmountForDisplay(totalFiat)
-            );
-
-            templateHtml += receiptHtmlRow(
-                localeString('pos.views.Order.totalBitcoin'),
-                receiptFormatAmount(bitcoinUnits, Number(totalSats))
-            );
-
-            templateHtml += `</table></body></html>`;
-
-            RNPrint.print({
-                html: templateHtml
-            });
-        };
-
-        if (this.state.print && isPaid && enablePrinter) {
-            printReceipt();
-        }
-
         return (
             <Screen>
                 <Header
@@ -524,7 +728,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     style={styles.content}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {lineItems.map((item: any, index: number) => {
+                    {lineItems?.map((item: any, index: number) => {
                         const fiatPriced = item.base_price_money.amount > 0;
 
                         const unitPrice = fiatPriced
@@ -941,7 +1145,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
                                 navigation.navigate(
-                                    settings?.ecash?.enableCashu
+                                    settings?.ecash?.enableCashu &&
+                                        BackendUtils.supportsCashuWallet()
                                         ? 'ReceiveEcash'
                                         : 'Receive',
                                     {
@@ -955,6 +1160,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                                 : totalFiat,
                                         autoGenerate: true,
                                         memo,
+                                        order,
                                         // For displaying paid orders
                                         orderId: order.id,
                                         // sats
@@ -980,7 +1186,8 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             )}
                             containerStyle={{ marginTop: 40, marginBottom: 40 }}
                             icon={{ name: 'print', size: 25 }}
-                            onPress={() => printReceipt()}
+                            onPress={() => this.printReceipt()}
+                            secondary
                         />
                     )}
                 </ScrollView>
