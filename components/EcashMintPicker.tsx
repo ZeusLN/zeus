@@ -76,8 +76,11 @@ export default class EcashMintPicker extends React.Component<
                                 color: mints[selectedMintUrl]?.errorConnecting
                                     ? themeColor('warning')
                                     : themeColor('text'),
-                                marginRight: 10
+                                marginRight: 10,
+                                flex: 1
                             }}
+                            numberOfLines={1}
+                            ellipsizeMode="tail"
                         >
                             {mints[selectedMintUrl]?.name
                                 ? mints[selectedMintUrl].name
