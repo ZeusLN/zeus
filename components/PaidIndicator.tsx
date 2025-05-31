@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Dimensions, Vibration } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
@@ -16,10 +16,18 @@ function PaidIndicator() {
     const randomNumber = Math.ceil(Math.random() * 3) - 1;
     const indicatorSize = Dimensions.get('window').height * 0.4;
 
+    const animationRef = useRef<Lottie>(null);
+
+    useEffect(() => {
+        // Start the animation only when desired
+        animationRef.current?.play();
+    }, []); // Empty dependency means it runs only on first mount
+
     return (
         <Lottie
+            ref={animationRef}
             source={lightning[randomNumber]}
-            autoPlay
+            autoPlay={false}
             loop={false}
             resizeMode="cover"
             colorFilters={[
