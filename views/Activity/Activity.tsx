@@ -398,12 +398,25 @@ export default class Activity extends React.PureComponent<
 > {
     private transactionListener: EmitterSubscription;
     private invoicesListener: EmitterSubscription;
+    private focusListener?: () => void;
 
     state = {
         loading: false,
         selectedPaymentForOrder: null,
         isCsvModalVisible: false
     };
+
+    async componentDidMount() {
+        const { ActivityStore, SettingsStore, navigation } = this.props;
+        const { getActivityAndFilter } = ActivityStore;
+
+        await getActivityAndFilter(SettingsStore.settings.locale);
+        this.subscribeEvents();
+
+        this.focusListener = navigation.addListener('focus', async () => {
+            await getActivityAndFilter(SettingsStore.settings.locale);
+        });
+    }
 
     async UNSAFE_componentWillMount() {
         const {
@@ -428,6 +441,7 @@ export default class Activity extends React.PureComponent<
     componentWillUnmount() {
         if (this.transactionListener) this.transactionListener.remove();
         if (this.invoicesListener) this.invoicesListener.remove();
+        if (this.focusListener) this.focusListener();
     }
 
     subscribeEvents = () => {
