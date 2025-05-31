@@ -74,7 +74,9 @@ export default class SendingLightning extends React.Component<
             if (!noteKey) return;
             Storage.getItem(noteKey)
                 .then((storedNotes) => {
-                    this.setState({ storedNotes: storedNotes || '' });
+                    if (storedNotes) {
+                        this.setState({ storedNotes });
+                    }
                 })
                 .catch((error) => {
                     console.error('Error retrieving notes:', error);
