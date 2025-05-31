@@ -1647,7 +1647,9 @@ export default class Receive extends React.Component<
                                     )}
                                 />
                             )}
-                            {error_msg && <ErrorMessage message={error_msg} />}
+                            {error_msg && (
+                                <ErrorMessage message={error_msg} dismissable />
+                            )}
 
                             {showLspSettings && (
                                 <View style={{ margin: 10 }}>
