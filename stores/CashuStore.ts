@@ -2189,29 +2189,29 @@ export default class CashuStore {
     public mintToken = async ({
         memo,
         value,
-        lockedPubkey,
+        pubkey,
         lockTime
     }: {
         memo: string;
         value: string;
-        lockedPubkey?: string;
-        lockTime?: number;
+        pubkey?: string; //  pubkey for lock token
+        lockTime?: number; //  lock time for lock token
     }): Promise<{ token: string; decoded: CashuToken } | undefined> => {
         runInAction(() => {
             this.mintingToken = true;
             this.mintingTokenError = false;
             this.error_msg = undefined;
         });
-        if (lockedPubkey) {
-            if (lockedPubkey.length === 64) {
-                lockedPubkey = '02' + lockedPubkey;
-            } else if (lockedPubkey.length === 66) {
-                lockedPubkey = lockedPubkey;
+        if (pubkey) {
+            if (pubkey.length === 64) {
+                pubkey = '02' + pubkey;
+            } else if (pubkey.length === 66) {
+                pubkey = pubkey;
             }
         }
-        const p2pk = lockedPubkey
+        const p2pk = pubkey
             ? {
-                  pubkey: lockedPubkey,
+                  pubkey,
                   locktime: lockTime ?? 0
               }
             : undefined;

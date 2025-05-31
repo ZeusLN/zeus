@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { Chip, Icon } from 'react-native-elements';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -42,7 +43,8 @@ interface CashuLockSettingsProps {
 }
 
 interface CashuLockSettingsState {
-    lockedPubkey: string;
+    pubkey: string;
+    contactName: string;
     duration: string;
     showCustomDuration: boolean;
     customDurationValue: string;
@@ -80,6 +82,7 @@ export default class CashuLockSettings extends React.Component<
         const {
             currentLockPubkey,
             currentDuration,
+            contactName,
             memo,
             value,
             satAmount,
@@ -87,7 +90,8 @@ export default class CashuLockSettings extends React.Component<
         } = route.params || {};
 
         this.state = {
-            lockedPubkey: currentLockPubkey || '',
+            pubkey: currentLockPubkey || '',
+            contactName: contactName || '',
             duration: currentDuration || '',
             showCustomDuration: false,
             customDurationValue: '',
@@ -120,13 +124,15 @@ export default class CashuLockSettings extends React.Component<
 
         if (params.hasCashuPubkey === false) {
             this.setState({
-                lockedPubkey: '',
                 error: localeString('cashu.contactNoCashuPubkey')
             });
         } else if (params?.destination) {
-            this.handleQRScanResult(params.destination);
+            this.setState({
+                contactName: params.contactName || '',
+                pubkey: params.destination,
+                error: ''
+            });
         }
-
         this.props.navigation.setParams({
             destination: undefined,
             contactName: undefined,
@@ -134,9 +140,9 @@ export default class CashuLockSettings extends React.Component<
         });
     };
 
-    handleContactSelection(lockedPubkey: string) {
+    handleContactSelection(pubkey: string) {
         this.setState({
-            lockedPubkey,
+            pubkey,
             error: ''
         });
     }
@@ -169,17 +175,13 @@ export default class CashuLockSettings extends React.Component<
     };
 
     validateForm = (): string => {
-        const {
-            lockedPubkey,
-            duration,
-            showCustomDuration,
-            customDurationValue
-        } = this.state;
+        const { pubkey, duration, showCustomDuration, customDurationValue } =
+            this.state;
 
-        if (!lockedPubkey) {
+        if (!pubkey) {
             return localeString('cashu.pubkeyRequired');
         }
-        if (!AddressUtils.isValidLightningPubKey(lockedPubkey)) {
+        if (!AddressUtils.isValidLightningPubKey(pubkey)) {
             return localeString('cashu.invalidCashuPubkey');
         }
         if (showCustomDuration) {
@@ -191,13 +193,13 @@ export default class CashuLockSettings extends React.Component<
         return '';
     };
 
-    handleLockedPubkeyChange = (text: string) => {
+    handlePubkeyChange = (text: string) => {
         const cleanedText = text.trim();
         const validationError = this.validatePubkey(cleanedText);
         const isValid = !validationError;
 
         this.setState({
-            lockedPubkey: cleanedText,
+            pubkey: cleanedText,
             error: validationError,
             isPubkeyValid: isValid
         });
@@ -242,13 +244,14 @@ export default class CashuLockSettings extends React.Component<
     handleSave = () => {
         const { navigation } = this.props;
         const {
-            lockedPubkey,
+            pubkey,
             duration,
             showCustomDuration,
             memo,
             value,
             satAmount,
-            account
+            account,
+            contactName
         } = this.state;
 
         const error = this.validateForm();
@@ -261,15 +264,15 @@ export default class CashuLockSettings extends React.Component<
             ? this.getCustomDurationString()
             : duration;
 
-        // Navigate back with all form data
         navigation.navigate('MintToken', {
-            lockedPubkey,
+            pubkey,
             duration: finalDuration,
             fromLockSettings: true,
             memo,
             value,
             satAmount,
-            account
+            account,
+            contactName
         });
     };
 
@@ -290,7 +293,7 @@ export default class CashuLockSettings extends React.Component<
 
             if (!validationError) {
                 this.setState({
-                    lockedPubkey: cleanedText,
+                    pubkey: cleanedText,
                     error: '',
                     hasClipboardContent: false,
                     isPubkeyValid: true
@@ -298,7 +301,7 @@ export default class CashuLockSettings extends React.Component<
             } else {
                 if (cleanedText && !this.validatePubkey(cleanedText)) {
                     this.setState({
-                        lockedPubkey: cleanedText,
+                        pubkey: cleanedText,
                         error: '',
                         hasClipboardContent: false,
                         isPubkeyValid: true
@@ -324,14 +327,14 @@ export default class CashuLockSettings extends React.Component<
         const validationError = this.validatePubkey(cleanedPubkey);
         if (!validationError) {
             this.setState({
-                lockedPubkey: cleanedPubkey,
+                pubkey: cleanedPubkey,
                 error: '',
                 isPubkeyValid: true
             });
         } else {
             if (cleanedPubkey && !this.validatePubkey(cleanedPubkey)) {
                 this.setState({
-                    lockedPubkey: cleanedPubkey,
+                    pubkey: cleanedPubkey,
                     error: '',
                     isPubkeyValid: true
                 });
@@ -371,7 +374,7 @@ export default class CashuLockSettings extends React.Component<
 
     isFormValid = () => {
         const {
-            lockedPubkey,
+            pubkey,
             duration,
             showCustomDuration,
             customDurationValue,
@@ -379,8 +382,8 @@ export default class CashuLockSettings extends React.Component<
         } = this.state;
 
         return (
-            lockedPubkey &&
-            AddressUtils.isValidLightningPubKey(lockedPubkey) &&
+            pubkey &&
+            AddressUtils.isValidLightningPubKey(pubkey) &&
             !error &&
             ((duration && !showCustomDuration) ||
                 (showCustomDuration && customDurationValue && !error))
@@ -390,16 +393,17 @@ export default class CashuLockSettings extends React.Component<
     render() {
         const { navigation } = this.props;
         const {
-            lockedPubkey,
+            pubkey,
             duration,
             showCustomDuration,
             customDurationValue,
             customDurationUnit,
             error,
             hasClipboardContent,
-            isPubkeyValid
+            isPubkeyValid,
+            contactName
         } = this.state;
-
+        console.log(this.props.route.params.contactName);
         const dynamicStyles = this.getDynamicStyles();
         const isFormValid = this.isFormValid();
 
@@ -410,7 +414,7 @@ export default class CashuLockSettings extends React.Component<
                     onBack={() => {
                         navigation.navigate('MintToken', {
                             fromLockSettings: true,
-                            lockedPubkey: this.state.lockedPubkey,
+                            pubkey: this.state.pubkey,
                             duration: this.state.duration,
                             ...this.props.route.params
                         });
@@ -470,8 +474,8 @@ export default class CashuLockSettings extends React.Component<
                     >
                         <TextInput
                             placeholder={'02abc...'}
-                            value={lockedPubkey}
-                            onChangeText={this.handleLockedPubkeyChange}
+                            value={contactName ? '' : pubkey}
+                            onChangeText={this.handlePubkeyChange}
                             onFocus={this.checkClipboardContent}
                             style={{
                                 flex: 1,
@@ -486,13 +490,61 @@ export default class CashuLockSettings extends React.Component<
                             autoCorrect={false}
                             autoCapitalize="none"
                         />
+                        {contactName && (
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    position: 'absolute',
+                                    left: 10,
+                                    top: 22
+                                }}
+                            >
+                                <Chip
+                                    title={contactName}
+                                    titleStyle={{
+                                        ...styles.text,
+                                        color: themeColor('background'),
+                                        backgroundColor: themeColor('chain')
+                                    }}
+                                    // @ts-ignore:next-line
+                                    type="inline"
+                                    containerStyle={{
+                                        backgroundColor: themeColor('chain'),
+                                        borderRadius: 8,
+                                        paddingRight: 24
+                                    }}
+                                />
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        this.setState({
+                                            pubkey: '',
+                                            contactName: '',
+                                            error: ''
+                                        });
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: 8
+                                    }}
+                                >
+                                    <Icon
+                                        name="close-circle"
+                                        type="material-community"
+                                        size={18}
+                                        color={themeColor('background')}
+                                    />
+                                </TouchableOpacity>
+                            </View>
+                        )}
                         <TouchableOpacity
                             onPress={() => {
                                 const { memo, value, satAmount, account } =
                                     this.state;
                                 navigation.navigate('Contacts', {
                                     SendScreen: true,
-                                    returnToCashuLockSettings: true,
+                                    CashuLockSettingsScreen: true,
                                     memo,
                                     value,
                                     satAmount,
