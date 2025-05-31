@@ -30,7 +30,8 @@ interface MintTokenProps {
         'MintToken',
         {
             amount?: string;
-            lockedPubkey?: string;
+            pubkey?: string;
+            contactName?: string;
             locktime?: number;
             memo?: string;
             value?: string;
@@ -47,18 +48,10 @@ interface MintTokenState {
     memo: string;
     value: string;
     satAmount: string | number;
-    lockedPubkey: string;
+    pubkey: string;
+    contactName: string;
     locktime?: number;
     duration: string;
-    account: string;
-    formData: {
-        memo: string;
-        value: string;
-        satAmount: string | number;
-        account: string;
-        lockedPubkey: string;
-        duration: string;
-    };
 }
 
 @inject('CashuStore', 'UnitsStore', 'ContactStore')
@@ -69,21 +62,15 @@ export default class MintToken extends React.Component<
 > {
     constructor(props: MintTokenProps) {
         super(props);
-        const initialFormData = {
+        this.state = {
+            loading: true,
             memo: '',
             value: '',
             satAmount: '',
-            account: 'default',
-            lockedPubkey: '',
+            pubkey: '', // For Locking token
+            contactName: '', // For Locking token
             duration: ''
         };
-
-        this.state = {
-            loading: true,
-            ...initialFormData,
-            formData: initialFormData
-        };
-
         this.handleLockSettingsSave = this.handleLockSettingsSave.bind(this);
         this.resetForm = this.resetForm.bind(this);
         this.handleLockSettingsPress = this.handleLockSettingsPress.bind(this);
@@ -115,38 +102,22 @@ export default class MintToken extends React.Component<
         this.props.navigation.removeListener('focus', this.handleScreenFocus);
     }
 
-    saveFormData = () => {
-        const { memo, value, satAmount, account, lockedPubkey, duration } =
-            this.state;
-        const formData = {
-            memo,
-            value,
-            satAmount,
-            account,
-            lockedPubkey,
-            duration
-        };
-
-        this.setState({ formData });
-    };
-
     handleScreenFocus = () => {
         const { route } = this.props;
         const params = route.params || {};
 
         if (params.fromLockSettings) {
             const stateUpdate: Partial<MintTokenState> = {
-                lockedPubkey: params.lockedPubkey ?? this.state.lockedPubkey,
+                pubkey: params.pubkey ?? this.state.pubkey,
                 duration: params.duration ?? this.state.duration,
                 locktime: this.convertDurationToSeconds(params.duration),
                 memo: params.memo ?? this.state.memo,
                 value: params.value ?? this.state.value,
                 satAmount: params.satAmount ?? this.state.satAmount,
-                account: params.account ?? this.state.account
+                contactName: params.contactName ?? this.state.contactName
             };
 
             this.setState(stateUpdate as MintTokenState, () => {
-                this.saveFormData();
                 const updatedParams = { ...params };
                 delete updatedParams.fromLockSettings;
                 this.props.navigation.setParams(updatedParams);
@@ -188,48 +159,39 @@ export default class MintToken extends React.Component<
         }
     };
 
-    handleLockSettingsSave = (lockedPubkey: string, duration: string) => {
+    handleLockSettingsSave = (pubkey: string, duration: string) => {
         const locktime = this.convertDurationToSeconds(duration);
 
         this.setState({
-            lockedPubkey,
+            pubkey,
             locktime,
             duration
         });
     };
 
     resetForm() {
-        const initialFormData = {
+        this.setState({
             memo: '',
             value: '',
             satAmount: '',
-            account: 'default',
-            lockedPubkey: '',
-            duration: ''
-        };
-
-        this.setState({
-            ...initialFormData,
-            formData: initialFormData,
+            pubkey: '',
+            duration: '',
             locktime: undefined
         });
     }
 
     handleLockSettingsPress = () => {
         const { navigation } = this.props;
-        const { memo, value, satAmount, account, lockedPubkey, duration } =
+        const { memo, value, satAmount, pubkey, duration, contactName } =
             this.state;
-
-        this.saveFormData();
-
         navigation.navigate('CashuLockSettings', {
-            currentLockPubkey: lockedPubkey,
+            currentLockPubkey: pubkey,
             currentDuration: duration,
             fromMintToken: true,
             memo,
             value,
             satAmount,
-            account
+            contactName
         });
     };
 
@@ -250,22 +212,19 @@ export default class MintToken extends React.Component<
     };
 
     handleMemoChange = (text: string) => {
-        this.setState({ memo: text }, this.saveFormData);
+        this.setState({ memo: text });
     };
 
     handleAmountChange = (amount: string, satAmount: string | number) => {
-        this.setState(
-            {
-                value: amount,
-                satAmount
-            },
-            this.saveFormData
-        );
+        this.setState({
+            value: amount,
+            satAmount
+        });
     };
 
     render() {
         const { CashuStore, navigation } = this.props;
-        const { memo, value, satAmount, lockedPubkey, duration } = this.state;
+        const { memo, value, satAmount, pubkey, duration } = this.state;
         const { fontScale } = Dimensions.get('window');
 
         const { mintToken, mintingToken, loadingMsg } = CashuStore;
@@ -373,17 +332,16 @@ export default class MintToken extends React.Component<
                                         <Button
                                             icon={{
                                                 type: 'ionicon',
-                                                name: lockedPubkey
+                                                name: pubkey
                                                     ? 'lock-closed-outline'
                                                     : 'lock-open-outline',
                                                 size: 20,
                                                 color: themeColor('text')
                                             }}
                                             title={
-                                                lockedPubkey &&
-                                                lockedPubkey.length > 0
+                                                pubkey && pubkey.length > 0
                                                     ? `${this.formatPubkey(
-                                                          lockedPubkey
+                                                          pubkey
                                                       )} (${this.formatDuration(
                                                           duration
                                                       )})`
@@ -413,7 +371,7 @@ export default class MintToken extends React.Component<
                                                 'cashu.mintEcashToken'
                                             )}
                                             onPress={() => {
-                                                const lockSeconds = lockedPubkey
+                                                const lockSeconds = pubkey
                                                     ? this.convertDurationToSeconds(
                                                           duration
                                                       )
@@ -425,13 +383,12 @@ export default class MintToken extends React.Component<
                                                         '0'
                                                 };
 
-                                                if (lockedPubkey) {
-                                                    params.lockedPubkey =
-                                                        lockedPubkey;
+                                                if (pubkey) {
+                                                    params.pubkey = pubkey;
                                                     params.lockTime =
                                                         lockSeconds;
                                                 }
-
+                                                this.resetForm();
                                                 mintToken(params).then(
                                                     (
                                                         result:
@@ -449,7 +406,6 @@ export default class MintToken extends React.Component<
                                                                 token,
                                                                 decoded
                                                             } = result;
-                                                            this.resetForm();
                                                             navigation.navigate(
                                                                 'CashuToken',
                                                                 {

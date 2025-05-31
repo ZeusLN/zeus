@@ -35,7 +35,7 @@ interface ContactsSettingsProps {
         'Contacts',
         {
             SendScreen: boolean;
-            returnToCashuLockSettings?: boolean;
+            CashuLockSettingsScreen?: boolean;
             memo?: string;
             value?: string;
             satAmount?: string;
@@ -49,7 +49,7 @@ interface ContactsSettingsState {
     search: string;
     SendScreen: boolean;
     deletionAwaitingConfirmation: boolean;
-    returnToCashuLockSettings: boolean;
+    CashuLockSettingsScreen: boolean;
 }
 
 @inject('ContactStore')
@@ -61,14 +61,14 @@ export default class Contacts extends React.Component<
     constructor(props: ContactsSettingsProps) {
         super(props);
         const SendScreen = this.props.route.params?.SendScreen;
-        const returnToCashuLockSettings =
-            this.props.route.params?.returnToCashuLockSettings || false;
+        const CashuLockSettingsScreen =
+            this.props.route.params?.CashuLockSettingsScreen || false;
 
         this.state = {
             search: '',
             SendScreen,
             deletionAwaitingConfirmation: false,
-            returnToCashuLockSettings
+            CashuLockSettingsScreen
         };
     }
 
@@ -161,7 +161,7 @@ export default class Contacts extends React.Component<
             <TouchableOpacity
                 onPress={() => {
                     if (this.state.SendScreen && !hasMultiplePayableAddresses) {
-                        if (this.state.returnToCashuLockSettings) {
+                        if (this.state.CashuLockSettingsScreen) {
                             // Navigate back to CashuLockSettings with contact info and preserved MintToken data
                             this.props.navigation.navigate(
                                 'CashuLockSettings',
@@ -270,12 +270,12 @@ export default class Contacts extends React.Component<
             search,
             SendScreen,
             deletionAwaitingConfirmation,
-            returnToCashuLockSettings
+            CashuLockSettingsScreen
         } = this.state;
         const { contacts } = ContactStore;
 
         const filteredContacts = contacts.filter((contactItem: any) => {
-            if (returnToCashuLockSettings) {
+            if (CashuLockSettingsScreen) {
                 const contactObj = new Contact(contactItem);
                 if (!contactObj.hasCashuPubkey) return false;
             }
@@ -543,7 +543,7 @@ export default class Contacts extends React.Component<
                 </ScrollView>
 
                 {/* Show message if no contacts with cashuPubkey */}
-                {returnToCashuLockSettings &&
+                {CashuLockSettingsScreen &&
                     filteredContacts.length === 0 &&
                     !loading && (
                         <View
