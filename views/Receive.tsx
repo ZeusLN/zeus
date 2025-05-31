@@ -118,6 +118,7 @@ interface ReceiveProps {
             addressType?: string;
             selectedIndex: number;
             memo: string;
+            order: any; // Full order, required for receipt printing
             orderId: string;
             orderTotal: string;
             orderTip: string;
@@ -1610,6 +1611,7 @@ export default class Receive extends React.Component<
                                         icon={{ name: 'print', size: 25 }}
                                         onPress={() =>
                                             navigation.navigate('Order', {
+                                                order: route?.params?.order,
                                                 orderId: this.state.orderId,
                                                 print: true
                                             })

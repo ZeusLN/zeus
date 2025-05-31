@@ -81,6 +81,7 @@ interface ReceiveEcashProps {
             autoGenerate: boolean;
             selectedIndex: number;
             memo: string;
+            order: any; // Full order, required for receipt printing
             orderId: string;
             orderTotal: string;
             orderTip: string;
@@ -602,6 +603,7 @@ export default class ReceiveEcash extends React.Component<
                                         icon={{ name: 'print', size: 25 }}
                                         onPress={() =>
                                             navigation.navigate('Order', {
+                                                order: route?.params?.order,
                                                 orderId: this.state.orderId,
                                                 print: true
                                             })
