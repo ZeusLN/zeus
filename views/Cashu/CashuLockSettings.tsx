@@ -403,7 +403,6 @@ export default class CashuLockSettings extends React.Component<
             isPubkeyValid,
             contactName
         } = this.state;
-        console.log(this.props.route.params.contactName);
         const dynamicStyles = this.getDynamicStyles();
         const isFormValid = this.isFormValid();
 
