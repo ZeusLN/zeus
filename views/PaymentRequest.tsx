@@ -138,16 +138,6 @@ export default class PaymentRequest extends React.Component<
 
         const subInfo: any = SwapStore.subInfo;
 
-        const min = this.calculateLimit(subInfo?.limits?.minimal || 0);
-        const max = this.calculateLimit(subInfo?.limits?.maximal || 0);
-
-        const minBN = new BigNumber(min);
-        const maxBN = new BigNumber(max);
-
-        const serviceFeePct = subInfo?.fees?.percentage || 0;
-        const networkFeeBigNum = new BigNumber(subInfo?.fees?.minerFees || 0);
-        const networkFee = networkFeeBigNum.toNumber();
-
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
         const requestAmount = pay_req && pay_req.getRequestAmount;
@@ -158,13 +148,10 @@ export default class PaymentRequest extends React.Component<
             }
         }
 
-        let input: any;
-        input = this.calculateSendAmount(
-            new BigNumber(requestAmount || 0),
-            serviceFeePct,
-            networkFee
+        const validAmountToSwap = this.isAmountValidToSwap(
+            subInfo,
+            requestAmount
         );
-        const validAmountToSwap = input.gte(minBN) && input.lte(maxBN);
 
         this.setState({
             feeOption,
@@ -182,6 +169,30 @@ export default class PaymentRequest extends React.Component<
                 lightningReadyToSend: true
             });
         }
+    }
+
+    isAmountValidToSwap(subInfo: any, requestAmount: number | null): boolean {
+        if (!subInfo) {
+            return false;
+        }
+
+        const min = this.calculateLimit(subInfo.limits.minimal || 0);
+        const max = this.calculateLimit(subInfo.limits.maximal || 0);
+        const minBN = new BigNumber(min);
+        const maxBN = new BigNumber(max);
+
+        const serviceFeePct = subInfo.fees.percentage || 0;
+        const networkFee = new BigNumber(
+            subInfo.fees.minerFees || 0
+        ).toNumber();
+
+        const input = this.calculateSendAmount(
+            new BigNumber(requestAmount || 0),
+            serviceFeePct,
+            networkFee
+        );
+
+        return input.gte(minBN) && input.lte(maxBN);
     }
 
     bigCeil = (big: BigNumber): BigNumber => {
