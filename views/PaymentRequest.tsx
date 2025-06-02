@@ -176,21 +176,12 @@ export default class PaymentRequest extends React.Component<
             return false;
         }
 
-        const min = this.calculateLimit(subInfo.limits.minimal || 0);
-        const max = this.calculateLimit(subInfo.limits.maximal || 0);
+        const min = this.calculateLimit(subInfo.limits.minimal || 0).toNumber();
+        const max = this.calculateLimit(subInfo.limits.maximal || 0).toNumber();
         const minBN = new BigNumber(min);
         const maxBN = new BigNumber(max);
 
-        const serviceFeePct = subInfo.fees.percentage || 0;
-        const networkFee = new BigNumber(
-            subInfo.fees.minerFees || 0
-        ).toNumber();
-
-        const input = this.calculateSendAmount(
-            new BigNumber(requestAmount || 0),
-            serviceFeePct,
-            networkFee
-        );
+        const input = this.calculateLimit(requestAmount || 0);
 
         return input.gte(minBN) && input.lte(maxBN);
     }
@@ -218,7 +209,7 @@ export default class PaymentRequest extends React.Component<
         );
     };
 
-    calculateLimit = (limit: number): number => {
+    calculateLimit = (limit: number): any => {
         const { subInfo } = this.props.SwapStore;
         const info: any = subInfo;
         const serviceFeePct = info?.fees?.percentage || 0;
@@ -229,7 +220,7 @@ export default class PaymentRequest extends React.Component<
             new BigNumber(limit),
             serviceFeePct,
             networkFee
-        ).toNumber();
+        );
     };
 
     componentWillUnmount(): void {
