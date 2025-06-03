@@ -650,7 +650,8 @@ export default class SendingLightning extends React.Component<
                         style={{
                             position: 'absolute',
                             top: 10,
-                            right: 10
+                            right: 10,
+                            zIndex: 1
                         }}
                     >
                         {payingDonation ? (
