@@ -28,7 +28,7 @@ export default class WithdrawalRequest extends BaseModel {
     }
 
     @computed public get getNoteKey(): string {
-        return `note-${this.invreq_id || ''}`;
+        return `note-${this.bolt12 || ''}`;
     }
 
     @computed public get getNote(): string {
