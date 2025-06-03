@@ -261,7 +261,7 @@ export default class PaymentRequest extends React.Component<
 
         const { settings } = SettingsStore;
 
-        const enableDonations = settings?.privacy?.enableDonations;
+        const enableDonations = settings?.payments?.enableDonations;
         const { donationAmount } = this.state;
         let feeLimitSat = fee_limit_sat;
 
@@ -492,7 +492,7 @@ export default class PaymentRequest extends React.Component<
 
         const { enableTor, implementation, settings } = SettingsStore;
 
-        const enableDonations = settings?.privacy?.enableDonations;
+        const enableDonations = settings?.payments?.enableDonations;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
