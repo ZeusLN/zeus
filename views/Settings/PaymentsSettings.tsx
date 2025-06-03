@@ -68,7 +68,7 @@ export default class PaymentsSettings extends React.Component<
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
             mounted: true,
-            enableDonations: settings?.privacy?.enableDonations || false
+            enableDonations: settings?.payments?.enableDonations || false
         });
     }
 
@@ -366,8 +366,8 @@ export default class PaymentsSettings extends React.Component<
                                         enableDonations: !enableDonations
                                     });
                                     await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
+                                        payments: {
+                                            ...settings.payments,
                                             enableDonations: !enableDonations
                                         }
                                     });
