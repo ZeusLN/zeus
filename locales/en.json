@@ -787,6 +787,8 @@
     "views.Tools.withdrawal.title": "Withdrawal Request",
     "views.Tools.withdrawal.descriptionPlaceholder": "Gift to Zeus",
     "views.Tools.withdrawal.createWithdrawalRequest": "Create withdrawal request",
+    "views.WithdrawalRedemption.redeeming": "Redeeming withdrawal request",
+    "views.WithdrawalRedemption.success": "Withdrawal request redemption successful",
     "views.withdrawal.errorCreate": "Error creating withdrawal request",
     "views.withdrawal.id": "Withdrawal request ID",
     "views.Settings.title": "Settings",

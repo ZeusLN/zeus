@@ -3,7 +3,7 @@ import { inject } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -48,19 +48,13 @@ export default class WithdrawalRequestRedemption extends React.Component<
         invreq: string;
         label: string;
     }) => {
-        const { InvoicesStore } = this.props;
+        const { navigation } = this.props;
         const uniqueLabel = `${label}-${Date.now()}`;
-        try {
-            const result = await InvoicesStore.redeemWithdrawalRequest({
-                invreq,
-                label: uniqueLabel
-            });
-            Alert.alert('Success', `Invoice: ${JSON.stringify(result)}`);
-            return result;
-        } catch (error: any) {
-            Alert.alert('Redemption failed');
-            throw error;
-        }
+
+        navigation.navigate('WithdrawalRedemption', {
+            invreq,
+            label: uniqueLabel
+        });
     };
 
     async componentDidMount() {

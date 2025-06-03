@@ -175,12 +175,11 @@ export default class InvoicesStore {
         this.error = false;
         this.error_msg = null;
         try {
-            console.log('before');
             const response = await BackendUtils.redeemWithdrawalRequest({
                 invreq,
                 label
             });
-            console.log('after', response);
+            console.log(response);
             runInAction(() => {
                 this.loading = false;
                 this.error = false;
