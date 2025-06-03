@@ -54,7 +54,6 @@ interface PrivacySettings {
     clipboard?: boolean;
     lurkerMode?: boolean;
     enableMempoolRates?: boolean;
-    enableDonations?: boolean;
 }
 
 interface DisplaySettings {
@@ -95,6 +94,7 @@ interface PaymentsSettings {
     timeoutSeconds?: string;
     preferredMempoolRate?: string;
     slideToPayThreshold: number;
+    enableDonations?: boolean;
 }
 
 interface InvoicesSettings {
@@ -1308,8 +1308,7 @@ export default class SettingsStore {
             customBlockExplorer: '',
             clipboard: false,
             lurkerMode: false,
-            enableMempoolRates: true,
-            enableDonations: false
+            enableMempoolRates: true
         },
         display: {
             theme: DEFAULT_THEME,
@@ -1340,7 +1339,8 @@ export default class SettingsStore {
             defaultFeeFixed: '1000',
             timeoutSeconds: '60',
             preferredMempoolRate: 'fastestFee',
-            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
+            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
+            enableDonations: false
         },
         invoices: {
             addressType: '0',
