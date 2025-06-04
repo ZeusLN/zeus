@@ -27,7 +27,7 @@ import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import InvoicesStore from '../stores/InvoicesStore';
 import NotesStore from '../stores/NotesStore';
 
-interface WithdrawalRedemptionProps {
+interface RedeemWithdrawalRequestProps {
     route: {
         params: {
             invreq: string;
@@ -41,7 +41,7 @@ interface WithdrawalRedemptionProps {
     label: string;
 }
 
-interface WithdrawalRedemptionState {
+interface RedeemWithdrawalRequestState {
     loading: boolean;
     error: string | null;
     redemptionResult: any;
@@ -51,13 +51,13 @@ interface WithdrawalRedemptionState {
 
 @inject('InvoicesStore', 'NotesStore')
 @observer
-export default class WithdrawalRedemption extends React.Component<
-    WithdrawalRedemptionProps,
-    WithdrawalRedemptionState
+export default class RedeemWithdrawalRequest extends React.Component<
+    RedeemWithdrawalRequestProps,
+    RedeemWithdrawalRequestState
 > {
     private backPressSubscription: NativeEventSubscription;
 
-    constructor(props: WithdrawalRedemptionProps) {
+    constructor(props: RedeemWithdrawalRequestProps) {
         super(props);
         this.state = {
             loading: true,
@@ -229,7 +229,9 @@ export default class WithdrawalRedemption extends React.Component<
                     <View
                         style={{
                             ...styles.content,
-                            paddingTop: windowSize.height * 0.05
+                            height: '80%',
+                            justifyContent: 'center',
+                            alignItems: 'center'
                         }}
                     >
                         <ErrorIcon
@@ -237,6 +239,16 @@ export default class WithdrawalRedemption extends React.Component<
                             width={windowSize.width}
                             fill={themeColor('highlight')}
                         />
+                        <Text
+                            style={{
+                                color: themeColor('warning'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 32,
+                                marginTop: windowSize.height * 0.07
+                            }}
+                        >
+                            {localeString('general.error')}
+                        </Text>
                         <View style={{ alignItems: 'center' }}>
                             <Text
                                 style={{
@@ -255,52 +267,96 @@ export default class WithdrawalRedemption extends React.Component<
                     </View>
                 )}
 
-                {(!!error || !!redemptionResult) && (
-                    <>
-                        <Row
-                            align="center"
-                            style={{
-                                alignSelf: 'center',
-                                justifyContent: 'center',
-                                marginTop: 50,
-                                marginBottom: 15,
-                                width: '90%'
-                            }}
-                        >
-                            <Button
-                                title={
-                                    storedNote
-                                        ? localeString(
-                                              'views.SendingLightning.UpdateNote'
-                                          )
-                                        : localeString(
-                                              'views.SendingLightning.AddANote'
-                                          )
-                                }
-                                onPress={() =>
-                                    navigation.navigate('AddNotes', {
-                                        noteKey
-                                    })
-                                }
-                                secondary
-                                adaptiveWidth
-                                buttonStyle={{
-                                    height: 40,
+                {!loading && (error || redemptionResult) && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            bottom: 20,
+                            width: '100%',
+                            paddingHorizontal: '5%'
+                        }}
+                    >
+                        {!!error && (
+                            <Row
+                                align="center"
+                                style={{
+                                    alignSelf: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: 20,
                                     width: '100%'
                                 }}
-                                containerStyle={{
-                                    width: '100%',
-                                    maxWidth: '100%',
-                                    alignSelf: 'stretch'
+                            >
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.tryAgain'
+                                    )}
+                                    icon={{
+                                        name: 'return-up-back',
+                                        type: 'ionicon',
+                                        size: 25
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    buttonStyle={{
+                                        backgroundColor: 'white',
+                                        height: 40,
+                                        width: '100%'
+                                    }}
+                                    containerStyle={{
+                                        width: '100%',
+                                        maxWidth: '100%',
+                                        alignSelf: 'stretch'
+                                    }}
+                                    adaptiveWidth
+                                />
+                            </Row>
+                        )}
+
+                        {!!redemptionResult && (
+                            <Row
+                                align="center"
+                                style={{
+                                    alignSelf: 'center',
+                                    justifyContent: 'center',
+                                    marginBottom: 20,
+                                    width: '100%'
                                 }}
-                            />
-                        </Row>
+                            >
+                                <Button
+                                    title={
+                                        storedNote
+                                            ? localeString(
+                                                  'views.SendingLightning.UpdateNote'
+                                              )
+                                            : localeString(
+                                                  'views.SendingLightning.AddANote'
+                                              )
+                                    }
+                                    onPress={() =>
+                                        navigation.navigate('AddNotes', {
+                                            noteKey
+                                        })
+                                    }
+                                    secondary
+                                    adaptiveWidth
+                                    buttonStyle={{
+                                        height: 40,
+                                        width: '100%'
+                                    }}
+                                    containerStyle={{
+                                        width: '100%',
+                                        maxWidth: '100%',
+                                        alignSelf: 'stretch'
+                                    }}
+                                />
+                            </Row>
+                        )}
+
                         <Row
                             align="center"
                             style={{
                                 alignSelf: 'center',
                                 justifyContent: 'center',
-                                width: '90%'
+                                width: '100%'
                             }}
                         >
                             <Button
@@ -330,7 +386,7 @@ export default class WithdrawalRedemption extends React.Component<
                                 adaptiveWidth
                             />
                         </Row>
-                    </>
+                    </View>
                 )}
             </Screen>
         );
