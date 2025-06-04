@@ -273,10 +273,19 @@ export default class Contacts extends React.Component<
         } = this.state;
         const { contacts } = ContactStore;
 
+        // Calculate if we have any contacts with Cashu pubkeys
+        const hasCashuContacts = CashuLockSettingsScreen
+            ? contacts.some((contactItem: any) => {
+                  const contact = new Contact(contactItem);
+                  return contact.hasCashuPubkey;
+              })
+            : true;
+
         const filteredContacts = contacts.filter((contactItem: any) => {
+            // First filter for Cashu contacts if we're in CashuLockSettingsScreen
             if (CashuLockSettingsScreen) {
-                const contactObj = new Contact(contactItem);
-                if (!contactObj.hasCashuPubkey) return false;
+                const contact = new Contact(contactItem);
+                if (!contact.hasCashuPubkey) return false;
             }
 
             // Then apply search filter
@@ -354,78 +363,91 @@ export default class Contacts extends React.Component<
                     <>
                         {SendScreen ? (
                             <View>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 14 }}
-                                />
-                                <SearchBar
-                                    placeholder={localeString(
-                                        'views.Settings.Contacts.searchBar1'
-                                    )}
-                                    // @ts-ignore:next-line
-                                    onChangeText={this.updateSearch}
-                                    value={this.state.search}
-                                    inputStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor={themeColor(
-                                        'secondaryText'
-                                    )}
-                                    containerStyle={{
-                                        backgroundColor: 'none',
-                                        borderTopWidth: 0,
-                                        borderBottomWidth: 0
-                                    }}
-                                    inputContainerStyle={{
-                                        backgroundColor: 'none'
-                                    }}
-                                    // @ts-ignore:next-line
-                                    searchIcon={
-                                        <Text
-                                            style={{
-                                                fontSize: 20,
-                                                color: themeColor('text'),
-                                                fontWeight: 'bold'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.Contacts.to'
+                                {(!CashuLockSettingsScreen ||
+                                    hasCashuContacts) && (
+                                    <>
+                                        <Divider
+                                            orientation="horizontal"
+                                            style={{ marginTop: 14 }}
+                                        />
+                                        <SearchBar
+                                            placeholder={localeString(
+                                                'views.Settings.Contacts.searchBar1'
                                             )}
-                                        </Text>
-                                    }
-                                    leftIconContainerStyle={{
-                                        marginLeft: 18,
-                                        marginRight: -8,
-                                        marginBottom: 6
-                                    }}
-                                    multiline={true}
-                                />
-                                <Divider orientation="horizontal" />
+                                            // @ts-ignore:next-line
+                                            onChangeText={this.updateSearch}
+                                            value={this.state.search}
+                                            inputStyle={{
+                                                color: themeColor('text')
+                                            }}
+                                            placeholderTextColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                            containerStyle={{
+                                                backgroundColor: 'none',
+                                                borderTopWidth: 0,
+                                                borderBottomWidth: 0
+                                            }}
+                                            inputContainerStyle={{
+                                                backgroundColor: 'none'
+                                            }}
+                                            // @ts-ignore:next-line
+                                            searchIcon={
+                                                <Text
+                                                    style={{
+                                                        fontSize: 20,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Contacts.to'
+                                                    )}
+                                                </Text>
+                                            }
+                                            leftIconContainerStyle={{
+                                                marginLeft: 18,
+                                                marginRight: -8,
+                                                marginBottom: 6
+                                            }}
+                                            multiline={true}
+                                        />
+                                        <Divider orientation="horizontal" />
+                                    </>
+                                )}
                             </View>
                         ) : (
-                            <SearchBar
-                                placeholder={localeString(
-                                    'views.Settings.Contacts.searchBar2'
+                            <>
+                                {(!CashuLockSettingsScreen ||
+                                    hasCashuContacts) && (
+                                    <SearchBar
+                                        placeholder={localeString(
+                                            'views.Settings.Contacts.searchBar2'
+                                        )}
+                                        // @ts-ignore:next-line
+                                        onChangeText={this.updateSearch}
+                                        value={this.state.search}
+                                        inputStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        containerStyle={{
+                                            backgroundColor: 'transparent',
+                                            borderTopWidth: 0,
+                                            borderBottomWidth: 0
+                                        }}
+                                        inputContainerStyle={{
+                                            borderRadius: 15,
+                                            backgroundColor:
+                                                themeColor('secondary')
+                                        }}
+                                    />
                                 )}
-                                // @ts-ignore:next-line
-                                onChangeText={this.updateSearch}
-                                value={this.state.search}
-                                inputStyle={{
-                                    color: themeColor('text')
-                                }}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                containerStyle={{
-                                    backgroundColor: 'transparent',
-                                    borderTopWidth: 0,
-                                    borderBottomWidth: 0
-                                }}
-                                inputContainerStyle={{
-                                    borderRadius: 15,
-                                    backgroundColor: themeColor('secondary')
-                                }}
-                            />
+                            </>
                         )}
                     </>
                 )}
@@ -481,7 +503,7 @@ export default class Contacts extends React.Component<
                         keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!loading && filteredContacts.length > 1 && (
+                    {!loading && filteredContacts.length > 0 && (
                         <Button
                             title={
                                 deletionAwaitingConfirmation
@@ -517,10 +539,14 @@ export default class Contacts extends React.Component<
                     {loading ? (
                         <LoadingIndicator />
                     ) : (
-                        contacts.length === 0 && (
+                        ((CashuLockSettingsScreen && !hasCashuContacts) ||
+                            (!CashuLockSettingsScreen &&
+                                contacts.length === 0)) && (
                             <Button
                                 title={localeString(
-                                    'views.Settings.Contacts.noContacts'
+                                    CashuLockSettingsScreen
+                                        ? 'cashu.noContactsWithCashuPubkey'
+                                        : 'views.Settings.Contacts.noContacts'
                                 )}
                                 icon={{
                                     name: 'error-outline',
@@ -540,33 +566,6 @@ export default class Contacts extends React.Component<
                         )
                     )}
                 </ScrollView>
-
-                {/* Show message if no contacts with cashuPubkey */}
-                {CashuLockSettingsScreen &&
-                    filteredContacts.length === 0 &&
-                    !loading && (
-                        <View
-                            style={{
-                                flex: 1,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                padding: 20
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    textAlign: 'center',
-                                    fontSize: 16,
-                                    fontFamily: 'PPNeueMontreal-Book'
-                                }}
-                            >
-                                {localeString(
-                                    'cashu.noContactsWithCashuPubkey'
-                                ).toUpperCase()}
-                            </Text>
-                        </View>
-                    )}
             </Screen>
         );
     }

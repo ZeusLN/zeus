@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    ScrollView,
-    StyleSheet,
-    View,
-    TouchableOpacity,
-    Platform
-} from 'react-native';
+import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -200,7 +194,6 @@ export default class CashuLockSettings extends React.Component<
 
     validateForm = (): string => {
         const { pubkey, showCustomDuration, customDurationValue } = this.state;
-
         if (!pubkey) {
             return localeString('cashu.pubkeyRequired');
         }
@@ -642,9 +635,7 @@ export default class CashuLockSettings extends React.Component<
                         selectedIndex={selectedDurationIndex}
                         buttons={DURATION_OPTIONS}
                         textStyle={{
-                            color: themeColor('text'),
-                            fontSize: 14,
-                            fontFamily: 'PPNeueMontreal-Medium'
+                            color: themeColor('text')
                         }}
                         selectedTextStyle={{
                             color: themeColor('secondary')
@@ -652,9 +643,7 @@ export default class CashuLockSettings extends React.Component<
                         containerStyle={{
                             backgroundColor: themeColor('secondary'),
                             borderRadius: 12,
-                            borderWidth: 0,
-                            height: 30,
-                            marginBottom: Platform.OS === 'ios' ? 16 : 0
+                            borderColor: themeColor('secondary')
                         }}
                         innerBorderStyle={{
                             color: themeColor('secondary')
@@ -705,25 +694,6 @@ export default class CashuLockSettings extends React.Component<
                                     </View>
                                 </Row>
                             </View>
-
-                            {customDurationValue && !this.state.error && (
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Medium',
-                                        fontSize: 16,
-                                        width: '90%',
-                                        margin: 'auto',
-                                        color: themeColor('success'),
-                                        textAlign: 'center',
-                                        backgroundColor:
-                                            'rgba(75, 181, 67, 0.1)',
-                                        padding: 12,
-                                        borderRadius: 8
-                                    }}
-                                >
-                                    {`${customDurationValue} ${customDurationUnit}`}
-                                </Text>
-                            )}
                         </View>
                     )}
 
