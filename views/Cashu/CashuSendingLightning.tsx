@@ -5,10 +5,14 @@ import {
     NativeEventSubscription,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import BigNumber from 'bignumber.js';
 
 import LnurlPaySuccess from '../LnurlPay/Success';
 
@@ -23,8 +27,11 @@ import CashuStore from '../../stores/CashuStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import PaymentsStore from '../../stores/PaymentsStore';
 import SettingsStore from '../../stores/SettingsStore';
+import TransactionsStore from '../../stores/TransactionsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import Base64Utils from '../../utils/Base64Utils';
+import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
@@ -32,7 +39,13 @@ import Storage from '../../storage';
 import Clock from '../../assets/images/SVG/Clock.svg';
 import ErrorIcon from '../../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
+import Gift from '../../assets/images/SVG/gift.svg';
+
 import CopyBox from '../../components/CopyBox';
+import KeyValue from '../../components/KeyValue';
+import Amount from '../../components/Amount';
+import ModalBox from '../../components/ModalBox';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 interface CashuSendingLightningProps {
     navigation: StackNavigationProp<any, any>;
@@ -40,13 +53,32 @@ interface CashuSendingLightningProps {
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
+    TransactionsStore: TransactionsStore;
+    route: Route<
+        'CashuSendingLightning',
+        {
+            donationAmount?: string;
+            enableDonations: boolean;
+        }
+    >;
 }
 
 interface CashuSendingLightningState {
     storedNotes: string;
+    wasSuccessful: boolean;
+    paymentType: string;
+    payingDonation: boolean;
+    showDonationInfo: boolean;
+    donationHandled: boolean;
+    donationPreimage: string;
+    amountDonated: number | null;
+    donationEnhancedPath: any;
+    donationPathExists: boolean;
+    donationFee: string;
+    donationFeePercentage: string;
 }
 
-@inject('CashuStore', 'LnurlPayStore', 'PaymentsStore')
+@inject('CashuStore', 'LnurlPayStore', 'PaymentsStore', 'TransactionsStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -57,7 +89,18 @@ export default class CashuSendingLightning extends React.Component<
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
-            storedNotes: ''
+            storedNotes: '',
+            payingDonation: false,
+            showDonationInfo: false,
+            donationHandled: false,
+            donationPreimage: '',
+            amountDonated: null,
+            wasSuccessful: false,
+            paymentType: 'main',
+            donationEnhancedPath: null,
+            donationPathExists: false,
+            donationFee: '',
+            donationFeePercentage: ''
         };
     }
 
@@ -83,6 +126,409 @@ export default class CashuSendingLightning extends React.Component<
             this.handleBackPress.bind(this)
         );
     }
+
+    componentDidUpdate() {
+        const { CashuStore, TransactionsStore, route } = this.props;
+        const { donationIsPaid } = TransactionsStore;
+        const { donationAmount, enableDonations } = route.params;
+
+        const wasSuccessful = this.successfullySent(CashuStore);
+
+        if (wasSuccessful && !this.state.wasSuccessful) {
+            this.setState({ wasSuccessful: true });
+        } else if (!wasSuccessful && this.state.wasSuccessful) {
+            this.setState({ wasSuccessful: false });
+        }
+
+        if (
+            wasSuccessful &&
+            !this.state.wasSuccessful &&
+            enableDonations &&
+            donationAmount &&
+            !donationIsPaid
+        ) {
+            this.setState(
+                {
+                    payingDonation: true,
+                    paymentType: 'donation'
+                },
+                () => {
+                    this.loadLnurl()
+                        .then(async (payment_request) => {
+                            if (!payment_request) {
+                                this.setState({ payingDonation: false });
+                                return;
+                            }
+
+                            try {
+                                const result =
+                                    await TransactionsStore.sendPaymentSilently(
+                                        {
+                                            payment_request
+                                        }
+                                    );
+
+                                const {
+                                    payment_error,
+                                    status,
+                                    failure_reason
+                                } = result || {};
+                                const isFailure =
+                                    status === 'FAILED' ||
+                                    status === 3 ||
+                                    (typeof payment_error === 'string' &&
+                                        payment_error !== '') ||
+                                    failure_reason ===
+                                        'FAILURE_REASON_INSUFFICIENT_BALANCE';
+
+                                if (isFailure) {
+                                    this.setState({
+                                        payingDonation: false,
+                                        amountDonated: parseFloat(
+                                            donationAmount ?? ''
+                                        )
+                                    });
+                                    return;
+                                }
+
+                                TransactionsStore.donationIsPaid = true;
+
+                                const amountDonated =
+                                    result?.num_satoshis ||
+                                    result?.value_sat ||
+                                    result.amount_msat / 1000;
+
+                                let donationFee = '';
+                                if (
+                                    result?.amount_msat &&
+                                    result?.amount_sent_msat
+                                ) {
+                                    const msatSent = +result.amount_sent_msat
+                                        .toString()
+                                        .replace('msat', '');
+                                    const msat = +result.amount_msat
+                                        .toString()
+                                        .replace('msat', '');
+                                    donationFee = (
+                                        (msatSent - msat) /
+                                        1000
+                                    ).toString();
+                                }
+
+                                const preimage = result?.payment_preimage;
+                                let payment_preimage = '';
+
+                                if (preimage) {
+                                    if (
+                                        typeof preimage !== 'string' &&
+                                        preimage.data
+                                    ) {
+                                        payment_preimage =
+                                            Base64Utils.bytesToHex(
+                                                preimage.data
+                                            );
+                                    } else if (typeof preimage === 'string') {
+                                        payment_preimage = preimage;
+                                    }
+                                }
+
+                                const payments =
+                                    await this.props.PaymentsStore.getPayments({
+                                        maxPayments: 1,
+                                        reversed: true
+                                    });
+
+                                const payment = payments?.[0];
+                                let donationEnhancedPath = null;
+                                let donationPathExists = false;
+
+                                if (payment?.fee_msat) {
+                                    donationFee = (
+                                        Number(payment.fee_msat) / 1000
+                                    ).toString();
+                                }
+
+                                const donationFeePercentage =
+                                    Number(
+                                        new BigNumber(donationFee)
+                                            .div(amountDonated)
+                                            .times(100)
+                                            .toFixed(3)
+                                    )
+                                        .toString()
+                                        .replace(/-/g, '') + '%';
+
+                                if (BackendUtils.isLNDBased()) {
+                                    donationEnhancedPath =
+                                        payment?.enhancedPath;
+                                    donationPathExists =
+                                        donationEnhancedPath?.length > 0 &&
+                                        donationEnhancedPath[0][0];
+                                }
+
+                                console.log('✔ Finished donation logic');
+
+                                this.setState({
+                                    payingDonation: false,
+                                    donationHandled: true,
+                                    donationPreimage: payment_preimage || '',
+                                    amountDonated,
+                                    donationEnhancedPath,
+                                    donationPathExists,
+                                    donationFee,
+                                    donationFeePercentage
+                                });
+                            } catch (err) {
+                                console.log(
+                                    'Error during payment handling',
+                                    err
+                                );
+                                this.setState({ payingDonation: false });
+                            }
+                        })
+                        .catch((err) => {
+                            console.error('Unexpected error:', err);
+                            this.setState({ payingDonation: false });
+                        });
+                }
+            );
+        } else {
+            console.log('Skipped donation trigger');
+        }
+    }
+
+    loadLnurl = async () => {
+        const donationAddress = 'tips@pay.zeusln.app';
+        const { route } = this.props;
+        const { donationAmount } = route.params;
+
+        const [username, bolt11Domain] = donationAddress.split('@');
+        const url = bolt11Domain.includes('.onion')
+            ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
+            : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+
+        try {
+            const response = await ReactNativeBlobUtil.fetch('GET', url);
+            const lnurlData = response.json();
+            const amount = parseFloat(donationAmount ?? '') * 1000;
+            const callbackUrl = `${lnurlData.callback}?amount=${amount}`;
+
+            const invoiceResponse = await ReactNativeBlobUtil.fetch(
+                'GET',
+                callbackUrl
+            );
+            const invoiceData = invoiceResponse.json();
+
+            return invoiceData.pr;
+        } catch (err) {
+            console.error('loadLnurl error:', err);
+            return null;
+        }
+    };
+
+    renderInfoModal = () => {
+        const {
+            showDonationInfo,
+            donationPreimage,
+            donationHandled,
+            amountDonated,
+            donationEnhancedPath,
+            donationPathExists,
+            donationFee,
+            donationFeePercentage
+        } = this.state;
+
+        const { navigation } = this.props;
+
+        const amountLabel = `${amountDonated} ${
+            amountDonated === 1 ? 'sat' : 'sats'
+        }`;
+
+        return (
+            <ModalBox
+                isOpen={showDonationInfo}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        showDonationInfo: false
+                    });
+                }}
+                position="center"
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        {donationHandled ? (
+                            <>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('text'),
+                                        marginBottom: 12,
+                                        fontSize: 18,
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.PaymentRequest.thankYouForDonation'
+                                    )}
+                                </Text>
+                                <View
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: -10
+                                    }}
+                                >
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.amountDonated'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={amountDonated?.toString()}
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                </View>
+                                {donationFee && donationFeePercentage && (
+                                    <View
+                                        style={{
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Payment.fee'
+                                            )}
+                                            value={
+                                                <Row>
+                                                    <Amount
+                                                        sats={donationFee}
+                                                        debit
+                                                        sensitive
+                                                        toggleable
+                                                    />
+                                                    {donationFeePercentage && (
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {` (${donationFeePercentage})`}
+                                                        </Text>
+                                                    )}
+                                                </Row>
+                                            }
+                                        />
+                                    </View>
+                                )}
+
+                                {donationPreimage && (
+                                    <View
+                                        style={{
+                                            width: '100%',
+                                            marginTop: donationFee ? 12 : 16
+                                        }}
+                                    >
+                                        <CopyBox
+                                            heading={localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )}
+                                            headingCopied={`${localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )} ${localeString(
+                                                'components.ExternalLinkModal.copied'
+                                            )}`}
+                                            theme="dark"
+                                            URL={donationPreimage}
+                                        />
+                                    </View>
+                                )}
+                                {donationPathExists && (
+                                    <Button
+                                        title={`${localeString(
+                                            'views.Payment.title'
+                                        )} ${
+                                            donationEnhancedPath?.length > 1
+                                                ? `${localeString(
+                                                      'views.Payment.paths'
+                                                  )} (${
+                                                      donationEnhancedPath.length
+                                                  })`
+                                                : localeString(
+                                                      'views.Payment.path'
+                                                  )
+                                        } `}
+                                        onPress={() => {
+                                            this.setState({
+                                                showDonationInfo: false
+                                            });
+                                            navigation.navigate(
+                                                'PaymentPaths',
+                                                {
+                                                    enhancedPath:
+                                                        donationEnhancedPath
+                                                }
+                                            );
+                                        }}
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                        containerStyle={{ marginTop: 30 }}
+                                    />
+                                )}
+                            </>
+                        ) : (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    fontSize: 18,
+                                    marginBottom: 20,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                Your attempt to donate to ZEUS with{' '}
+                                {amountLabel} has failed.
+                            </Text>
+                        )}
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() =>
+                                this.setState({ showDonationInfo: false })
+                            }
+                            containerStyle={{
+                                marginTop: donationPathExists ? 14 : 18
+                            }}
+                            tertiary
+                        />
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
 
     private handleBackPress(): boolean {
         const { CashuStore, navigation } = this.props;
@@ -113,13 +559,15 @@ export default class CashuSendingLightning extends React.Component<
             noteKey
         } = CashuStore;
         const payment_hash = payReq && payReq.payment_hash;
-        const { storedNotes } = this.state;
+        const { storedNotes, donationHandled, paymentType, payingDonation } =
+            this.state;
 
         const success = this.successfullySent(CashuStore);
         const windowSize = Dimensions.get('window');
 
         return (
             <Screen>
+                {this.renderInfoModal()}
                 {loading && (
                     <View
                         style={{
@@ -141,6 +589,36 @@ export default class CashuSendingLightning extends React.Component<
                         >
                             {localeString('views.SendingLightning.sending')}
                         </Text>
+                    </View>
+                )}
+                {paymentType === 'donation' && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 10,
+                            zIndex: 1
+                        }}
+                    >
+                        {payingDonation ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    this.setState({ showDonationInfo: true })
+                                }
+                            >
+                                <Gift
+                                    fill={
+                                        donationHandled
+                                            ? themeColor('highlight')
+                                            : themeColor('error')
+                                    }
+                                    width={30}
+                                    height={30}
+                                />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
                 {!loading && (
