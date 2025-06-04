@@ -553,13 +553,15 @@ export default class LND {
                 fee_rate: `${Number(fee_rate) / 100}`,
                 ...(this.supportInboundFees() && {
                     inboundFee: {
-                        base_fee_msat: base_fee_msat_inbound,
-                        fee_rate_ppm:
-                            fee_rate_inbound !== ''
-                                ? `${new BigNumber(fee_rate_inbound)
-                                      .multipliedBy(10000)
-                                      .toFixed(0)}`
-                                : ''
+                        ...(base_fee_msat_inbound !== '' && {
+                            base_fee_msat: base_fee_msat_inbound
+                        }),
+                        ...(fee_rate_inbound !== '' &&
+                            fee_rate_inbound !== undefined && {
+                                fee_rate_ppm: `${new BigNumber(fee_rate_inbound)
+                                    .multipliedBy(10000)
+                                    .toFixed(0)}`
+                            })
                     }
                 }),
                 global: true,
@@ -574,13 +576,15 @@ export default class LND {
             fee_rate: `${Number(fee_rate) / 100}`,
             ...(this.supportInboundFees() && {
                 inboundFee: {
-                    base_fee_msat: base_fee_msat_inbound,
-                    fee_rate_ppm:
-                        fee_rate_inbound !== ''
-                            ? `${new BigNumber(fee_rate_inbound)
-                                  .multipliedBy(10000)
-                                  .toFixed(0)}`
-                            : ''
+                    ...(base_fee_msat_inbound !== '' && {
+                        base_fee_msat: base_fee_msat_inbound
+                    }),
+                    ...(fee_rate_inbound !== '' &&
+                        fee_rate_inbound !== undefined && {
+                            fee_rate_ppm: `${new BigNumber(fee_rate_inbound)
+                                .multipliedBy(10000)
+                                .toFixed(0)}`
+                        })
                 }
             }),
             chan_point: {

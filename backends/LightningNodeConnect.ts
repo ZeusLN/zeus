@@ -373,13 +373,17 @@ export default class LightningNodeConnect {
                 fee_rate: `${Number(fee_rate) / 100}`,
                 ...(this.supportInboundFees() && {
                     inboundFee: {
-                        base_fee_msat: data.base_fee_msat_inbound,
-                        fee_rate_ppm:
-                            data.fee_rate_inbound !== ''
-                                ? `${new BigNumber(data.fee_rate_inbound)
-                                      .multipliedBy(10000)
-                                      .toFixed(0)}`
-                                : ''
+                        ...(data.base_fee_msat_inbound !== '' && {
+                            base_fee_msat: data.base_fee_msat_inbound
+                        }),
+                        ...(data.fee_rate_inbound !== '' &&
+                            data.fee_rate_inbound !== undefined && {
+                                fee_rate_ppm: `${new BigNumber(
+                                    data.fee_rate_inbound
+                                )
+                                    .multipliedBy(10000)
+                                    .toFixed(0)}`
+                            })
                     }
                 }),
 
@@ -399,13 +403,17 @@ export default class LightningNodeConnect {
                 fee_rate: `${Number(fee_rate) / 100}`,
                 ...(this.supportInboundFees() && {
                     inboundFee: {
-                        base_fee_msat: data.base_fee_msat_inbound,
-                        fee_rate_ppm:
-                            data.fee_rate_inbound !== ''
-                                ? `${new BigNumber(data.fee_rate_inbound)
-                                      .multipliedBy(10000)
-                                      .toFixed(0)}`
-                                : ''
+                        ...(data.base_fee_msat_inbound !== '' && {
+                            base_fee_msat: data.base_fee_msat_inbound
+                        }),
+                        ...(data.fee_rate_inbound !== '' &&
+                            data.fee_rate_inbound !== undefined && {
+                                fee_rate_ppm: `${new BigNumber(
+                                    data.fee_rate_inbound
+                                )
+                                    .multipliedBy(10000)
+                                    .toFixed(0)}`
+                            })
                     }
                 }),
                 chan_point: {
