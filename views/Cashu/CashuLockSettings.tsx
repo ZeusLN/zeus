@@ -1,16 +1,25 @@
 import * as React from 'react';
-import { ScrollView, StyleSheet, View, TouchableOpacity } from 'react-native';
+import {
+    ScrollView,
+    StyleSheet,
+    View,
+    TouchableOpacity,
+    Platform
+} from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
-import { Chip, Icon } from 'react-native-elements';
-
+import { Chip, Icon, ButtonGroup } from 'react-native-elements';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 import Button from '../../components/Button';
+import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import { Row } from '../../components/layout/Row';
+import { Spacer } from '../../components/layout/Spacer';
+import DropdownSetting from '../../components/DropdownSetting';
 
 import ContactStore from '../../stores/ContactStore';
 
@@ -19,7 +28,6 @@ import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
 interface CashuLockSettingsProps {
     navigation: StackNavigationProp<any, any>;
@@ -37,7 +45,9 @@ interface CashuLockSettingsProps {
             memo?: string;
             value?: string;
             satAmount?: string | number;
-            account?: string;
+            showCustomDuration?: boolean;
+            customDurationValue?: string;
+            customDurationUnit?: string;
         }
     >;
 }
@@ -48,27 +58,31 @@ interface CashuLockSettingsState {
     duration: string;
     showCustomDuration: boolean;
     customDurationValue: string;
-    customDurationUnit: TimeUnit;
+    customDurationUnit: string;
     showUnitDropdown: boolean;
     memo: string;
     value: string;
     satAmount: string | number;
-    account: string;
     error: string;
     hasClipboardContent: boolean;
     isPubkeyValid: boolean;
+    selectedDurationIndex: number;
 }
 
-type TimeUnit = 'hour' | 'day' | 'week' | 'month' | 'year';
+const TIME_UNITS: string[] = [
+    localeString('time.hours'),
+    localeString('time.days'),
+    localeString('time.weeks'),
+    localeString('time.months'),
+    localeString('time.years')
+];
 
-const TIME_UNITS: TimeUnit[] = ['hour', 'day', 'week', 'month', 'year'];
-
-const DURATION_OPTIONS = [
-    localeString('cashu.duration.1day'),
-    localeString('cashu.duration.1week'),
+const DURATION_OPTIONS: string[] = [
+    localeString('cashu.duration.1Day'),
+    localeString('cashu.duration.1Week'),
     localeString('cashu.duration.forever'),
-    localeString('cashu.duration.custom')
-] as const;
+    localeString('general.custom')
+];
 
 @inject('ContactStore')
 @observer
@@ -86,32 +100,46 @@ export default class CashuLockSettings extends React.Component<
             memo,
             value,
             satAmount,
-            account
-        } = route.params || {};
-
+            showCustomDuration,
+            customDurationValue,
+            customDurationUnit
+        } = route.params;
         this.state = {
             pubkey: currentLockPubkey || '',
             contactName: contactName || '',
-            duration: currentDuration || '',
-            showCustomDuration: false,
-            customDurationValue: '',
-            customDurationUnit: 'day' as TimeUnit,
+            duration: currentDuration || DURATION_OPTIONS[0],
+            showCustomDuration: showCustomDuration || false,
+            customDurationValue: customDurationValue || '',
+            customDurationUnit: customDurationUnit || TIME_UNITS[0],
             showUnitDropdown: false,
             memo: memo || '',
             value: value || '',
             satAmount: satAmount || '',
-            account: account || 'default',
             error: '',
             hasClipboardContent: false,
             isPubkeyValid: currentLockPubkey
                 ? AddressUtils.isValidLightningPubKey(currentLockPubkey)
-                : true
+                : true,
+            selectedDurationIndex: currentDuration
+                ? DURATION_OPTIONS.indexOf(currentDuration)
+                : 0
         };
         this.handleContactSelection = this.handleContactSelection.bind(this);
     }
 
     componentDidMount() {
         this.props.navigation.addListener('focus', this.handleFocus);
+        const { route } = this.props;
+        const { showCustomDuration, customDurationValue, customDurationUnit } =
+            route.params || {};
+        if (showCustomDuration) {
+            this.setState({
+                showCustomDuration: true,
+                selectedDurationIndex: 3,
+                customDurationValue: customDurationValue || '',
+                customDurationUnit: customDurationUnit || TIME_UNITS[0]
+            });
+        }
     }
 
     componentWillUnmount() {
@@ -121,15 +149,11 @@ export default class CashuLockSettings extends React.Component<
     handleFocus = () => {
         const { route } = this.props;
         const { params } = route;
-
-        if (params.hasCashuPubkey === false) {
-            this.setState({
-                error: localeString('cashu.contactNoCashuPubkey')
-            });
-        } else if (params?.destination) {
+        if (params?.destination) {
             this.setState({
                 contactName: params.contactName || '',
                 pubkey: params.destination,
+                duration: params.currentDuration || '',
                 error: ''
             });
         }
@@ -175,8 +199,7 @@ export default class CashuLockSettings extends React.Component<
     };
 
     validateForm = (): string => {
-        const { pubkey, duration, showCustomDuration, customDurationValue } =
-            this.state;
+        const { pubkey, showCustomDuration, customDurationValue } = this.state;
 
         if (!pubkey) {
             return localeString('cashu.pubkeyRequired');
@@ -186,9 +209,6 @@ export default class CashuLockSettings extends React.Component<
         }
         if (showCustomDuration) {
             return this.validateCustomDurationValue(customDurationValue);
-        }
-        if (!duration) {
-            return localeString('cashu.durationRequired');
         }
         return '';
     };
@@ -203,8 +223,6 @@ export default class CashuLockSettings extends React.Component<
             error: validationError,
             isPubkeyValid: isValid
         });
-
-        // Check clipboard content when input is empty
         if (!cleanedText) {
             this.checkClipboardContent();
         }
@@ -237,21 +255,21 @@ export default class CashuLockSettings extends React.Component<
         if (!customDurationValue) return '';
 
         const value = parseInt(customDurationValue, 10);
-        const unitString = localeString(`cashu.timeUnit.${customDurationUnit}`);
-        return `${value} ${value === 1 ? unitString : unitString + 's'}`;
+        const unitKey = customDurationUnit.toLowerCase();
+        return `${value} ${value === 1 ? unitKey : unitKey + 's'}`;
     };
 
     handleSave = () => {
-        const { navigation } = this.props;
         const {
             pubkey,
-            duration,
             showCustomDuration,
+            customDurationValue,
+            customDurationUnit,
             memo,
             value,
             satAmount,
-            account,
-            contactName
+            contactName,
+            selectedDurationIndex
         } = this.state;
 
         const error = this.validateForm();
@@ -261,18 +279,22 @@ export default class CashuLockSettings extends React.Component<
         }
 
         const finalDuration = showCustomDuration
-            ? this.getCustomDurationString()
-            : duration;
+            ? `${customDurationValue} ${customDurationUnit}`
+            : DURATION_OPTIONS[selectedDurationIndex];
 
-        navigation.navigate('MintToken', {
+        this.props.navigation.popTo('MintToken', {
             pubkey,
             duration: finalDuration,
             fromLockSettings: true,
             memo,
             value,
             satAmount,
-            account,
-            contactName
+            contactName,
+            showCustomDuration,
+            ...(showCustomDuration && {
+                customDurationValue,
+                customDurationUnit
+            })
         });
     };
 
@@ -284,7 +306,6 @@ export default class CashuLockSettings extends React.Component<
             this.setState({ hasClipboardContent: false });
         }
     };
-
     handlePaste = async () => {
         try {
             const text = await Clipboard.getString();
@@ -356,18 +377,6 @@ export default class CashuLockSettings extends React.Component<
             cancelButtonText: {
                 ...styles.cancelButtonText,
                 color: themeColor('text')
-            },
-            lockButton: {
-                ...styles.lockButton,
-                backgroundColor: themeColor('text')
-            },
-            lockButtonDisabled: {
-                ...styles.lockButton,
-                backgroundColor: themeColor('secondary')
-            },
-            lockButtonText: {
-                ...styles.lockButtonText,
-                color: themeColor('secondary')
             }
         };
     };
@@ -375,49 +384,48 @@ export default class CashuLockSettings extends React.Component<
     isFormValid = () => {
         const {
             pubkey,
-            duration,
             showCustomDuration,
             customDurationValue,
-            error
+            error,
+            selectedDurationIndex
         } = this.state;
+        const isPubkeyValid =
+            pubkey && AddressUtils.isValidLightningPubKey(pubkey) && !error;
+        if (showCustomDuration) {
+            return isPubkeyValid && customDurationValue && !error;
+        }
+        return isPubkeyValid && selectedDurationIndex !== undefined;
+    };
 
-        return (
-            pubkey &&
-            AddressUtils.isValidLightningPubKey(pubkey) &&
-            !error &&
-            ((duration && !showCustomDuration) ||
-                (showCustomDuration && customDurationValue && !error))
-        );
+    onBack = () => {
+        this.props.navigation.popTo('MintToken', {
+            fromLockSettings: true,
+            pubkey: '',
+            duration: '',
+            showCustomDuration: false
+        });
     };
 
     render() {
         const { navigation } = this.props;
         const {
             pubkey,
-            duration,
             showCustomDuration,
             customDurationValue,
             customDurationUnit,
             error,
             hasClipboardContent,
             isPubkeyValid,
-            contactName
+            contactName,
+            selectedDurationIndex
         } = this.state;
-        const dynamicStyles = this.getDynamicStyles();
         const isFormValid = this.isFormValid();
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        navigation.navigate('MintToken', {
-                            fromLockSettings: true,
-                            pubkey: this.state.pubkey,
-                            duration: this.state.duration,
-                            ...this.props.route.params
-                        });
-                    }}
+                    onBack={this.onBack}
                     navigateBackOnBackPress={false}
                     centerComponent={{
                         text: localeString('cashu.lockEcash'),
@@ -539,15 +547,13 @@ export default class CashuLockSettings extends React.Component<
                         )}
                         <TouchableOpacity
                             onPress={() => {
-                                const { memo, value, satAmount, account } =
-                                    this.state;
+                                const { memo, value, satAmount } = this.state;
                                 navigation.navigate('Contacts', {
                                     SendScreen: true,
                                     CashuLockSettingsScreen: true,
                                     memo,
                                     value,
-                                    satAmount,
-                                    account
+                                    satAmount
                                 });
                             }}
                             style={{ position: 'absolute', right: 10 }}
@@ -571,7 +577,7 @@ export default class CashuLockSettings extends React.Component<
                             onPress={this.handlePaste}
                             buttonStyle={{
                                 backgroundColor: themeColor('secondary'),
-                                borderRadius: 12,
+                                borderRadius: 5,
                                 height: 48,
                                 marginBottom: 15
                             }}
@@ -615,193 +621,89 @@ export default class CashuLockSettings extends React.Component<
                         />
                     </View>
 
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                            gap: 8
+                    <ButtonGroup
+                        onPress={(selectedIndex: number) => {
+                            if (selectedIndex === 3) {
+                                this.setState({
+                                    showCustomDuration: true,
+                                    duration: '',
+                                    selectedDurationIndex: selectedIndex
+                                });
+                            } else {
+                                this.setState({
+                                    duration: DURATION_OPTIONS[selectedIndex],
+                                    showCustomDuration: false,
+                                    customDurationValue: '',
+                                    error: '',
+                                    selectedDurationIndex: selectedIndex
+                                });
+                            }
                         }}
-                    >
-                        {DURATION_OPTIONS.map((option) => (
-                            <TouchableOpacity
-                                key={option}
-                                onPress={() => {
-                                    if (
-                                        option ===
-                                        localeString('cashu.duration.custom')
-                                    ) {
-                                        this.setState({
-                                            showCustomDuration: true,
-                                            duration: ''
-                                        });
-                                    } else {
-                                        this.setState({
-                                            duration:
-                                                duration === option
-                                                    ? ''
-                                                    : option,
-                                            showCustomDuration: false,
-                                            customDurationValue: '',
-                                            error: ''
-                                        });
-                                    }
-                                }}
-                                style={{
-                                    width: 75,
-                                    height: 36,
-                                    borderRadius: 18,
-                                    backgroundColor:
-                                        (option ===
-                                            localeString(
-                                                'cashu.duration.custom'
-                                            ) &&
-                                            showCustomDuration) ||
-                                        (option !==
-                                            localeString(
-                                                'cashu.duration.custom'
-                                            ) &&
-                                            duration === option)
-                                            ? themeColor('text')
-                                            : themeColor('secondary'),
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    shadowColor: '#000',
-                                    shadowOffset: {
-                                        width: 0,
-                                        height: 2
-                                    },
-                                    shadowOpacity: 0.1,
-                                    shadowRadius: 3,
-                                    elevation: 2
-                                }}
-                                activeOpacity={0.7}
-                            >
-                                <Text
-                                    style={{
-                                        color:
-                                            (option ===
-                                                localeString(
-                                                    'cashu.duration.custom'
-                                                ) &&
-                                                showCustomDuration) ||
-                                            (option !==
-                                                localeString(
-                                                    'cashu.duration.custom'
-                                                ) &&
-                                                duration === option)
-                                                ? themeColor('secondary')
-                                                : themeColor('text'),
-                                        fontSize: 14,
-                                        fontWeight: '500',
-                                        fontFamily: 'PPNeueMontreal-Medium'
-                                    }}
-                                >
-                                    {option}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
+                        selectedIndex={selectedDurationIndex}
+                        buttons={DURATION_OPTIONS}
+                        textStyle={{
+                            color: themeColor('text'),
+                            fontSize: 14,
+                            fontFamily: 'PPNeueMontreal-Medium'
+                        }}
+                        selectedTextStyle={{
+                            color: themeColor('secondary')
+                        }}
+                        containerStyle={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 12,
+                            borderWidth: 0,
+                            height: 30,
+                            marginBottom: Platform.OS === 'ios' ? 16 : 0
+                        }}
+                        innerBorderStyle={{
+                            color: themeColor('secondary')
+                        }}
+                        selectedButtonStyle={{
+                            backgroundColor: themeColor('highlight'),
+                            borderRadius: 12
+                        }}
+                    />
 
                     {showCustomDuration && (
                         <View>
                             <View
                                 style={{
-                                    borderRadius: 12,
-                                    padding: 16,
+                                    padding: 10,
                                     marginBottom: 5
                                 }}
                             >
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        gap: 12,
-                                        marginBottom: 16
-                                    }}
-                                >
+                                <Row style={{ width: '100%' }}>
+                                    <TextInput
+                                        placeholder={'1-999'}
+                                        textColor={themeColor('text')}
+                                        keyboardType="numeric"
+                                        value={customDurationValue}
+                                        style={{
+                                            width: '58%'
+                                        }}
+                                        onChangeText={
+                                            this.handleCustomDurationValueChange
+                                        }
+                                    />
+                                    <Spacer width={4} />
                                     <View style={{ flex: 1 }}>
-                                        <TextInput
-                                            placeholder={'1-999'}
-                                            value={customDurationValue}
-                                            onChangeText={
-                                                this
-                                                    .handleCustomDurationValueChange
-                                            }
-                                            style={{
-                                                height: 48,
-                                                borderRadius: 12,
-                                                backgroundColor:
-                                                    themeColor('secondary'),
-                                                borderWidth: 0,
-                                                borderColor: 'transparent'
-                                            }}
-                                            textInputStyle={{
-                                                color: themeColor('secondary'),
-                                                fontSize: 18,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium',
-                                                textAlign: 'center'
-                                            }}
-                                            keyboardType="number-pad"
-                                        />
-                                    </View>
-                                </View>
-
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        flexWrap: 'wrap',
-                                        gap: 8,
-                                        justifyContent: 'center'
-                                    }}
-                                >
-                                    {TIME_UNITS.map((unit) => (
-                                        <TouchableOpacity
-                                            key={unit}
-                                            style={{
-                                                paddingVertical: 8,
-                                                paddingHorizontal: 16,
-                                                borderRadius: 20,
-                                                backgroundColor:
-                                                    customDurationUnit === unit
-                                                        ? themeColor('text')
-                                                        : themeColor(
-                                                              'secondary'
-                                                          ),
-                                                minWidth: 80,
-                                                alignItems: 'center'
-                                            }}
-                                            onPress={() => {
+                                        <DropdownSetting
+                                            selectedValue={customDurationUnit}
+                                            values={TIME_UNITS.map((unit) => ({
+                                                key: unit,
+                                                value: unit,
+                                                description: unit
+                                            }))}
+                                            onValueChange={(value) => {
                                                 this.setState({
-                                                    customDurationUnit: unit,
+                                                    customDurationUnit: value,
                                                     showUnitDropdown: false
                                                 });
                                             }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    color:
-                                                        customDurationUnit ===
-                                                        unit
-                                                            ? themeColor(
-                                                                  'secondary'
-                                                              )
-                                                            : themeColor(
-                                                                  'text'
-                                                              ),
-                                                    fontSize: 16,
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Medium',
-                                                    textTransform: 'capitalize'
-                                                }}
-                                            >
-                                                {localeString(
-                                                    `cashu.timeUnit.${unit}`
-                                                )}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
+                                        />
+                                    </View>
+                                </Row>
                             </View>
 
                             {customDurationValue && !this.state.error && (
@@ -819,11 +721,7 @@ export default class CashuLockSettings extends React.Component<
                                         borderRadius: 8
                                     }}
                                 >
-                                    {`${customDurationValue} ${
-                                        customDurationValue === '1'
-                                            ? customDurationUnit
-                                            : customDurationUnit + 's'
-                                    }`}
+                                    {`${customDurationValue} ${customDurationUnit}`}
                                 </Text>
                             )}
                         </View>
@@ -831,36 +729,18 @@ export default class CashuLockSettings extends React.Component<
 
                     <View style={styles.bottomButtonContainer}>
                         <Button
-                            onPress={() => {
-                                const navigationParams = {
-                                    ...this.props.route.params,
-                                    fromLockSettings: true
-                                };
-
-                                navigation.navigate(
-                                    'MintToken',
-                                    navigationParams
-                                );
-                            }}
-                            containerStyle={styles.bottomButton}
-                            buttonStyle={dynamicStyles.cancelButton}
-                            titleStyle={dynamicStyles.cancelButtonText}
-                            title={localeString('cashu.cancel')}
-                        />
-
-                        <Button
                             onPress={this.handleSave}
                             containerStyle={styles.bottomButton}
-                            buttonStyle={
-                                isFormValid
-                                    ? dynamicStyles.lockButton
-                                    : dynamicStyles.lockButtonDisabled
-                            }
-                            titleStyle={
-                                isFormValid
-                                    ? dynamicStyles.lockButtonText
-                                    : styles.lockButtonTextDisabled
-                            }
+                            buttonStyle={{
+                                backgroundColor: isFormValid
+                                    ? themeColor('text')
+                                    : themeColor('secondary')
+                            }}
+                            titleStyle={{
+                                color: isFormValid
+                                    ? themeColor('secondary')
+                                    : themeColor('text')
+                            }}
                             disabled={!isFormValid}
                             title={localeString('cashu.lock')}
                         />
@@ -894,19 +774,5 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         fontSize: 16,
         fontFamily: 'PPNeueMontreal-Medium'
-    },
-    lockButton: {
-        height: 48,
-        borderRadius: 8
-    },
-    lockButtonDisabled: {
-        backgroundColor: 'transparent'
-    },
-    lockButtonText: {
-        fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Medium'
-    },
-    lockButtonTextDisabled: {
-        color: 'rgba(0, 0, 0, 0.3)'
     }
 });

@@ -877,14 +877,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             ? (settings.pos &&
                                                   settings.pos.defaultView) ||
                                               'Products'
-                                            : navigation
-                                                  .getState()
-                                                  .routes.find(
-                                                      (route) =>
-                                                          route.params
-                                                              ?.fromMintToken
-                                                  )
-                                            ? 'Balance'
                                             : isSyncing
                                             ? 'Balance'
                                             : (settings.display &&
