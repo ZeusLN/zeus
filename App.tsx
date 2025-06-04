@@ -250,8 +250,8 @@ import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
-import WithdrawalRequestRedemption from './views/WithdrawalRequestRedemption';
-import WithdrawalRedemption from './views/WithdrawalRedemption';
+import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
+import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -1181,15 +1181,15 @@ export default class App extends React.PureComponent {
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="WithdrawalRequestRedemption" // @ts-ignore:next-line
+                                                        name="WithdrawalRequestInfo" // @ts-ignore:next-line
                                                         component={
-                                                            WithdrawalRequestRedemption
+                                                            WithdrawalRequestInfo
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="WithdrawalRedemption" // @ts-ignore:next-line
+                                                        name="RedeemWithdrawalRequest" // @ts-ignore:next-line
                                                         component={
-                                                            WithdrawalRedemption
+                                                            RedeemWithdrawalRequest
                                                         }
                                                     />
                                                 </Stack.Navigator>
