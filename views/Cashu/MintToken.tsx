@@ -12,14 +12,13 @@ import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
+import CashuToken from '../../models/CashuToken';
 
 import CashuStore from '../../stores/CashuStore';
 import ContactStore from '../../stores/ContactStore';
 
-import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-
-import CashuToken from '../../models/CashuToken';
+import { localeString } from '../../utils/LocaleUtils';
 
 interface MintTokenProps {
     exitSetup: any;
@@ -39,6 +38,9 @@ interface MintTokenProps {
             account?: string;
             duration?: string;
             fromLockSettings?: boolean;
+            showCustomDuration?: boolean;
+            customDurationValue?: string;
+            customDurationUnit?: string;
         }
     >;
 }
@@ -52,6 +54,9 @@ interface MintTokenState {
     contactName: string;
     locktime?: number;
     duration: string;
+    showCustomDuration: boolean;
+    customDurationValue: string;
+    customDurationUnit: string;
 }
 
 @inject('CashuStore', 'UnitsStore', 'ContactStore')
@@ -67,9 +72,12 @@ export default class MintToken extends React.Component<
             memo: '',
             value: '',
             satAmount: '',
-            pubkey: '', // For Locking token
-            contactName: '', // For Locking token
-            duration: ''
+            pubkey: '',
+            contactName: '',
+            duration: '',
+            showCustomDuration: false,
+            customDurationValue: '',
+            customDurationUnit: ''
         };
         this.handleLockSettingsSave = this.handleLockSettingsSave.bind(this);
         this.resetForm = this.resetForm.bind(this);
@@ -90,7 +98,6 @@ export default class MintToken extends React.Component<
                 satAmount: getSatAmount(amount)
             });
         }
-
         this.setState({
             loading: false
         });
@@ -114,9 +121,15 @@ export default class MintToken extends React.Component<
                 memo: params.memo ?? this.state.memo,
                 value: params.value ?? this.state.value,
                 satAmount: params.satAmount ?? this.state.satAmount,
-                contactName: params.contactName ?? this.state.contactName
+                contactName: params.contactName ?? this.state.contactName,
+                showCustomDuration:
+                    params.showCustomDuration ?? this.state.showCustomDuration,
+                customDurationValue:
+                    params.customDurationValue ??
+                    this.state.customDurationValue,
+                customDurationUnit:
+                    params.customDurationUnit ?? this.state.customDurationUnit
             };
-
             this.setState(stateUpdate as MintTokenState, () => {
                 const updatedParams = { ...params };
                 delete updatedParams.fromLockSettings;
@@ -136,23 +149,23 @@ export default class MintToken extends React.Component<
         if (parts.length !== 2) return 0;
 
         const value = parseInt(parts[0], 10);
-        const unit = parts[1].toLowerCase();
+        const unit = parts[1];
         if (isNaN(value) || value <= 0) return 0;
         switch (unit) {
-            case 'hour':
-            case 'hours':
+            case 'Hour':
+            case 'Hours':
                 return value * 3600;
-            case 'day':
-            case 'days':
+            case 'Day':
+            case 'Days':
                 return value * 86400;
-            case 'week':
-            case 'weeks':
+            case 'Week':
+            case 'Weeks':
                 return value * 604800;
-            case 'month':
-            case 'months':
+            case 'Month':
+            case 'Months':
                 return value * 2592000;
-            case 'year':
-            case 'years':
+            case 'Year':
+            case 'Years':
                 return value * 31536000;
             default:
                 return 0;
@@ -176,14 +189,42 @@ export default class MintToken extends React.Component<
             satAmount: '',
             pubkey: '',
             duration: '',
-            locktime: undefined
+            locktime: undefined,
+            contactName: '',
+            showCustomDuration: false,
+            customDurationValue: '',
+            customDurationUnit: ''
+        });
+
+        this.props.navigation.setParams({
+            amount: undefined,
+            pubkey: undefined,
+            contactName: undefined,
+            locktime: undefined,
+            memo: undefined,
+            value: undefined,
+            satAmount: undefined,
+            duration: undefined,
+            fromLockSettings: undefined,
+            showCustomDuration: undefined,
+            customDurationValue: undefined,
+            customDurationUnit: undefined
         });
     }
 
     handleLockSettingsPress = () => {
         const { navigation } = this.props;
-        const { memo, value, satAmount, pubkey, duration, contactName } =
-            this.state;
+        const {
+            memo,
+            value,
+            satAmount,
+            pubkey,
+            duration,
+            contactName,
+            showCustomDuration,
+            customDurationValue,
+            customDurationUnit
+        } = this.state;
         navigation.navigate('CashuLockSettings', {
             currentLockPubkey: pubkey,
             currentDuration: duration,
@@ -191,7 +232,10 @@ export default class MintToken extends React.Component<
             memo,
             value,
             satAmount,
-            contactName
+            contactName,
+            showCustomDuration,
+            customDurationValue,
+            customDurationUnit
         });
     };
 
@@ -200,21 +244,17 @@ export default class MintToken extends React.Component<
             return '';
         return `${pubkey.slice(0, 6)}...${pubkey.slice(-4)}`;
     };
-
     formatDuration = (duration: string | undefined): string => {
         if (!duration) return localeString('cashu.noDuration');
         return duration;
     };
-
-    handleBack = () => {
+    onBack = () => {
         const { navigation } = this.props;
-        navigation.navigate('Wallet', { fromMintToken: true });
+        navigation.popTo('Wallet');
     };
-
     handleMemoChange = (text: string) => {
         this.setState({ memo: text });
     };
-
     handleAmountChange = (amount: string, satAmount: string | number) => {
         this.setState({
             value: amount,
@@ -231,6 +271,8 @@ export default class MintToken extends React.Component<
         const loading = CashuStore.loading || this.state.loading;
 
         const error_msg = CashuStore.error_msg;
+
+        const isAmountValid = satAmount && Number(satAmount) > 0;
 
         const dynamicStyles = {
             text: {
@@ -252,6 +294,16 @@ export default class MintToken extends React.Component<
             lockButtonText: {
                 ...styles.lockButtonText,
                 color: themeColor('text')
+            },
+            mintButton: {
+                backgroundColor: isAmountValid
+                    ? themeColor('text')
+                    : themeColor('secondary')
+            },
+            mintButtonText: {
+                color: isAmountValid
+                    ? themeColor('secondary')
+                    : themeColor('text')
             }
         };
 
@@ -260,7 +312,7 @@ export default class MintToken extends React.Component<
                 <Header
                     leftComponent="Back"
                     navigateBackOnBackPress={false}
-                    onBack={this.handleBack}
+                    onBack={this.onBack}
                     centerComponent={{
                         text: localeString('cashu.mintEcashToken'),
                         style: {
@@ -388,7 +440,6 @@ export default class MintToken extends React.Component<
                                                     params.lockTime =
                                                         lockSeconds;
                                                 }
-                                                this.resetForm();
                                                 mintToken(params).then(
                                                     (
                                                         result:
@@ -406,6 +457,7 @@ export default class MintToken extends React.Component<
                                                                 token,
                                                                 decoded
                                                             } = result;
+                                                            this.resetForm();
                                                             navigation.navigate(
                                                                 'CashuToken',
                                                                 {
@@ -417,6 +469,13 @@ export default class MintToken extends React.Component<
                                                     }
                                                 );
                                             }}
+                                            buttonStyle={
+                                                dynamicStyles.mintButton
+                                            }
+                                            titleStyle={
+                                                dynamicStyles.mintButtonText
+                                            }
+                                            disabled={!isAmountValid}
                                         />
                                     </View>
                                 </>

@@ -170,7 +170,6 @@ export default class Contacts extends React.Component<
                                         ? item.cashuPubkey[0]
                                         : null,
                                     contactName: item.name,
-                                    hasCashuPubkey: isCashuPubkeyAvailable,
                                     // Preserve MintToken fields data
                                     memo,
                                     value,
@@ -482,7 +481,7 @@ export default class Contacts extends React.Component<
                         keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!loading && contacts.length > 1 && (
+                    {!loading && filteredContacts.length > 1 && (
                         <Button
                             title={
                                 deletionAwaitingConfirmation
@@ -564,7 +563,7 @@ export default class Contacts extends React.Component<
                             >
                                 {localeString(
                                     'cashu.noContactsWithCashuPubkey'
-                                )}
+                                ).toUpperCase()}
                             </Text>
                         </View>
                     )}
