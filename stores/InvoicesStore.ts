@@ -179,7 +179,6 @@ export default class InvoicesStore {
                 invreq,
                 label
             });
-            console.log(response);
             runInAction(() => {
                 this.loading = false;
                 this.error = false;
@@ -187,18 +186,22 @@ export default class InvoicesStore {
             });
             return response;
         } catch (error: any) {
-            console.log(error);
-            const error_msg = error?.toString();
+            let parsedError;
+            try {
+                parsedError = JSON.parse(error.message).message;
+            } catch (parseErr) {
+                parsedError = error.message;
+            }
             runInAction(() => {
                 this.loading = false;
                 this.error = true;
                 this.error_msg =
-                    error_msg ||
+                    parsedError ||
                     localeString(
                         'stores.InvoicesStore.errorRedeemingWithdrawalRequest'
                     );
             });
-            throw new Error(error);
+            throw new Error(parsedError);
         }
     };
 
