@@ -40,6 +40,11 @@ interface ContactsSettingsProps {
             value?: string;
             satAmount?: string;
             account?: string;
+            duration?: string;
+            showCustomDuration?: boolean;
+            customDurationValue?: string;
+            customDurationUnit?: string;
+            selectedDurationIndex?: number;
         }
     >;
     ContactStore: ContactStore;
@@ -151,7 +156,17 @@ export default class Contacts extends React.Component<
         const contact = new Contact(item);
         const { hasMultiplePayableAddresses } = contact;
         const { route } = this.props;
-        const { memo, value, satAmount, account } = route.params || {};
+        const {
+            memo,
+            value,
+            satAmount,
+            account,
+            duration,
+            showCustomDuration,
+            customDurationValue,
+            customDurationUnit,
+            selectedDurationIndex
+        } = route.params || {};
 
         // Check if contact has Cashu pubkey
         const isCashuPubkeyAvailable =
@@ -162,7 +177,7 @@ export default class Contacts extends React.Component<
                 onPress={() => {
                     if (this.state.SendScreen && !hasMultiplePayableAddresses) {
                         if (this.state.CashuLockSettingsScreen) {
-                            // Navigate back to CashuLockSettings with contact info and preserved MintToken data
+                            // Navigate back to CashuLockSettings with contact info and preserved duration data
                             this.props.navigation.navigate(
                                 'CashuLockSettings',
                                 {
@@ -174,7 +189,13 @@ export default class Contacts extends React.Component<
                                     memo,
                                     value,
                                     satAmount,
-                                    account
+                                    account,
+                                    // Preserve duration data
+                                    duration,
+                                    showCustomDuration,
+                                    customDurationValue,
+                                    customDurationUnit,
+                                    selectedDurationIndex
                                 }
                             );
                         } else {
@@ -503,39 +524,41 @@ export default class Contacts extends React.Component<
                         keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!loading && filteredContacts.length > 0 && (
-                        <Button
-                            title={
-                                deletionAwaitingConfirmation
-                                    ? localeString(
-                                          'views.Settings.AddEditNode.tapToConfirm'
-                                      )
-                                    : localeString(
-                                          'views.Settings.Contacts.deleteAllContacts'
-                                      )
-                            }
-                            onPress={async () => {
-                                if (!deletionAwaitingConfirmation) {
-                                    this.setState({
-                                        deletionAwaitingConfirmation: true
-                                    });
-                                } else {
-                                    await Storage.setItem(CONTACTS_KEY, []);
-                                    this.setState({
-                                        deletionAwaitingConfirmation: false
-                                    });
-                                    ContactStore?.loadContacts();
+                    {!loading &&
+                        filteredContacts.length > 0 &&
+                        !CashuLockSettingsScreen && (
+                            <Button
+                                title={
+                                    deletionAwaitingConfirmation
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.Contacts.deleteAllContacts'
+                                          )
                                 }
-                            }}
-                            containerStyle={{
-                                borderColor: themeColor('delete')
-                            }}
-                            titleStyle={{
-                                color: themeColor('delete')
-                            }}
-                            secondary
-                        />
-                    )}
+                                onPress={async () => {
+                                    if (!deletionAwaitingConfirmation) {
+                                        this.setState({
+                                            deletionAwaitingConfirmation: true
+                                        });
+                                    } else {
+                                        await Storage.setItem(CONTACTS_KEY, []);
+                                        this.setState({
+                                            deletionAwaitingConfirmation: false
+                                        });
+                                        ContactStore?.loadContacts();
+                                    }
+                                }}
+                                containerStyle={{
+                                    borderColor: themeColor('delete')
+                                }}
+                                titleStyle={{
+                                    color: themeColor('delete')
+                                }}
+                                secondary
+                            />
+                        )}
                     {loading ? (
                         <LoadingIndicator />
                     ) : (
