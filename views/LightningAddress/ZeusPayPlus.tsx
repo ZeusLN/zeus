@@ -45,6 +45,7 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
             createZeusPayPlusOrder,
             lightningAddressType,
             zeusPlusExpiresAt,
+            zeusPlusAnnualFeeSats,
             loading
         } = LightningAddressStore;
 
@@ -181,7 +182,11 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                     <View style={{ bottom: 15 }}>
                         {!zeusPayPlus && (
                             <Row style={{ alignSelf: 'center', margin: 25 }}>
-                                <Amount jumboText sats={100000} toggleable />
+                                <Amount
+                                    jumboText
+                                    sats={zeusPlusAnnualFeeSats}
+                                    toggleable
+                                />
                             </Row>
                         )}
                         <Button
