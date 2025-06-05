@@ -60,6 +60,8 @@ export default class LightningAddressStore {
     @observable public lightningAddressType: string;
     @observable public lightningAddressActivated: boolean = false;
     @observable public zeusPlusExpiresAt: any;
+    @observable public zeusPlusAnnualFeeSats: any;
+    @observable public zeusPlusDiscount: any;
     @observable public loading: boolean = false;
     @observable public redeeming: boolean = false;
     @observable public redeemingAll: boolean = false;
@@ -609,6 +611,8 @@ export default class LightningAddressStore {
                 domain,
                 addressType,
                 plusExpiresAt,
+                plusAnnualFeeSats,
+                plusDiscount,
                 deviceToken
             } = statusData;
 
@@ -631,6 +635,8 @@ export default class LightningAddressStore {
                 this.lightningAddressDomain = domain;
                 this.lightningAddressType = addressType;
                 this.zeusPlusExpiresAt = plusExpiresAt;
+                this.zeusPlusAnnualFeeSats = plusAnnualFeeSats;
+                this.zeusPlusDiscount = plusDiscount;
                 this.serviceDeviceToken = deviceToken;
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;
@@ -1305,6 +1311,8 @@ export default class LightningAddressStore {
         this.lightningAddressDomain = '';
         this.lightningAddressType = '';
         this.zeusPlusExpiresAt = undefined;
+        this.zeusPlusAnnualFeeSats = undefined;
+        this.zeusPlusDiscount = undefined;
     };
 
     @action

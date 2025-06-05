@@ -1,17 +1,27 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 
 import Text from '../../components/Text';
 import { Row } from '../../components/layout/Row';
+
+import LightningAddressStore from '../../stores/LightningAddressStore';
 
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
+interface ZeusPayPlusPerksListProps {
+    LightningAddressStore?: LightningAddressStore;
+}
+
 @inject('LightningAddressStore', 'SettingsStore')
 @observer
-export default class ZeusPayPlusPerksList extends React.PureComponent {
+export default class ZeusPayPlusPerksList extends React.Component<
+    ZeusPayPlusPerksListProps,
+    {}
+> {
     render() {
         const perks = [
             {
@@ -28,7 +38,10 @@ export default class ZeusPayPlusPerksList extends React.PureComponent {
             },
             {
                 title: 'LSP channel lease discounts',
-                active: false
+                active: true,
+                value: `-${new BigNumber(
+                    this.props.LightningAddressStore?.zeusPlusDiscount || 0
+                ).times(100)}%`
             },
             {
                 title: 'Early access to new features',
@@ -70,6 +83,17 @@ export default class ZeusPayPlusPerksList extends React.PureComponent {
                                     {localeString('general.comingSoon')}
                                 </Text>
                             )}
+                            {perk.value && (
+                                <Text
+                                    style={{
+                                        ...styles.value,
+                                        color: themeColor('highlight'),
+                                        textAlign: 'right'
+                                    }}
+                                >
+                                    {perk.value}
+                                </Text>
+                            )}
                         </Row>
                     </View>
                 ))}
@@ -87,5 +111,9 @@ const styles = StyleSheet.create({
     comingSoon: {
         fontFamily: font('marlideBold'),
         fontSize: 20
+    },
+    value: {
+        fontFamily: font('marlideBold'),
+        fontSize: 35
     }
 });
