@@ -42,6 +42,8 @@ interface CashuLockSettingsProps {
             showCustomDuration?: boolean;
             customDurationValue?: string;
             customDurationUnit?: string;
+            duration?: string;
+            selectedDurationIndex?: number;
         }
     >;
 }
@@ -96,12 +98,15 @@ export default class CashuLockSettings extends React.Component<
             satAmount,
             showCustomDuration,
             customDurationValue,
-            customDurationUnit
-        } = route.params;
+            customDurationUnit,
+            duration,
+            selectedDurationIndex
+        } = route.params || {};
+
         this.state = {
             pubkey: currentLockPubkey || '',
             contactName: contactName || '',
-            duration: currentDuration || DURATION_OPTIONS[0],
+            duration: duration || currentDuration || DURATION_OPTIONS[0],
             showCustomDuration: showCustomDuration || false,
             customDurationValue: customDurationValue || '',
             customDurationUnit: customDurationUnit || TIME_UNITS[0],
@@ -114,9 +119,12 @@ export default class CashuLockSettings extends React.Component<
             isPubkeyValid: currentLockPubkey
                 ? AddressUtils.isValidLightningPubKey(currentLockPubkey)
                 : true,
-            selectedDurationIndex: currentDuration
-                ? DURATION_OPTIONS.indexOf(currentDuration)
-                : 0
+            selectedDurationIndex:
+                selectedDurationIndex !== undefined
+                    ? selectedDurationIndex
+                    : currentDuration
+                    ? DURATION_OPTIONS.indexOf(currentDuration)
+                    : 0
         };
         this.handleContactSelection = this.handleContactSelection.bind(this);
     }
@@ -147,14 +155,29 @@ export default class CashuLockSettings extends React.Component<
             this.setState({
                 contactName: params.contactName || '',
                 pubkey: params.destination,
-                duration: params.currentDuration || '',
+                duration: params.duration || this.state.duration,
+                showCustomDuration:
+                    params.showCustomDuration ?? this.state.showCustomDuration,
+                customDurationValue:
+                    params.customDurationValue ||
+                    this.state.customDurationValue,
+                customDurationUnit:
+                    params.customDurationUnit || this.state.customDurationUnit,
+                selectedDurationIndex:
+                    params.selectedDurationIndex ??
+                    this.state.selectedDurationIndex,
                 error: ''
             });
         }
         this.props.navigation.setParams({
             destination: undefined,
             contactName: undefined,
-            hasCashuPubkey: undefined
+            hasCashuPubkey: undefined,
+            duration: undefined,
+            showCustomDuration: undefined,
+            customDurationValue: undefined,
+            customDurationUnit: undefined,
+            selectedDurationIndex: undefined
         });
     };
 
@@ -540,13 +563,27 @@ export default class CashuLockSettings extends React.Component<
                         )}
                         <TouchableOpacity
                             onPress={() => {
-                                const { memo, value, satAmount } = this.state;
+                                const {
+                                    memo,
+                                    value,
+                                    satAmount,
+                                    duration,
+                                    showCustomDuration,
+                                    customDurationValue,
+                                    customDurationUnit,
+                                    selectedDurationIndex
+                                } = this.state;
                                 navigation.navigate('Contacts', {
                                     SendScreen: true,
                                     CashuLockSettingsScreen: true,
                                     memo,
                                     value,
-                                    satAmount
+                                    satAmount,
+                                    duration,
+                                    showCustomDuration,
+                                    customDurationValue,
+                                    customDurationUnit,
+                                    selectedDurationIndex
                                 });
                             }}
                             style={{ position: 'absolute', right: 10 }}
