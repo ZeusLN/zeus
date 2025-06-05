@@ -758,8 +758,7 @@ export default class SwapDetails extends React.Component<
         const failure = failureReason || swapData.failureReason;
 
         const showRefundButton =
-            (updates === 'invoice.failedToPay' &&
-                failure === 'invoice could not be paid') ||
+            updates === 'invoice.failedToPay' ||
             updates === 'transaction.lockupFailed' ||
             (isSubmarineSwap && updates === 'swap.expired') ||
             (failure && error);
