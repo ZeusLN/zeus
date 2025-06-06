@@ -1001,7 +1001,7 @@
     "views.Settings.EmbeddedNode.LNDLogs.title": "LND 程式紀錄",
     "views.Settings.EmbeddedNode.LNDLogs.copyLogs": "複製紀錄到剪貼簿",
     "views.Settings.EmbeddedNode.feeEstimator": "手續費估算服務",
-    "views.Settings.EmbeddedNode.customFeeEstimator": "Custom fee estimator",
+    "views.Settings.EmbeddedNode.customFeeEstimator": "自訂服務網址",
     "views.Settings.EmbeddedNode.speedloader": "EGS伺服器",
     "views.Settings.EmbeddedNode.customSpeedloader": "自訂EGS伺服器",
     "views.Settings.EmbeddedNode.Troubleshooting.title": "故障排除",
