@@ -50,7 +50,7 @@ export default class InfoModal extends React.Component<InfoModalProps, {}> {
                 >
                     <View
                         style={{
-                            backgroundColor: themeColor('secondary'),
+                            backgroundColor: themeColor('modalBackground'),
                             borderRadius: 30,
                             padding: 30,
                             width: '100%',

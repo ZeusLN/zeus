@@ -595,7 +595,7 @@ export default class InvoicesSettings extends React.Component<
                 </ScrollView>
                 <ModalBox
                     style={{
-                        backgroundColor: themeColor('background'),
+                        backgroundColor: themeColor('modalBackground'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
                         height: modalHeight,

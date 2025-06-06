@@ -61,7 +61,7 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                 >
                     <View
                         style={{
-                            backgroundColor: themeColor('secondary'),
+                            backgroundColor: themeColor('modalBackground'),
                             borderRadius: 30,
                             padding: 30,
                             width: '100%',

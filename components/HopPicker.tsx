@@ -206,7 +206,10 @@ export default class ChannelPicker extends React.Component<
                             <View
                                 style={[
                                     styles.modal,
-                                    { backgroundColor: themeColor('secondary') }
+                                    {
+                                        backgroundColor:
+                                            themeColor('modalBackground')
+                                    }
                                 ]}
                             >
                                 <View

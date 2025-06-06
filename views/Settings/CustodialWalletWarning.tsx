@@ -215,7 +215,7 @@ export default class CustodialWalletWarning extends React.Component<
                         <View
                             style={{
                                 ...styles.modalContainer,
-                                backgroundColor: themeColor('background')
+                                backgroundColor: themeColor('modalBackground')
                             }}
                         >
                             <Text
