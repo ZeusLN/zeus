@@ -4,6 +4,7 @@ const Kyriaki: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#1E2022',
     secondary: '#31363F',
+    modalBackground: '#31363F',
     text: 'white',
     secondaryText: '#A7A9AC',
     highlight: '#FFA900',
@@ -36,6 +37,7 @@ const Light: { [key: string]: any } = {
     generalStyle: 'light',
     background: '#fff',
     secondary: '#f0f0f0',
+    modalBackground: '#ffffff',
     text: 'black',
     secondaryText: '#8a8999',
     buttonText: 'black',
@@ -63,6 +65,7 @@ const Dark: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#1F242D',
     secondary: '#31363F',
+    modalBackground: '#31363F',
     text: 'white',
     secondaryText: '#A7A9AC',
     highlight: '#ffd24b',
@@ -89,6 +92,7 @@ const Junkie: { [key: string]: any } = {
     generalStyle: 'dark',
     background: 'rgb(51, 51, 51)',
     secondary: 'rgb(191, 0, 28)',
+    modalBackground: 'rgb(51, 51, 51)',
     text: 'white',
     secondaryText: 'lightgray',
     highlight: 'rgb(249, 212, 0)',
@@ -103,6 +107,7 @@ const BPM: { [key: string]: any } = {
     generalStyle: 'light',
     background: '#fff',
     secondary: '#f0f0f0',
+    modalBackground: '#ffffff',
     text: '#2b74b4',
     secondaryText: '#8a8999',
     highlight: 'orange',
@@ -119,6 +124,7 @@ const Spooky: { [key: string]: any } = {
     background: '#000',
     gradientBackground: ['#1E2022', '#000000', '#000000', '#000000'],
     secondary: '#31363F',
+    modalBackground: '#31363F',
     text: 'white',
     secondaryText: '#A7A9AC',
     highlight: '#eb6123',
@@ -147,6 +153,7 @@ const BlackedOut: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#000',
     secondary: '#141414',
+    modalBackground: '#141414',
     separator: '#141414'
 };
 
@@ -154,6 +161,7 @@ const Scarlet: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#56042c',
     secondary: '#8A1538',
+    modalBackground: '#8A1538',
     separator: '#8A1538',
     highlight: '#ffd24b'
 };
@@ -162,6 +170,7 @@ const Purple: { [key: string]: any } = {
     generalStyle: 'light',
     background: '#dbd0e1',
     secondary: '#ba9cbf',
+    modalBackground: '#dbd0e1',
     text: '#776d86',
     secondaryText: '#6f7286',
     highlight: '#ffd24b',
@@ -178,6 +187,7 @@ const Blueberry: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#04235A',
     secondary: '#064490',
+    modalBackground: '#064490',
     separator: '#064490',
     highlight: '#ffd24b'
 };
@@ -186,6 +196,7 @@ const DeepPurple: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#0a0612',
     secondary: '#150c25',
+    modalBackground: '#150c25',
     separator: '#150c25',
     highlight: '#ffd24b'
 };
@@ -194,6 +205,7 @@ const Deadpool: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#000',
     secondary: '#D12531',
+    modalBackground: '#000',
     text: '#F4F9FF',
     secondaryText: '#F4F9FF',
     highlight: '#ffd24b',
@@ -214,6 +226,7 @@ const Mighty: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#472243',
     secondary: '#006a65',
+    modalBackground: '#472243',
     separator: '#006a65',
     highlight: '#fdb827',
     bolt: '#fdb827',
@@ -225,6 +238,7 @@ const Green: { [key: string]: any } = {
     background: '#00793f',
     text: '#fff',
     secondary: '#204c39',
+    modalBackground: '#204c39',
     separator: '#204c39',
     highlight: '#ffd24b',
     bolt: '#fff',
@@ -236,6 +250,7 @@ const Pub: { [key: string]: any } = {
     background: '#000',
     gradientBackground: ['#1E2022', '#000000'],
     secondary: '#31363F',
+    modalBackground: '#31363F',
     text: 'white',
     secondaryText: '#A7A9AC',
     highlight: '#dccfff',
@@ -264,6 +279,7 @@ const Popsicle: { [key: string]: any } = {
     gradientBackground: ['#FF5C98', '#FF9C23'],
     generalStyle: 'dark',
     background: '#FF9C23',
+    modalBackground: '#FF9C23',
     separator: '#141414',
     bolt: '#fff',
     chain: '#fff',
@@ -282,6 +298,7 @@ const Nostrich: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#582688',
     secondary: '#141414',
+    modalBackground: '#141414',
     separator: '#141414'
 };
 
@@ -290,6 +307,7 @@ const Desert: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#000',
     secondary: '#141414',
+    modalBackground: '#141414',
     separator: '#141414'
 };
 
@@ -298,6 +316,7 @@ const OrangeCreamSoda: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#FF6200',
     secondary: '#141414',
+    modalBackground: '#141414',
     separator: '#141414',
     secondaryText: '#E6E6E6'
 };
@@ -313,6 +332,7 @@ const Mint: { [key: string]: any } = {
     ],
     generalStyle: 'dark',
     background: '#46B48A',
+    modalBackground: '#46B48A',
     secondaryText: '#FFFDF2',
     separator: '#141414',
     highlight: '#ffd24b',
@@ -325,6 +345,7 @@ const RedMetallic: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#B94A4A',
     secondary: '#141414',
+    modalBackground: '#141414',
     separator: '#141414'
 };
 
@@ -332,6 +353,7 @@ const Watermelon: { [key: string]: any } = {
     gradientBackground: ['#FF5C98', 'green'],
     generalStyle: 'dark',
     background: 'green',
+    modalBackground: 'green',
     separator: '#141414',
     highlight: '#ffd24b',
     bolt: '#fff',
@@ -344,6 +366,7 @@ const Radioactive: { [key: string]: any } = {
     background: '#000',
     gradientBackground: ['#191919', '#000000'],
     secondary: '#31363F',
+    modalBackground: '#31363F',
     text: 'white',
     secondaryText: '#A7A9AC',
     highlight: '#b8ff0f',

@@ -36,7 +36,7 @@ export default class ExternalLinkModal extends React.Component<
             <ModalBox
                 isOpen={showExternalLinkModal}
                 style={{
-                    backgroundColor: themeColor('background'),
+                    backgroundColor: themeColor('modalBackground'),
                     paddingLeft: 24,
                     paddingRight: 24,
                     height: 580

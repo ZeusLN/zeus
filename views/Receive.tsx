@@ -3166,7 +3166,7 @@ export default class Receive extends React.Component<
                 </View>
                 <ModalBox
                     style={{
-                        backgroundColor: themeColor('background'),
+                        backgroundColor: themeColor('modalBackground'),
                         borderTopLeftRadius: 20,
                         borderTopRightRadius: 20,
                         height: modalHeight,
