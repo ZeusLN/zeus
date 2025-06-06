@@ -435,10 +435,12 @@ export default class MintToken extends React.Component<
                                                         '0'
                                                 };
 
-                                                if (pubkey) {
+                                                if (pubkey && lockSeconds) {
                                                     params.pubkey = pubkey;
                                                     params.lockTime =
-                                                        lockSeconds;
+                                                        Math.floor(
+                                                            Date.now() / 1000
+                                                        ) + lockSeconds;
                                                 }
                                                 mintToken(params).then(
                                                     (
