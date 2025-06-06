@@ -16,6 +16,7 @@ import BigNumber from 'bignumber.js';
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
 import ChannelsFilter from '../../components/Channels/ChannelsFilter';
+import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import WalletHeader from '../../components/WalletHeader';
 import { Spacer } from '../../components/layout/Spacer';
@@ -379,6 +380,17 @@ export default class ChannelsPane extends React.PureComponent<ChannelsProps> {
                     totalOutbound={totalOutbound}
                     totalOffline={totalOffline}
                 />
+
+                {/* Rebalance Channels Button */}
+                <View style={styles.button}>
+                    <Button
+                        title="Rebalance Channels"
+                        onPress={() => navigation.navigate('Rebalance')}
+                        secondary
+                        containerStyle={{ marginBottom: 5 }}
+                    />
+                </View>
+
                 {settings?.lsps1ShowPurchaseButton &&
                     (BackendUtils.supportsLSPScustomMessage() ||
                         BackendUtils.supportsLSPS1rest()) && (
