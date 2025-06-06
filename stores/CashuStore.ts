@@ -197,6 +197,10 @@ export default class CashuStore {
         return this.settingsStore.lndDir || 'lnd';
     };
 
+    get selectedMintPubkey() {
+        return this.cashuWallets[this.selectedMintUrl]?.pubkey;
+    }
+
     calculateTotalBalance = async () => {
         let newTotalBalance = 0;
         Object.keys(this.cashuWallets).forEach((mintUrl: string) => {
@@ -210,7 +214,6 @@ export default class CashuStore {
         );
         return this.totalBalanceSats;
     };
-
     @action
     public fetchMints = async () => {
         runInAction(() => {
