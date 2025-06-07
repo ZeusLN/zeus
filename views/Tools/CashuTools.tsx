@@ -13,6 +13,7 @@ import CashuStore from '../../stores/CashuStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 interface CashuToolsProps {
     navigation: StackNavigationProp<any, any>;
@@ -172,6 +173,25 @@ ${oldCount} -> ${newCount}
                                 </Text>
                             </View>
                         </>
+
+                        <View style={{ marginTop: 25 }}>
+                            <Button
+                                title={localeString(
+                                    'views.Settings.Ecash.cashuTroubleshooting'
+                                )}
+                                onPress={() => {
+                                    UrlUtils.goToUrl(
+                                        'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
+                                    );
+                                }}
+                                icon={{
+                                    name: 'help-buoy-outline',
+                                    type: 'ionicon',
+                                    size: 25
+                                }}
+                                secondary
+                            />
+                        </View>
 
                         <>
                             <View style={{ marginTop: 25 }}>

@@ -249,8 +249,28 @@ export default class EcashSettings extends React.Component<
                                 'views.Settings.Ecash.enableEcash.learnMore'
                             )}
                             onPress={() => {
-                                UrlUtils.goToUrl('https://cashu.space');
+                                UrlUtils.goToUrl(
+                                    'https://docs.zeusln.app/cashu'
+                                );
                             }}
+                        />
+                    </View>
+                    <View style={{ marginTop: 25 }}>
+                        <Button
+                            title={localeString(
+                                'views.Settings.Ecash.cashuTroubleshooting'
+                            )}
+                            onPress={() => {
+                                UrlUtils.goToUrl(
+                                    'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
+                                );
+                            }}
+                            icon={{
+                                name: 'help-buoy-outline',
+                                type: 'ionicon',
+                                size: 25
+                            }}
+                            secondary
                         />
                     </View>
 
