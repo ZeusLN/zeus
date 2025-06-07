@@ -1372,6 +1372,7 @@
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl": "API URL",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl": "URL d'API personnalisée",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start": "Commencer le balayage",
+    "views.Settings.Ecash.cashuTroubleshooting": "Cashu troubleshooting",
     "views.Settings.Ecash.title": "Paramètres Ecash",
     "views.Settings.Ecash.enableEcash": "Activer Cashu ecash",
     "views.Settings.Ecash.enableEcash.subtitle1": "Cashu est un protocole de cryptomonnaie Chaumian conçu pour Bitcoin. C'est une solution de garde, mais avec une confidentialité supérieure à celle d'un compte traditionnel.",

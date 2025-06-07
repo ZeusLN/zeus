@@ -1372,6 +1372,7 @@
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl": "API URL",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl": "URL de API personalizada",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start": "Iniciar varredura",
+    "views.Settings.Ecash.cashuTroubleshooting": "Cashu troubleshooting",
     "views.Settings.Ecash.title": "Configurações de e-cash",
     "views.Settings.Ecash.enableEcash": "Habilitar Cashu ecash",
     "views.Settings.Ecash.enableEcash.subtitle1": "Cashu é um protocolo de e-cash chaumiano desenvolvido para Bitcoin. É uma solução de custódia, mas com maior privacidade do que uma conta tradicional.",
