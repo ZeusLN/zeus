@@ -891,6 +891,8 @@
     "views.Settings.POS.confPref": "Confirmation preference",
     "views.Settings.POS.disableTips": "Disable tips",
     "views.Settings.POS.taxPercentage": "Tax percentage",
+    "views.Settings.POS.taxPercentage.global.info": "Global tax rate applied to all products. Individual product tax rates will override this setting when specified.",
+    "views.Settings.POS.taxPercentage.info": "Individual tax rate for this product. When set, this will override the global tax rate. Leave empty to use the global tax rate.",
     "views.Settings.POS.devMode": "Developer mode",
     "views.Settings.POS.showKeypad": "Show keypad",
     "views.Settings.POS.enablePrinter": "Enable printer",

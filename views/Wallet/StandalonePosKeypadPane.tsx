@@ -189,6 +189,7 @@ export default class PosKeypadPane extends React.PureComponent<
         order.line_items.push({
             name: localeString('pos.customItem'),
             quantity: 1,
+            taxPercentage: '', // Custom items use global tax rate
             base_price_money: {
                 amount: units === PricedIn.Fiat ? Number(amountCalc) : 0,
                 sats:

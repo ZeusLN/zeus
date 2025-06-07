@@ -14,6 +14,7 @@ export interface LineItem {
     name: string;
     quantity: number;
     base_price_money: BasePriceMoney;
+    taxPercentage?: string;
 }
 
 export default class Order extends BaseModel {
