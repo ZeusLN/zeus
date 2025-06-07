@@ -26,6 +26,7 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 import Storage from '../../storage';
 
@@ -355,25 +356,47 @@ export default class CashuSendingLightning extends React.Component<
                                 </Text>
                             )}
                             {(!!paymentErrorMsg || !!paymentError) && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingLightning.tryAgain'
-                                    )}
-                                    icon={{
-                                        name: 'return-up-back',
-                                        type: 'ionicon',
-                                        size: 25
-                                    }}
-                                    onPress={() => navigation.goBack()}
-                                    buttonStyle={{
-                                        backgroundColor: 'white',
-                                        height: 40
-                                    }}
-                                    containerStyle={{
-                                        width: '100%',
-                                        margin: 10
-                                    }}
-                                />
+                                <>
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingLightning.tryAgain'
+                                        )}
+                                        icon={{
+                                            name: 'return-up-back',
+                                            type: 'ionicon',
+                                            size: 25
+                                        }}
+                                        onPress={() => navigation.goBack()}
+                                        buttonStyle={{
+                                            backgroundColor: 'white',
+                                            height: 40
+                                        }}
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 3
+                                        }}
+                                    />
+                                    <Button
+                                        title={localeString(
+                                            'views.Settings.Ecash.cashuTroubleshooting'
+                                        )}
+                                        icon={{
+                                            name: 'help-buoy-outline',
+                                            type: 'ionicon',
+                                            size: 25
+                                        }}
+                                        onPress={() => {
+                                            UrlUtils.goToUrl(
+                                                'https://docs.zeusln.app/cashu#i-get-an-error-saying-outputs-have-already-been-signed-before-or-already-spent-what-should-i-do'
+                                            );
+                                        }}
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 3
+                                        }}
+                                        secondary
+                                    />
+                                </>
                             )}
 
                             <Button
@@ -392,7 +415,7 @@ export default class CashuSendingLightning extends React.Component<
                                 titleStyle={{
                                     color: themeColor('background')
                                 }}
-                                containerStyle={{ width: '100%' }}
+                                containerStyle={{ width: '100%', margin: 3 }}
                             />
                         </View>
                     </>
