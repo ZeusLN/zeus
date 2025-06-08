@@ -16,6 +16,7 @@ import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
+import SwapIcon from '../../assets/images/SVG/Swap.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 
 import Header from '../../components/Header';
@@ -108,6 +109,45 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                         }}
                                     >
                                         {localeString('views.Accounts.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && BackendUtils.supportsChannelManagement() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Rebalance')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <SwapIcon
+                                            fill={themeColor('text')}
+                                            width={18}
+                                            height={18}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('views.Rebalance.title')}
                                     </Text>
                                     <View style={styles.ForwardArrow}>
                                         <ForwardIcon
