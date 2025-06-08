@@ -160,6 +160,9 @@ import Routing from './views/Routing/Routing';
 import RoutingEvent from './views/Routing/RoutingEvent';
 import SetFees from './views/Routing/SetFees';
 
+// Rebalance
+import Rebalance from './views/Rebalance';
+
 // new views
 import Activity from './views/Activity/Activity';
 import ActivityFilter from './views/Activity/ActivityFilter';
@@ -659,6 +662,10 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="SetFees" // @ts-ignore:next-line
                                                         component={SetFees}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="Rebalance" // @ts-ignore:next-line
+                                                        component={Rebalance}
                                                     />
                                                     <Stack.Screen
                                                         name="Activity" // @ts-ignore:next-line
