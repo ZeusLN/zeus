@@ -1316,10 +1316,16 @@ export default class PaymentRequest extends React.Component<
                                         <View
                                             style={{
                                                 marginTop: 10,
-                                                marginBottom: 10
+                                                marginBottom: 10,
+                                                paddingHorizontal:
+                                                    donationAmount == 0
+                                                        ? 0
+                                                        : !donationsToggle
+                                                        ? 30
+                                                        : 0
                                             }}
                                         >
-                                            <Row justify="space-between">
+                                            <Row justify="space-around">
                                                 <View style={{ width: '95%' }}>
                                                     <KeyValue
                                                         keyValue={localeString(
@@ -1336,13 +1342,52 @@ export default class PaymentRequest extends React.Component<
                                                         height="20"
                                                     />
                                                 ) : (
-                                                    <CaretRight
-                                                        fill={themeColor(
-                                                            'text'
+                                                    <View
+                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+                                                            justifyContent:
+                                                                'center'
+                                                        }}
+                                                    >
+                                                        {donationAmount > 0 && (
+                                                            <Row
+                                                                style={{
+                                                                    marginRight: 6
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'highlight'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {`${numberWithCommas(
+                                                                        donationAmount
+                                                                    )} ${localeString(
+                                                                        'general.sats'
+                                                                    )}`}
+                                                                </Text>
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {` (${donationPercentage}%)`}
+                                                                </Text>
+                                                            </Row>
                                                         )}
-                                                        width="20"
-                                                        height="20"
-                                                    />
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    </View>
                                                 )}
                                             </Row>
                                         </View>
