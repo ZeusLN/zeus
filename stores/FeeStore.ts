@@ -215,28 +215,47 @@ export default class FeeStore {
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        BackendUtils.getForwardingHistory(params)
+        const response = params
+            ? BackendUtils.getForwardingHistory(params)
+            : BackendUtils.getForwardingHistory();
+
+        response
             .then((data: any) => {
-                runInAction(() => {
-                    this.forwardingEvents = data.forwarding_events
-                        .map((event: any) => new ForwardEvent(event))
-                        .reverse();
+                try {
+                    runInAction(() => {
+                        const rawEvents =
+                            data.forwarding_events || data.forwards || [];
 
-                    // Add up fees earned for this timeframe
-                    // Uses BigNumber to prevent rounding errors in the add operation
-                    this.forwardingEvents.forEach(
-                        (event: ForwardEvent) =>
-                            (this.earnedDuringTimeframe =
-                                this.earnedDuringTimeframe.plus(
-                                    Number(event.fee_msat) / 1000
-                                ))
-                    );
+                        if (!Array.isArray(rawEvents)) {
+                            throw new Error(
+                                'forwarding_events or forwards is not an array'
+                            );
+                        }
 
-                    this.lastOffsetIndex = data.last_offset_index;
-                    this.loading = false;
-                });
+                        this.forwardingEvents = rawEvents
+                            .map((event: any) => new ForwardEvent(event))
+                            .reverse();
+
+                        this.forwardingEvents.forEach(
+                            (event: ForwardEvent) =>
+                                (this.earnedDuringTimeframe =
+                                    this.earnedDuringTimeframe.plus(
+                                        Number(event.fee_msat) / 1000
+                                    ))
+                        );
+
+                        this.lastOffsetIndex = data.last_offset_index;
+                        this.loading = false;
+                    });
+                } catch (e: any) {
+                    console.error(e);
+                    this.forwardingError();
+                }
             })
-            .catch(() => this.forwardingError());
+            .catch((e: any) => {
+                console.error('Fetching forwarding history failed:', e);
+                this.forwardingError();
+            });
     };
 
     @action
