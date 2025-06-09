@@ -7,6 +7,9 @@ ZEUS is a mobile Bitcoin/Lightning wallet and remote node manager for LND and Co
 
 ZEUS is built on TypeScript and React Native. It runs on both Android and iOS.
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ZeusLN/zeus)
+
+
 Read more on our [documentation site](https://docs.zeusln.app/).
 
 ### App Store links
