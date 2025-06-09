@@ -1372,6 +1372,7 @@
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl": "API URL",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl": "URL API personalizată",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start": "Începeți măturarea",
+    "views.Settings.Ecash.cashuTroubleshooting": "Cashu troubleshooting",
     "views.Settings.Ecash.title": "Setări Ecash",
     "views.Settings.Ecash.enableEcash": "Activează Cashu ecash",
     "views.Settings.Ecash.enableEcash.subtitle1": "Cashu este un protocol Chaumian ecash construit pentru Bitcoin. Este o soluție de custodie, dar cu o confidențialitate mai bună decât un cont tradițional.",
