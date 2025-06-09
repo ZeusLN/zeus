@@ -1005,6 +1005,7 @@ export default class ChannelsStore {
 
     @action
     public loadChannelInfo = (chanId: string, deleteBeforeLoading = false) => {
+        console.log(chanId);
         this.loading = true;
 
         if (deleteBeforeLoading) {
@@ -1012,12 +1013,18 @@ export default class ChannelsStore {
         }
 
         BackendUtils.getChannelInfo(chanId)
-            .then((data: any) =>
+            .then((data: any) => {
+                const rawChannels = data.channels || data;
+                const channels = BackendUtils.isLNDBased()
+                    ? rawChannels
+                    : rawChannels[0];
+                console.log(channels);
                 runInAction(() => {
-                    this.chanInfo[chanId] = new ChannelInfo(data);
+                    this.chanInfo[chanId] = new ChannelInfo(channels);
+                    console.log(this.chanInfo[chanId]);
                     this.loading = false;
-                })
-            )
+                });
+            })
             .catch((error: any) => {
                 runInAction(() => {
                     this.errorMsgPeer = error.toString();

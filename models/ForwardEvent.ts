@@ -11,11 +11,31 @@ export default class ForwardEvent extends BaseModel {
     fee_msat: string;
     timestamp: string;
 
+    // CLNRest
+    created_index: string;
+    in_channel: string;
+    in_msat: string;
+    status: string;
+    received_time: string;
+    in_htlc_id: string;
+    out_channel: string;
+    out_htlc_id: string;
+    updated_index: string;
+    style: string;
+    out_msat: string;
+    resolved_time: string;
+    failcode: string;
+    failreason: string;
+
     @computed public get getTime(): string {
-        return DateTimeUtils.listFormattedDate(this.timestamp || 0);
+        return DateTimeUtils.listFormattedDate(
+            this.timestamp || this.resolved_time || 0
+        );
     }
 
     @computed public get getDateShort(): string | Date {
-        return DateTimeUtils.listFormattedDateShort(this.timestamp || 0);
+        return DateTimeUtils.listFormattedDateShort(
+            this.timestamp || this.resolved_time || 0
+        );
     }
 }
