@@ -27,23 +27,52 @@ export default class ChannelInfo extends BaseModel {
     node_1_policy?: RoutingPolicy;
     node_2_policy?: RoutingPolicy;
 
+    // CLNRest
+    channel_flags?: number;
+    message_flags?: number;
+    features?: string;
+    direction?: number;
+    source?: string;
+    destination?: string;
+    public?: boolean;
+    active?: boolean;
+    amount_msat?: number;
+    short_channel_id?: string;
+    delay: number;
+    htlc_minimum_msat: number;
+    htlc_maximum_msat: number;
+    base_fee_millisatoshi: number;
+    fee_per_millionth: number;
+
+    getNodePolicy(): RoutingPolicy {
+        return {
+            time_lock_delta: this.delay,
+            min_htlc: this.htlc_minimum_msat.toString(),
+            fee_base_msat: this.base_fee_millisatoshi.toString(),
+            fee_rate_milli_msat: this.fee_per_millionth.toString(),
+            disabled: false,
+            max_htlc_msat: this.htlc_maximum_msat.toString(),
+            last_update: this.last_update || 0
+        };
+    }
+
     @computed
     public get node1Policy(): RoutingPolicy | undefined {
-        return this.node_1_policy || this.node1_policy;
+        return this.node_1_policy || this.node1_policy || this.getNodePolicy();
     }
 
     @computed
     public get node2Policy(): RoutingPolicy | undefined {
-        return this.node_2_policy || this.node2_policy;
+        return this.node_2_policy || this.node2_policy || this.getNodePolicy();
     }
 
     @computed
     public get node1Pub(): string {
-        return this.node_1_pub || this.node1_pub || '';
+        return this.node_1_pub || this.node1_pub || this.source || '';
     }
 
     @computed
     public get node2Pub(): string {
-        return this.node_2_pub || this.node2_pub || '';
+        return this.node_2_pub || this.node2_pub || this.destination || '';
     }
 }
