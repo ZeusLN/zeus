@@ -1372,6 +1372,7 @@
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.apiUrl": "API URL",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.customApiUrl": "Vlastní API URL",
     "views.Settings.EmbeddedNode.Chantools.Sweepremoteclosed.start": "Zahájit výběr",
+    "views.Settings.Ecash.cashuTroubleshooting": "Cashu troubleshooting",
     "views.Settings.Ecash.title": "Nastavení ecash",
     "views.Settings.Ecash.enableEcash": "Povolit Cashu ecash",
     "views.Settings.Ecash.enableEcash.subtitle1": "Cashu is a Chaumian ecash protocol built for Bitcoin. It's a custodial solution but with better privacy than a traditional account.",
