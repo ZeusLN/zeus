@@ -315,6 +315,8 @@ export default class ChannelView extends React.Component<
         const { testnet } = NodeInfoStore;
         const { closeChannelErr, closingChannel } = ChannelsStore;
 
+        const closeAddress: string | undefined = channel?.close_address;
+
         const {
             channel_point,
             commit_weight,
@@ -1211,11 +1213,15 @@ export default class ChannelView extends React.Component<
                                             <TextInput
                                                 placeholder={'bc1...'}
                                                 value={deliveryAddress}
-                                                onChangeText={(text: string) =>
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
                                                     this.setState({
                                                         deliveryAddress: text
-                                                    })
-                                                }
+                                                    });
+                                                    ChannelsStore.closeChannelErr =
+                                                        '';
+                                                }}
                                                 locked={closingChannel}
                                             />
                                         </>
@@ -1227,15 +1233,28 @@ export default class ChannelView extends React.Component<
                                     title={localeString(
                                         'views.Channel.confirmClose'
                                     )}
-                                    onPress={() =>
+                                    onPress={() => {
+                                        if (
+                                            closeAddress !== '' &&
+                                            closeAddress !== undefined &&
+                                            deliveryAddress !== '' &&
+                                            deliveryAddress !== undefined &&
+                                            deliveryAddress !== closeAddress
+                                        ) {
+                                            ChannelsStore.closeChannelErr =
+                                                localeString(
+                                                    'view.Channel.closeAddressError'
+                                                );
+                                            return;
+                                        }
                                         this.closeChannel(
                                             channel_point,
                                             channelId,
                                             satPerByte,
                                             forceCloseChannel,
                                             deliveryAddress
-                                        )
-                                    }
+                                        );
+                                    }}
                                     warning
                                 />
                             </View>

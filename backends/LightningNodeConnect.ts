@@ -227,7 +227,8 @@ export default class LightningNodeConnect {
             min_confs: data.min_confs,
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
-            spend_unconfirmed: data.spend_unconfirmed
+            spend_unconfirmed: data.spend_unconfirmed,
+            close_address: data.close_address
         };
 
         if (data.fundMax) {
