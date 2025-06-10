@@ -36,9 +36,7 @@ export default class ExternalLinkModal extends React.Component<
             <ModalBox
                 isOpen={showExternalLinkModal}
                 style={{
-                    backgroundColor: themeColor('background'),
-                    paddingLeft: 24,
-                    paddingRight: 24,
+                    backgroundColor: 'transparent',
                     height: 580
                 }}
                 onClosed={() => toggleExternalLinkModal(false)}
@@ -47,6 +45,8 @@ export default class ExternalLinkModal extends React.Component<
                 <View
                     style={{
                         flex: 1,
+                        width: '100%',
+                        backgroundColor: themeColor('modalBackground'),
                         justifyContent: 'center',
                         alignItems: 'center',
                         marginTop: 22
@@ -54,7 +54,6 @@ export default class ExternalLinkModal extends React.Component<
                 >
                     <View
                         style={{
-                            backgroundColor: themeColor('background'),
                             borderRadius: 30,
                             padding: 35,
                             alignItems: 'center',
