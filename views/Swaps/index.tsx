@@ -26,6 +26,13 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC, numberWithCommas } from '../../utils/UnitsUtils';
 import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import {
+    bigCeil,
+    calculateReceiveAmount,
+    calculateServiceFeeOnSend,
+    calculateSendAmount,
+    calculateLimit
+} from '../../utils/SwapUtils';
 
 import SwapStore from '../../stores/SwapStore';
 import UnitsStore from '../../stores/UnitsStore';
@@ -117,11 +124,29 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const { subInfo, reverseInfo } = SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
 
+        const serviceFeePct = info?.fees?.percentage || 0;
+        const networkFeeBigNum = this.state.reverse
+            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+                  info?.fees?.minerFees?.lockup || 0
+              )
+            : new BigNumber(info?.fees?.minerFees || 0);
+        const networkFee = networkFeeBigNum.toNumber();
+
         const minThreshold = info?.limits?.minimal || 0;
         const maxThreshold = info?.limits?.maximal || 0;
 
-        const minSendAmount = this.calculateLimit(minThreshold);
-        const maxSendAmount = this.calculateLimit(maxThreshold);
+        const minSendAmount = calculateLimit(
+            minThreshold,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+        const maxSendAmount = calculateLimit(
+            maxThreshold,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
 
         const currentInputSatsBN = new BigNumber(inputSats || 0);
         const currentOutputSatsBN = new BigNumber(outputSats || 0);
@@ -255,10 +280,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             .toFixed(2);
                     }
 
-                    const newInputSats = this.calculateSendAmount(
+                    const newInputSats = calculateSendAmount(
                         newOutputSats,
                         serviceFeePct,
-                        networkFee
+                        networkFee,
+                        this.state.reverse
                     );
                     let newInputFiat = '';
                     if (
@@ -272,10 +298,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             .toFixed(2);
                     }
 
-                    const newServiceFeeSats = this.calculateServiceFeeOnSend(
+                    const newServiceFeeSats = calculateServiceFeeOnSend(
                         newInputSats,
                         serviceFeePct,
-                        networkFee
+                        networkFee,
+                        this.state.reverse
                     );
 
                     this.setState(
@@ -329,117 +356,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             },
             () => this.checkIsValid()
         );
-    };
-
-    bigCeil = (big: BigNumber): BigNumber => {
-        return big.integerValue(BigNumber.ROUND_CEIL);
-    };
-
-    bigFloor = (big: BigNumber): BigNumber => {
-        return big.integerValue(BigNumber.ROUND_FLOOR);
-    };
-
-    calculateReceiveAmount = (
-        sendAmount: BigNumber,
-        serviceFee: number,
-        minerFee: number
-    ): BigNumber => {
-        const receiveAmount = this.state.reverse
-            ? sendAmount
-                  .minus(this.bigCeil(sendAmount.times(serviceFee).div(100)))
-                  .minus(minerFee)
-            : sendAmount
-                  .minus(minerFee)
-                  .div(
-                      new BigNumber(1).plus(new BigNumber(serviceFee).div(100))
-                  );
-        return BigNumber.maximum(this.bigFloor(receiveAmount), 0);
-    };
-
-    calculateServiceFeeOnSend = (
-        sendAmount: BigNumber,
-        serviceFee: number,
-        minerFee: number
-    ): BigNumber => {
-        if (sendAmount.isNaN() || sendAmount.isLessThanOrEqualTo(0)) {
-            return new BigNumber(0);
-        }
-
-        let feeNum: BigNumber;
-
-        if (this.state.reverse) {
-            feeNum = this.bigCeil(sendAmount.times(serviceFee).div(100));
-        } else {
-            const receiveAmt = this.calculateReceiveAmount(
-                sendAmount,
-                serviceFee,
-                minerFee
-            );
-            if (sendAmount.isLessThanOrEqualTo(receiveAmt.plus(minerFee))) {
-                // If send amount isn't enough to cover receive + miner
-                feeNum = new BigNumber(0);
-            } else {
-                feeNum = sendAmount.minus(receiveAmt).minus(minerFee);
-            }
-
-            if (sendAmount.toNumber() < minerFee) {
-                feeNum = new BigNumber(0);
-            }
-        }
-        return this.bigCeil(BigNumber.maximum(feeNum, 0)); // Ensure fee is not negative
-    };
-
-    calculateSendAmount = (
-        receiveAmount: BigNumber,
-        serviceFee: number,
-        minerFee: number
-    ): BigNumber => {
-        if (receiveAmount.isNaN() || receiveAmount.isLessThanOrEqualTo(0)) {
-            return new BigNumber(0);
-        }
-        return this.state.reverse
-            ? this.bigCeil(
-                  receiveAmount
-                      .plus(minerFee)
-                      .div(
-                          new BigNumber(1).minus(
-                              new BigNumber(serviceFee).div(100)
-                          )
-                      )
-              )
-            : this.bigCeil(
-                  // ensure enough is sent
-                  receiveAmount
-                      .plus(
-                          this.bigCeil(
-                              // service fee is on receiveAmount for submarine
-                              receiveAmount.times(
-                                  new BigNumber(serviceFee).div(100)
-                              )
-                          )
-                      )
-                      .plus(minerFee)
-              );
-    };
-
-    calculateLimit = (limit: number): number => {
-        const { subInfo, reverseInfo } = this.props.SwapStore;
-        const info: any = this.state.reverse ? reverseInfo : subInfo;
-        const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFeeBigNum = this.state.reverse
-            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
-            : new BigNumber(info?.fees?.minerFees || 0);
-        const networkFee = networkFeeBigNum.toNumber();
-
-        return !this.state.reverse
-            ? this.calculateSendAmount(
-                  new BigNumber(limit),
-                  serviceFeePct,
-                  networkFee
-              ).toNumber()
-            : limit;
     };
 
     render() {
@@ -523,8 +439,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             </TouchableOpacity>
         );
 
-        const min = this.calculateLimit(info?.limits?.minimal || 0);
-        const max = this.calculateLimit(info?.limits?.maximal || 0);
+        const min = calculateLimit(
+            info?.limits?.minimal || 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
+        const max = calculateLimit(
+            info?.limits?.maximal || 0,
+            serviceFeePct,
+            networkFee,
+            reverse
+        );
 
         const currentInputSats = new BigNumber(inputSats || 0);
         const errorInput =
@@ -692,10 +618,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             );
 
                                                         const outputSats =
-                                                            this.calculateReceiveAmount(
+                                                            calculateReceiveAmount(
                                                                 satAmountNew,
                                                                 serviceFeePct,
-                                                                networkFee
+                                                                networkFee,
+                                                                reverse
                                                             );
 
                                                         const outputFiat =
@@ -717,10 +644,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         this.setState(
                                                             {
                                                                 serviceFeeSats:
-                                                                    this.calculateServiceFeeOnSend(
+                                                                    calculateServiceFeeOnSend(
                                                                         satAmountNew,
                                                                         serviceFeePct,
-                                                                        networkFee
+                                                                        networkFee,
+                                                                        reverse
                                                                     ),
                                                                 inputSats:
                                                                     Number(
@@ -898,10 +826,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                 input = 0;
                                                             } else
                                                                 input =
-                                                                    this.calculateSendAmount(
+                                                                    calculateSendAmount(
                                                                         satAmountNew,
                                                                         serviceFeePct,
-                                                                        networkFee
+                                                                        networkFee,
+                                                                        reverse
                                                                     );
 
                                                             const inputFiat =
@@ -944,7 +873,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             this.setState(
                                                                 {
                                                                     serviceFeeSats:
-                                                                        this.bigCeil(
+                                                                        bigCeil(
                                                                             serviceFeeSats
                                                                         ),
                                                                     inputSats:
@@ -1116,10 +1045,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         );
 
                                                     const outputSats =
-                                                        this.calculateReceiveAmount(
+                                                        calculateReceiveAmount(
                                                             satAmountNew,
                                                             serviceFeePct,
-                                                            networkFee
+                                                            networkFee,
+                                                            reverse
                                                         );
 
                                                     const outputFiat =
@@ -1136,10 +1066,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
                                                     this.setState({
                                                         serviceFeeSats:
-                                                            this.calculateServiceFeeOnSend(
+                                                            calculateServiceFeeOnSend(
                                                                 satAmountNew,
                                                                 serviceFeePct,
-                                                                networkFee
+                                                                networkFee,
+                                                                reverse
                                                             ),
                                                         inputSats:
                                                             Number(
@@ -1213,10 +1144,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         );
 
                                                     const outputSats =
-                                                        this.calculateReceiveAmount(
+                                                        calculateReceiveAmount(
                                                             satAmountNew,
                                                             serviceFeePct,
-                                                            networkFee
+                                                            networkFee,
+                                                            reverse
                                                         );
 
                                                     const outputFiat =
@@ -1232,10 +1164,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             : '';
                                                     this.setState({
                                                         serviceFeeSats:
-                                                            this.calculateServiceFeeOnSend(
+                                                            calculateServiceFeeOnSend(
                                                                 satAmountNew,
                                                                 serviceFeePct,
-                                                                networkFee
+                                                                networkFee,
+                                                                reverse
                                                             ),
                                                         inputSats:
                                                             Number(
