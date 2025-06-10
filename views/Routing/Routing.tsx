@@ -53,11 +53,7 @@ export default class Routing extends React.PureComponent<
         const { FeeStore } = this.props;
         FeeStore.getFees();
         if (BackendUtils.supportsForwardingHistory()) {
-            if (BackendUtils.isLNDBased()) {
-                FeeStore.getForwardingHistory(HOURS[0]);
-            } else {
-                FeeStore.getForwardingHistory();
-            }
+            FeeStore.getForwardingHistory(HOURS[0]);
         }
     }
 
@@ -73,8 +69,8 @@ export default class Routing extends React.PureComponent<
             >
                 <RoutingListItem
                     title={localeString('views.Routing.received')}
-                    fee={item.fee_msat / 1000}
-                    amountOut={item.amt_out || item.out_msat / 1000}
+                    fee={item.feeSat}
+                    amountOut={item.amtOut}
                     date={item.getDateShort}
                 />
             </TouchableOpacity>
@@ -91,7 +87,8 @@ export default class Routing extends React.PureComponent<
             totalEarned,
             earnedDuringTimeframe,
             forwardingEvents,
-            forwardingHistoryError
+            forwardingHistoryError,
+            getForwardingHistory
         } = FeeStore;
 
         const loading = FeeStore.loading || FeeStore.loadingFees;
@@ -224,13 +221,7 @@ export default class Routing extends React.PureComponent<
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
-                                if (BackendUtils.supportsForwardingHistory()) {
-                                    FeeStore.getForwardingHistory(
-                                        HOURS[selectedIndex]
-                                    );
-                                } else {
-                                    FeeStore.getForwardingHistory();
-                                }
+                                getForwardingHistory(HOURS[selectedIndex]);
                                 this.setState({ selectedIndex });
                             }}
                             selectedIndex={selectedIndex}
@@ -259,15 +250,9 @@ export default class Routing extends React.PureComponent<
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
                                 onRefresh={() => {
-                                    if (
-                                        BackendUtils.supportsForwardingHistory()
-                                    ) {
-                                        FeeStore.getForwardingHistory(
-                                            HOURS[selectedIndex]
-                                        );
-                                    } else {
-                                        FeeStore.getForwardingHistory();
-                                    }
+                                    getForwardingHistory(
+                                        HOURS[this.state.selectedIndex]
+                                    );
                                 }}
                                 refreshing={false}
                                 keyExtractor={(item, index) =>
