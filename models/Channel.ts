@@ -33,6 +33,7 @@ export default class Channel extends BaseModel {
     settled_balance: any;
     time_locked_balance: any;
     num_updates: string;
+    close_address?: string;
     @observable
     active: boolean;
     remote_balance: string;

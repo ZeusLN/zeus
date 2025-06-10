@@ -121,7 +121,7 @@ export default class OpenChannel extends React.Component<
             utxos: [],
             utxoBalance: 0,
             connectPeerOnly: false,
-            advancedSettingsToggle: true,
+            advancedSettingsToggle: false,
             account: 'default',
             additionalChannels: []
         };
