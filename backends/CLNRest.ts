@@ -483,6 +483,7 @@ export default class CLNRest {
     supportsBolt11BlindedRoutes = () => false;
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => true;
+    isLNDBased = () => false;
     supportsForwardingHistory = () => true;
     supportInboundFees = () => false;
     supportsDevTools = () => true;
