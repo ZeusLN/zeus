@@ -187,7 +187,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         // Calculate tax using individual product rates when available (for receipt)
         const calculateTaxSatsForReceipt = () => {
-            if (fiatEnabled) {
+            const hasIndividualTaxRatesForReceipt = lineItems?.some(
+                (item: any) =>
+                    item.taxPercentage !== undefined &&
+                    item.taxPercentage !== null &&
+                    item.taxPercentage !== ''
+            );
+
+            if (fiatEnabled && !hasIndividualTaxRatesForReceipt) {
                 return new BigNumber(order.total_tax_money.amount)
                     .div(100)
                     .div(rate)
@@ -501,7 +508,12 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         templateHtml += receiptHtmlRow(
             getReceiptTaxLabel(),
-            order.getTaxMoneyDisplay
+            this.props.FiatStore.formatAmountForDisplay(
+                new BigNumber(taxSats)
+                    .multipliedBy(rate)
+                    .dividedBy(SATS_PER_BTC)
+                    .toFixed(2)
+            )
         );
 
         templateHtml += receiptHtmlRow(
@@ -631,15 +643,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
         // Calculate tax using individual product rates when available
         const calculateTaxSats = () => {
-            if (fiatEnabled) {
-                return new BigNumber(order?.total_tax_money.amount)
-                    .div(100)
-                    .div(rate)
-                    .multipliedBy(SATS_PER_BTC)
-                    .toFixed(0);
-            }
-
-            // Check if any line items have individual tax rates
             const hasIndividualTaxRates = lineItems?.some(
                 (item: any) =>
                     item.taxPercentage !== undefined &&
@@ -647,10 +650,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     item.taxPercentage !== ''
             );
 
-            if (hasIndividualTaxRates) {
-                // Calculate tax per item with individual rates, fallback to global rate
-                let totalTaxSats = new BigNumber(0);
+            if (fiatEnabled && !hasIndividualTaxRates) {
+                return new BigNumber(order?.total_tax_money.amount)
+                    .div(100)
+                    .div(rate)
+                    .multipliedBy(SATS_PER_BTC)
+                    .toFixed(0);
+            }
 
+            if (hasIndividualTaxRates) {
+                let totalTaxSats = new BigNumber(0);
                 lineItems?.forEach((item: any) => {
                     // Use individual tax rate if set and not empty, otherwise use global rate
                     const itemTaxRate =
@@ -702,44 +711,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
         };
 
         const taxSats = calculateTaxSats();
-
-        const getTaxDisplayLabel = () => {
-            if (!lineItems || lineItems.length === 0) {
-                return localeString('pos.views.Order.tax');
-            }
-            const taxRates = new Set<string>();
-            lineItems.forEach((item: any) => {
-                const itemTaxRate =
-                    item.taxPercentage !== undefined &&
-                    item.taxPercentage !== null &&
-                    item.taxPercentage !== ''
-                        ? item.taxPercentage
-                        : taxPercentage || '0';
-                const displayTaxRate = itemTaxRate || '0';
-                taxRates.add(displayTaxRate);
-            });
-
-            const uniqueRates = Array.from(taxRates);
-
-            if (uniqueRates.length === 1) {
-                const rate = uniqueRates[0];
-                if (rate === '0') {
-                    return localeString('pos.views.Order.tax');
-                }
-                return `${localeString('pos.views.Order.tax')} (${rate}%)`;
-            } else {
-                const rateList = uniqueRates
-                    .filter((rate) => rate !== '0')
-                    .map((rate) => `${rate}%`)
-                    .join(', ');
-
-                if (rateList === '') {
-                    return localeString('pos.views.Order.tax');
-                }
-
-                return `${localeString('pos.views.Order.tax')} (${rateList})`;
-            }
-        };
 
         const twentyPercentButton = () => (
             <Text
@@ -946,28 +917,76 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 : item.base_price_money.amount
                             : item.base_price_money.sats;
 
+                        const itemTaxRate =
+                            item.taxPercentage !== undefined &&
+                            item.taxPercentage !== null &&
+                            item.taxPercentage !== ''
+                                ? item.taxPercentage
+                                : taxPercentage || '0';
+
+                        const taxDisplay =
+                            itemTaxRate && itemTaxRate !== '0'
+                                ? ` + ${itemTaxRate}% tax`
+                                : '';
+
                         let unitDisplayValue, totalDisplayValue;
                         if (fiatPriced) {
                             unitDisplayValue = UnitsStore.getFormattedAmount(
                                 new BigNumber(unitPrice).toFixed(2),
                                 'fiat'
                             );
-                            totalDisplayValue = UnitsStore.getFormattedAmount(
-                                new BigNumber(unitPrice)
-                                    .multipliedBy(item.quantity)
-                                    .toFixed(2),
-                                'fiat'
-                            );
+                            totalDisplayValue =
+                                UnitsStore.getFormattedAmount(
+                                    new BigNumber(unitPrice)
+                                        .multipliedBy(item.quantity)
+                                        .toFixed(2),
+                                    'fiat'
+                                ) + taxDisplay;
                         } else {
                             unitDisplayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'sats'
                             );
-                            totalDisplayValue = UnitsStore.getFormattedAmount(
-                                new BigNumber(unitPrice)
-                                    .multipliedBy(item.quantity)
-                                    .toString(),
-                                'sats'
+                            const baseDisplayValue =
+                                bitcoinUnits === 'sats' ? (
+                                    <Amount
+                                        fixedUnits="sats"
+                                        sats={new BigNumber(unitPrice)
+                                            .multipliedBy(item.quantity)
+                                            .toString()}
+                                    />
+                                ) : (
+                                    <Amount
+                                        fixedUnits="BTC"
+                                        sats={new BigNumber(unitPrice)
+                                            .multipliedBy(item.quantity)
+                                            .toString()}
+                                    />
+                                );
+                            totalDisplayValue = (
+                                <View
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'row'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {baseDisplayValue}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {taxDisplay}
+                                    </Text>
+                                </View>
                             );
                         }
 
@@ -1294,18 +1313,41 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         </>
                     )}
 
-                    <KeyValue
-                        keyValue={getTaxDisplayLabel()}
-                        value={
-                            fiatEnabled ? (
-                                order.getTaxMoneyDisplay
-                            ) : bitcoinUnits === 'sats' ? (
-                                <Amount fixedUnits="sats" sats={taxSats} />
-                            ) : (
-                                <Amount fixedUnits="BTC" sats={taxSats} />
-                            )
-                        }
-                    />
+                    {fiatEnabled && (
+                        <KeyValue
+                            keyValue={localeString('pos.views.Order.taxFiat')}
+                            value={FiatStore.formatAmountForDisplay(
+                                new BigNumber(taxSats)
+                                    .multipliedBy(rate)
+                                    .dividedBy(SATS_PER_BTC)
+                                    .toFixed(2)
+                            )}
+                        />
+                    )}
+
+                    <TouchableOpacity
+                        onPress={() => {
+                            this.setState({
+                                bitcoinUnits:
+                                    this.state.bitcoinUnits === 'sats'
+                                        ? 'BTC'
+                                        : 'sats'
+                            });
+                        }}
+                    >
+                        <KeyValue
+                            keyValue={localeString(
+                                'pos.views.Order.taxBitcoin'
+                            )}
+                            value={
+                                bitcoinUnits === 'sats' ? (
+                                    <Amount fixedUnits="sats" sats={taxSats} />
+                                ) : (
+                                    <Amount fixedUnits="BTC" sats={taxSats} />
+                                )
+                            }
+                        />
+                    </TouchableOpacity>
 
                     {fiatEnabled && (
                         <KeyValue
