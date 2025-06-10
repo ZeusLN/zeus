@@ -134,8 +134,6 @@ export default class PaymentRequest extends React.Component<
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
 
-        await SwapStore.getSwapFees();
-
         const subInfo: any = SwapStore.subInfo;
 
         let feeOption = 'fixed';
