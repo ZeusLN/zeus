@@ -29,7 +29,7 @@ export default class FeeStore {
     @observable public monthEarned: string | number;
     @observable public totalEarned: string | number;
 
-    @observable public forwardingEvents: Array<any> = [];
+    @observable public forwardingEvents: Array<ForwardEvent> = [];
     @observable public lastOffsetIndex: number;
     @observable public forwardingHistoryError = false;
 
@@ -209,26 +209,33 @@ export default class FeeStore {
     };
 
     @action
-    public getForwardingHistory = (params?: any) => {
+    public getForwardingHistory = (params?: number) => {
         if (this.loading) return;
         this.loading = true;
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        const response = params
-            ? BackendUtils.getForwardingHistory(params)
-            : BackendUtils.getForwardingHistory();
+
+        const response =
+            params != null
+                ? BackendUtils.isLNDBased()
+                    ? BackendUtils.getForwardingHistory(params)
+                    : BackendUtils.getForwardingHistory()
+                : BackendUtils.getForwardingHistory();
 
         response
             .then((data: any) => {
                 try {
                     runInAction(() => {
-                        const rawEvents =
+                        let rawEvents =
                             data.forwarding_events || data.forwards || [];
 
-                        if (!Array.isArray(rawEvents)) {
-                            throw new Error(
-                                'forwarding_events or forwards is not an array'
+                        if (!BackendUtils.isLNDBased() && params != null) {
+                            const cutoffTime =
+                                Date.now() / 1000 - params * 3600;
+                            rawEvents = rawEvents.filter(
+                                (event: any) =>
+                                    event.resolved_time >= cutoffTime
                             );
                         }
 
@@ -236,19 +243,17 @@ export default class FeeStore {
                             .map((event: any) => new ForwardEvent(event))
                             .reverse();
 
-                        this.forwardingEvents.forEach(
-                            (event: ForwardEvent) =>
-                                (this.earnedDuringTimeframe =
-                                    this.earnedDuringTimeframe.plus(
-                                        Number(event.fee_msat) / 1000
-                                    ))
-                        );
+                        this.forwardingEvents.forEach((event: ForwardEvent) => {
+                            this.earnedDuringTimeframe =
+                                this.earnedDuringTimeframe.plus(
+                                    Number(event.fee_msat) / 1000
+                                );
+                        });
 
                         this.lastOffsetIndex = data.last_offset_index;
                         this.loading = false;
                     });
                 } catch (e: any) {
-                    console.error(e);
                     this.forwardingError();
                 }
             })

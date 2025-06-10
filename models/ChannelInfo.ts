@@ -44,26 +44,14 @@ export default class ChannelInfo extends BaseModel {
     base_fee_millisatoshi: number;
     fee_per_millionth: number;
 
-    getNodePolicy(): RoutingPolicy {
-        return {
-            time_lock_delta: this.delay,
-            min_htlc: this.htlc_minimum_msat.toString(),
-            fee_base_msat: this.base_fee_millisatoshi.toString(),
-            fee_rate_milli_msat: this.fee_per_millionth.toString(),
-            disabled: false,
-            max_htlc_msat: this.htlc_maximum_msat.toString(),
-            last_update: this.last_update || 0
-        };
-    }
-
     @computed
     public get node1Policy(): RoutingPolicy | undefined {
-        return this.node_1_policy || this.node1_policy || this.getNodePolicy();
+        return this.node_1_policy || this.node1_policy;
     }
 
     @computed
     public get node2Policy(): RoutingPolicy | undefined {
-        return this.node_2_policy || this.node2_policy || this.getNodePolicy();
+        return this.node_2_policy || this.node2_policy;
     }
 
     @computed

@@ -69,16 +69,24 @@ export default class FeeBreakdown extends React.Component<
             chanInfo[channelId] &&
             chanInfo[channelId].node1Pub === nodeId
         ) {
-            localPolicy = chanInfo[channelId].node1Policy;
-            remotePolicy = chanInfo[channelId].node2Policy;
+            localPolicy =
+                chanInfo[channelId].node1Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
+            remotePolicy =
+                chanInfo[channelId].node2Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
         }
         if (
             chanInfo &&
             chanInfo[channelId] &&
             chanInfo[channelId].node2Pub === nodeId
         ) {
-            localPolicy = chanInfo[channelId].node2Policy;
-            remotePolicy = chanInfo[channelId].node1Policy;
+            localPolicy =
+                chanInfo[channelId].node2Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
+            remotePolicy =
+                chanInfo[channelId].node1Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
         }
 
         return (
@@ -149,7 +157,8 @@ export default class FeeBreakdown extends React.Component<
                         />
                         {BackendUtils.supportInboundFees() && (
                             <>
-                                {!!localPolicy.inbound_fee_base_msat && (
+                                {!!(localPolicy as any)
+                                    .inbound_fee_base_msat && (
                                     <KeyValue
                                         keyValue={localeString(
                                             'views.Channel.localInboundBaseFee'
@@ -158,7 +167,8 @@ export default class FeeBreakdown extends React.Component<
                                             <Amount
                                                 sats={
                                                     Number(
-                                                        localPolicy.inbound_fee_base_msat
+                                                        (localPolicy as any)
+                                                            .inbound_fee_base_msat
                                                     ) / 1000
                                                 }
                                                 toggleable
@@ -167,20 +177,23 @@ export default class FeeBreakdown extends React.Component<
                                         }
                                     />
                                 )}
-                                {!!localPolicy.inbound_fee_rate_milli_msat && (
+                                {!!(localPolicy as any)
+                                    .inbound_fee_rate_milli_msat && (
                                     <KeyValue
                                         keyValue={localeString(
                                             'views.Channel.localInboundFeeRate'
                                         )}
                                         value={`${
                                             Number(
-                                                localPolicy.inbound_fee_rate_milli_msat
+                                                (localPolicy as any)
+                                                    .inbound_fee_rate_milli_msat
                                             ) / 10000
                                         }%`}
                                         sensitive
                                     />
                                 )}
-                                {!!remotePolicy.inbound_fee_base_msat && (
+                                {!!(remotePolicy as any)
+                                    .inbound_fee_base_msat && (
                                     <KeyValue
                                         keyValue={localeString(
                                             'views.Channel.remoteInboundBaseFee'
@@ -189,7 +202,8 @@ export default class FeeBreakdown extends React.Component<
                                             <Amount
                                                 sats={
                                                     Number(
-                                                        remotePolicy.inbound_fee_base_msat
+                                                        (remotePolicy as any)
+                                                            .inbound_fee_base_msat
                                                     ) / 1000
                                                 }
                                                 toggleable
@@ -198,14 +212,16 @@ export default class FeeBreakdown extends React.Component<
                                         }
                                     />
                                 )}
-                                {!!remotePolicy.inbound_fee_rate_milli_msat && (
+                                {!!(remotePolicy as any)
+                                    .inbound_fee_rate_milli_msat && (
                                     <KeyValue
                                         keyValue={localeString(
                                             'views.Channel.remoteInboundFeeRate'
                                         )}
                                         value={`${
                                             Number(
-                                                remotePolicy.inbound_fee_rate_milli_msat
+                                                (remotePolicy as any)
+                                                    .inbound_fee_rate_milli_msat
                                             ) / 10000
                                         }%`}
                                         sensitive
@@ -331,7 +347,7 @@ export default class FeeBreakdown extends React.Component<
                                 'views.Channel.lastLocalUpdate'
                             )}
                             value={DateTimeUtils.listFormattedDate(
-                                localPolicy.last_update
+                                localPolicy.last_update!
                             )}
                         />
                         <KeyValue
@@ -339,7 +355,7 @@ export default class FeeBreakdown extends React.Component<
                                 'views.Channel.lastRemoteUpdate'
                             )}
                             value={DateTimeUtils.listFormattedDate(
-                                remotePolicy.last_update
+                                remotePolicy.last_update!
                             )}
                         />
                         <KeyValue
