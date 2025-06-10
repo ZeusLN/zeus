@@ -31,8 +31,6 @@ export default class AndroidNfcModal extends React.Component<
                 isOpen={showAndroidNfcModal}
                 style={{
                     backgroundColor: 'transparent',
-                    paddingLeft: 24,
-                    paddingRight: 24,
                     height: 380
                 }}
                 swipeToClose={false}
@@ -50,7 +48,7 @@ export default class AndroidNfcModal extends React.Component<
                 >
                     <View
                         style={{
-                            backgroundColor: themeColor('background'),
+                            backgroundColor: themeColor('modalBackground'),
                             borderRadius: 30,
                             padding: 35,
                             alignItems: 'center',

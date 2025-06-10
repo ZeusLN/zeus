@@ -645,7 +645,7 @@ export default class KeypadPane extends React.PureComponent<
                 <ModalBox
                     style={{
                         ...styles.modal,
-                        backgroundColor: themeColor('background')
+                        backgroundColor: themeColor('modalBackground')
                     }}
                     swipeToClose={true}
                     backButtonClose={true}
