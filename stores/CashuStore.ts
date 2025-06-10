@@ -1343,8 +1343,13 @@ export default class CashuStore {
     };
 
     @action
-    public getPayReq = async (bolt11Invoice: string) => {
-        this.loading = true;
+    public getPayReq = async (
+        bolt11Invoice: string,
+        isDonationPayment: boolean = false
+    ) => {
+        if (!isDonationPayment) {
+            this.loading = true;
+        }
         this.payReq = undefined;
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
@@ -1390,7 +1395,9 @@ export default class CashuStore {
             runInAction(() => {
                 this.payReq = new Invoice(data);
                 this.getPayReqError = undefined;
-                this.loading = false;
+                if (!isDonationPayment) {
+                    this.loading = false;
+                }
             });
 
             this.proofsToUse = proofsToUse;
@@ -1457,8 +1464,20 @@ export default class CashuStore {
     };
 
     @action
-    public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
-        this.loading = true;
+    public payLnInvoiceFromEcash = async ({
+        amount,
+        isDonationPayment = false
+    }: {
+        amount?: string;
+        isDonationPayment?: boolean;
+    }) => {
+        if (isDonationPayment) {
+            console.log('STARTING DONATION PAYMENT PROCESS');
+        }
+
+        if (!isDonationPayment) {
+            this.loading = true;
+        }
 
         const mintUrl = this.selectedMintUrl;
 
@@ -1523,7 +1542,9 @@ export default class CashuStore {
                     proofsToSend = result.proofsToSend;
                     proofsToKeep = result.proofsToKeep;
                     newCounterValue = result.newCounterValue;
-                    success = true;
+                    if (!isDonationPayment) {
+                        success = true;
+                    }
                     console.log(
                         `payLnInvoiceFromEcash: Attempt ${
                             attempt + 1
@@ -1601,7 +1622,9 @@ export default class CashuStore {
                 mintUrl
             });
 
-            this.noteKey = payment.getNoteKey;
+            if (!isDonationPayment) {
+                this.noteKey = payment.getNoteKey;
+            }
 
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);
             // store Ecash payment
@@ -1618,35 +1641,40 @@ export default class CashuStore {
                 this.cashuWallets[mintUrl].balanceSats - amountToPay
             );
 
-            this.loading = false;
+            if (!isDonationPayment) {
+                this.loading = false;
+            }
 
             return payment;
         } catch (err: any) {
             console.log('paying ln invoice from ecash error', err);
-            const mintQuote = await wallet!!.checkMeltQuote(
-                this.meltQuote!!.quote
-            );
-            if (mintQuote.state == MeltQuoteState.PAID) {
-                this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.alreadyPaid'
+            if (!isDonationPayment) {
+                const mintQuote = await wallet!!.checkMeltQuote(
+                    this.meltQuote!!.quote
                 );
-                this.loading = false;
-                return;
-            } else if (mintQuote.state == MeltQuoteState.PENDING) {
+                if (mintQuote.state == MeltQuoteState.PAID) {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.alreadyPaid'
+                    );
+                    this.loading = false;
+                    return;
+                } else if (mintQuote.state == MeltQuoteState.PENDING) {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = localeString(
+                        'stores.CashuStore.pending'
+                    );
+                    this.loading = false;
+                    return;
+                }
                 this.paymentError = true;
-                this.paymentErrorMsg = localeString(
-                    'stores.CashuStore.pending'
-                );
+                this.paymentErrorMsg = String(err.message);
                 this.loading = false;
-                return;
             }
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);
             await this.addMintProofs(mintUrl, proofs!!);
-            this.paymentError = true;
-            this.paymentErrorMsg = String(err.message);
-            this.loading = false;
-            return;
+
+            return { donationError: 'Donation payment failed' };
         }
     };
 
