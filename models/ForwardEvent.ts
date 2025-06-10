@@ -38,4 +38,12 @@ export default class ForwardEvent extends BaseModel {
             this.timestamp || this.resolved_time || 0
         );
     }
+
+    @computed public get amtOut(): string | number {
+        return this.amt_out || Number(this.out_msat) / 1000;
+    }
+
+    @computed public get feeSat(): string | number {
+        return Number(this.fee_msat) / 1000;
+    }
 }

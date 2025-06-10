@@ -1004,7 +1004,6 @@ export default class ChannelsStore {
 
     @action
     public loadChannelInfo = (chanId: string, deleteBeforeLoading = false) => {
-        console.log(chanId);
         this.loading = true;
 
         if (deleteBeforeLoading) {
@@ -1017,10 +1016,8 @@ export default class ChannelsStore {
                 const channels = BackendUtils.isLNDBased()
                     ? rawChannels
                     : rawChannels[0];
-                console.log(channels);
                 runInAction(() => {
                     this.chanInfo[chanId] = new ChannelInfo(channels);
-                    console.log(this.chanInfo[chanId]);
                     this.loading = false;
                 });
             })
@@ -1031,6 +1028,22 @@ export default class ChannelsStore {
                     this.loading = false;
                 });
             });
+    };
+
+    // for CLNRest
+    public getNodePolicy = (chanId: string) => {
+        if (!this.chanInfo[chanId]) return;
+        return {
+            time_lock_delta: this.chanInfo[chanId].delay,
+            min_htlc: this.chanInfo[chanId].htlc_minimum_msat.toString(),
+            fee_base_msat:
+                this.chanInfo[chanId].base_fee_millisatoshi.toString(),
+            fee_rate_milli_msat:
+                this.chanInfo[chanId].fee_per_millionth.toString(),
+            disabled: false,
+            max_htlc_msat: this.chanInfo[chanId].htlc_maximum_msat.toString(),
+            last_update: this.chanInfo[chanId].last_update?.toString()
+        };
     };
 
     public setChannelsType = (type: ChannelsType) => {
