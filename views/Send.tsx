@@ -306,10 +306,6 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidMount() {
-        const { SwapStore } = this.props;
-
-        await SwapStore.getSwapFees();
-
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
