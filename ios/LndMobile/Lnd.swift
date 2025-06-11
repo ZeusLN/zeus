@@ -130,6 +130,8 @@ open class Lnd {
     "WalletKitDeriveKey": { bytes, cb in LndmobileWalletKitDeriveKey(bytes, cb) },
     "WalletKitRescan": { bytes, cb in LndmobileWalletKitRescan(bytes, cb) },
     "WalletKitNextAddr": { bytes, cb in LndmobileWalletKitNextAddr(bytes, cb) },
+    "WalletKitSignMessageWithAddr": { bytes, cb in LndmobileWalletKitSignMessageWithAddr(bytes, cb) },
+    "WalletKitVerifyMessageWithAddr": { bytes, cb in LndmobileWalletKitVerifyMessageWithAddr(bytes, cb) },
   
     // derivePrivateKey
     "VerifyMessage": { bytes, cb in LndmobileVerifyMessage(bytes, cb) },
