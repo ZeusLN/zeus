@@ -560,7 +560,7 @@ export default class ContactDetails extends React.Component<
                                                     key={index}
                                                     style={styles.contactRow}
                                                 >
-                                                    <Ecash />
+                                                    <Ecash fill={'#FACC15'} />
                                                     <Text
                                                         style={{
                                                             ...styles.contactFields,
