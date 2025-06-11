@@ -215,13 +215,7 @@ export default class FeeStore {
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-
-        const response =
-            params != null
-                ? BackendUtils.isLNDBased()
-                    ? BackendUtils.getForwardingHistory(params)
-                    : BackendUtils.getForwardingHistory()
-                : BackendUtils.getForwardingHistory();
+        const response = BackendUtils.getForwardingHistory(params);
 
         response
             .then((data: any) => {
