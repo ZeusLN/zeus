@@ -46,4 +46,20 @@ export default class ForwardEvent extends BaseModel {
     @computed public get feeSat(): string | number {
         return Number(this.fee_msat) / 1000;
     }
+
+    @computed public get inChannelId(): string {
+        return this.in_channel || this.chan_id_in;
+    }
+
+    @computed public get outChannelId(): string {
+        return this.out_channel || this.chan_id_out;
+    }
+
+    @computed public get inAmt(): number {
+        return Number(this.amt_in) || Number(this.in_msat) / 1000;
+    }
+
+    @computed public get outAmt(): number {
+        return Number(this.amt_out) || Number(this.out_msat) / 1000;
+    }
 }
