@@ -1166,7 +1166,8 @@ export default class LightningAddress extends React.Component<
                             )}
                         {lightningAddressHandle && (
                             <>
-                                {!isReady &&
+                                {lightningAddressType === 'zaplocker' &&
+                                    !isReady &&
                                     !loading &&
                                     !redeeming &&
                                     !redeemingAll &&
