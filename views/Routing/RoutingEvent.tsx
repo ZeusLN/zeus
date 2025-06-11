@@ -44,17 +44,10 @@ export default class RoutingEvent extends React.Component<
         const { route } = props;
 
         const routingEvent = route.params?.routingEvent;
-        const { chan_id_in, chan_id_out, out_channel, in_channel } =
-            routingEvent;
+        const { inChannelId, outChannelId } = routingEvent;
 
-        this.props.ChannelsStore.loadChannelInfo(
-            chan_id_in || in_channel,
-            true
-        );
-        this.props.ChannelsStore.loadChannelInfo(
-            chan_id_out || out_channel,
-            true
-        );
+        this.props.ChannelsStore.loadChannelInfo(inChannelId, true);
+        this.props.ChannelsStore.loadChannelInfo(outChannelId, true);
 
         this.state = {
             routingEvent
@@ -65,34 +58,19 @@ export default class RoutingEvent extends React.Component<
         const { routingEvent } = this.state;
         const { aliasesById, channels } = ChannelsStore;
 
-        const {
-            chan_id_in,
-            chan_id_out,
-            amt_in,
-            amt_out,
-            fee,
-            getTime,
-            in_msat,
-            out_msat,
-            in_channel,
-            out_channel
-        } = routingEvent;
+        const { fee, getTime, inChannelId, outChannelId, inAmt, outAmt } =
+            routingEvent;
 
         const chanInFilter = channels.filter(
-            (channel) =>
-                channel.channelId === chan_id_in ||
-                channel.channelId === in_channel
+            (channel) => channel.channelId === inChannelId
         );
         const chanIn = chanInFilter[0];
         const chanOutFilter = channels.filter(
-            (channel) =>
-                channel.channelId === chan_id_out ||
-                channel.channelId === out_channel
+            (channel) => channel.channelId === outChannelId
         );
         const chanOut = chanOutFilter[0];
-        const chanInLabel = aliasesById[chan_id_in] || chan_id_in || in_channel;
-        const chanOutLabel =
-            aliasesById[chan_id_out] || chan_id_out || out_channel;
+        const chanInLabel = aliasesById[inChannelId] || inChannelId;
+        const chanOutLabel = aliasesById[outChannelId] || outChannelId;
         const channelInPoint = chanIn && chanIn.channel_point;
         const channelOutPoint = chanOut && chanOut.channel_point;
 
@@ -114,7 +92,7 @@ export default class RoutingEvent extends React.Component<
                         <Amount
                             sats={
                                 fee ||
-                                (parseInt(in_msat) - parseInt(out_msat)) / 1000
+                                (parseInt(inAmt) - parseInt(outAmt)) / 1000
                             }
                             jumboText
                             toggleable
@@ -123,7 +101,7 @@ export default class RoutingEvent extends React.Component<
                         />
                     </View>
 
-                    {(chan_id_in || in_channel) && (
+                    {inChannelId && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.NodeInfo.ForwardingHistory.srcChannelId'
@@ -154,7 +132,7 @@ export default class RoutingEvent extends React.Component<
                         />
                     )}
 
-                    {(chan_id_out || out_channel) && (
+                    {outChannelId && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.NodeInfo.ForwardingHistory.dstChannelId'
@@ -185,31 +163,21 @@ export default class RoutingEvent extends React.Component<
                         />
                     )}
 
-                    {(amt_in || in_msat) && (
+                    {inAmt && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.NodeInfo.ForwardingHistory.amtIn'
                             )}
-                            value={
-                                <Amount
-                                    sats={amt_in || in_msat / 1000}
-                                    sensitive
-                                />
-                            }
+                            value={<Amount sats={inAmt} sensitive />}
                         />
                     )}
 
-                    {(amt_out || out_msat) && (
+                    {outAmt && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.NodeInfo.ForwardingHistory.amtOut'
                             )}
-                            value={
-                                <Amount
-                                    sats={amt_out || out_msat / 1000}
-                                    sensitive
-                                />
-                            }
+                            value={<Amount sats={outAmt} sensitive />}
                         />
                     )}
 
@@ -223,7 +191,7 @@ export default class RoutingEvent extends React.Component<
                     )}
 
                     <FeeBreakdown
-                        channelId={chan_id_in || in_channel}
+                        channelId={inChannelId}
                         peerDisplay={chanInLabel}
                         channelPoint={channelInPoint}
                         label={localeString(
@@ -232,7 +200,7 @@ export default class RoutingEvent extends React.Component<
                     />
 
                     <FeeBreakdown
-                        channelId={chan_id_out || out_channel}
+                        channelId={outChannelId}
                         peerDisplay={chanOutLabel}
                         channelPoint={channelOutPoint}
                         label={localeString(
