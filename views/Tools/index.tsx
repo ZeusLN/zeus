@@ -459,46 +459,32 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             }}
                         >
                             <TouchableOpacity
+                                style={styles.columnField}
                                 onPress={() =>
                                     navigation.navigate(
                                         'CreateWithdrawalRequest'
                                     )
                                 }
                             >
-                                <View style={styles.columnField}>
-                                    <View style={styles.icon}>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 14,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book'
-                                            }}
-                                        >
-                                            <Icon
-                                                name="edit"
-                                                type="feather"
-                                                color={themeColor('text')}
-                                                underlayColor="transparent"
-                                                size={17}
-                                            />
-                                        </Text>
-                                    </View>
-                                    <Text
-                                        style={{
-                                            ...styles.columnText,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'general.withdrawalRequest'
-                                        )}
-                                    </Text>
-                                    <View style={styles.ForwardArrow}>
-                                        <ForwardIcon
-                                            stroke={forwardArrowColor}
-                                        />
-                                    </View>
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="edit"
+                                        type="feather"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('general.withdrawalRequest')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
@@ -518,7 +504,8 @@ const styles = StyleSheet.create({
     },
     icon: {
         width: 50,
-        alignItems: 'center'
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     photo: {
         alignSelf: 'center',
