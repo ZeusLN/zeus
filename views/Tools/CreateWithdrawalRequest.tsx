@@ -62,17 +62,19 @@ export default class CreateWithdrawalRequest extends Component<
     }
 
     handleInputChange = (key: 'amount' | 'description', value: string) => {
-        const msat = (parseInt(value) * 1000).toString();
-        const { units } = unitsStore;
-        const isBTC = units === 'BTC';
+        if (key === 'amount') {
+            const msat = (parseInt(value) * 1000).toString();
+            const { units } = unitsStore;
+            const isBTC = units === 'BTC';
 
-        this.setState((prevState) => ({
-            ...prevState,
-            [key]: value,
-            satsAmount: isBTC ? getSatAmount(msat).toString() : msat
-        }));
-
-        if (key === 'description') {
+            this.setState({
+                amount: value,
+                satsAmount: isBTC ? getSatAmount(msat).toString() : msat
+            });
+        } else if (key === 'description') {
+            this.setState({
+                description: value
+            });
             this.props.InvoicesStore.clearUnified();
         }
     };
