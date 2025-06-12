@@ -872,8 +872,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             >
                                 <Tab.Navigator
                                     initialRouteName={
-                                        posEnabled !== PosEnabled.Disabled &&
-                                        posStatus === 'active'
+                                        error &&
+                                        posEnabled === PosEnabled.Disabled
+                                            ? 'Balance'
+                                            : posEnabled !==
+                                                  PosEnabled.Disabled &&
+                                              posStatus === 'active'
                                             ? (settings.pos &&
                                                   settings.pos.defaultView) ||
                                               'Products'
