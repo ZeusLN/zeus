@@ -743,7 +743,7 @@ const handleAnything = async (
         AddressUtils.isValidWithdrawalRequest(value)
     ) {
         return [
-            'WithdrawalRequestRedemption',
+            'WithdrawalRequestInfo',
             {
                 bolt12: value
             }
