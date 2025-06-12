@@ -1026,7 +1026,7 @@
     "views.Settings.AddContact.selectField": "選擇欄位",
     "views.Settings.AddContact.deleteContact": "刪除欄位",
     "views.Settings.Contacts.multipleAddresses": "多個位址",
-    "views.Settings.Contacts.searchBar1": "Nostr npub, NIP-05, LN address, on-chain address",
+    "views.Settings.Contacts.searchBar1": "Nostr npub 代碼, NIP-05 代碼, LN 位址, 或鏈上錢包位址",
     "views.Settings.Contacts.searchBar2": "搜尋",
     "views.Settings.Contacts.favorites": "我的最愛",
     "views.Settings.Contacts.contacts": "聯絡人",
