@@ -286,9 +286,13 @@ export default class SignVerifyMessage extends React.Component<
             this.setSelectedAddress(mode, address);
         };
 
-        navigation.navigate('AddressPicker', {
+        navigation.navigate('OnChainAddresses', {
+            selectionMode: true,
             selectedAddress,
-            onAddressSelected: handleAddressSelected
+            onAddressSelected: handleAddressSelected,
+            headerTitle: localeString(
+                'views.Settings.SignMessage.selectAddress'
+            )
         });
     };
 
@@ -302,8 +306,36 @@ export default class SignVerifyMessage extends React.Component<
     renderAddressSelector = (mode: 'sign' | 'verify') => {
         const { MessageSignStore } = this.props;
         const { addresses } = MessageSignStore;
-        const { selectedAddress } = this.state;
+        const { selectedAddress, loading } = this.state;
 
+        // For verification, use a simple text input since the address might not be yours
+        if (mode === 'verify') {
+            return (
+                <View style={styles.addressSelector}>
+                    <Text style={{ color: themeColor('secondaryText') }}>
+                        {localeString(
+                            'views.Settings.SignMessage.selectAddressVerification'
+                        )}
+                    </Text>
+                    <TextInput
+                        placeholder={localeString(
+                            'views.Settings.SignMessage.enterAddressToVerify'
+                        )}
+                        value={selectedAddress}
+                        onChangeText={(text: string) => {
+                            this.setState({ selectedAddress: text });
+                            MessageSignStore.setSelectedAddress(text);
+                        }}
+                        locked={loading}
+                        style={{
+                            marginTop: 10
+                        }}
+                    />
+                </View>
+            );
+        }
+
+        // For signing, use the address picker since you can only sign with your own addresses
         const currentAddressDetails = addresses.find(
             (addr) => addr.address === selectedAddress
         );
@@ -312,13 +344,9 @@ export default class SignVerifyMessage extends React.Component<
         return (
             <View style={styles.addressSelector}>
                 <Text style={{ color: themeColor('secondaryText') }}>
-                    {mode === 'sign'
-                        ? localeString(
-                              'views.Settings.SignMessage.selectAddressSigning'
-                          )
-                        : localeString(
-                              'views.Settings.SignMessage.selectAddressVerification'
-                          )}
+                    {localeString(
+                        'views.Settings.SignMessage.selectAddressSigning'
+                    )}
                 </Text>
 
                 <TouchableOpacity

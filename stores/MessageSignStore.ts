@@ -240,7 +240,18 @@ export default class MessageSignStore {
                 verifyOperation
                     .then((result: any) => {
                         this.valid = result.valid || result.verified || false;
-                        this.pubkey = result.pubkey || result.publicKey;
+                        const rawPubkey = result.pubkey || result.publicKey;
+                        if (rawPubkey) {
+                            if (rawPubkey instanceof Uint8Array) {
+                                this.pubkey = Array.from(rawPubkey, (byte) =>
+                                    byte.toString(16).padStart(2, '0')
+                                ).join('');
+                            } else {
+                                this.pubkey = rawPubkey;
+                            }
+                        } else {
+                            this.pubkey = null;
+                        }
                         this.error = false;
                         this.errorMessage = '';
                     })
