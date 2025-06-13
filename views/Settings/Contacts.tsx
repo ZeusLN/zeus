@@ -31,7 +31,22 @@ import NostrichIcon from '../../assets/images/SVG/Nostrich.svg';
 
 interface ContactsSettingsProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'Contacts', { SendScreen: boolean }>;
+    route: Route<
+        'Contacts',
+        {
+            SendScreen: boolean;
+            CashuLockSettingsScreen?: boolean;
+            memo?: string;
+            value?: string;
+            satAmount?: string;
+            account?: string;
+            duration?: string;
+            showCustomDuration?: boolean;
+            customDurationValue?: string;
+            customDurationUnit?: string;
+            selectedDurationIndex?: number;
+        }
+    >;
     ContactStore: ContactStore;
 }
 
@@ -39,6 +54,7 @@ interface ContactsSettingsState {
     search: string;
     SendScreen: boolean;
     deletionAwaitingConfirmation: boolean;
+    CashuLockSettingsScreen: boolean;
 }
 
 @inject('ContactStore')
@@ -50,10 +66,14 @@ export default class Contacts extends React.Component<
     constructor(props: ContactsSettingsProps) {
         super(props);
         const SendScreen = this.props.route.params?.SendScreen;
+        const CashuLockSettingsScreen =
+            this.props.route.params?.CashuLockSettingsScreen || false;
+
         this.state = {
             search: '',
             SendScreen,
-            deletionAwaitingConfirmation: false
+            deletionAwaitingConfirmation: false,
+            CashuLockSettingsScreen
         };
     }
 
@@ -71,6 +91,7 @@ export default class Contacts extends React.Component<
             hasBolt12Offer,
             hasOnchainAddress,
             hasPubkey,
+            hasCashuPubkey,
             hasMultiplePayableAddresses
         } = contact;
 
@@ -86,7 +107,6 @@ export default class Contacts extends React.Component<
                   )}...${item.lnAddress[0].slice(-10)}`
                 : item.lnAddress[0];
         }
-
         if (hasBolt12Address) {
             return item.bolt12Address[0].length > 23
                 ? `${item.bolt12Address[0].slice(
@@ -120,41 +140,97 @@ export default class Contacts extends React.Component<
                 : item.pubkey[0];
         }
 
+        if (hasCashuPubkey) {
+            return item.cashuPubkey[0].length > 23
+                ? `${item.cashuPubkey[0].slice(
+                      0,
+                      12
+                  )}...${item.cashuPubkey[0].slice(-8)}`
+                : item.cashuPubkey[0];
+        }
+
         return localeString('views.Settings.Contacts.noAddress');
     };
 
     renderContactItem = ({ item }: { item: Contact }) => {
         const contact = new Contact(item);
         const { hasMultiplePayableAddresses } = contact;
+        const { route } = this.props;
+        const {
+            memo,
+            value,
+            satAmount,
+            account,
+            duration,
+            showCustomDuration,
+            customDurationValue,
+            customDurationUnit,
+            selectedDurationIndex
+        } = route.params || {};
+
+        // Check if contact has Cashu pubkey
+        const isCashuPubkeyAvailable =
+            contact.cashuPubkey && contact.cashuPubkey.length > 0;
+
         return (
             <TouchableOpacity
                 onPress={() => {
                     if (this.state.SendScreen && !hasMultiplePayableAddresses) {
-                        if (contact.isSingleLnAddress) {
-                            this.props.navigation.navigate('Send', {
-                                destination: item.lnAddress[0],
-                                contactName: item.name
-                            });
-                        } else if (contact.isSingleBolt12Address) {
-                            this.props.navigation.navigate('Send', {
-                                destination: item.bolt12Address[0],
-                                contactName: item.name
-                            });
-                        } else if (contact.isSingleBolt12Offer) {
-                            this.props.navigation.navigate('Send', {
-                                destination: item.bolt12Offer[0],
-                                contactName: item.name
-                            });
-                        } else if (contact.isSingleOnchainAddress) {
-                            this.props.navigation.navigate('Send', {
-                                destination: item.onchainAddress[0],
-                                contactName: item.name
-                            });
-                        } else if (contact.isSinglePubkey) {
-                            this.props.navigation.navigate('Send', {
-                                destination: item.pubkey[0],
-                                contactName: item.name
-                            });
+                        if (this.state.CashuLockSettingsScreen) {
+                            // Navigate back to CashuLockSettings with contact info and preserved duration data
+                            this.props.navigation.navigate(
+                                'CashuLockSettings',
+                                {
+                                    destination: isCashuPubkeyAvailable
+                                        ? item.cashuPubkey[0]
+                                        : null,
+                                    contactName: item.name,
+                                    // Preserve MintToken fields data
+                                    memo,
+                                    value,
+                                    satAmount,
+                                    account,
+                                    // Preserve duration data
+                                    duration,
+                                    showCustomDuration,
+                                    customDurationValue,
+                                    customDurationUnit,
+                                    selectedDurationIndex
+                                }
+                            );
+                        } else {
+                            // Standard Send screen behavior
+                            if (contact.isSingleLnAddress) {
+                                this.props.navigation.navigate('Send', {
+                                    destination: item.lnAddress[0],
+                                    contactName: item.name
+                                });
+                            } else if (contact.isSingleBolt12Address) {
+                                this.props.navigation.navigate('Send', {
+                                    destination: item.bolt12Address[0],
+                                    contactName: item.name
+                                });
+                            } else if (contact.isSingleBolt12Offer) {
+                                this.props.navigation.navigate('Send', {
+                                    destination: item.bolt12Offer[0],
+                                    contactName: item.name
+                                });
+                            } else if (contact.isSingleOnchainAddress) {
+                                this.props.navigation.navigate('Send', {
+                                    destination: item.onchainAddress[0],
+                                    contactName: item.name
+                                });
+                            } else if (contact.isSinglePubkey) {
+                                this.props.navigation.navigate('Send', {
+                                    destination: item.pubkey[0],
+                                    contactName: item.name
+                                });
+                            } else if (contact.isSingleCashuPubkey) {
+                                this.props.navigation.navigate('Send', {
+                                    destination: item.cashuPubkey[0],
+                                    contactName: item.name
+                                });
+                            }
                         }
                     } else {
                         this.props.navigation.navigate('ContactDetails', {
@@ -183,7 +259,7 @@ export default class Contacts extends React.Component<
                             }}
                         />
                     )}
-                    <View>
+                    <View style={{ flex: 1 }}>
                         <Text
                             style={{ fontSize: 16, color: themeColor('text') }}
                         >
@@ -210,15 +286,36 @@ export default class Contacts extends React.Component<
     render() {
         const { navigation, ContactStore } = this.props;
         const { loading } = ContactStore;
-        const { search, SendScreen, deletionAwaitingConfirmation } = this.state;
+        const {
+            search,
+            SendScreen,
+            deletionAwaitingConfirmation,
+            CashuLockSettingsScreen
+        } = this.state;
         const { contacts } = ContactStore;
-        const filteredContacts = contacts.filter((contact: any) => {
+
+        // Calculate if we have any contacts with Cashu pubkeys
+        const hasCashuContacts = CashuLockSettingsScreen
+            ? contacts.some((contactItem: any) => {
+                  const contact = new Contact(contactItem);
+                  return contact.hasCashuPubkey;
+              })
+            : true;
+
+        const filteredContacts = contacts.filter((contactItem: any) => {
+            // First filter for Cashu contacts if we're in CashuLockSettingsScreen
+            if (CashuLockSettingsScreen) {
+                const contact = new Contact(contactItem);
+                if (!contact.hasCashuPubkey) return false;
+            }
+
+            // Then apply search filter
             const hasMatch = (field: string) =>
-                Array.isArray(contact[field])
-                    ? contact[field].some((input: string) =>
+                Array.isArray(contactItem[field])
+                    ? contactItem[field].some((input: string) =>
                           input.toLowerCase().includes(search.toLowerCase())
                       )
-                    : contact[field]
+                    : contactItem[field]
                           ?.toLowerCase()
                           .includes(search.toLowerCase());
 
@@ -231,7 +328,8 @@ export default class Contacts extends React.Component<
                 hasMatch('nip05') ||
                 hasMatch('onchainAddress') ||
                 hasMatch('nostrNpub') ||
-                hasMatch('pubkey')
+                hasMatch('pubkey') ||
+                hasMatch('cashuPubkey')
             );
         });
 
@@ -286,78 +384,91 @@ export default class Contacts extends React.Component<
                     <>
                         {SendScreen ? (
                             <View>
-                                <Divider
-                                    orientation="horizontal"
-                                    style={{ marginTop: 14 }}
-                                />
-                                <SearchBar
-                                    placeholder={localeString(
-                                        'views.Settings.Contacts.searchBar1'
-                                    )}
-                                    // @ts-ignore:next-line
-                                    onChangeText={this.updateSearch}
-                                    value={this.state.search}
-                                    inputStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    placeholderTextColor={themeColor(
-                                        'secondaryText'
-                                    )}
-                                    containerStyle={{
-                                        backgroundColor: 'none',
-                                        borderTopWidth: 0,
-                                        borderBottomWidth: 0
-                                    }}
-                                    inputContainerStyle={{
-                                        backgroundColor: 'none'
-                                    }}
-                                    // @ts-ignore:next-line
-                                    searchIcon={
-                                        <Text
-                                            style={{
-                                                fontSize: 20,
-                                                color: themeColor('text'),
-                                                fontWeight: 'bold'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.Settings.Contacts.to'
+                                {(!CashuLockSettingsScreen ||
+                                    hasCashuContacts) && (
+                                    <>
+                                        <Divider
+                                            orientation="horizontal"
+                                            style={{ marginTop: 14 }}
+                                        />
+                                        <SearchBar
+                                            placeholder={localeString(
+                                                'views.Settings.Contacts.searchBar1'
                                             )}
-                                        </Text>
-                                    }
-                                    leftIconContainerStyle={{
-                                        marginLeft: 18,
-                                        marginRight: -8,
-                                        marginBottom: 6
-                                    }}
-                                    multiline={true}
-                                />
-                                <Divider orientation="horizontal" />
+                                            // @ts-ignore:next-line
+                                            onChangeText={this.updateSearch}
+                                            value={this.state.search}
+                                            inputStyle={{
+                                                color: themeColor('text')
+                                            }}
+                                            placeholderTextColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                            containerStyle={{
+                                                backgroundColor: 'none',
+                                                borderTopWidth: 0,
+                                                borderBottomWidth: 0
+                                            }}
+                                            inputContainerStyle={{
+                                                backgroundColor: 'none'
+                                            }}
+                                            // @ts-ignore:next-line
+                                            searchIcon={
+                                                <Text
+                                                    style={{
+                                                        fontSize: 20,
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        fontWeight: 'bold'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.Settings.Contacts.to'
+                                                    )}
+                                                </Text>
+                                            }
+                                            leftIconContainerStyle={{
+                                                marginLeft: 18,
+                                                marginRight: -8,
+                                                marginBottom: 6
+                                            }}
+                                            multiline={true}
+                                        />
+                                        <Divider orientation="horizontal" />
+                                    </>
+                                )}
                             </View>
                         ) : (
-                            <SearchBar
-                                placeholder={localeString(
-                                    'views.Settings.Contacts.searchBar2'
+                            <>
+                                {(!CashuLockSettingsScreen ||
+                                    hasCashuContacts) && (
+                                    <SearchBar
+                                        placeholder={localeString(
+                                            'views.Settings.Contacts.searchBar2'
+                                        )}
+                                        // @ts-ignore:next-line
+                                        onChangeText={this.updateSearch}
+                                        value={this.state.search}
+                                        inputStyle={{
+                                            color: themeColor('text')
+                                        }}
+                                        placeholderTextColor={themeColor(
+                                            'secondaryText'
+                                        )}
+                                        containerStyle={{
+                                            backgroundColor: 'transparent',
+                                            borderTopWidth: 0,
+                                            borderBottomWidth: 0
+                                        }}
+                                        inputContainerStyle={{
+                                            borderRadius: 15,
+                                            backgroundColor:
+                                                themeColor('secondary')
+                                        }}
+                                    />
                                 )}
-                                // @ts-ignore:next-line
-                                onChangeText={this.updateSearch}
-                                value={this.state.search}
-                                inputStyle={{
-                                    color: themeColor('text')
-                                }}
-                                placeholderTextColor={themeColor(
-                                    'secondaryText'
-                                )}
-                                containerStyle={{
-                                    backgroundColor: 'transparent',
-                                    borderTopWidth: 0,
-                                    borderBottomWidth: 0
-                                }}
-                                inputContainerStyle={{
-                                    borderRadius: 15,
-                                    backgroundColor: themeColor('secondary')
-                                }}
-                            />
+                            </>
                         )}
                     </>
                 )}
@@ -413,46 +524,52 @@ export default class Contacts extends React.Component<
                         keyExtractor={(_, index) => index.toString()}
                         scrollEnabled={false}
                     />
-                    {!loading && contacts.length > 1 && (
-                        <Button
-                            title={
-                                deletionAwaitingConfirmation
-                                    ? localeString(
-                                          'views.Settings.AddEditNode.tapToConfirm'
-                                      )
-                                    : localeString(
-                                          'views.Settings.Contacts.deleteAllContacts'
-                                      )
-                            }
-                            onPress={async () => {
-                                if (!deletionAwaitingConfirmation) {
-                                    this.setState({
-                                        deletionAwaitingConfirmation: true
-                                    });
-                                } else {
-                                    await Storage.setItem(CONTACTS_KEY, []);
-                                    this.setState({
-                                        deletionAwaitingConfirmation: false
-                                    });
-                                    ContactStore?.loadContacts();
+                    {!loading &&
+                        filteredContacts.length > 0 &&
+                        !CashuLockSettingsScreen && (
+                            <Button
+                                title={
+                                    deletionAwaitingConfirmation
+                                        ? localeString(
+                                              'views.Settings.AddEditNode.tapToConfirm'
+                                          )
+                                        : localeString(
+                                              'views.Settings.Contacts.deleteAllContacts'
+                                          )
                                 }
-                            }}
-                            containerStyle={{
-                                borderColor: themeColor('delete')
-                            }}
-                            titleStyle={{
-                                color: themeColor('delete')
-                            }}
-                            secondary
-                        />
-                    )}
+                                onPress={async () => {
+                                    if (!deletionAwaitingConfirmation) {
+                                        this.setState({
+                                            deletionAwaitingConfirmation: true
+                                        });
+                                    } else {
+                                        await Storage.setItem(CONTACTS_KEY, []);
+                                        this.setState({
+                                            deletionAwaitingConfirmation: false
+                                        });
+                                        ContactStore?.loadContacts();
+                                    }
+                                }}
+                                containerStyle={{
+                                    borderColor: themeColor('delete')
+                                }}
+                                titleStyle={{
+                                    color: themeColor('delete')
+                                }}
+                                secondary
+                            />
+                        )}
                     {loading ? (
                         <LoadingIndicator />
                     ) : (
-                        contacts.length === 0 && (
+                        ((CashuLockSettingsScreen && !hasCashuContacts) ||
+                            (!CashuLockSettingsScreen &&
+                                contacts.length === 0)) && (
                             <Button
                                 title={localeString(
-                                    'views.Settings.Contacts.noContacts'
+                                    CashuLockSettingsScreen
+                                        ? 'cashu.noContactsWithCashuPubkey'
+                                        : 'views.Settings.Contacts.noContacts'
                                 )}
                                 icon={{
                                     name: 'error-outline',

@@ -3,6 +3,8 @@ import { Proof } from '@cashu/cashu-ts';
 
 import BaseModel from './BaseModel';
 
+import { contactStore } from '../stores/Stores';
+
 import CashuUtils from '../utils/CashuUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -55,5 +57,24 @@ export default class CashuToken extends BaseModel {
 
     @computed public get getTimestamp(): number {
         return this.received ? this.received_at || 0 : this.created_at || 0;
+    }
+
+    @computed public get getLockPubkey(): string | undefined {
+        if (!this.proofs || this.proofs.length === 0) return undefined;
+        return CashuUtils.getP2PKPubkeySecret(this.proofs[0].secret);
+    }
+
+    @computed public get getLocktime(): number | undefined {
+        if (!this.proofs || this.proofs.length === 0) return undefined;
+        return CashuUtils.getP2PKLocktime(this.proofs[0].secret);
+    }
+
+    @computed public get getContactName(): string | undefined {
+        const lockPubkey = this.getLockPubkey;
+        if (!lockPubkey) return undefined;
+        const contact = contactStore.contacts.find((contact: any) =>
+            contact.cashuPubkey?.some((pubkey: string) => pubkey === lockPubkey)
+        );
+        return contact?.name;
     }
 }
