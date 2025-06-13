@@ -26,7 +26,15 @@ export default class InventoryStore {
                     this.categories = JSON.parse(categories) || [];
                 }
                 if (products) {
-                    this.products = JSON.parse(products) || [];
+                    this.products = (JSON.parse(products) || []).map(
+                        (product: any) => {
+                            // Ensure all products have the taxPercentage field for backward compatibility
+                            if (product.taxPercentage === undefined) {
+                                product.taxPercentage = '';
+                            }
+                            return product;
+                        }
+                    );
                 }
             });
         } catch (error) {
@@ -107,6 +115,7 @@ export default class InventoryStore {
                 found.pricedIn = newProduct.pricedIn;
                 found.category = newProduct.category;
                 found.status = newProduct.status;
+                found.taxPercentage = newProduct.taxPercentage;
             } else {
                 existingProducts.push(newProduct);
             }
