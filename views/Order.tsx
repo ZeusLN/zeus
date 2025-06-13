@@ -227,13 +227,16 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     let itemSubtotalSats: string;
 
                     if (fiatPriced) {
-                        itemSubtotalSats = new BigNumber(
+                        let fiatAmount = new BigNumber(
                             item.base_price_money.amount
-                        )
-                            .multipliedBy(item.quantity)
-                            .div(100)
+                        ).multipliedBy(item.quantity);
+                        if (settings.pos.posEnabled === PosEnabled.Square) {
+                            fiatAmount = fiatAmount.div(100);
+                        }
+                        itemSubtotalSats = fiatAmount
                             .div(rate)
                             .multipliedBy(SATS_PER_BTC)
+                            .integerValue(BigNumber.ROUND_HALF_UP)
                             .toFixed(0);
                     } else {
                         itemSubtotalSats = new BigNumber(
@@ -639,7 +642,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        // Calculate tax using individual product rates when available
         const calculateTaxSats = () => {
             const hasIndividualTaxRates = lineItems?.some(
                 (item: any) =>
@@ -664,11 +666,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     let itemSubtotalSats: string;
 
                     if (fiatPriced) {
-                        itemSubtotalSats = new BigNumber(
+                        let fiatAmount = new BigNumber(
                             item.base_price_money.amount
-                        )
-                            .multipliedBy(item.quantity)
-                            .div(100)
+                        ).multipliedBy(item.quantity);
+                        // Only divide by 100 if using Square (amount is in cents)
+                        if (settings.pos.posEnabled === PosEnabled.Square) {
+                            fiatAmount = fiatAmount.div(100);
+                        }
+                        itemSubtotalSats = fiatAmount
                             .div(rate)
                             .multipliedBy(SATS_PER_BTC)
                             .integerValue(BigNumber.ROUND_HALF_UP)
@@ -915,7 +920,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 item.taxPercentage !== ''
                         );
 
-                        // Get this item's tax rate
                         const itemTaxRate =
                             item.taxPercentage !== undefined &&
                             item.taxPercentage !== null &&
@@ -925,23 +929,20 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 ? taxPercentage || '0'
                                 : null;
 
-                        // Show tax display if we have individual rates or this item has its own rate
                         const taxDisplay = itemTaxRate
                             ? ` + ${itemTaxRate}% tax`
                             : '';
 
                         let unitDisplayValue, totalDisplayValue;
                         if (fiatPriced) {
-                            unitDisplayValue = UnitsStore.getFormattedAmount(
-                                new BigNumber(unitPrice).toFixed(2),
-                                'fiat'
+                            unitDisplayValue = FiatStore.formatAmountForDisplay(
+                                new BigNumber(unitPrice).toFixed(2)
                             );
                             totalDisplayValue =
-                                UnitsStore.getFormattedAmount(
+                                FiatStore.formatAmountForDisplay(
                                     new BigNumber(unitPrice)
                                         .multipliedBy(item.quantity)
-                                        .toFixed(2),
-                                    'fiat'
+                                        .toFixed(2)
                                 ) + taxDisplay;
                         } else {
                             unitDisplayValue = UnitsStore.getFormattedAmount(
