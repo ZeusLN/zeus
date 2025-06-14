@@ -209,7 +209,9 @@ export default class WithdrawalRequestView extends React.Component<
                         )}
 
                         <KeyValue
-                            keyValue={localeString('views.withdrawal.id')}
+                            keyValue={localeString(
+                                'views.WithdrawalRequest.id'
+                            )}
                             value={invreq_id}
                             sensitive
                             color={themeColor('text')}
