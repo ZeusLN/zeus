@@ -185,6 +185,7 @@ export default class Receive extends React.Component<
 > {
     constructor(props: ReceiveProps) {
         super(props);
+        this.props.SettingsStore.resetSelectedForceFiat();
         this.state = {
             selectedIndex: props.route.params?.selectedIndex ?? 0,
             expirationIndex: 1,
@@ -2223,8 +2224,8 @@ export default class Receive extends React.Component<
                                                     />
                                                 </>
                                             )}
-
                                             <AmountInput
+                                                navigation={navigation}
                                                 amount={value}
                                                 title={`${localeString(
                                                     'views.Receive.amount'
@@ -2273,7 +2274,6 @@ export default class Receive extends React.Component<
                                                     });
                                                 }}
                                             />
-
                                             {needInbound && (
                                                 <TouchableOpacity
                                                     onPress={() =>

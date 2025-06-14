@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from './Amount';
 import TextInput from './TextInput';
@@ -12,11 +13,12 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
+import Icon from 'react-native-vector-icons/Feather';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -32,16 +34,23 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
+    navigation: StackNavigationProp<any, any>;
 }
 
 interface AmountInputState {
     satAmount: string | number;
+    forceFiat: string | undefined;
+    prevForceFiat: string | undefined;
 }
 
-const getSatAmount = (amount: string | number, forceUnit?: string) => {
+const getSatAmount = (
+    amount: string | number,
+    forceUnit?: string,
+    forceFiat?: string
+) => {
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
-    const { fiat } = settings;
+    const fiat = forceFiat || settings.fiat;
     const { units } = unitsStore;
     const effectiveUnits = forceUnit || units;
 
@@ -50,7 +59,7 @@ const getSatAmount = (amount: string | number, forceUnit?: string) => {
 
     const fiatEntry =
         fiat && fiatRates
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            ? fiatRates.find((entry: any) => entry.code === fiat)
             : null;
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
@@ -130,50 +139,118 @@ export default class AmountInput extends React.Component<
     constructor(props: any) {
         super(props);
 
-        const { amount, onAmountChange } = props;
+        const { amount, onAmountChange, SettingsStore } = props;
+        const { selectedForceFiat } = SettingsStore;
         let satAmount = '0';
         if (amount)
-            satAmount = getSatAmount(amount, props.forceUnit).toString();
+            satAmount = getSatAmount(
+                amount,
+                props.forceUnit,
+                selectedForceFiat
+            ).toString();
 
         onAmountChange(amount, satAmount);
         this.state = {
-            satAmount
+            satAmount,
+            forceFiat: '',
+            prevForceFiat: ''
         };
     }
 
     componentDidMount() {
-        const { amount, onAmountChange }: any = this.props;
-        const satAmount = getSatAmount(amount, this.props.forceUnit);
+        const { amount, onAmountChange, SettingsStore }: any = this.props;
+        const satAmount = getSatAmount(
+            amount,
+            this.props.forceUnit,
+            SettingsStore?.selectedForceFiat
+        );
         onAmountChange(amount, satAmount);
-        this.setState({ satAmount });
+        this.setState({
+            satAmount,
+            forceFiat: SettingsStore?.selectedForceFiat
+        });
     }
 
-    UNSAFE_componentWillReceiveProps(
-        nextProps: Readonly<AmountInputProps>
-    ): void {
-        const { amount, forceUnit } = nextProps;
-        if (forceUnit === 'sats' && forceUnit !== this.props.forceUnit) {
+    componentDidUpdate(
+        prevProps: AmountInputProps,
+        prevState: AmountInputState
+    ) {
+        const { amount, forceUnit, SettingsStore, onAmountChange } = this.props;
+        const currentFiat = SettingsStore?.selectedForceFiat;
+
+        if (prevState.prevForceFiat !== currentFiat) {
+            const newSatAmount = getSatAmount(
+                amount || '',
+                forceUnit,
+                currentFiat
+            );
+            this.setState({
+                satAmount: newSatAmount,
+                forceFiat: currentFiat,
+                prevForceFiat: currentFiat
+            });
+            onAmountChange?.(amount || '', newSatAmount);
+            return;
+        }
+
+        if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
             const currentSatAmount = getSatAmount(
                 amount || '',
-                this.props.forceUnit
+                prevProps.forceUnit,
+                currentFiat
             );
             this.setState({ satAmount: currentSatAmount });
-            this.props.onAmountChange(
-                currentSatAmount.toString(),
-                currentSatAmount
+            onAmountChange?.(currentSatAmount.toString(), currentSatAmount);
+            return;
+        }
+
+        if (forceUnit !== prevProps.forceUnit || amount !== prevProps.amount) {
+            const satAmount = getSatAmount(
+                amount || '',
+                forceUnit,
+                currentFiat
             );
-        } else {
-            const satAmount = getSatAmount(amount || '', forceUnit);
             this.setState({ satAmount });
         }
     }
 
     onChangeUnits = () => {
-        const { amount, onAmountChange, UnitsStore }: any = this.props;
+        const { amount, onAmountChange, UnitsStore, SettingsStore }: any =
+            this.props;
         UnitsStore.changeUnits();
-        const satAmount = getSatAmount(amount, this.props.forceUnit);
+        const satAmount = getSatAmount(
+            amount,
+            this.props.forceUnit,
+            SettingsStore.selectedForceFiat
+        );
         onAmountChange(amount, satAmount);
         this.setState({ satAmount });
+    };
+
+    navigateToCurrencySelection = () => {
+        const { SettingsStore, navigation }: any = this.props;
+
+        navigation.navigate('SelectCurrency', {
+            currencyConverter: false,
+            fromReceive: true,
+            selectedCurrency: SettingsStore.selectedForceFiat,
+            onSelect: (value: string) => {
+                SettingsStore.setSelectedForceFiat(value);
+            }
+        });
+    };
+
+    getFlagEmoji = (currencyValue: string) => {
+        if (currencyValue === 'XAF') {
+            return '';
+        }
+        const currency = CURRENCY_KEYS.find(
+            (currency) => currency.value === currencyValue
+        );
+        if (currency) {
+            return currency.key.split(' ')[0];
+        }
+        return '';
     };
 
     render() {
@@ -198,18 +275,81 @@ export default class AmountInput extends React.Component<
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
+        const fiat = SettingsStore?.selectedForceFiat || settings.fiat;
 
         return (
             <React.Fragment>
                 {title && (
-                    <Text
+                    <View
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: themeColor('secondaryText')
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: 5,
+                            height: 24
                         }}
                     >
-                        {title}
-                    </Text>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('secondaryText'),
+                                fontSize: 14
+                            }}
+                        >
+                            {title}
+                        </Text>
+                        {fiatEnabled && effectiveUnits === 'fiat' && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.navigateToCurrencySelection();
+                                }}
+                                activeOpacity={0.5}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 4,
+                                    paddingHorizontal: 10,
+                                    borderRadius: 16,
+                                    backgroundColor: themeColor('secondary'),
+                                    borderWidth: 1,
+                                    borderColor: themeColor('highlight')
+                                }}
+                            >
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            fontSize: 12,
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            marginRight: 4
+                                        }}
+                                    >
+                                        {this.getFlagEmoji(fiat)}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            fontSize: 12,
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            marginRight: 4
+                                        }}
+                                    >
+                                        {fiat}
+                                    </Text>
+                                    <Icon
+                                        name="chevron-right"
+                                        size={12}
+                                        color={themeColor('text')}
+                                    />
+                                </View>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 )}
                 <Row>
                     {prefix ? prefix : undefined}
@@ -228,7 +368,8 @@ export default class AmountInput extends React.Component<
                             const formatted = text.replace(/[^\d.,-]/g, '');
                             const satAmount = getSatAmount(
                                 formatted,
-                                forceUnit
+                                forceUnit,
+                                SettingsStore?.selectedForceFiat
                             );
                             onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
