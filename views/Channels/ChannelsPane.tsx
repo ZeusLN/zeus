@@ -40,6 +40,7 @@ import ChannelsStore, {
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -79,6 +80,7 @@ interface ChannelsProps {
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
     ModalStore?: ModalStore;
+    UnitsStore?: UnitsStore;
 }
 
 interface ChannelsState {
@@ -134,7 +136,8 @@ const ColorChangingButton = ({ onPress }: { onPress: () => void }) => {
     'LSPStore',
     'NodeInfoStore',
     'SettingsStore',
-    'ModalStore'
+    'ModalStore',
+    'UnitsStore'
 )
 @observer
 export default class ChannelsPane extends React.PureComponent<
@@ -444,7 +447,8 @@ export default class ChannelsPane extends React.PureComponent<
     render() {
         const Tab = createBottomTabNavigator();
 
-        const { ChannelsStore, SettingsStore, navigation } = this.props;
+        const { ChannelsStore, SettingsStore, navigation, UnitsStore } =
+            this.props;
         const {
             loading,
             getChannels,
@@ -723,34 +727,42 @@ export default class ChannelsPane extends React.PureComponent<
                 ) : (
                     <View style={{ flex: 1 }}>
                         <SafeAreaView style={{ flex: 1 }}>
-                            <View>
-                                {ChannelsStore?.error && (
-                                    <ErrorMessage
-                                        message={
-                                            ChannelsStore?.errorDisconnectPeer ||
-                                            ChannelsStore?.errorListPeers ||
-                                            localeString('general.error')
-                                        }
-                                        dismissable
-                                    />
-                                )}
-                            </View>
-                            {ChannelsStore?.loading ? (
+                            {ChannelsStore?.error && (
+                                <ErrorMessage
+                                    message={
+                                        ChannelsStore?.errorDisconnectPeer ||
+                                        ChannelsStore?.errorListPeers ||
+                                        localeString('general.error')
+                                    }
+                                    dismissable
+                                />
+                            )}
+                            {loading ? (
                                 <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />
                                 </View>
                             ) : (
                                 <FlatList
                                     style={{
+                                        flex: 1,
                                         paddingHorizontal: 20,
-                                        paddingBottom: 20,
                                         paddingTop: ChannelsStore?.error
                                             ? 0
                                             : 20
                                     }}
                                     onRefresh={() => ChannelsStore?.getPeers()}
                                     refreshing={ChannelsStore?.loading}
-                                    data={ChannelsStore?.peers}
+                                    data={ChannelsStore?.peers?.filter(
+                                        (peer) => {
+                                            return (
+                                                peer.connected &&
+                                                peer.connected === true
+                                            );
+                                        }
+                                    )}
+                                    ListFooterComponent={
+                                        <View style={{ height: 20 }} />
+                                    }
                                     renderItem={({ item }) => {
                                         const peer = new Peer(item);
 
@@ -859,9 +871,10 @@ export default class ChannelsPane extends React.PureComponent<
                                                             >
                                                                 {`${localeString(
                                                                     'views.OpenChannel.satsSent'
-                                                                )}: ${
-                                                                    peer.sats_sent
-                                                                }`}
+                                                                )}: ${UnitsStore?.getFormattedAmount(
+                                                                    peer.sats_sent,
+                                                                    'sats'
+                                                                )}`}
                                                             </Text>
                                                         )}
                                                         {peer.sats_recv && (
@@ -877,9 +890,10 @@ export default class ChannelsPane extends React.PureComponent<
                                                             >
                                                                 {`${localeString(
                                                                     'views.OpenChannel.satsRecv'
-                                                                )}: ${
-                                                                    peer.sats_recv
-                                                                }`}
+                                                                )}: ${UnitsStore?.getFormattedAmount(
+                                                                    peer.sats_recv,
+                                                                    'sats'
+                                                                )}`}
                                                             </Text>
                                                         )}
                                                         {peer.connected && (
