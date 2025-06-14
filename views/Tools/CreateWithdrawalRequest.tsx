@@ -9,7 +9,6 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 import CollapsedQR from '../../components/CollapsedQR';
-import { unitsStore } from '../../stores/Stores';
 const ZIconWhite = require('../../assets/images/icon-white.png');
 const ZIcon = require('../../assets/images/icon-black.png');
 
@@ -18,6 +17,8 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import InvoicesStore from '../../stores/InvoicesStore';
 import BalanceStore from '../../stores/BalanceStore';
+import UnitsStore from '../../stores/UnitsStore';
+
 import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Icon } from 'react-native-elements';
@@ -28,6 +29,7 @@ interface CreateWithdrawalRequestProps {
     navigation: StackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
     BalanceStore: BalanceStore;
+    UnitsStore: UnitsStore;
 }
 
 interface CreateWithdrawalRequestState {
@@ -41,7 +43,7 @@ interface CreateWithdrawalRequestState {
     withdrawalRequestCreationError: boolean;
 }
 
-@inject('InvoicesStore', 'BalanceStore')
+@inject('InvoicesStore', 'BalanceStore', 'UnitsStore')
 @observer
 export default class CreateWithdrawalRequest extends Component<
     CreateWithdrawalRequestProps,
@@ -63,13 +65,26 @@ export default class CreateWithdrawalRequest extends Component<
 
     handleInputChange = (key: 'amount' | 'description', value: string) => {
         if (key === 'amount') {
-            const msat = (parseInt(value) * 1000).toString();
-            const { units } = unitsStore;
+            const { units } = this.props.UnitsStore;
             const isBTC = units === 'BTC';
+            const isFiat = units === 'fiat';
+
+            let satsAmount: string;
+            if (isBTC) {
+                satsAmount = (
+                    Number(getSatAmount(value, 'BTC')) * 1000
+                ).toString();
+            } else if (isFiat) {
+                satsAmount = (
+                    Number(getSatAmount(value, 'fiat')) * 1000
+                ).toString();
+            } else {
+                satsAmount = (parseInt(value) * 1000).toString();
+            }
 
             this.setState({
                 amount: value,
-                satsAmount: isBTC ? getSatAmount(msat).toString() : msat
+                satsAmount
             });
         } else if (key === 'description') {
             this.setState({
@@ -103,14 +118,18 @@ export default class CreateWithdrawalRequest extends Component<
                     });
                 } else {
                     this.setState({
-                        error_msg: localeString('views.withdrawal.errorCreate')
+                        error_msg: localeString(
+                            'views.Tools.ErrorCreateWithdrawalRequest'
+                        )
                     });
                 }
             } catch (error: any) {
                 this.setState({
                     error_msg:
                         error.toString() ||
-                        localeString('views.withdrawal.errorCreate'),
+                        localeString(
+                            'views.Tools.ErrorCreateWithdrawalRequest'
+                        ),
                     showQR: false,
                     withdrawalRequestCreationError: true
                 });
@@ -191,7 +210,7 @@ export default class CreateWithdrawalRequest extends Component<
                             {this.state.withdrawalRequestCreationError && (
                                 <ErrorMessage
                                     message={localeString(
-                                        'views.withdrawal.errorCreate'
+                                        'views.Tools.ErrorCreateWithdrawalRequest'
                                     )}
                                 />
                             )}
