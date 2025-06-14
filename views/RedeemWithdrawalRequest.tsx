@@ -161,67 +161,56 @@ export default class RedeemWithdrawalRequest extends React.Component<
                 )}
 
                 {!loading && !error && redemptionResult && (
-                    <View
-                        style={{
-                            ...styles.content,
-                            paddingTop: windowSize.height * 0.15
-                        }}
-                    >
-                        {(!loading || !error) && (
-                            <Wordmark
-                                height={windowSize.width * 0.25}
-                                width={windowSize.width}
-                                fill={themeColor('highlight')}
-                            />
-                        )}
-                        {!loading && !error && (
-                            <>
-                                <PaidIndicator />
-                                <View
-                                    style={{
-                                        alignItems: 'center',
-                                        paddingTop: windowSize.height * 0.1
-                                    }}
-                                >
-                                    <SuccessAnimation />
-                                    <Text
-                                        style={{
-                                            color: themeColor('text'),
-                                            paddingTop:
-                                                windowSize.height * 0.03,
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            fontSize:
-                                                windowSize.width *
-                                                windowSize.scale *
-                                                0.017
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.WithdrawalRedemption.success'
-                                        )}
-                                    </Text>
-                                    <View
-                                        style={{
-                                            width: '90%',
-                                            paddingTop: windowSize.height * 0.1
-                                        }}
-                                    >
-                                        <CopyBox
-                                            heading={localeString(
-                                                'views.Invoice.paymentHash'
-                                            )}
-                                            headingCopied={`${localeString(
-                                                'views.Invoice.paymentHash'
-                                            )} ${localeString(
-                                                'components.ExternalLinkModal.copied'
-                                            )}`}
-                                            theme="dark"
-                                            URL={redemptionResult.payment_hash}
-                                        />
-                                    </View>
-                                </View>
-                            </>
-                        )}
+                    <View style={styles.content}>
+                        <Wordmark
+                            height={windowSize.width * 0.25}
+                            width={windowSize.width}
+                            fill={themeColor('highlight')}
+                            style={{ marginBottom: windowSize.height * 0.02 }}
+                        />
+                        <PaidIndicator />
+                        <View
+                            style={{
+                                alignItems: 'center',
+                                paddingTop: windowSize.height * 0.05
+                            }}
+                        >
+                            <SuccessAnimation />
+                            <Text
+                                style={{
+                                    color: themeColor('text'),
+                                    paddingTop: windowSize.height * 0.03,
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    fontSize:
+                                        windowSize.width *
+                                        windowSize.scale *
+                                        0.017
+                                }}
+                            >
+                                {localeString(
+                                    'views.WithdrawalRedemption.success'
+                                )}
+                            </Text>
+                            <View
+                                style={{
+                                    width: '90%',
+                                    paddingTop: windowSize.height * 0.06
+                                }}
+                            >
+                                <CopyBox
+                                    heading={localeString(
+                                        'views.Invoice.paymentHash'
+                                    )}
+                                    headingCopied={`${localeString(
+                                        'views.Invoice.paymentHash'
+                                    )} ${localeString(
+                                        'components.ExternalLinkModal.copied'
+                                    )}`}
+                                    theme="dark"
+                                    URL={redemptionResult.payment_hash}
+                                />
+                            </View>
+                        </View>
                     </View>
                 )}
 
@@ -271,7 +260,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                     <View
                         style={{
                             position: 'absolute',
-                            bottom: 20,
+                            bottom: 10,
                             width: '100%',
                             paddingHorizontal: '5%'
                         }}
@@ -317,7 +306,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                 style={{
                                     alignSelf: 'center',
                                     justifyContent: 'center',
-                                    marginBottom: 20,
+                                    marginBottom: 10,
                                     width: '100%'
                                 }}
                             >
@@ -396,7 +385,8 @@ export default class RedeemWithdrawalRequest extends React.Component<
 const styles = StyleSheet.create({
     content: {
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
+        paddingTop: Dimensions.get('window').height * 0.12,
         width: '100%'
     }
 });
