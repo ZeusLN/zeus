@@ -402,6 +402,48 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </TouchableOpacity>
                     </View>
 
+                    {BackendUtils.supportsWithdrawalRequests() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() =>
+                                    navigation.navigate(
+                                        'CreateWithdrawalRequest'
+                                    )
+                                }
+                            >
+                                <View style={styles.icon}>
+                                    <Icon
+                                        name="edit"
+                                        type="feather"
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={18}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('general.withdrawalRequest')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
                     {BackendUtils.supportsDevTools() && (
                         <View
                             style={{
@@ -443,48 +485,6 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                             stroke={forwardArrowColor}
                                         />
                                     </View>
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {BackendUtils.supportsWithdrawalRequests() && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
-                        >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'CreateWithdrawalRequest'
-                                    )
-                                }
-                            >
-                                <View style={styles.icon}>
-                                    <Icon
-                                        name="edit"
-                                        type="feather"
-                                        color={themeColor('text')}
-                                        underlayColor="transparent"
-                                        size={18}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.withdrawalRequest')}
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
                                 </View>
                             </TouchableOpacity>
                         </View>
