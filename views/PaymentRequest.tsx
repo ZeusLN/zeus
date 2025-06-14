@@ -636,12 +636,7 @@ export default class PaymentRequest extends React.Component<
                                         )}
                                     {isNoAmountInvoice ? (
                                         <AmountInput
-                                            setCurrencySelectOpen={() =>
-                                                this.props.SettingsStore.navigateToCurrencySelection(
-                                                    this.props.navigation,
-                                                    true
-                                                )
-                                            }
+                                            navigation={navigation}
                                             amount={customAmount}
                                             title={localeString(
                                                 'views.PaymentRequest.customAmt'
