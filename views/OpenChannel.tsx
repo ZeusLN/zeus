@@ -579,12 +579,7 @@ export default class OpenChannel extends React.Component<
                         {!connectPeerOnly && (
                             <>
                                 <AmountInput
-                                    setCurrencySelectOpen={() =>
-                                        this.props.SettingsStore.navigateToCurrencySelection(
-                                            this.props.navigation,
-                                            true
-                                        )
-                                    }
+                                    navigation={navigation}
                                     amount={
                                         fundMax
                                             ? utxoBalance > 0
@@ -717,12 +712,7 @@ export default class OpenChannel extends React.Component<
                                                 }}
                                             />
                                             <AmountInput
-                                                setCurrencySelectOpen={() =>
-                                                    this.props.SettingsStore.navigateToCurrencySelection(
-                                                        this.props.navigation,
-                                                        true
-                                                    )
-                                                }
+                                                navigation={navigation}
                                                 amount={
                                                     channel?.local_funding_amount
                                                 }
