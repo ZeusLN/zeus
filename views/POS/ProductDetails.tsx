@@ -320,12 +320,7 @@ export default class ProductDetails extends React.Component<
                                             />
                                         </View>
                                         <AmountInput
-                                            setCurrencySelectOpen={() =>
-                                                this.props.SettingsStore.navigateToCurrencySelection(
-                                                    this.props.navigation,
-                                                    true
-                                                )
-                                            }
+                                            navigation={navigation}
                                             amount={product?.price}
                                             title={localeString(
                                                 'views.Settings.POS.Product.price'

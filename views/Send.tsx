@@ -999,12 +999,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
                                 <AmountInput
-                                    setCurrencySelectOpen={() =>
-                                        this.props.SettingsStore.navigateToCurrencySelection(
-                                            this.props.navigation,
-                                            true
-                                        )
-                                    }
+                                    navigation={navigation}
                                     amount={
                                         fundMax
                                             ? utxoBalance > 0
@@ -1102,12 +1097,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 }}
                                             />
                                             <AmountInput
-                                                setCurrencySelectOpen={() =>
-                                                    this.props.SettingsStore.navigateToCurrencySelection(
-                                                        this.props.navigation,
-                                                        true
-                                                    )
-                                                }
+                                                navigation={navigation}
                                                 amount={output?.amount.toString()}
                                                 title={localeString(
                                                     'views.Send.amount'
@@ -1276,12 +1266,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         NodeInfoStore.supportsOffers && (
                             <React.Fragment>
                                 <AmountInput
-                                    setCurrencySelectOpen={() =>
-                                        this.props.SettingsStore.navigateToCurrencySelection(
-                                            this.props.navigation,
-                                            true
-                                        )
-                                    }
+                                    navigation={navigation}
                                     amount={amount}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(
@@ -1314,12 +1299,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <AmountInput
-                                    setCurrencySelectOpen={() =>
-                                        this.props.SettingsStore.navigateToCurrencySelection(
-                                            this.props.navigation,
-                                            true
-                                        )
-                                    }
+                                    navigation={navigation}
                                     amount={amount}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(
