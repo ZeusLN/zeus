@@ -1853,20 +1853,6 @@ export default class SettingsStore {
         this.selectedForceFiat = currency;
     }
 
-    @action navigateToCurrencySelection = (
-        navigation: any,
-        fromReceive: boolean
-    ) => {
-        navigation.navigate('SelectCurrency', {
-            currencyConverter: false,
-            fromReceive,
-            selectedCurrency: this.selectedForceFiat,
-            onSelect: (value: string) => {
-                this.setSelectedForceFiat(value);
-            }
-        });
-    };
-
     @action resetSelectedForceFiat = () => {
         this.selectedForceFiat = this.settings.fiat ?? DEFAULT_FIAT;
     };
