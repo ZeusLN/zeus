@@ -889,12 +889,7 @@ export default class ReceiveEcash extends React.Component<
                                         </>
 
                                         <AmountInput
-                                            setCurrencySelectOpen={() =>
-                                                this.props.SettingsStore.navigateToCurrencySelection(
-                                                    this.props.navigation,
-                                                    true
-                                                )
-                                            }
+                                            navigation={navigation}
                                             amount={value}
                                             title={`${localeString(
                                                 'views.Receive.amount'

@@ -346,12 +346,7 @@ export default class EcashSettings extends React.Component<
                                         )}
                                     </Text>
                                     <AmountInput
-                                        setCurrencySelectOpen={() =>
-                                            this.props.SettingsStore.navigateToCurrencySelection(
-                                                this.props.navigation,
-                                                true
-                                            )
-                                        }
+                                        navigation={navigation}
                                         amount={sweepThresholdSats}
                                         onAmountChange={
                                             this.handleThresholdChange

@@ -276,12 +276,7 @@ export default class PaymentsSettings extends React.Component<
                     )}
 
                     <AmountInput
-                        setCurrencySelectOpen={() =>
-                            this.props.SettingsStore.navigateToCurrencySelection(
-                                this.props.navigation,
-                                true
-                            )
-                        }
+                        navigation={navigation}
                         amount={slideToPayThreshold.toString()}
                         title={
                             localeString('general.lightning') +

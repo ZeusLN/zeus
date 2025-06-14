@@ -384,12 +384,7 @@ export default class LnurlPay extends React.Component<
                         </View>
                         <View style={{ marginTop: 0 }}>
                             <AmountInput
-                                setCurrencySelectOpen={() =>
-                                    this.props.SettingsStore.navigateToCurrencySelection(
-                                        this.props.navigation,
-                                        true
-                                    )
-                                }
+                                navigation={navigation}
                                 amount={amount}
                                 locked={
                                     loading ||

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from './Amount';
 import TextInput from './TextInput';
@@ -12,7 +13,7 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
@@ -33,7 +34,7 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
-    setCurrencySelectOpen?: (open: boolean) => void;
+    navigation: StackNavigationProp<any, any>;
 }
 
 interface AmountInputState {
@@ -226,6 +227,32 @@ export default class AmountInput extends React.Component<
         this.setState({ satAmount });
     };
 
+    navigateToCurrencySelection = () => {
+        const { SettingsStore, navigation }: any = this.props;
+
+        navigation.navigate('SelectCurrency', {
+            currencyConverter: false,
+            fromReceive: true,
+            selectedCurrency: SettingsStore.selectedForceFiat,
+            onSelect: (value: string) => {
+                SettingsStore.setSelectedForceFiat(value);
+            }
+        });
+    };
+
+    getFlagEmoji = (currencyValue: string) => {
+        if (currencyValue === 'XAF') {
+            return '';
+        }
+        const currency = CURRENCY_KEYS.find(
+            (currency) => currency.value === currencyValue
+        );
+        if (currency) {
+            return currency.key.split(' ')[0];
+        }
+        return '';
+    };
+
     render() {
         const { satAmount } = this.state;
         const {
@@ -248,6 +275,7 @@ export default class AmountInput extends React.Component<
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
+        const fiat = SettingsStore?.selectedForceFiat || settings.fiat;
 
         return (
             <React.Fragment>
@@ -257,7 +285,8 @@ export default class AmountInput extends React.Component<
                             flexDirection: 'row',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            marginBottom: 5
+                            marginBottom: 5,
+                            height: 24
                         }}
                     >
                         <Text
@@ -269,49 +298,57 @@ export default class AmountInput extends React.Component<
                         >
                             {title}
                         </Text>
-                        {fiatEnabled &&
-                            effectiveUnits === 'fiat' &&
-                            this.props.setCurrencySelectOpen && (
-                                <View>
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            this.props.setCurrencySelectOpen?.(
-                                                true
-                                            )
-                                        }
-                                        activeOpacity={0.5}
+                        {fiatEnabled && effectiveUnits === 'fiat' && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    this.navigateToCurrencySelection();
+                                }}
+                                activeOpacity={0.5}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    paddingVertical: 4,
+                                    paddingHorizontal: 10,
+                                    borderRadius: 16,
+                                    backgroundColor: themeColor('secondary'),
+                                    borderWidth: 1,
+                                    borderColor: themeColor('highlight')
+                                }}
+                            >
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text
                                         style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            paddingVertical: 8,
-                                            paddingHorizontal: 14,
-                                            borderRadius: 16,
-                                            backgroundColor:
-                                                themeColor('secondary'),
-                                            borderWidth: 1,
-                                            borderColor: themeColor('highlight')
+                                            fontSize: 12,
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            marginRight: 4
                                         }}
                                     >
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 14,
-                                                fontFamily:
-                                                    'PPNeueMontreal-Medium'
-                                            }}
-                                        >
-                                            {SettingsStore?.selectedForceFiat ||
-                                                settings.fiat}
-                                        </Text>
-                                        <Icon
-                                            name="chevron-right"
-                                            size={14}
-                                            color={themeColor('text')}
-                                            style={{ marginLeft: 5 }}
-                                        />
-                                    </TouchableOpacity>
+                                        {this.getFlagEmoji(fiat)}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            fontSize: 12,
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            marginRight: 4
+                                        }}
+                                    >
+                                        {fiat}
+                                    </Text>
+                                    <Icon
+                                        name="chevron-right"
+                                        size={12}
+                                        color={themeColor('text')}
+                                    />
                                 </View>
-                            )}
+                            </TouchableOpacity>
+                        )}
                     </View>
                 )}
                 <Row>
