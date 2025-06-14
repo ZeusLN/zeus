@@ -432,6 +432,7 @@ export default class TransactionsStore {
                     this.txid = data.txid;
                     this.publishSuccess = true;
                     this.loading = false;
+                    this.settingsStore.triggerBalanceUpdate = true;
                 });
             })
             .catch((error: Error) => {
