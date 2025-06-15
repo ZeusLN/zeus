@@ -311,7 +311,8 @@ export default class StandalonePosPane extends React.PureComponent<
             (item) =>
                 item.name === product.name &&
                 (item.base_price_money.amount === productCalcPrice ||
-                    item.base_price_money.sats === productCalcPrice)
+                    item.base_price_money.sats === productCalcPrice) &&
+                (item.taxPercentage || '') === (product.taxPercentage || '')
         );
 
         if (item) {
@@ -320,6 +321,7 @@ export default class StandalonePosPane extends React.PureComponent<
             order.line_items.push({
                 name: product.name,
                 quantity: 1,
+                taxPercentage: product.taxPercentage || '',
                 base_price_money: {
                     amount:
                         product.pricedIn === PricedIn.Fiat
