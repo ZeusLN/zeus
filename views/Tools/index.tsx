@@ -16,7 +16,7 @@ import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
-import SwapIcon from '../../assets/images/SVG/Swap.svg';
+import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 
 import Header from '../../components/Header';
@@ -135,10 +135,10 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             >
                                 <View style={styles.columnField}>
                                     <View style={styles.icon}>
-                                        <SwapIcon
+                                        <RebalanceIcon
                                             fill={themeColor('text')}
-                                            width={18}
-                                            height={18}
+                                            width={23}
+                                            height={23}
                                         />
                                     </View>
                                     <Text
