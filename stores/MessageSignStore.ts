@@ -1,11 +1,12 @@
 import { action, observable } from 'mobx';
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import addressUtils from '../utils/AddressUtils';
 
 interface VerificationRequest {
     msg: string;
     signature: string;
-    addr?: string; // Optional address for on-chain verification
+    addr?: string;
 }
 
 export default class MessageSignStore {
@@ -24,6 +25,53 @@ export default class MessageSignStore {
         accountName?: string;
         addressType?: string;
     }[] = [];
+
+    private parseErrorMessage(error: any, fallbackMessage: string): string {
+        if (error && typeof error === 'object') {
+            if (error.message) {
+                try {
+                    const parsed = JSON.parse(error.message);
+                    return parsed.message || error.message;
+                } catch {
+                    return error.message;
+                }
+            } else if (error.toString) {
+                try {
+                    const errorStr = error.toString();
+                    const jsonMatch = errorStr.match(/\{.*\}/);
+                    if (jsonMatch) {
+                        const parsed = JSON.parse(jsonMatch[0]);
+                        return parsed.message || errorStr;
+                    } else {
+                        return errorStr;
+                    }
+                } catch {
+                    return error.toString();
+                }
+            } else {
+                return fallbackMessage;
+            }
+        } else {
+            return error ? error.toString() : fallbackMessage;
+        }
+    }
+
+    private handleError(
+        error: any,
+        fallbackMessage: string,
+        resetState: boolean = false
+    ): void {
+        console.error('Error occurred:', error);
+        this.error = true;
+        this.errorMessage = this.parseErrorMessage(error, fallbackMessage);
+        this.loading = false;
+
+        if (resetState) {
+            this.signature = null;
+            this.pubkey = null;
+            this.valid = null;
+        }
+    }
 
     @action
     public reset() {
@@ -49,21 +97,13 @@ export default class MessageSignStore {
     @action
     public loadAddresses = () => {
         this.loading = true;
-        console.log('Loading on-chain addresses...');
 
         const previouslySelectedAddress = this.selectedAddress;
 
         BackendUtils.listAddresses()
             .then((data: any) => {
-                console.log('Address data received:', data);
-
                 // Handle response format from UTXOsStore
                 if (data && data.account_with_addresses) {
-                    // Format from UTXOsStore - has account_with_addresses array
-                    console.log(
-                        `Found ${data.account_with_addresses.length} accounts with addresses`
-                    );
-
                     // Flatten all addresses from all accounts
                     const allAddresses: any[] = [];
                     data.account_with_addresses.forEach((account: any) => {
@@ -71,7 +111,9 @@ export default class MessageSignStore {
                             account.addresses.forEach((addr: any) => {
                                 allAddresses.push({
                                     address: addr.address,
-                                    type: this.getAddressType(addr.address),
+                                    type: addressUtils.getAddressType(
+                                        addr.address
+                                    ),
                                     accountName: account.name,
                                     addressType: account.address_type
                                 });
@@ -79,21 +121,16 @@ export default class MessageSignStore {
                         }
                     });
 
-                    console.log(
-                        `Extracted ${allAddresses.length} total addresses`
-                    );
                     this.addresses = allAddresses;
                 } else if (data && data.addresses) {
                     // Format directly with addresses array (current format)
-                    console.log(
-                        `Found ${data.addresses.length} on-chain addresses`
-                    );
                     this.addresses = data.addresses.map((addr: any) => ({
                         address: addr.address,
-                        type: addr.type || this.getAddressType(addr.address)
+                        type:
+                            addr.type ||
+                            addressUtils.getAddressType(addr.address)
                     }));
                 } else {
-                    console.log('No address data found in expected format');
                     this.addresses = [];
                     this.error = true;
                 }
@@ -107,9 +144,6 @@ export default class MessageSignStore {
 
                 if (addressStillExists) {
                     // Keep the previously selected address
-                    console.log(
-                        `Keeping previously selected address: ${previouslySelectedAddress}`
-                    );
                     this.selectedAddress = previouslySelectedAddress;
                 } else if (this.addresses.length > 0) {
                     // Only set to first address if there was no previous selection or it no longer exists
@@ -127,23 +161,6 @@ export default class MessageSignStore {
             .finally(() => {
                 this.loading = false;
             });
-    };
-
-    private getAddressType = (address: string): string => {
-        // Proper address type detection based on LND's supported types
-        if (address.startsWith('bc1q')) return 'P2WPKH (Segwit)';
-        if (address.startsWith('bc1p')) return 'P2TR (Taproot)';
-        if (address.startsWith('3')) return 'NP2WKH (Nested Segwit)';
-        if (address.startsWith('1')) return 'P2PKH (Legacy)';
-        if (address.startsWith('tb1q')) return 'P2WPKH (Testnet Segwit)';
-        if (address.startsWith('tb1p')) return 'P2TR (Testnet Taproot)';
-        if (address.startsWith('2')) return 'NP2WKH (Testnet Nested Segwit)';
-        if (address.startsWith('m') || address.startsWith('n'))
-            return 'P2PKH (Testnet Legacy)';
-        // Add regtest address patterns
-        if (address.startsWith('bcrt1q')) return 'P2WPKH (Regtest Segwit)';
-        if (address.startsWith('bcrt1p')) return 'P2TR (Regtest Taproot)';
-        return 'Unknown';
     };
 
     @action
@@ -176,10 +193,7 @@ export default class MessageSignStore {
                         }
                     })
                     .catch((error: any) => {
-                        console.error('Error in sign operation:', error);
-                        this.error = true;
-                        this.errorMessage = error.toString();
-                        this.reset();
+                        this.handleError(error, 'Unknown signing error', true);
                     })
                     .finally(() => {
                         this.loading = false;
@@ -193,10 +207,7 @@ export default class MessageSignStore {
                 this.loading = false;
             }
         } catch (error: any) {
-            console.error('Exception in signMessage:', error);
-            this.error = true;
-            this.errorMessage = error.toString();
-            this.loading = false;
+            this.handleError(error, 'Unknown signing error');
         }
     };
 
@@ -230,24 +241,29 @@ export default class MessageSignStore {
                           data.addr || ''
                       );
 
-            console.log(
-                '[MessageSignStore] Calling backend with signingMode:',
-                this.signingMode
-            );
-
             // Check if verifyOperation is a valid Promise
             if (verifyOperation && typeof verifyOperation.then === 'function') {
                 verifyOperation
                     .then((result: any) => {
                         this.valid = result.valid || result.verified || false;
-                        this.pubkey = result.pubkey || result.publicKey;
+                        const rawPubkey = result.pubkey || result.publicKey;
+                        if (rawPubkey) {
+                            if (rawPubkey instanceof Uint8Array) {
+                                this.pubkey = Array.from(rawPubkey, (byte) =>
+                                    byte.toString(16).padStart(2, '0')
+                                ).join('');
+                            } else {
+                                this.pubkey = rawPubkey;
+                            }
+                        } else {
+                            this.pubkey = null;
+                        }
                         this.error = false;
                         this.errorMessage = '';
                     })
                     .catch((error: any) => {
-                        console.error('Error in verify operation:', error);
-                        this.error = true;
-                        this.errorMessage = error.toString();
+                        this.valid = false;
+                        this.handleError(error, 'Unknown verification error');
                     })
                     .finally(() => {
                         this.loading = false;
@@ -263,10 +279,8 @@ export default class MessageSignStore {
                 this.loading = false;
             }
         } catch (error: any) {
-            console.error('Exception in verifyMessage:', error);
-            this.error = true;
-            this.errorMessage = error.toString();
-            this.loading = false;
+            this.valid = false;
+            this.handleError(error, 'Unknown verification error');
         }
     };
 }

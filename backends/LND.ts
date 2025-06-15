@@ -641,7 +641,6 @@ export default class LND {
             msg: Base64Utils.utf8ToBase64(data.msg),
             signature: data.signature
         });
-    supportsAddressMessageSigning = () => true;
     signMessageWithAddr = async (message: string, address: string) =>
         this.postRequest('/v2/wallet/address/signmessage', {
             msg: Base64Utils.utf8ToBase64(message),
@@ -772,4 +771,5 @@ export default class LND {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => false;
+    supportsAddressMessageSigning = () => true;
 }
