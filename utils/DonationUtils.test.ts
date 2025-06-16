@@ -23,12 +23,12 @@ describe('DonationUtils', () => {
     });
 
     describe('findDonationPercentageIndex', () => {
-        const options = [20, 25, 30];
+        const options = [5, 10, 20];
 
         it('should return correct index for exact match', () => {
-            expect(findDonationPercentageIndex(20, options)).toBe(0);
-            expect(findDonationPercentageIndex(25, options)).toBe(1);
-            expect(findDonationPercentageIndex(30, options)).toBe(2);
+            expect(findDonationPercentageIndex(5, options)).toBe(0);
+            expect(findDonationPercentageIndex(10, options)).toBe(1);
+            expect(findDonationPercentageIndex(20, options)).toBe(2);
         });
 
         it('should return null for non-matching percentage', () => {
