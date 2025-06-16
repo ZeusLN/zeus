@@ -6,6 +6,7 @@ import {
     View,
     TouchableOpacity
 } from 'react-native';
+import { reaction } from 'mobx';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Slider from '@react-native-community/slider';
@@ -91,6 +92,7 @@ export default class CashuPaymentRequest extends React.Component<
 > {
     listener: any;
     isComponentMounted: boolean = false;
+    payReqDisposer: any;
     state = {
         customAmount: '',
         satAmount: '',
@@ -101,6 +103,36 @@ export default class CashuPaymentRequest extends React.Component<
         donationAmount: 0,
         selectedIndex: null
     };
+
+    async componentDidMount() {
+        const { SettingsStore, CashuStore } = this.props;
+        const settings = await SettingsStore.getSettings();
+        const { defaultDonationPercentage } = settings.payments;
+
+        this.payReqDisposer = reaction(
+            () => CashuStore.payReq,
+            (payReq) => {
+                if (payReq?.getRequestAmount) {
+                    const requestAmount = payReq.getRequestAmount;
+                    const donationAmount = calculateDonationAmount(
+                        requestAmount,
+                        Number(defaultDonationPercentage) || 0
+                    );
+                    const index = findDonationPercentageIndex(
+                        Number(defaultDonationPercentage) || 0,
+                        [5, 10, 20]
+                    );
+
+                    this.setState({
+                        donationAmount,
+                        selectedIndex: index,
+                        donationPercentage:
+                            Number(defaultDonationPercentage) || 0
+                    });
+                }
+            }
+        );
+    }
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
@@ -237,7 +269,7 @@ export default class CashuPaymentRequest extends React.Component<
             </TouchableOpacity>
         );
 
-        const donationPercentageOptions = [20, 25, 30];
+        const donationPercentageOptions = [5, 10, 20];
 
         const handleButtonPress = (index: number) => {
             const percentage = donationPercentageOptions[index];
