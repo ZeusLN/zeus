@@ -149,6 +149,8 @@ export default class PaymentRequest extends React.Component<
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
 
+        const { defaultDonationPercentage } = settings.payments;
+
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
         const requestAmount = pay_req && pay_req.getRequestAmount;
@@ -160,6 +162,16 @@ export default class PaymentRequest extends React.Component<
         }
 
         const validAmountToSwap = this.isAmountValidToSwap();
+        const donationPercentageOptions = [5, 10, 20];
+
+        const donationAmount = calculateDonationAmount(
+            requestAmount ?? 0,
+            Number(defaultDonationPercentage) || 0
+        );
+        const index = findDonationPercentageIndex(
+            Number(defaultDonationPercentage) || 0,
+            donationPercentageOptions
+        );
 
         this.setState({
             feeOption,
@@ -167,7 +179,11 @@ export default class PaymentRequest extends React.Component<
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
             slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            validAmountToSwap
+            validAmountToSwap,
+            donationPercentage:
+                settings?.payments?.defaultDonationPercentage || 0,
+            donationAmount,
+            selectedIndex: index
         });
 
         if (implementation === 'embedded-lnd') {
@@ -486,7 +502,7 @@ export default class PaymentRequest extends React.Component<
         const getMemo = pay_req && pay_req.getMemo;
         const getNameDescReceiver = pay_req && pay_req.getNameDescReceiver;
 
-        const donationPercentageOptions = [20, 25, 30];
+        const donationPercentageOptions = [5, 10, 20];
 
         const handleButtonPress = (index: number) => {
             const percentage = donationPercentageOptions[index];
