@@ -81,13 +81,29 @@ export default class SignVerifyMessage extends React.Component<
                 'focus',
                 () => {
                     MessageSignStore.loadAddresses();
-
                     this.checkForAddressSelection();
                 }
             );
         }
 
+        this.handleRouteParams(route?.params || {});
+    };
+
+    componentWillUnmount() {
+        if (this.navigationFocusListener) {
+            this.navigationFocusListener();
+        }
+    }
+
+    checkForAddressSelection = () => {
+        const { route } = this.props;
         const params = route?.params || {};
+
+        this.handleRouteParams(params);
+    };
+
+    handleRouteParams = (params: any) => {
+        const { MessageSignStore } = this.props;
 
         if (params.selectedIndex !== undefined) {
             this.setState({ selectedIndex: params.selectedIndex });
@@ -106,25 +122,12 @@ export default class SignVerifyMessage extends React.Component<
             });
         }
 
-        this.checkForAddressSelection();
-    };
-
-    componentWillUnmount() {
-        if (this.navigationFocusListener) {
-            this.navigationFocusListener();
-        }
-    }
-
-    checkForAddressSelection = () => {
-        const { route, MessageSignStore } = this.props;
-        const { params } = route || {};
-
-        if (params?.preserveMode === 'onchain') {
+        if (params.preserveMode === 'onchain') {
             this.setState({ signingMode: 'onchain' });
             MessageSignStore.setSigningMode('onchain');
         }
 
-        if (params?.selectedAddress) {
+        if (params.selectedAddress) {
             const selectedAddress = params.selectedAddress;
             const mode = params.mode;
 
@@ -142,11 +145,6 @@ export default class SignVerifyMessage extends React.Component<
                 });
                 MessageSignStore.setSigningMode('onchain');
             }
-        }
-
-        if (params?.selectedIndex !== undefined) {
-            const selectedIndex = params.selectedIndex;
-            this.setState({ selectedIndex });
         }
 
         if (params?.signingMode) {
@@ -286,9 +284,13 @@ export default class SignVerifyMessage extends React.Component<
             this.setSelectedAddress(mode, address);
         };
 
-        navigation.navigate('AddressPicker', {
+        navigation.navigate('OnChainAddresses', {
+            selectionMode: true,
             selectedAddress,
-            onAddressSelected: handleAddressSelected
+            onAddressSelected: handleAddressSelected,
+            headerTitle: localeString(
+                'views.Settings.SignMessage.selectAddress'
+            )
         });
     };
 
@@ -302,8 +304,44 @@ export default class SignVerifyMessage extends React.Component<
     renderAddressSelector = (mode: 'sign' | 'verify') => {
         const { MessageSignStore } = this.props;
         const { addresses } = MessageSignStore;
-        const { selectedAddress } = this.state;
+        const { selectedAddress, loading } = this.state;
 
+        if (mode === 'verify') {
+            return (
+                <View style={styles.addressSelector}>
+                    <Text
+                        style={{
+                            ...styles.text,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {localeString(
+                            'views.Settings.SignMessage.selectAddressVerification'
+                        )}
+                    </Text>
+                    <TextInput
+                        value={selectedAddress}
+                        onChangeText={(text: string) => {
+                            this.setState({ selectedAddress: text });
+                            MessageSignStore.setSelectedAddress(text);
+
+                            if (MessageSignStore.error) {
+                                MessageSignStore.reset();
+                                MessageSignStore.setSigningMode(
+                                    this.state.signingMode as
+                                        | 'lightning'
+                                        | 'onchain'
+                                );
+                                MessageSignStore.setSelectedAddress(text);
+                            }
+                        }}
+                        locked={loading}
+                    />
+                </View>
+            );
+        }
+
+        // For signing, use the address picker since you can only sign with your own addresses
         const currentAddressDetails = addresses.find(
             (addr) => addr.address === selectedAddress
         );
@@ -311,14 +349,15 @@ export default class SignVerifyMessage extends React.Component<
 
         return (
             <View style={styles.addressSelector}>
-                <Text style={{ color: themeColor('secondaryText') }}>
-                    {mode === 'sign'
-                        ? localeString(
-                              'views.Settings.SignMessage.selectAddressSigning'
-                          )
-                        : localeString(
-                              'views.Settings.SignMessage.selectAddressVerification'
-                          )}
+                <Text
+                    style={{
+                        ...styles.text,
+                        color: themeColor('secondaryText')
+                    }}
+                >
+                    {localeString(
+                        'views.Settings.SignMessage.selectAddressSigning'
+                    )}
                 </Text>
 
                 <TouchableOpacity
@@ -505,7 +544,6 @@ export default class SignVerifyMessage extends React.Component<
                         backgroundColor: themeColor('secondary'),
                         borderRadius: 12,
                         borderColor: themeColor('secondary'),
-                        marginTop: 10,
                         marginBottom: 10
                     }}
                     innerBorderStyle={{
@@ -514,6 +552,133 @@ export default class SignVerifyMessage extends React.Component<
                 />
             </View>
         );
+    };
+
+    handleTextInputChange = (
+        field: keyof SignVerifyMessageState,
+        value: string
+    ) => {
+        this.setState({ [field]: value } as any);
+
+        if (this.props.MessageSignStore.error) {
+            this.props.MessageSignStore.reset();
+            this.props.MessageSignStore.setSigningMode(
+                this.state.signingMode as 'lightning' | 'onchain'
+            );
+        }
+    };
+
+    renderErrorMessage = (customCondition: boolean = true) => {
+        const { MessageSignStore } = this.props;
+        const { error, errorMessage } = MessageSignStore;
+
+        if (error && customCondition) {
+            return (
+                <View style={styles.result}>
+                    <ErrorMessage
+                        message={
+                            errorMessage ||
+                            localeString('views.Settings.SignMessage.error')
+                        }
+                    />
+                </View>
+            );
+        }
+
+        return null;
+    };
+
+    renderVerificationResult = () => {
+        const { MessageSignStore } = this.props;
+        const { valid, error, errorMessage } = MessageSignStore;
+
+        if (valid !== null || error) {
+            return (
+                <View style={styles.result}>
+                    {valid ? (
+                        <SuccessMessage
+                            message={localeString(
+                                'views.Settings.SignMessage.success'
+                            )}
+                        />
+                    ) : (
+                        <ErrorMessage
+                            message={
+                                error && errorMessage
+                                    ? errorMessage
+                                    : localeString(
+                                          'views.Settings.SignMessage.error'
+                                      )
+                            }
+                        />
+                    )}
+                </View>
+            );
+        }
+
+        return null;
+    };
+
+    validateSigningInput = () => {
+        const { messageToSign } = this.state;
+
+        if (
+            this.state.signingMode === 'onchain' &&
+            !this.state.selectedAddress
+        ) {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseSelectAddress')
+            );
+            return false;
+        }
+
+        if (!messageToSign || messageToSign.trim() === '') {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseEnterMessage')
+            );
+            return false;
+        }
+
+        return true;
+    };
+
+    validateVerificationInput = () => {
+        const {
+            messageToVerify,
+            signatureToVerify,
+            selectedAddress,
+            signingMode
+        } = this.state;
+        const { supportsAddressMessageSigning } = this.state;
+
+        if (!messageToVerify || messageToVerify.trim() === '') {
+            Alert.alert(
+                localeString(
+                    'views.Settings.SignMessage.pleaseEnterMessageVerify'
+                )
+            );
+            return false;
+        }
+
+        if (!signatureToVerify || signatureToVerify.trim() === '') {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseEnterSignature')
+            );
+            return false;
+        }
+
+        if (
+            supportsAddressMessageSigning &&
+            signingMode === 'onchain' &&
+            (!selectedAddress || selectedAddress.trim() === '')
+        ) {
+            Alert.alert(
+                localeString('views.Settings.SignMessage.pleaseSelectAddress')
+            );
+            return false;
+        }
+
+        return true;
     };
 
     render() {
@@ -615,9 +780,9 @@ export default class SignVerifyMessage extends React.Component<
                     {supportsAddressMessageSigning && (
                         <Text
                             style={{
+                                ...styles.text,
                                 color: themeColor('secondaryText'),
-                                paddingTop: 20,
-                                paddingLeft: 10
+                                paddingTop: 20
                             }}
                         >
                             {selectedIndex === 0
@@ -661,11 +826,12 @@ export default class SignVerifyMessage extends React.Component<
                                         'views.Settings.SignMessage.placeHolder'
                                     )}
                                     value={messageToSign}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            messageToSign: text
-                                        })
-                                    }
+                                    onChangeText={(text: string) => {
+                                        this.handleTextInputChange(
+                                            'messageToSign',
+                                            text
+                                        );
+                                    }}
                                     multiline
                                     style={{
                                         height: 100
@@ -683,34 +849,14 @@ export default class SignVerifyMessage extends React.Component<
                                         name: 'create'
                                     }}
                                     onPress={() => {
-                                        if (
-                                            this.state.signingMode === 'onchain'
-                                        ) {
-                                            if (!this.state.selectedAddress) {
-                                                Alert.alert(
-                                                    localeString(
-                                                        'views.Settings.SignMessage.pleaseSelectAddress'
-                                                    )
-                                                );
-                                                return;
-                                            }
+                                        if (this.validateSigningInput()) {
+                                            signMessage(messageToSign);
                                         }
-
-                                        if (
-                                            !messageToSign ||
-                                            messageToSign.trim() === ''
-                                        ) {
-                                            Alert.alert(
-                                                localeString(
-                                                    'views.Settings.SignMessage.pleaseEnterMessage'
-                                                )
-                                            );
-                                            return;
-                                        }
-                                        signMessage(messageToSign);
                                     }}
                                 />
                             </View>
+
+                            {this.renderErrorMessage(selectedIndex === 0)}
 
                             {signature && (
                                 <View>
@@ -764,11 +910,12 @@ export default class SignVerifyMessage extends React.Component<
                                         'views.Settings.SignMessage.placeHolder'
                                     )}
                                     value={messageToVerify}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            messageToVerify: text
-                                        })
-                                    }
+                                    onChangeText={(text: string) => {
+                                        this.handleTextInputChange(
+                                            'messageToVerify',
+                                            text
+                                        );
+                                    }}
                                     locked={loading}
                                     multiline
                                     style={{
@@ -790,11 +937,12 @@ export default class SignVerifyMessage extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={signatureToVerify}
-                                    onChangeText={(text: string) =>
-                                        this.setState({
-                                            signatureToVerify: text
-                                        })
-                                    }
+                                    onChangeText={(text: string) => {
+                                        this.handleTextInputChange(
+                                            'signatureToVerify',
+                                            text
+                                        );
+                                    }}
                                     multiline
                                     style={{
                                         height: 100
@@ -803,23 +951,7 @@ export default class SignVerifyMessage extends React.Component<
                                 />
                             </View>
 
-                            {valid !== null ? (
-                                <View style={styles.result}>
-                                    {valid ? (
-                                        <SuccessMessage
-                                            message={`${localeString(
-                                                'views.Settings.SignMessage.success'
-                                            )} ${pubkey ? `${pubkey}` : ''}`}
-                                        />
-                                    ) : (
-                                        <ErrorMessage
-                                            message={localeString(
-                                                'views.Settings.SignMessage.error'
-                                            )}
-                                        />
-                                    )}
-                                </View>
-                            ) : null}
+                            {this.renderVerificationResult()}
 
                             <View style={styles.button}>
                                 <Button
@@ -872,37 +1004,11 @@ export default class SignVerifyMessage extends React.Component<
             signingMode
         } = this.state;
 
-        if (!messageToVerify || messageToVerify.trim() === '') {
-            Alert.alert(
-                localeString(
-                    'views.Settings.SignMessage.pleaseEnterMessageVerify'
-                )
-            );
-            return;
-        }
-
-        if (!signatureToVerify || signatureToVerify.trim() === '') {
-            Alert.alert(
-                localeString('views.Settings.SignMessage.pleaseEnterSignature')
-            );
+        if (!this.validateVerificationInput()) {
             return;
         }
 
         const { supportsAddressMessageSigning } = this.state;
-
-        if (
-            supportsAddressMessageSigning &&
-            signingMode === 'onchain' &&
-            (!selectedAddress || selectedAddress.trim() === '')
-        ) {
-            Alert.alert(
-                localeString('views.Settings.SignMessage.pleaseSelectAddress')
-            );
-            console.log(
-                '[SignVerifyMessage] Verification aborted: no address provided for on-chain verification'
-            );
-            return;
-        }
 
         const verifyRequest = {
             msg: messageToVerify,
@@ -942,26 +1048,15 @@ const styles = StyleSheet.create({
     result: {
         paddingTop: 20
     },
-    infoBox: {
-        padding: 10,
-        borderRadius: 6,
-        borderWidth: 1
-    },
     addressInfoBox: {
         padding: 10,
         borderRadius: 6,
         borderWidth: 1,
         marginTop: 10
     },
-    errorBox: {
-        padding: 10,
-        borderRadius: 6,
-        borderWidth: 1,
-        marginTop: 10
-    },
     addressSelector: {
-        marginTop: 10,
-        marginBottom: 10
+        marginBottom: 10,
+        marginTop: 6
     },
     addressButton: {
         padding: 10,
