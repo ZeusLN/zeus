@@ -139,10 +139,7 @@ export default class ReceiveEcash extends React.Component<
         };
     }
 
-    listener: any;
-    listenerSecondary: any;
     lnInterval: any;
-    onChainInterval: any;
     hopPickerRef: HopPicker | null;
 
     async UNSAFE_componentWillMount() {
@@ -225,22 +222,14 @@ export default class ReceiveEcash extends React.Component<
         this.setState({ nfcSupported });
     }
 
-    clearListeners = () => {
-        if (this.listener && this.listener.stop) this.listener.stop();
-        if (this.listenerSecondary && this.listenerSecondary.stop)
-            this.listenerSecondary.stop();
-    };
-
     clearIntervals = () => {
         if (this.lnInterval) clearInterval(this.lnInterval);
-        if (this.onChainInterval) clearInterval(this.onChainInterval);
     };
 
     onBack = () => {
         const { CashuStore } = this.props;
         const { clearInvoice } = CashuStore;
-        // kill all listeners and pollers before navigating back
-        this.clearListeners();
+        // kill pollers before navigating back
         this.clearIntervals();
 
         // clear invoice
