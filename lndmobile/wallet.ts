@@ -526,10 +526,6 @@ export const signMessageWithAddr = async (
     addr: string
 ): Promise<walletrpc.SignMessageWithAddrResponse> => {
     try {
-        console.log(
-            `lndmobile/wallet.ts: signMessageWithAddr called with address: ${addr}`
-        );
-
         const response = await sendCommand<
             walletrpc.ISignMessageWithAddrRequest,
             walletrpc.SignMessageWithAddrRequest,
@@ -582,16 +578,8 @@ export const verifyMessageWithAddr = async (
         }
 
         if (!msg || msg.length === 0) {
-            console.error(
-                '[lndmobile/wallet.ts] verifyMessageWithAddr: Error - message is empty'
-            );
             throw new Error('Message is required for verification');
         }
-
-        const msgBase64 = Base64Utils.bytesToBase64(msg);
-        console.log(
-            `[lndmobile/wallet.ts] verifyMessageWithAddr: base64 encoded message length: ${msgBase64.length}`
-        );
 
         // Enhanced signature debugging
         let signatureToUse = signature;
