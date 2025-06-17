@@ -3,10 +3,6 @@
 #import "StreamingCallback.h"
 #import "Lndmobile.xcframework/ios-arm64/Lndmobile.framework/Headers/Lndmobile.h"
 
-#ifdef RCT_NEW_ARCH_ENABLED
-#import "RNLncRnSpec.h"
-#endif
-
 @implementation LncModule
 RCT_EXPORT_MODULE()
 
