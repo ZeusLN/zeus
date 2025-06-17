@@ -3,6 +3,8 @@ require_relative '../node_modules/@react-native-community/cli-platform-ios/nativ
 
 platform :ios, min_ios_version_supported
 
+use_frameworks! :linkage => :static
+
 target 'zeus' do
   config = use_native_modules!
 
