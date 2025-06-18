@@ -1,7 +1,7 @@
 import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 
-interface RoutingPolicy {
+export interface RoutingPolicy {
     time_lock_delta: number;
     min_htlc: string;
     fee_base_msat: string;
