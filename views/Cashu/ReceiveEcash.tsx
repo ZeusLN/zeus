@@ -18,6 +18,7 @@ import NfcManager, {
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
+import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
 
@@ -139,10 +140,7 @@ export default class ReceiveEcash extends React.Component<
         };
     }
 
-    listener: any;
-    listenerSecondary: any;
     lnInterval: any;
-    onChainInterval: any;
     hopPickerRef: HopPicker | null;
 
     async UNSAFE_componentWillMount() {
@@ -225,23 +223,13 @@ export default class ReceiveEcash extends React.Component<
         this.setState({ nfcSupported });
     }
 
-    clearListeners = () => {
-        if (this.listener && this.listener.stop) this.listener.stop();
-        if (this.listenerSecondary && this.listenerSecondary.stop)
-            this.listenerSecondary.stop();
-    };
-
     clearIntervals = () => {
         if (this.lnInterval) clearInterval(this.lnInterval);
-        if (this.onChainInterval) clearInterval(this.onChainInterval);
     };
 
     onBack = () => {
         const { CashuStore } = this.props;
         const { clearInvoice } = CashuStore;
-        // kill all listeners and pollers before navigating back
-        this.clearListeners();
-        this.clearIntervals();
 
         // clear invoice
         clearInvoice();
@@ -357,12 +345,17 @@ export default class ReceiveEcash extends React.Component<
         const { CashuStore, PosStore } = this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
-        const { setWatchedInvoicePaid, checkInvoicePaid, quoteId } = CashuStore;
+        const { setWatchedInvoicePaid, checkInvoicePaid } = CashuStore;
 
-        if (!quoteId) return;
+        if (!CashuStore.quoteId) return;
+
+        // persist invoice to check,
+        // incase user backs out of view
+        const quoteId = cloneDeep(CashuStore.quoteId);
+        const selectedMintUrl = cloneDeep(CashuStore.selectedMintUrl);
 
         this.lnInterval = setInterval(() => {
-            checkInvoicePaid().then(
+            checkInvoicePaid(quoteId, selectedMintUrl).then(
                 (response?: {
                     isPaid: boolean;
                     amtSat?: number;
