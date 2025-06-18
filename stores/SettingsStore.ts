@@ -899,6 +899,11 @@ export const CURRENCY_KEYS = [
         supportedSources: ['Zeus', 'Yadio']
     },
     {
+        key: '🇿🇲 Zambian Kwacha (ZMW)',
+        value: 'ZMW',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
         key: 'Gold (XAU)',
         value: 'XAU',
         supportedSources: ['Zeus', 'Yadio']
