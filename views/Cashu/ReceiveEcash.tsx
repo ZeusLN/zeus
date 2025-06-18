@@ -18,6 +18,7 @@ import NfcManager, {
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import Clipboard from '@react-native-clipboard/clipboard';
+import cloneDeep from 'lodash/cloneDeep';
 
 import handleAnything from '../../utils/handleAnything';
 
@@ -229,8 +230,6 @@ export default class ReceiveEcash extends React.Component<
     onBack = () => {
         const { CashuStore } = this.props;
         const { clearInvoice } = CashuStore;
-        // kill pollers before navigating back
-        this.clearIntervals();
 
         // clear invoice
         clearInvoice();
@@ -346,12 +345,17 @@ export default class ReceiveEcash extends React.Component<
         const { CashuStore, PosStore } = this.props;
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
-        const { setWatchedInvoicePaid, checkInvoicePaid, quoteId } = CashuStore;
+        const { setWatchedInvoicePaid, checkInvoicePaid } = CashuStore;
 
-        if (!quoteId) return;
+        if (!CashuStore.quoteId) return;
+
+        // persist invoice to check,
+        // incase user backs out of view
+        const quoteId = cloneDeep(CashuStore.quoteId);
+        const selectedMintUrl = cloneDeep(CashuStore.selectedMintUrl);
 
         this.lnInterval = setInterval(() => {
-            checkInvoicePaid().then(
+            checkInvoicePaid(quoteId, selectedMintUrl).then(
                 (response?: {
                     isPaid: boolean;
                     amtSat?: number;
