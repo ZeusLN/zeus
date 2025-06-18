@@ -752,14 +752,19 @@ export default class ChannelsPane extends React.PureComponent<
                                     }}
                                     onRefresh={() => ChannelsStore?.getPeers()}
                                     refreshing={ChannelsStore?.loading}
-                                    data={ChannelsStore?.peers?.filter(
-                                        (peer) => {
-                                            return (
-                                                peer.connected &&
-                                                peer.connected === true
-                                            );
-                                        }
-                                    )}
+                                    data={
+                                        BackendUtils.isLNDBased()
+                                            ? ChannelsStore?.peers
+                                            : ChannelsStore?.peers?.filter(
+                                                  (peer) => {
+                                                      return (
+                                                          peer.connected &&
+                                                          peer.connected ===
+                                                              true
+                                                      );
+                                                  }
+                                              )
+                                    }
                                     ListFooterComponent={
                                         <View style={{ height: 20 }} />
                                     }
