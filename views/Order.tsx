@@ -236,7 +236,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 ? DEFAULT_CUSTOM_TIP_PERCENTAGE
                                 : customPercentage;
                         totalSats = new BigNumber(subTotalSats)
-                            .multipliedBy(`1.${effectivePercentage}`)
+                            .multipliedBy(
+                                new BigNumber(1).plus(
+                                    new BigNumber(effectivePercentage).div(100)
+                                )
+                            )
                             .plus(taxSats)
                             .toFixed(0);
                         tipSats = new BigNumber(subTotalSats)
@@ -648,7 +652,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 ? DEFAULT_CUSTOM_TIP_PERCENTAGE
                                 : customPercentage;
                         totalSats = new BigNumber(subTotalSats)
-                            .multipliedBy(`1.${effectivePercentage}`)
+                            .multipliedBy(
+                                new BigNumber(1).plus(
+                                    new BigNumber(effectivePercentage).div(100)
+                                )
+                            )
                             .plus(taxSats)
                             .toFixed(0);
                         tipSats = new BigNumber(subTotalSats)
