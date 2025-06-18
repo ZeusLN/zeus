@@ -5,7 +5,7 @@ import { randomBytes } from 'react-native-randombytes';
 
 import Channel from '../models/Channel';
 import ClosedChannel from '../models/ClosedChannel';
-import ChannelInfo from '../models/ChannelInfo';
+import ChannelInfo, { RoutingPolicy } from '../models/ChannelInfo';
 import FundedPsbt from '../models/FundedPsbt';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
@@ -1030,9 +1030,8 @@ export default class ChannelsStore {
             });
     };
 
-    // for CLNRest
-    public getNodePolicy = (chanId: string) => {
-        if (!this.chanInfo[chanId]) return;
+    // for CLNRest nodes, because the backend does not return the node policy.
+    public getNodePolicy = (chanId: string): RoutingPolicy => {
         return {
             time_lock_delta: this.chanInfo[chanId].delay,
             min_htlc: this.chanInfo[chanId].htlc_minimum_msat.toString(),
@@ -1042,7 +1041,7 @@ export default class ChannelsStore {
                 this.chanInfo[chanId].fee_per_millionth.toString(),
             disabled: false,
             max_htlc_msat: this.chanInfo[chanId].htlc_maximum_msat.toString(),
-            last_update: this.chanInfo[chanId].last_update?.toString()
+            last_update: Number(this.chanInfo[chanId].last_update?.toString())
         };
     };
 
