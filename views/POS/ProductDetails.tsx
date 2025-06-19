@@ -126,19 +126,12 @@ export default class ProductDetails extends React.Component<
 
                 if (product) {
                     if (this.props.UnitsStore.units !== product.pricedIn) {
-                        // change unit to match product
                         while (
                             this.props.UnitsStore.units !== product.pricedIn
                         ) {
                             this.props.UnitsStore.changeUnits();
                         }
                     }
-
-                    // Ensure taxPercentage exists for existing products
-                    if (product.taxPercentage === undefined) {
-                        product.taxPercentage = '';
-                    }
-
                     this.setState({
                         categories: categoryOptions,
                         product,
@@ -194,10 +187,7 @@ export default class ProductDetails extends React.Component<
                         return;
                     }
                     value = value.replace(',', '.');
-                    if (
-                        value !== '' &&
-                        (isNaN(parseFloat(value)) || parseFloat(value) < 0)
-                    ) {
+                    if (value !== '' && isNaN(parseFloat(value))) {
                         return;
                     }
                     break;

@@ -26,15 +26,7 @@ export default class InventoryStore {
                     this.categories = JSON.parse(categories) || [];
                 }
                 if (products) {
-                    this.products = (JSON.parse(products) || []).map(
-                        (product: any) => {
-                            // Ensure all products have the taxPercentage field for backward compatibility
-                            if (product.taxPercentage === undefined) {
-                                product.taxPercentage = '';
-                            }
-                            return product;
-                        }
-                    );
+                    this.products = JSON.parse(products) || [];
                 }
             });
         } catch (error) {
