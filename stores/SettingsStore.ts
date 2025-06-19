@@ -1329,6 +1329,7 @@ export default class SettingsStore {
     @observable certVerification: boolean | undefined;
     @observable public loggedIn = false;
     @observable public triggerSettingsRefresh: boolean = false;
+    @observable public triggerBalanceUpdate: boolean = false;
     @observable public connecting = true;
     @observable public fetchLock = false;
     @observable public lurkerExposed = false;
