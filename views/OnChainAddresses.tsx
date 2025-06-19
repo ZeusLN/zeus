@@ -9,8 +9,9 @@ import { Button, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import chain from 'lodash/chain';
 import cloneDeep from 'lodash/cloneDeep';
+// leave as is, do not do tree-shaking
+import { chain } from 'lodash';
 
 import Amount from '../components/Amount';
 import Header from '../components/Header';

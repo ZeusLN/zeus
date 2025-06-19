@@ -1,6 +1,7 @@
 import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
-import chain from 'lodash/chain';
+// leave as is, do not do tree-shaking
+import { chain } from 'lodash';
 import { randomBytes } from 'react-native-randombytes';
 
 import Channel from '../models/Channel';
