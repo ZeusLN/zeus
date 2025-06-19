@@ -130,11 +130,9 @@ export default class PaymentRequest extends React.Component<
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore, SwapStore } = this.props;
+        const { SettingsStore, InvoicesStore } = this.props;
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
-
-        const subInfo: any = SwapStore.subInfo;
 
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
@@ -146,10 +144,7 @@ export default class PaymentRequest extends React.Component<
             }
         }
 
-        const validAmountToSwap = this.isAmountValidToSwap(
-            subInfo,
-            requestAmount
-        );
+        const validAmountToSwap = this.isAmountValidToSwap();
 
         this.setState({
             feeOption,
@@ -169,7 +164,13 @@ export default class PaymentRequest extends React.Component<
         }
     }
 
-    isAmountValidToSwap(subInfo: any, requestAmount: number | null): boolean {
+    isAmountValidToSwap(): boolean {
+        const { SwapStore, InvoicesStore } = this.props;
+
+        const subInfo: any = SwapStore.subInfo;
+        const { pay_req } = InvoicesStore;
+        const requestAmount = pay_req && pay_req.getRequestAmount;
+
         if (!subInfo) {
             return false;
         }
