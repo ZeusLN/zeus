@@ -24,6 +24,7 @@ import TextInput from '../components/TextInput';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { calculateTotalSats } from '../utils/TipUtils';
 
 import BackendUtils from '../utils/BackendUtils';
 import FiatStore from '../stores/FiatStore';
@@ -235,10 +236,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             customPercentage === ''
                                 ? DEFAULT_CUSTOM_TIP_PERCENTAGE
                                 : customPercentage;
-                        totalSats = new BigNumber(subTotalSats)
-                            .multipliedBy(`1.${effectivePercentage}`)
-                            .plus(taxSats)
-                            .toFixed(0);
+                        totalSats = calculateTotalSats(
+                            subTotalSats,
+                            effectivePercentage,
+                            taxSats
+                        );
                         tipSats = new BigNumber(subTotalSats)
                             .multipliedBy(
                                 new BigNumber(effectivePercentage).dividedBy(
@@ -647,10 +649,11 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                             customPercentage === ''
                                 ? DEFAULT_CUSTOM_TIP_PERCENTAGE
                                 : customPercentage;
-                        totalSats = new BigNumber(subTotalSats)
-                            .multipliedBy(`1.${effectivePercentage}`)
-                            .plus(taxSats)
-                            .toFixed(0);
+                        totalSats = calculateTotalSats(
+                            subTotalSats,
+                            effectivePercentage,
+                            taxSats
+                        );
                         tipSats = new BigNumber(subTotalSats)
                             .multipliedBy(
                                 new BigNumber(effectivePercentage).dividedBy(
