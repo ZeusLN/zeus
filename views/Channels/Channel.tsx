@@ -172,6 +172,16 @@ export default class ChannelView extends React.Component<
         }
     }
 
+    componentDidMount() {
+        const { channel } = this.state;
+
+        const closeAddress: string | undefined = channel?.close_address;
+
+        if (closeAddress && closeAddress !== '') {
+            this.setState({ deliveryAddress: closeAddress });
+        }
+    }
+
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
@@ -1202,9 +1212,16 @@ export default class ChannelView extends React.Component<
                                                     ...styles.text,
                                                     color: themeColor('text')
                                                 }}
-                                                infoModalText={localeString(
-                                                    'views.Channel.externalAddress.info'
-                                                )}
+                                                infoModalText={
+                                                    closeAddress &&
+                                                    closeAddress !== ''
+                                                        ? localeString(
+                                                              'views.Channel.externalAddress.info2'
+                                                          )
+                                                        : localeString(
+                                                              'views.Channel.externalAddress.info1'
+                                                          )
+                                                }
                                             >
                                                 {localeString(
                                                     'views.Channel.externalAddress'
@@ -1219,10 +1236,13 @@ export default class ChannelView extends React.Component<
                                                     this.setState({
                                                         deliveryAddress: text
                                                     });
-                                                    ChannelsStore.closeChannelErr =
-                                                        '';
                                                 }}
-                                                locked={closingChannel}
+                                                locked={
+                                                    closingChannel ||
+                                                    (closeAddress !==
+                                                        undefined &&
+                                                        closeAddress !== '')
+                                                }
                                             />
                                         </>
                                     )}
@@ -1233,28 +1253,15 @@ export default class ChannelView extends React.Component<
                                     title={localeString(
                                         'views.Channel.confirmClose'
                                     )}
-                                    onPress={() => {
-                                        if (
-                                            closeAddress !== '' &&
-                                            closeAddress !== undefined &&
-                                            deliveryAddress !== '' &&
-                                            deliveryAddress !== undefined &&
-                                            deliveryAddress !== closeAddress
-                                        ) {
-                                            ChannelsStore.closeChannelErr =
-                                                localeString(
-                                                    'view.Channel.closeAddressError'
-                                                );
-                                            return;
-                                        }
+                                    onPress={() =>
                                         this.closeChannel(
                                             channel_point,
                                             channelId,
                                             satPerByte,
                                             forceCloseChannel,
                                             deliveryAddress
-                                        );
-                                    }}
+                                        )
+                                    }
                                     warning
                                 />
                             </View>
