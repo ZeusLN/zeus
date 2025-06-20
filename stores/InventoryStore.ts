@@ -107,6 +107,7 @@ export default class InventoryStore {
                 found.pricedIn = newProduct.pricedIn;
                 found.category = newProduct.category;
                 found.status = newProduct.status;
+                found.taxPercentage = newProduct.taxPercentage;
             } else {
                 existingProducts.push(newProduct);
             }
