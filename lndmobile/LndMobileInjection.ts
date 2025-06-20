@@ -326,7 +326,8 @@ export interface ILndMobileInjections {
             spend_unconfirmed?: boolean,
             simpleTaprootChannel?: boolean,
             fund_max?: boolean,
-            utxos?: Array<string>
+            utxos?: Array<string>,
+            close_address?: string
         ) => Promise<lnrpc.ChannelPoint>;
         openChannelAll: (
             pubkey: string,
