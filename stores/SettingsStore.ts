@@ -1867,8 +1867,4 @@ export default class SettingsStore {
     @action setSelectedForceFiat(currency: string) {
         this.selectedForceFiat = currency;
     }
-
-    @action resetSelectedForceFiat = () => {
-        this.selectedForceFiat = this.settings.fiat ?? DEFAULT_FIAT;
-    };
 }
