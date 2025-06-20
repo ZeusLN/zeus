@@ -9,8 +9,6 @@ import {
 import Product, { PricedIn, ProductStatus } from '../../models/Product';
 import InventoryStore from '../../stores/InventoryStore';
 import UnitsStore from '../../stores/UnitsStore';
-import SettingsStore from '../../stores/SettingsStore';
-
 import { inject, observer } from 'mobx-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Divider, ListItem } from 'react-native-elements';
@@ -37,7 +35,6 @@ interface ProductProps {
     InventoryStore: InventoryStore;
     PosStore: PosStore;
     UnitsStore: UnitsStore;
-    SettingsStore: SettingsStore;
     route: Route<'ProductDetails', { productId: string }>;
 }
 
@@ -57,7 +54,6 @@ export default class ProductDetails extends React.Component<
 > {
     constructor(props: ProductProps) {
         super(props);
-        this.props.SettingsStore.resetSelectedForceFiat();
         this.state = {
             categories: [],
             product: null,
@@ -347,7 +343,6 @@ export default class ProductDetails extends React.Component<
                                             />
                                         </View>
                                         <AmountInput
-                                            navigation={navigation}
                                             amount={product?.price}
                                             title={localeString(
                                                 'views.Settings.POS.Product.price'
