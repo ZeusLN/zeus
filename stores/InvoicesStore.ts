@@ -543,7 +543,7 @@ export default class InvoicesStore {
     };
 
     @action
-    public getPayReq = (paymentRequest: string) => {
+    public getPayReq = (paymentRequest: string): Promise<Invoice> => {
         this.loading = true;
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
@@ -556,7 +556,7 @@ export default class InvoicesStore {
                     this.getPayReqError = null;
                     this.loading = false;
                 });
-                return;
+                return this.pay_req;
             })
             .catch((error: Error) => {
                 const error_friendly = errorToUserFriendly(error);

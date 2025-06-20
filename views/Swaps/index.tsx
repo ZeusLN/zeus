@@ -209,8 +209,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         // Logic for handling route params
         if (!SwapStore.loading && !this.state.paramsProcessed && route.params) {
-            const { initialInvoice, initialAmountSats, initialReverse } =
-                route.params;
+            const {
+                initialInvoice,
+                initialAmountSats,
+                initialReverse,
+                isJitInvoiceForOutput
+            } = route.params;
 
             if (
                 initialInvoice !== undefined &&
@@ -218,7 +222,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 initialReverse !== undefined
             ) {
                 this.setState({ paramsProcessed: true }, async () => {
-                    // Use callback to ensure paramsProcessed is set before further calcs
+                    // Mark as processed
+                    const { InvoicesStore } = this.props;
                     const { units } = UnitsStore;
                     const { fiatRates } = FiatStore;
                     const { fiat } = settings;
@@ -242,38 +247,91 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         : new BigNumber(info?.fees?.minerFees || 0);
                     const networkFee = networkFeeBigNum.toNumber();
 
-                    const newOutputSats = new BigNumber(initialAmountSats || 0);
-                    let newOutputFiat = '';
+                    let finalInputSats: BigNumber; // What the user sends (on-chain for reverse, LN for submarine)
+                    let finalOutputSats: BigNumber; // What the user receives (LN for reverse, on-chain for submarine)
+
+                    if (initialReverse) {
+                        finalInputSats = new BigNumber(initialAmountSats || 0); // On-chain amount to send
+
+                        if (isJitInvoiceForOutput) {
+                            // This is the LSP JIT flow: initialInvoice is a Bolt11, its amount is the LN output
+                            if (!InvoicesStore) {
+                                this.setState({
+                                    error: 'InvoicesStore not available for decoding JIT invoice.',
+                                    paramsProcessed: false
+                                });
+                                return;
+                            }
+                            try {
+                                const decodedJitInvoice =
+                                    await InvoicesStore.getPayReq(
+                                        initialInvoice
+                                    );
+                                finalOutputSats = new BigNumber(
+                                    decodedJitInvoice.num_satoshis || 0
+                                );
+
+                                if (finalOutputSats.isLessThanOrEqualTo(0)) {
+                                    throw new Error(
+                                        'JIT invoice amount is zero or could not be determined.'
+                                    );
+                                }
+                            } catch (e: any) {
+                                this.setState({
+                                    error: `Failed to decode JIT invoice: ${e.message}`,
+                                    paramsProcessed: false
+                                });
+                                return;
+                            }
+                        } else {
+                            // Standard reverse swap pre-fill: initialInvoice is an on-chain address.
+                            // finalInputSats is already set from initialAmountSats.
+                            // Calculate the LN amount the user will receive.
+                            finalOutputSats = this.calculateReceiveAmount(
+                                finalInputSats,
+                                serviceFeePct,
+                                networkFee
+                            );
+                        }
+                    } else {
+                        // Submarine swap: initialAmountSats is the on-chain amount to receive
+                        finalOutputSats = new BigNumber(initialAmountSats || 0);
+                        // Calculate LN amount to send
+                        finalInputSats = this.calculateSendAmount(
+                            finalOutputSats,
+                            serviceFeePct,
+                            networkFee
+                        );
+                    }
+
+                    // Calculate fiat values based on final sat amounts
+                    let finalInputFiat = '';
                     if (
                         units === 'fiat' &&
                         rate > 0 &&
-                        newOutputSats.isGreaterThan(0)
+                        finalInputSats.isGreaterThan(0)
                     ) {
-                        newOutputFiat = newOutputSats
+                        finalInputFiat = finalInputSats
                             .div(SATS_PER_BTC)
                             .times(rate)
                             .toFixed(2);
                     }
 
-                    const newInputSats = this.calculateSendAmount(
-                        newOutputSats,
-                        serviceFeePct,
-                        networkFee
-                    );
-                    let newInputFiat = '';
+                    let finalOutputFiat = '';
                     if (
                         units === 'fiat' &&
                         rate > 0 &&
-                        newInputSats.isGreaterThan(0)
+                        finalOutputSats.isGreaterThan(0)
                     ) {
-                        newInputFiat = newInputSats
+                        finalOutputFiat = finalOutputSats
                             .div(SATS_PER_BTC)
                             .times(rate)
                             .toFixed(2);
                     }
 
+                    // Recalculate service fee based on the input amount
                     const newServiceFeeSats = this.calculateServiceFeeOnSend(
-                        newInputSats,
+                        finalInputSats,
                         serviceFeePct,
                         networkFee
                     );
@@ -282,17 +340,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         {
                             invoice: initialInvoice,
                             reverse: initialReverse,
-                            outputSats: newOutputSats,
-                            outputFiat:
-                                units === 'fiat'
-                                    ? newOutputFiat
-                                    : this.state.outputFiat,
-                            inputSats: newInputSats,
-                            inputFiat:
-                                units === 'fiat'
-                                    ? newInputFiat
-                                    : this.state.inputFiat,
-                            serviceFeeSats: newServiceFeeSats
+                            inputSats: finalInputSats, // On-chain send amount for reverse
+                            outputSats: finalOutputSats, // LN receive amount for reverse (from JIT invoice)
+                            inputFiat: units === 'fiat' ? finalInputFiat : '',
+                            outputFiat: units === 'fiat' ? finalOutputFiat : '',
+                            serviceFeeSats: newServiceFeeSats,
+                            error: '' // Clear previous errors
                         },
                         () => this.checkIsValid()
                     );
