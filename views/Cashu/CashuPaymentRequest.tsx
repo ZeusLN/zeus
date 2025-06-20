@@ -78,10 +78,6 @@ export default class CashuPaymentRequest extends React.Component<
     CashuPaymentRequestProps,
     CashuPaymentRequestState
 > {
-    constructor(props: CashuPaymentRequestProps) {
-        super(props);
-        this.props.SettingsStore.resetSelectedForceFiat();
-    }
     listener: any;
     isComponentMounted: boolean = false;
     state = {
@@ -294,7 +290,6 @@ export default class CashuPaymentRequest extends React.Component<
                                         )}
                                     {isNoAmountInvoice ? (
                                         <AmountInput
-                                            navigation={navigation}
                                             amount={customAmount}
                                             title={localeString(
                                                 'views.PaymentRequest.customAmt'

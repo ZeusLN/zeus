@@ -24,9 +24,9 @@ interface SelectCurrencyProps {
         'SelectCurrency',
         {
             currencyConverter: boolean;
-            fromReceive?: boolean;
-            onSelect?: (value: string) => void;
-            selectedCurrency?: string;
+            fromAmountInput: boolean;
+            onSelect: (value: string) => void;
+            selectedForceFiat: string;
         }
     >;
 }
@@ -154,7 +154,7 @@ export default class SelectCurrency extends React.Component<
                                             }
                                         );
                                     } else {
-                                        const onSelect = route.params?.onSelect;
+                                        const onSelect = route.params.onSelect;
                                         if (onSelect) {
                                             onSelect(item.value);
                                             navigation.goBack();
@@ -173,13 +173,13 @@ export default class SelectCurrency extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                route.params?.fromReceive &&
+                                                route.params.fromAmountInput &&
                                                 route.params
-                                                    ?.selectedCurrency ===
+                                                    .selectedForceFiat ===
                                                     item.value
                                                     ? themeColor('highlight')
                                                     : !route.params
-                                                          ?.fromReceive &&
+                                                          .fromAmountInput &&
                                                       ((!currencyConverter &&
                                                           selectedCurrency ===
                                                               item.value) ||
@@ -195,12 +195,12 @@ export default class SelectCurrency extends React.Component<
                                     </ListItem.Title>
                                 </ListItem.Content>
 
-                                {((!route.params?.fromReceive &&
+                                {((!route.params.fromAmountInput &&
                                     (selectedCurrency === item.value ||
                                         (!selectedCurrency &&
                                             item.value === DEFAULT_FIAT))) ||
-                                    (route.params?.fromReceive &&
-                                        route.params?.selectedCurrency ===
+                                    (route.params.fromAmountInput &&
+                                        route.params.selectedForceFiat ===
                                             item.value)) &&
                                     !currencyConverter && (
                                         <View>
