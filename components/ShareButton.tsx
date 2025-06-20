@@ -6,11 +6,13 @@ import { captureRef } from 'react-native-view-shot';
 import Share from 'react-native-share';
 import { Icon } from 'react-native-elements';
 
-import Button from './../components/Button';
+import Button from '../components/Button';
 
 import { localeString } from '../utils/LocaleUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
+
+import { modalStore } from '../stores/Stores';
 
 type QRCodeElement = React.ElementRef<typeof QRCode>;
 
@@ -30,10 +32,13 @@ export default class ShareButton extends React.Component<ShareButtonProps> {
     handlePress = async () => {
         const { onPress } = this.props;
         await onPress();
-        await this.shareContent();
+        modalStore.toggleShareModal({
+            onShareQR: this.shareQR,
+            onShareText: this.shareText
+        });
     };
 
-    shareContent = async () => {
+    shareQR = async () => {
         const { value, qrRef, onShareComplete } = this.props;
         try {
             if (!qrRef?.current) return;
@@ -47,6 +52,20 @@ export default class ShareButton extends React.Component<ShareButtonProps> {
             await Share.open({
                 message: value,
                 url: base64Data
+            });
+        } catch (error) {
+            // Share API throws error when share sheet closes, regardless of success
+            console.log('Error in shareContent:', error);
+        } finally {
+            onShareComplete?.();
+        }
+    };
+
+    shareText = async () => {
+        const { value, onShareComplete } = this.props;
+        try {
+            await Share.open({
+                message: value
             });
         } catch (error) {
             // Share API throws error when share sheet closes, regardless of success

@@ -1448,6 +1448,8 @@
     "components.AlertModal.neutrinoPeers": "Problematic neutrino peers",
     "components.AlertModal.neutrinoExplainer": "Neutrino peers with high ping times can cause performance issues in the app.",
     "components.AlertModal.reviewPeers": "Review neutrino peers list",
+    "components.ShareModal.shareQR": "QR",
+    "components.ShareModal.shareText": "Text",
     "views.PendingHTLCs.title": "Pending HTLCs",
     "views.PendingHTLCs.noPendingHTLCs": "No pending HTLCs",
     "views.PendingHTLCs.incoming": "Incoming",
