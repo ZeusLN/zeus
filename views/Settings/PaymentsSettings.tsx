@@ -39,10 +39,6 @@ export default class PaymentsSettings extends React.Component<
     PaymentsSettingsProps,
     PaymentsSettingsState
 > {
-    constructor(props: PaymentsSettingsProps) {
-        super(props);
-        this.props.SettingsStore.resetSelectedForceFiat();
-    }
     state = {
         feeLimitMethod: 'fixed',
         feeLimit: '1000',
@@ -276,7 +272,6 @@ export default class PaymentsSettings extends React.Component<
                     )}
 
                     <AmountInput
-                        navigation={navigation}
                         amount={slideToPayThreshold.toString()}
                         title={
                             localeString('general.lightning') +

@@ -23,10 +23,10 @@ interface SelectCurrencyProps {
     route: Route<
         'SelectCurrency',
         {
-            currencyConverter: boolean;
-            fromReceive?: boolean;
+            currencyConverter?: boolean;
+            fromAmountInput?: boolean;
             onSelect?: (value: string) => void;
-            selectedCurrency?: string;
+            selectedForceFiat?: string;
         }
     >;
 }
@@ -94,7 +94,12 @@ export default class SelectCurrency extends React.Component<
 
         const { updateSettings, getSettings }: any = SettingsStore;
 
-        const currencyConverter = route.params?.currencyConverter;
+        const {
+            currencyConverter = false,
+            fromAmountInput = false,
+            onSelect,
+            selectedForceFiat
+        } = route.params || {};
 
         return (
             <Screen>
@@ -147,25 +152,19 @@ export default class SelectCurrency extends React.Component<
                                 }}
                                 onPress={async () => {
                                     if (currencyConverter) {
-                                        navigation.navigate(
-                                            'CurrencyConverter',
-                                            {
-                                                selectedCurrency: item.value
-                                            }
-                                        );
+                                        navigation.popTo('CurrencyConverter', {
+                                            selectedCurrency: item.value
+                                        });
+                                    } else if (onSelect) {
+                                        onSelect(item.value);
+                                        navigation.goBack();
                                     } else {
-                                        const onSelect = route.params?.onSelect;
-                                        if (onSelect) {
-                                            onSelect(item.value);
+                                        await updateSettings({
+                                            fiat: item.value
+                                        }).then(() => {
+                                            getSettings();
                                             navigation.goBack();
-                                        } else {
-                                            await updateSettings({
-                                                fiat: item.value
-                                            }).then(() => {
-                                                getSettings();
-                                                navigation.goBack();
-                                            });
-                                        }
+                                        });
                                     }
                                 }}
                             >
@@ -173,13 +172,10 @@ export default class SelectCurrency extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                route.params?.fromReceive &&
-                                                route.params
-                                                    ?.selectedCurrency ===
-                                                    item.value
+                                                fromAmountInput &&
+                                                selectedForceFiat === item.value
                                                     ? themeColor('highlight')
-                                                    : !route.params
-                                                          ?.fromReceive &&
+                                                    : !fromAmountInput &&
                                                       ((!currencyConverter &&
                                                           selectedCurrency ===
                                                               item.value) ||
@@ -195,13 +191,12 @@ export default class SelectCurrency extends React.Component<
                                     </ListItem.Title>
                                 </ListItem.Content>
 
-                                {((!route.params?.fromReceive &&
+                                {((!fromAmountInput &&
                                     (selectedCurrency === item.value ||
                                         (!selectedCurrency &&
                                             item.value === DEFAULT_FIAT))) ||
-                                    (route.params?.fromReceive &&
-                                        route.params?.selectedCurrency ===
-                                            item.value)) &&
+                                    (fromAmountInput &&
+                                        selectedForceFiat === item.value)) &&
                                     !currencyConverter && (
                                         <View>
                                             <Icon
