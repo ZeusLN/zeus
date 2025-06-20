@@ -610,7 +610,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 }}
                                             >
                                                 <AmountInput
-                                                    navigation={navigation}
                                                     prefix={
                                                         <TouchableOpacity
                                                             onPress={() => {
@@ -804,7 +803,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     }}
                                                 >
                                                     <AmountInput
-                                                        navigation={navigation}
                                                         prefix={
                                                             <TouchableOpacity
                                                                 onPress={() => {

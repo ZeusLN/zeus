@@ -124,7 +124,6 @@ export default class ReceiveEcash extends React.Component<
 > {
     constructor(props: ReceiveEcashProps) {
         super(props);
-        this.props.SettingsStore.resetSelectedForceFiat();
         this.state = {
             loading: true,
             selectedIndex: props.route.params?.selectedIndex ?? 0,
@@ -889,7 +888,6 @@ export default class ReceiveEcash extends React.Component<
                                         </>
 
                                         <AmountInput
-                                            navigation={navigation}
                                             amount={value}
                                             title={`${localeString(
                                                 'views.Receive.amount'

@@ -137,7 +137,6 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     constructor(props: SendProps) {
         super(props);
-        this.props.SettingsStore.resetSelectedForceFiat();
         const { route, UnitsStore } = props;
         const {
             destination,
@@ -999,7 +998,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
                                 <AmountInput
-                                    navigation={navigation}
                                     amount={
                                         fundMax
                                             ? utxoBalance > 0
@@ -1097,7 +1095,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 }}
                                             />
                                             <AmountInput
-                                                navigation={navigation}
                                                 amount={output?.amount.toString()}
                                                 title={localeString(
                                                     'views.Send.amount'
@@ -1266,7 +1263,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                         NodeInfoStore.supportsOffers && (
                             <React.Fragment>
                                 <AmountInput
-                                    navigation={navigation}
                                     amount={amount}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(
@@ -1299,7 +1295,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                         BackendUtils.supportsKeysend() && (
                             <React.Fragment>
                                 <AmountInput
-                                    navigation={navigation}
                                     amount={amount}
                                     title={localeString('views.Send.amount')}
                                     onAmountChange={(

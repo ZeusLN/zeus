@@ -2,7 +2,6 @@ import * as React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
-import { StackNavigationProp } from '@react-navigation/stack';
 
 import Amount from './Amount';
 import TextInput from './TextInput';
@@ -13,12 +12,17 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
+import SettingsStore, {
+    CURRENCY_KEYS,
+    DEFAULT_FIAT
+} from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
 import Icon from 'react-native-vector-icons/Feather';
+
+import NavigationService from '../NavigationService';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -34,7 +38,6 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
-    navigation: StackNavigationProp<any, any>;
 }
 
 interface AmountInputState {
@@ -140,13 +143,15 @@ export default class AmountInput extends React.Component<
         super(props);
 
         const { amount, onAmountChange, SettingsStore } = props;
-        const { selectedForceFiat } = SettingsStore;
+        SettingsStore.selectedForceFiat =
+            SettingsStore.settings.fiat ?? DEFAULT_FIAT;
+
         let satAmount = '0';
         if (amount)
             satAmount = getSatAmount(
                 amount,
                 props.forceUnit,
-                selectedForceFiat
+                SettingsStore.selectedForceFiat
             ).toString();
 
         onAmountChange(amount, satAmount);
@@ -228,12 +233,12 @@ export default class AmountInput extends React.Component<
     };
 
     navigateToCurrencySelection = () => {
-        const { SettingsStore, navigation }: any = this.props;
+        const { SettingsStore }: any = this.props;
 
-        navigation.navigate('SelectCurrency', {
+        NavigationService.navigate('SelectCurrency', {
             currencyConverter: false,
-            fromReceive: true,
-            selectedCurrency: SettingsStore.selectedForceFiat,
+            fromAmountInput: true,
+            selectedForceFiat: SettingsStore.selectedForceFiat,
             onSelect: (value: string) => {
                 SettingsStore.setSelectedForceFiat(value);
             }

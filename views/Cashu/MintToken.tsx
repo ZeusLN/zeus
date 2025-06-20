@@ -20,13 +20,11 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CashuToken from '../../models/CashuToken';
-import SettingsStore from '../../stores/SettingsStore';
 
 interface MintTokenProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
-    SettingsStore: SettingsStore;
     route: Route<
         'MintToken',
         {
@@ -42,7 +40,7 @@ interface MintTokenState {
     satAmount: string | number;
 }
 
-@inject('CashuStore', 'UnitsStore', 'SettingsStore')
+@inject('CashuStore', 'UnitsStore')
 @observer
 export default class MintToken extends React.Component<
     MintTokenProps,
@@ -50,7 +48,6 @@ export default class MintToken extends React.Component<
 > {
     constructor(props: MintTokenProps) {
         super(props);
-        this.props.SettingsStore.resetSelectedForceFiat();
         this.state = {
             loading: true,
             memo: '',
@@ -182,7 +179,6 @@ export default class MintToken extends React.Component<
                                     </>
 
                                     <AmountInput
-                                        navigation={navigation}
                                         amount={value}
                                         title={localeString(
                                             'views.Receive.amount'
