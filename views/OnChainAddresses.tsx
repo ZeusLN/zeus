@@ -5,7 +5,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { Button, ListItem } from 'react-native-elements';
+import { ListItem, SearchBar } from 'react-native-elements';
+import Button from '../components/Button';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -35,7 +36,8 @@ import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 
 const AddressGroup = (props: any) => {
-    const addressGroup = props.addressGroup;
+    const { addressGroup, selectionMode, selectedAddress, onAddressSelected } =
+        props;
     const [isCollapsed, setCollapsed] = useState(false);
     return (
         <React.Fragment
@@ -97,73 +99,112 @@ const AddressGroup = (props: any) => {
                                 </ListItem.Title>
                             </Row>
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() =>
-                                NavigationService.navigate('Receive', {
-                                    account: addressGroup.accountName,
-                                    addressType: addressGroup.addressType,
-                                    selectedIndex: 2,
-                                    autoGenerateOnChain: true,
-                                    autoGenerateChange:
-                                        !!addressGroup.changeAddresses,
-                                    hideRightHeaderComponent: true
-                                })
-                            }
-                            accessibilityLabel={localeString(
-                                'views.OnChainAddresses.createAddress'
-                            )}
-                        >
-                            <Add
-                                fill={themeColor('text')}
-                                width="30"
-                                height="30"
-                                style={{ alignSelf: 'center' }}
-                            />
-                        </TouchableOpacity>
+                        {!selectionMode && (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    NavigationService.navigate('Receive', {
+                                        account: addressGroup.accountName,
+                                        addressType: addressGroup.addressType,
+                                        selectedIndex: 2,
+                                        autoGenerateOnChain: true,
+                                        autoGenerateChange:
+                                            !!addressGroup.changeAddresses,
+                                        hideRightHeaderComponent: true
+                                    })
+                                }
+                                accessibilityLabel={localeString(
+                                    'views.OnChainAddresses.createAddress'
+                                )}
+                            >
+                                <Add
+                                    fill={themeColor('text')}
+                                    width="30"
+                                    height="30"
+                                    style={{ alignSelf: 'center' }}
+                                />
+                            </TouchableOpacity>
+                        )}
                     </Row>
                 </ListItem.Content>
             </ListItem>
             {!isCollapsed &&
-                addressGroup.addresses.map((address: Address) => (
-                    <ListItem
-                        key={`address-${address.address}`}
-                        containerStyle={{
-                            borderBottomWidth: 0,
-                            backgroundColor: 'transparent'
-                        }}
-                        onPress={() => {
-                            const addressStr = address.address;
-                            NavigationService.navigate('QR', {
-                                value: `bitcoin:${
-                                    addressStr === addressStr.toLowerCase()
-                                        ? address.address.toUpperCase()
-                                        : address.address
-                                }`,
-                                copyValue: addressStr
-                            });
-                        }}
-                    >
-                        <ListItem.Content>
-                            <Amount sats={address.balance} sensitive />
-                            <ListItem.Subtitle
-                                right
-                                style={{
-                                    color: themeColor('secondaryText'),
-                                    fontSize: 14
-                                }}
-                            >
-                                {address.address}
-                            </ListItem.Subtitle>
-                        </ListItem.Content>
-                    </ListItem>
-                ))}
+                addressGroup.addresses.map((address: Address) => {
+                    const isSelected =
+                        selectionMode && address.address === selectedAddress;
+                    return (
+                        <ListItem
+                            key={`address-${address.address}`}
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: isSelected
+                                    ? themeColor('secondary')
+                                    : 'transparent'
+                            }}
+                            onPress={() => {
+                                if (selectionMode) {
+                                    // Only update local selection, don't call callback yet
+                                    onAddressSelected(address.address);
+                                } else {
+                                    const addressStr = address.address;
+                                    NavigationService.navigate('QR', {
+                                        value: `bitcoin:${
+                                            addressStr ===
+                                            addressStr.toLowerCase()
+                                                ? address.address.toUpperCase()
+                                                : address.address
+                                        }`,
+                                        copyValue: addressStr
+                                    });
+                                }
+                            }}
+                        >
+                            <ListItem.Content>
+                                <Amount
+                                    sats={address.balance}
+                                    sensitive
+                                    colorOverride={
+                                        isSelected
+                                            ? themeColor('highlight')
+                                            : undefined
+                                    }
+                                />
+                                <ListItem.Subtitle
+                                    right
+                                    style={{
+                                        color: isSelected
+                                            ? themeColor('highlight')
+                                            : themeColor('secondaryText'),
+                                        fontSize: 14
+                                    }}
+                                >
+                                    {address.address}
+                                </ListItem.Subtitle>
+                            </ListItem.Content>
+                        </ListItem>
+                    );
+                })}
         </React.Fragment>
     );
 };
 
-interface OnChainAddressesProps {
+interface SelectionModeConfig {
+    selectionMode?: boolean;
+    onAddressSelected?: (address: string) => void;
+    selectedAddress?: string;
+    showConfirmButton?: boolean;
+    onConfirm?: (address: string) => void;
+    onBack?: () => void;
+    headerTitle?: string;
+}
+
+interface OnChainAddressesProps extends SelectionModeConfig {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'OnChainAddresses', { account: string }>;
+    route: Route<
+        'OnChainAddresses',
+        {
+            account: string;
+        } & SelectionModeConfig
+    >;
     UTXOsStore: UTXOsStore;
 }
 
@@ -172,6 +213,8 @@ interface OnChainAddressesState {
     hideZeroBalance: boolean;
     hideChangeAddresses: boolean;
     sortBy: SortBy;
+    searchText: string;
+    selectedAddress: string;
 }
 
 enum SortBy {
@@ -213,8 +256,20 @@ export default class OnChainAddresses extends React.Component<
         accounts: [],
         hideZeroBalance: false,
         hideChangeAddresses: false,
-        sortBy: SortBy.balanceDescending
+        sortBy: SortBy.balanceDescending,
+        searchText: '',
+        selectedAddress: this.getConfigValue<string>('selectedAddress', '')
     };
+
+    getConfigValue<T>(key: keyof SelectionModeConfig, defaultValue?: T): T {
+        if (this.props[key] !== undefined) {
+            return this.props[key] as unknown as T;
+        }
+        if (this.props.route?.params?.[key] !== undefined) {
+            return this.props.route.params[key] as unknown as T;
+        }
+        return defaultValue as T;
+    }
 
     async componentDidMount() {
         this.props.navigation.addListener('focus', async () => {
@@ -229,6 +284,41 @@ export default class OnChainAddresses extends React.Component<
         });
     };
 
+    // Update search text as the user types and filter results
+    updateSearch = (text: string) => {
+        this.setState({ searchText: text });
+    };
+
+    selectAddress = (address: string) => {
+        const { selectedAddress } = this.state;
+
+        const newAddress = selectedAddress === address ? '' : address;
+
+        this.setState({ selectedAddress: newAddress });
+    };
+
+    confirmSelection = () => {
+        const { selectedAddress } = this.state;
+        const { navigation } = this.props;
+        const onAddressSelected = this.getConfigValue<
+            ((address: string) => void) | undefined
+        >('onAddressSelected');
+        const onConfirm = this.getConfigValue<
+            ((address: string) => void) | undefined
+        >('onConfirm');
+
+        if (onAddressSelected) {
+            onAddressSelected(selectedAddress);
+        }
+
+        if (onConfirm) {
+            onConfirm(selectedAddress);
+            return;
+        }
+
+        navigation.goBack();
+    };
+
     renderSeparator = () => (
         <View
             style={{
@@ -240,10 +330,20 @@ export default class OnChainAddresses extends React.Component<
 
     render() {
         const { UTXOsStore, navigation } = this.props;
-        const { accounts, hideZeroBalance, hideChangeAddresses } =
-            this.state ?? {};
+        const {
+            accounts,
+            hideZeroBalance,
+            hideChangeAddresses,
+            searchText,
+            selectedAddress
+        } = this.state ?? {};
         const { loadingAddresses, loadingAddressesError } = UTXOsStore;
         const sortBy = this.state?.sortBy ?? SortBy.creationTimeDescending;
+
+        const selectionMode = this.getConfigValue<boolean>(
+            'selectionMode',
+            false
+        );
 
         let addressGroups: AddressGroup[] | undefined;
 
@@ -312,6 +412,26 @@ export default class OnChainAddresses extends React.Component<
             if (hideChangeAddresses) {
                 addressGroups = addressGroups.filter((a) => !a.changeAddresses);
             }
+
+            // Apply search filter
+            if (searchText) {
+                addressGroups = addressGroups
+                    .map((group) => {
+                        const filteredGroup = { ...group };
+                        filteredGroup.addresses = group.addresses.filter(
+                            (addr) =>
+                                addr.address
+                                    .toLowerCase()
+                                    .includes(searchText.toLowerCase()) ||
+                                (group.accountName &&
+                                    group.accountName
+                                        .toLowerCase()
+                                        .includes(searchText.toLowerCase()))
+                        );
+                        return filteredGroup;
+                    })
+                    .filter((group) => group.addresses.length > 0);
+            }
         }
 
         const FilterAndSortingButtons = () => {
@@ -333,7 +453,7 @@ export default class OnChainAddresses extends React.Component<
                             value: s
                         }))}
                         selectedValue={sortBy}
-                        onValueChange={(newSortBy) =>
+                        onValueChange={(newSortBy: SortBy) =>
                             this.setState({ sortBy: newSortBy })
                         }
                     />
@@ -410,7 +530,10 @@ export default class OnChainAddresses extends React.Component<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.OnChainAddresses.title'),
+                        text:
+                            this.getConfigValue<string>('headerTitle') ||
+                            (!selectionMode &&
+                                localeString('views.OnChainAddresses.title')),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -419,7 +542,8 @@ export default class OnChainAddresses extends React.Component<
                     rightComponent={
                         !loadingAddresses &&
                         !loadingAddressesError &&
-                        !addressGroups ? (
+                        !addressGroups &&
+                        !selectionMode ? (
                             <TouchableOpacity
                                 onPress={() =>
                                     navigation.navigate('Receive', {
@@ -444,6 +568,35 @@ export default class OnChainAddresses extends React.Component<
                     }
                     navigation={navigation}
                 />
+
+                {/* Search bar */}
+                {!loadingAddresses && (
+                    <SearchBar
+                        placeholder={localeString('general.search')}
+                        // @ts-ignore:next-line
+                        onChangeText={this.updateSearch}
+                        value={searchText}
+                        inputStyle={{
+                            color: themeColor('text')
+                        }}
+                        placeholderTextColor={themeColor('secondaryText')}
+                        containerStyle={{
+                            backgroundColor: 'transparent',
+                            borderTopWidth: 0,
+                            borderBottomWidth: 0
+                        }}
+                        inputContainerStyle={{
+                            borderRadius: 15,
+                            backgroundColor: themeColor('secondary')
+                        }}
+                        // @ts-ignore:next-line
+                        searchIcon={{
+                            importantForAccessibility: 'no-hide-descendants',
+                            accessibilityElementsHidden: true
+                        }}
+                    />
+                )}
+
                 {loadingAddresses ? (
                     <View style={{ padding: 50 }}>
                         <LoadingIndicator />
@@ -455,7 +608,12 @@ export default class OnChainAddresses extends React.Component<
                             data={addressGroups}
                             renderItem={({ item: addressGroup }) => {
                                 return (
-                                    <AddressGroup addressGroup={addressGroup} />
+                                    <AddressGroup
+                                        addressGroup={addressGroup}
+                                        selectionMode={selectionMode}
+                                        selectedAddress={selectedAddress}
+                                        onAddressSelected={this.selectAddress}
+                                    />
                                 );
                             }}
                             keyExtractor={(_, index) => `address-${index}`}
@@ -464,6 +622,20 @@ export default class OnChainAddresses extends React.Component<
                             refreshing={loadingAddresses}
                             onRefresh={() => this.loadAddresses()}
                         />
+
+                        {/* Confirm button for selection mode */}
+                        {selectionMode && selectedAddress && (
+                            <View style={{ padding: 10 }}>
+                                <Button
+                                    title={localeString('general.confirm')}
+                                    onPress={this.confirmSelection}
+                                    buttonStyle={{
+                                        paddingTop: 10,
+                                        paddingBottom: 10
+                                    }}
+                                />
+                            </View>
+                        )}
                     </>
                 ) : loadingAddressesError ? (
                     <ErrorMessage message={loadingAddressesError} />
