@@ -550,6 +550,7 @@ export default class LightningNodeConnect {
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 
+    supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => this.permSendCoins;
