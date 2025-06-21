@@ -24,6 +24,7 @@ import * as HE from '../locales/he.json';
 import * as HR from '../locales/hr.json';
 import * as SW from '../locales/sw.json';
 import * as hi_EN from '../locales/hi_IN.json';
+import * as zh_TW from '../locales/zh_TW.json';
 
 // in progress
 import * as FA from '../locales/fa.json';
@@ -67,6 +68,7 @@ const Hebrew: any = HE;
 const Croatian: any = HR;
 const Korean: any = KO;
 const Hindi: any = hi_EN;
+const TaiwaneseMandarin: any = zh_TW;
 
 // strings that are needed on the java layer
 const JAVA_LAYER_STRINGS = [
@@ -137,6 +139,8 @@ export function localeString(localeString: string): any {
             return Korean[localeString] || English[localeString];
         case 'hi_IN':
             return Hindi[localeString] || English[localeString];
+        case 'zh_TW':
+            return TaiwaneseMandarin[localeString] || English[localeString];
 
         default:
             return English[localeString];
