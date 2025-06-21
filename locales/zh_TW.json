@@ -1493,7 +1493,7 @@
     "views.Cashu.Mint.restoration": "正在還原 Cashu 證明與餘額",
     "views.Cashu.Mint.restorationKeyset": "正在回復金鑰集",
     "views.Cashu.Mint.checkForExistingBalances": "檢查已存餘額",
-    "views.Cashu.CashuPaymentRequest.sendingFrom": "Sending from",
+    "views.Cashu.CashuPaymentRequest.sendingFrom": "付款金額來源",
     "views.Cashu.CashuPaymentRequest.noBalance": "目前沒有可用的 ecash 餘額，請先收款。",
     "views.Cashu.CashuPayment.inTransitPayment": "進行中的 Cashu 付款",
     "views.Cashu.CashuPayment.failedPayment": "失敗的 Cashu 付款",
