@@ -1332,6 +1332,7 @@ export default class SettingsStore {
     @observable public connecting = true;
     @observable public fetchLock = false;
     @observable public lurkerExposed = false;
+    @observable public selectedForceFiat: string | undefined;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
     @observable username: string;
@@ -1846,4 +1847,8 @@ export default class SettingsStore {
         this.posStatus = setting;
         return this.posStatus;
     };
+
+    @action setSelectedForceFiat(currency: string) {
+        this.selectedForceFiat = currency;
+    }
 }
