@@ -95,6 +95,20 @@ export default class Contacts extends React.Component<
             hasMultiplePayableAddresses
         } = contact;
 
+        if (this.state.CashuLockSettingsScreen && hasCashuPubkey) {
+            const hasMultipleCashuPubkeys =
+                contact.cashuPubkey && contact.cashuPubkey.length > 1;
+            if (hasMultipleCashuPubkeys) {
+                return localeString('cashu.selectCashuPubkey');
+            } else {
+                return contact.cashuPubkey[0].length > 23
+                    ? `${contact.cashuPubkey[0].slice(
+                          0,
+                          12
+                      )}...${contact.cashuPubkey[0].slice(-8)}`
+                    : contact.cashuPubkey[0];
+            }
+        }
         if (hasMultiplePayableAddresses) {
             return localeString('views.Settings.Contacts.multipleAddresses');
         }
@@ -168,29 +182,45 @@ export default class Contacts extends React.Component<
             selectedDurationIndex
         } = route.params || {};
 
-        // Check if contact has Cashu pubkey
         const isCashuPubkeyAvailable =
             contact.cashuPubkey && contact.cashuPubkey.length > 0;
+        const hasMultipleCashuPubkeys =
+            contact.cashuPubkey && contact.cashuPubkey.length > 1;
 
         return (
             <TouchableOpacity
                 onPress={() => {
-                    if (this.state.SendScreen && !hasMultiplePayableAddresses) {
-                        if (this.state.CashuLockSettingsScreen) {
-                            // Navigate back to CashuLockSettings with contact info and preserved duration data
-                            this.props.navigation.navigate(
-                                'CashuLockSettings',
-                                {
-                                    destination: isCashuPubkeyAvailable
-                                        ? item.cashuPubkey[0]
-                                        : null,
-                                    contactName: item.name,
-                                    // Preserve MintToken fields data
+                    if (
+                        this.state.CashuLockSettingsScreen &&
+                        isCashuPubkeyAvailable
+                    ) {
+                        if (hasMultipleCashuPubkeys) {
+                            this.props.navigation.navigate('ContactDetails', {
+                                contactId: item.contactId || item.id,
+                                isNostrContact: false,
+                                cashuLockData: {
+                                    fromCashuLockSettings: true,
                                     memo,
                                     value,
                                     satAmount,
                                     account,
-                                    // Preserve duration data
+                                    duration,
+                                    showCustomDuration,
+                                    customDurationValue,
+                                    customDurationUnit,
+                                    selectedDurationIndex
+                                }
+                            });
+                        } else {
+                            this.props.navigation.navigate(
+                                'CashuLockSettings',
+                                {
+                                    destination: item.cashuPubkey[0],
+                                    contactName: item.name,
+                                    memo,
+                                    value,
+                                    satAmount,
+                                    account,
                                     duration,
                                     showCustomDuration,
                                     customDurationValue,
@@ -198,39 +228,42 @@ export default class Contacts extends React.Component<
                                     selectedDurationIndex
                                 }
                             );
-                        } else {
-                            // Standard Send screen behavior
-                            if (contact.isSingleLnAddress) {
-                                this.props.navigation.navigate('Send', {
-                                    destination: item.lnAddress[0],
-                                    contactName: item.name
-                                });
-                            } else if (contact.isSingleBolt12Address) {
-                                this.props.navigation.navigate('Send', {
-                                    destination: item.bolt12Address[0],
-                                    contactName: item.name
-                                });
-                            } else if (contact.isSingleBolt12Offer) {
-                                this.props.navigation.navigate('Send', {
-                                    destination: item.bolt12Offer[0],
-                                    contactName: item.name
-                                });
-                            } else if (contact.isSingleOnchainAddress) {
-                                this.props.navigation.navigate('Send', {
-                                    destination: item.onchainAddress[0],
-                                    contactName: item.name
-                                });
-                            } else if (contact.isSinglePubkey) {
-                                this.props.navigation.navigate('Send', {
-                                    destination: item.pubkey[0],
-                                    contactName: item.name
-                                });
-                            } else if (contact.isSingleCashuPubkey) {
-                                this.props.navigation.navigate('Send', {
-                                    destination: item.cashuPubkey[0],
-                                    contactName: item.name
-                                });
-                            }
+                        }
+                    } else if (
+                        this.state.SendScreen &&
+                        !hasMultiplePayableAddresses
+                    ) {
+                        // Standard Send screen behavior
+                        if (contact.isSingleLnAddress) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.lnAddress[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleBolt12Address) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.bolt12Address[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleBolt12Offer) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.bolt12Offer[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleOnchainAddress) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.onchainAddress[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSinglePubkey) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.pubkey[0],
+                                contactName: item.name
+                            });
+                        } else if (contact.isSingleCashuPubkey) {
+                            this.props.navigation.navigate('Send', {
+                                destination: item.cashuPubkey[0],
+                                contactName: item.name
+                            });
                         }
                     } else {
                         this.props.navigation.navigate('ContactDetails', {

@@ -267,12 +267,16 @@ export default class CashuLockSettings extends React.Component<
 
     getCustomDurationString = () => {
         const { customDurationValue, customDurationUnit } = this.state;
-
         if (!customDurationValue) return '';
-
         const value = parseInt(customDurationValue, 10);
-        const unitKey = customDurationUnit.toLowerCase();
-        return `${value} ${value === 1 ? unitKey : unitKey + 's'}`;
+        const baseUnit = customDurationUnit.endsWith('s')
+            ? customDurationUnit.slice(0, -1)
+            : customDurationUnit;
+        const finalUnit = value === 1 ? baseUnit : baseUnit + 's';
+        const capitalizedUnit =
+            finalUnit.charAt(0).toUpperCase() + finalUnit.slice(1);
+
+        return `${value} ${capitalizedUnit}`;
     };
 
     handleSave = () => {
@@ -295,7 +299,7 @@ export default class CashuLockSettings extends React.Component<
         }
 
         const finalDuration = showCustomDuration
-            ? `${customDurationValue} ${customDurationUnit}`
+            ? this.getCustomDurationString()
             : DURATION_OPTIONS[selectedDurationIndex];
 
         this.props.navigation.popTo('MintToken', {

@@ -306,6 +306,41 @@ export default class MintToken extends React.Component<
                     : themeColor('text')
             }
         };
+        const handleMintEcashToken = () => {
+            const lockSeconds = pubkey
+                ? this.convertDurationToSeconds(duration)
+                : 0;
+            const params: any = {
+                memo,
+                value: satAmount.toString() || '0'
+            };
+            if (pubkey) {
+                params.pubkey = pubkey;
+                params.lockTime =
+                    lockSeconds && lockSeconds > 0
+                        ? Math.floor(Date.now() / 1000) + lockSeconds
+                        : undefined;
+            }
+            mintToken(params).then(
+                (
+                    result:
+                        | {
+                              token: string;
+                              decoded: CashuToken;
+                          }
+                        | undefined
+                ) => {
+                    if (result?.token && result.decoded) {
+                        const { token, decoded } = result;
+                        this.resetForm();
+                        navigation.navigate('CashuToken', {
+                            token,
+                            decoded
+                        });
+                    }
+                }
+            );
+        };
 
         return (
             <Screen>
@@ -422,55 +457,7 @@ export default class MintToken extends React.Component<
                                             title={localeString(
                                                 'cashu.mintEcashToken'
                                             )}
-                                            onPress={() => {
-                                                const lockSeconds = pubkey
-                                                    ? this.convertDurationToSeconds(
-                                                          duration
-                                                      )
-                                                    : 0;
-                                                const params: any = {
-                                                    memo,
-                                                    value:
-                                                        satAmount.toString() ||
-                                                        '0'
-                                                };
-
-                                                if (pubkey && lockSeconds) {
-                                                    params.pubkey = pubkey;
-                                                    params.lockTime =
-                                                        Math.floor(
-                                                            Date.now() / 1000
-                                                        ) + lockSeconds;
-                                                }
-                                                mintToken(params).then(
-                                                    (
-                                                        result:
-                                                            | {
-                                                                  token: string;
-                                                                  decoded: CashuToken;
-                                                              }
-                                                            | undefined
-                                                    ) => {
-                                                        if (
-                                                            result?.token &&
-                                                            result.decoded
-                                                        ) {
-                                                            const {
-                                                                token,
-                                                                decoded
-                                                            } = result;
-                                                            this.resetForm();
-                                                            navigation.navigate(
-                                                                'CashuToken',
-                                                                {
-                                                                    token,
-                                                                    decoded
-                                                                }
-                                                            );
-                                                        }
-                                                    }
-                                                );
-                                            }}
+                                            onPress={handleMintEcashToken}
                                             buttonStyle={
                                                 dynamicStyles.mintButton
                                             }
