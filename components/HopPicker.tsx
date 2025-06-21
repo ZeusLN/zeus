@@ -333,7 +333,13 @@ export default class ChannelPicker extends React.Component<
                             </Text>
                         </TouchableOpacity>
                     ) : (
-                        <TouchableOpacity onPress={() => this.openPicker()}>
+                        <TouchableOpacity
+                            onPress={() => this.openPicker()}
+                            style={{
+                                ...styles.selectorText,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        >
                             <Text
                                 style={{
                                     ...styles.text,
@@ -416,5 +422,9 @@ const styles = StyleSheet.create({
     },
     flexButton: {
         flex: 1
+    },
+    selectorText: {
+        marginTop: 6,
+        padding: 4
     }
 });

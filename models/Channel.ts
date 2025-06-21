@@ -68,6 +68,7 @@ export default class Channel extends BaseModel {
     close_cause: string;
 
     channel_id?: string;
+    id: string; // alias for channel_id
     alias?: string;
     // pending
     remote_node_pub?: string;
