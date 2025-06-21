@@ -16,7 +16,7 @@ import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
-import SwapIcon from '../../assets/images/SVG/Swap.svg';
+import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
 
@@ -180,10 +180,10 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             >
                                 <View style={styles.columnField}>
                                     <View style={styles.icon}>
-                                        <SwapIcon
+                                        <RebalanceIcon
                                             fill={themeColor('text')}
-                                            width={18}
-                                            height={18}
+                                            width={23}
+                                            height={23}
                                         />
                                     </View>
                                     <Text
@@ -204,7 +204,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {selectedNode && (
+                    {selectedNode && BackendUtils.isLNDBased() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -214,39 +214,29 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                 marginVertical: 5
                             }}
                         >
-                            {BackendUtils.isLNDBased() && (
-                                <>
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('BumpFee')
-                                        }
-                                    >
-                                        <View style={styles.icon}>
-                                            <SpeedometerIcon
-                                                fill={themeColor('text')}
-                                                width={23}
-                                                height={23}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.BumpFee.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                </>
-                            )}
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('BumpFee')}
+                            >
+                                <View style={styles.icon}>
+                                    <SpeedometerIcon
+                                        fill={themeColor('text')}
+                                        width={23}
+                                        height={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.BumpFee.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     )}
 

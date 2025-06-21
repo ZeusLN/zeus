@@ -220,6 +220,14 @@ class BackendUtils {
     // NWC
     initNWC = (...args: any[]) => this.call('initNWC', args);
 
+    //CLN
+    askReneCreateLayer = (...args: any[]) =>
+        this.call('askReneCreateLayer', args);
+    askReneUpdateChannel = (...args: any[]) =>
+        this.call('askReneUpdateChannel', args);
+    askReneRemoveLayer = (...args: any[]) =>
+        this.call('askReneRemoveLayer', args);
+
     clearCachedCalls = (...args: any[]) => this.call('clearCachedCalls', args);
 }
 

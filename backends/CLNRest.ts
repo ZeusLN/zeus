@@ -487,6 +487,56 @@ export default class CLNRest {
             timeout: 60
         });
     };
+    getRoutes = ({
+        source,
+        destination,
+        amount_msat,
+        layers,
+        maxfee_msat,
+        final_cltv
+    }: {
+        source: string;
+        destination: string;
+        amount_msat: number;
+        layers?: string[];
+        maxfee_msat?: number;
+        final_cltv?: number;
+    }) => {
+        return this.postRequest(
+            '/v1/getroutes',
+            {
+                source,
+                destination,
+                amount_msat,
+                layers,
+                maxfee_msat,
+                final_cltv
+            },
+            30000
+        );
+    };
+    askReneCreateLayer = ({ layer }: { layer: string }) => {
+        return this.postRequest('/v1/askrene-create-layer', { layer }, 30000);
+    };
+    askReneUpdateChannel = ({
+        short_channel_id_dir,
+        layer
+    }: {
+        short_channel_id_dir: string;
+        layer: string;
+    }) => {
+        return this.postRequest(
+            '/v1/askrene-update-channel',
+            {
+                short_channel_id_dir,
+                layer
+            },
+            30000
+        );
+    };
+    askReneRemoveLayer = ({ layer }: { layer: string }) => {
+        return this.postRequest('/v1/askrene-remove-layer', { layer }, 30000);
+    };
 
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
