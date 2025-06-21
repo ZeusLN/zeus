@@ -1032,7 +1032,7 @@
     "views.Settings.Contacts.contacts": "聯絡人",
     "views.Settings.Contacts.noContacts": "尚無聯絡人",
     "views.Settings.Contacts.noAddress": "沒有位址",
-    "views.Settings.Contacts.to": "To",
+    "views.Settings.Contacts.to": "給",
     "views.Settings.Contacts.deleteAllContacts": "刪除所有聯絡人",
     "views.SetNodePicture.choosePicture": "選擇圖片",
     "views.Transaction.title": "交易",
