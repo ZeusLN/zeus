@@ -155,7 +155,12 @@ export default class UTXOsStore {
                 for (const i in data.accounts) {
                     const account = new Account(data.accounts[i]);
                     const { name } = account;
-                    if (name && name !== 'default' && !name.includes('act:')) {
+                    if (
+                        name &&
+                        name !== 'default' &&
+                        name !== 'imported' &&
+                        !name.includes('act:')
+                    ) {
                         await BackendUtils.getBlockchainBalance({
                             account: name
                         })
