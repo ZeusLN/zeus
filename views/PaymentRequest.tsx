@@ -4,7 +4,6 @@ import {
     NativeEventEmitter,
     ScrollView,
     StyleSheet,
-    Text,
     View,
     TouchableOpacity
 } from 'react-native';
@@ -23,6 +22,7 @@ import KeyValue from '../components/KeyValue';
 import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import Switch from '../components/Switch';
+import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 import { Row } from '../components/layout/Row';
 import { WarningMessage } from '../components/SuccessErrorMessage';
@@ -502,8 +502,9 @@ export default class PaymentRequest extends React.Component<
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('views.PaymentRequest.error')}
-                                    : {getPayReqError}
+                                    {`${localeString(
+                                        'views.PaymentRequest.error'
+                                    )}: ${getPayReqError}`}
                                 </Text>
                             </View>
                         )}
@@ -927,15 +928,28 @@ export default class PaymentRequest extends React.Component<
                                         {!!pay_req &&
                                             BackendUtils.supportsMPP() &&
                                             !enableTor && (
-                                                <React.Fragment>
+                                                <View
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row',
+                                                        marginTop: 25
+                                                    }}
+                                                >
                                                     <Text
                                                         style={{
                                                             ...styles.label,
                                                             color: themeColor(
                                                                 'text'
-                                                            ),
-                                                            top: 25
+                                                            )
                                                         }}
+                                                        infoModalText={[
+                                                            localeString(
+                                                                'views.PaymentRequest.mpp.explainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.PaymentRequest.mpp.explainer2'
+                                                            )
+                                                        ]}
                                                     >
                                                         {localeString(
                                                             'views.PaymentRequest.mpp'
@@ -944,8 +958,6 @@ export default class PaymentRequest extends React.Component<
                                                     <View
                                                         style={{
                                                             flex: 1,
-                                                            flexDirection:
-                                                                'row',
                                                             justifyContent:
                                                                 'flex-end'
                                                         }}
@@ -968,20 +980,35 @@ export default class PaymentRequest extends React.Component<
                                                             }}
                                                         />
                                                     </View>
-                                                </React.Fragment>
+                                                </View>
                                             )}
 
                                         {!!pay_req &&
                                             BackendUtils.supportsAMP() && (
-                                                <React.Fragment>
+                                                <View
+                                                    style={{
+                                                        flex: 1,
+                                                        flexDirection: 'row',
+                                                        marginTop: 25,
+                                                        marginBottom: 15
+                                                    }}
+                                                >
                                                     <Text
                                                         style={{
                                                             ...styles.label,
                                                             color: themeColor(
                                                                 'text'
-                                                            ),
-                                                            top: 25
+                                                            )
                                                         }}
+                                                        infoModalText={[
+                                                            localeString(
+                                                                'views.PaymentRequest.amp.explainer1'
+                                                            ),
+                                                            localeString(
+                                                                'views.PaymentRequest.amp.explainer2'
+                                                            )
+                                                        ]}
+                                                        infoModalLink="https://docs.lightning.engineering/lightning-network-tools/lnd/amp"
                                                     >
                                                         {localeString(
                                                             'views.PaymentRequest.amp'
@@ -990,8 +1017,6 @@ export default class PaymentRequest extends React.Component<
                                                     <View
                                                         style={{
                                                             flex: 1,
-                                                            flexDirection:
-                                                                'row',
                                                             justifyContent:
                                                                 'flex-end'
                                                         }}
@@ -1014,7 +1039,7 @@ export default class PaymentRequest extends React.Component<
                                                             }
                                                         />
                                                     </View>
-                                                </React.Fragment>
+                                                </View>
                                             )}
 
                                         {ampOrMppEnabled && (
