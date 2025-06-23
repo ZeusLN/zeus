@@ -241,23 +241,21 @@ export default class ChannelsPane extends React.PureComponent<
     }
 
     initFromProps(props: ChannelsProps) {
-        const { NodeInfoStore } = props;
+        const { NodeInfoStore, SettingsStore } = props;
 
         let olympusPubkey, olympusHost;
         if (NodeInfoStore?.nodeInfo.isTestNet) {
-            olympusPubkey =
-                '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df';
-            olympusHost = '139.144.22.237:9735';
+            olympusPubkey = SettingsStore?.settings.lsps1PubkeyTestnet;
+            olympusHost = SettingsStore?.settings.lsps1HostTestnet;
         } else {
-            olympusPubkey =
-                '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581';
-            olympusHost = '45.79.192.236:9735';
+            olympusPubkey = SettingsStore?.settings.lsps1PubkeyMainnet;
+            olympusHost = SettingsStore?.settings.lsps1HostMainnet;
         }
 
         this.setState({
             channelDestination: 'Olympus by ZEUS',
-            node_pubkey_string: olympusPubkey,
-            host: olympusHost
+            node_pubkey_string: olympusPubkey!,
+            host: olympusHost!
         });
     }
 
@@ -938,7 +936,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 ]}
                                                             >
                                                                 {`${localeString(
-                                                                    'views.OpenChannel.numChannels'
+                                                                    'views.NetworkInfo.numChannels'
                                                                 )}: ${
                                                                     peer.num_channels
                                                                 }`}
