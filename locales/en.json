@@ -609,7 +609,6 @@
     "views.OpenChannel.satsPerVbyte": "Satoshis per vByte",
     "views.OpenChannel.private": "Private",
     "views.OpenChannel.connected": "Connected",
-    "views.OpenChannel.numChannels": "Number of channels",
     "views.Payment.title": "Payment",
     "views.Payment.inTransitPayment": "In Transit Payment",
     "views.Payment.failedPayment": "Failed Payment",
