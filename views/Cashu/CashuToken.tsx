@@ -48,6 +48,7 @@ interface CashuTokenState {
     cashuBcurEncoder: any;
     cashuFrameIndex: number;
     cashuBcurPart: string;
+    isTokenTooLarge: boolean;
 }
 
 @inject('CashuStore', 'ChannelsStore')
@@ -65,7 +66,8 @@ export default class CashuTokenView extends React.Component<
         cashuBBQrParts: [],
         cashuBcurEncoder: undefined,
         cashuFrameIndex: 0,
-        cashuBcurPart: ''
+        cashuBcurPart: '',
+        isTokenTooLarge: false
     };
 
     async componentDidMount() {
@@ -117,6 +119,7 @@ export default class CashuTokenView extends React.Component<
     }
 
     generateCashuInfo = (token: string) => {
+        const MAX_TOKEN_LENGTH = 1000;
         const input = Base64Utils.base64ToBytes(token);
         const fileType = 'U';
 
@@ -138,7 +141,8 @@ export default class CashuTokenView extends React.Component<
             cashuBcurEncoder: encoder,
             cashuBBQrParts: splitResult.parts,
             cashuFrameIndex: 0,
-            cashuBcurPart: encoder.nextPart()
+            cashuBcurPart: encoder.nextPart(),
+            isTokenTooLarge: token.length > MAX_TOKEN_LENGTH
         });
 
         setInterval(() => {
@@ -230,38 +234,45 @@ export default class CashuTokenView extends React.Component<
                 {localeString('views.PSBT.singleFrame')}
             </Text>
         );
-        const bcurButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 1
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                BC-ur
-            </Text>
-        );
-        const bbqrButton = () => (
-            <Text
-                style={{
-                    ...styles.text,
-                    color:
-                        selectedIndex === 2
-                            ? themeColor('background')
-                            : themeColor('text')
-                }}
-            >
-                BBQr
-            </Text>
-        );
+        const bcurButton = () => {
+            const bcurIndex = this.state.isTokenTooLarge ? 0 : 1;
+            return (
+                <Text
+                    style={{
+                        ...styles.text,
+                        color:
+                            selectedIndex === bcurIndex
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    BC-ur
+                </Text>
+            );
+        };
+
+        const bbqrButton = () => {
+            const bbqrIndex = this.state.isTokenTooLarge ? 1 : 2;
+            return (
+                <Text
+                    style={{
+                        ...styles.text,
+                        color:
+                            selectedIndex === bbqrIndex
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    BBQr
+                </Text>
+            );
+        };
 
         const qrButtons: any = [
-            { element: singleButton },
+            !this.state.isTokenTooLarge && { element: singleButton },
             { element: bcurButton },
             { element: bbqrButton }
-        ];
+        ].filter(Boolean);
 
         return (
             <Screen>
@@ -424,11 +435,17 @@ export default class CashuTokenView extends React.Component<
                             >
                                 <CollapsedQR
                                     value={
-                                        selectedIndex === 0
-                                            ? `cashu:${token}`
-                                            : selectedIndex === 2
-                                            ? cashuBBQrParts[cashuFrameIndex]
-                                            : cashuBcurPart
+                                        !this.state.isTokenTooLarge
+                                            ? selectedIndex === 0
+                                                ? `cashu:${token}`
+                                                : selectedIndex === 1
+                                                ? cashuBcurPart
+                                                : cashuBBQrParts[
+                                                      cashuFrameIndex
+                                                  ]
+                                            : selectedIndex === 0
+                                            ? cashuBcurPart
+                                            : cashuBBQrParts[cashuFrameIndex]
                                     }
                                     truncateLongValue
                                     expanded
