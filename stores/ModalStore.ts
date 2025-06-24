@@ -5,6 +5,7 @@ export default class ModalStore {
     @observable public showAndroidNfcModal: boolean = false;
     @observable public showInfoModal: boolean = false;
     @observable public showAlertModal: boolean = false;
+    @observable public showShareModal: boolean = false;
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
     @observable public infoModalTitle: string | undefined;
@@ -17,6 +18,8 @@ export default class ModalStore {
     @observable public alertModalText: string | Array<string> | undefined;
     @observable public alertModalLink: string | undefined;
     @observable public alertModalNav: string | undefined;
+    @observable public onShareQR?: () => void;
+    @observable public onShareText?: () => void;
     @observable public onPress: () => void;
 
     /* External Link Modal */
@@ -47,6 +50,28 @@ export default class ModalStore {
     @action
     public toggleAlertModal = (status: boolean) => {
         this.showAlertModal = status;
+    };
+
+    @action
+    public toggleShareModal = ({
+        onShareQR,
+        onShareText
+    }: {
+        onShareQR?: () => void;
+        onShareText?: () => void;
+    }) => {
+        this.showShareModal = onShareQR && onShareText ? true : false;
+        this.onShareQR = onShareQR;
+        this.onShareText = onShareText;
+    };
+
+    @action
+    @action
+    public shareQR = () => {
+        if (this.onShareQR) this.onShareQR();
+    };
+    public shareText = () => {
+        if (this.onShareText) this.onShareText();
     };
 
     @action
@@ -86,6 +111,12 @@ export default class ModalStore {
             this.infoModalText = undefined;
             this.infoModalLink = undefined;
             this.infoModalAdditionalButtons = undefined;
+            return true;
+        }
+        if (this.showShareModal) {
+            this.showShareModal = false;
+            this.onShareQR = undefined;
+            this.onShareText = undefined;
             return true;
         }
         return false;
