@@ -36,7 +36,7 @@ import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
-import CashuIcon from '../../assets/images/SVG/Ecash.svg';
+import Ecash from '../../assets/images/SVG/Ecash.svg';
 interface ContactInputFieldProps {
     icon: React.ReactNode;
     value: string;
@@ -624,7 +624,7 @@ export default class AddContact extends React.Component<
             addFieldsToArray(
                 cashuPubkey,
                 'cashuPubkey',
-                <CashuIcon />,
+                <Ecash fill={'#FACC15'} />,
                 isValidCashuPubkey,
                 this.onChangeCashuPubkey,
                 localeString('views.Settings.AddContact.cashuPubkey')
@@ -748,7 +748,7 @@ export default class AddContact extends React.Component<
                 key: 'Cashu pubkey',
                 translateKey: 'views.Settings.AddContact.cashuPubkey',
                 value: 'cashuPubkey',
-                icon: <CashuIcon />
+                icon: <Ecash fill={'#FACC15'} />
             },
             {
                 key: 'Onchain address',

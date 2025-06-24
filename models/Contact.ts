@@ -25,120 +25,108 @@ export default class Contact extends BaseModel {
         return this.contactId || this.id;
     }
 
+    private isAddressArrayEmpty(addresses: Array<string> | undefined): boolean {
+        return !addresses || addresses.length === 0 || addresses[0] === '';
+    }
+
+    private isAddressArraySingle(
+        addresses: Array<string> | undefined
+    ): boolean {
+        return Boolean(
+            addresses &&
+                addresses.length === 1 &&
+                addresses[0] &&
+                addresses[0] !== ''
+        );
+    }
+
+    private getActiveAddressTypes(): string[] {
+        const activeTypes: string[] = [];
+
+        if (!this.isAddressArrayEmpty(this.lnAddress))
+            activeTypes.push('lnAddress');
+        if (!this.isAddressArrayEmpty(this.bolt12Address))
+            activeTypes.push('bolt12Address');
+        if (!this.isAddressArrayEmpty(this.bolt12Offer))
+            activeTypes.push('bolt12Offer');
+        if (!this.isAddressArrayEmpty(this.onchainAddress))
+            activeTypes.push('onchainAddress');
+        if (!this.isAddressArrayEmpty(this.pubkey)) activeTypes.push('pubkey');
+        if (!this.isAddressArrayEmpty(this.cashuPubkey))
+            activeTypes.push('cashuPubkey');
+
+        return activeTypes;
+    }
+
+    private isSingleAddressType(targetType: string): boolean {
+        const activeTypes = this.getActiveAddressTypes();
+        return activeTypes.length === 1 && activeTypes[0] === targetType;
+    }
+
     @computed public get isSingleLnAddress(): boolean {
         return (
-            this.lnAddress &&
-            this.lnAddress.length === 1 &&
-            this.lnAddress[0] !== '' &&
-            (!this.bolt12Address ||
-                !this.bolt12Address[0] ||
-                this.bolt12Address[0] === '') &&
-            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
-            (!this.pubkey[0] || this.pubkey[0] === '') &&
-            (!this.bolt12Offer ||
-                !this.bolt12Offer[0] ||
-                this.bolt12Offer[0] === '')
+            this.isAddressArraySingle(this.lnAddress) &&
+            this.isSingleAddressType('lnAddress')
         );
     }
 
     @computed public get isSingleBolt12Address(): boolean {
         return (
-            this.bolt12Address &&
-            this.bolt12Address.length === 1 &&
-            this.bolt12Address[0] !== '' &&
-            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
-            (!this.pubkey[0] || this.pubkey[0] === '') &&
-            (!this.bolt12Offer ||
-                !this.bolt12Offer[0] ||
-                this.bolt12Offer[0] === '')
+            this.isAddressArraySingle(this.bolt12Address) &&
+            this.isSingleAddressType('bolt12Address')
         );
     }
 
     @computed public get isSingleBolt12Offer(): boolean {
         return (
-            this.bolt12Offer &&
-            this.bolt12Offer.length === 1 &&
-            this.bolt12Offer[0] !== '' &&
-            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
-            (!this.pubkey[0] || this.pubkey[0] === '') &&
-            (!this.bolt12Address ||
-                !this.bolt12Address[0] ||
-                this.bolt12Address[0] === '')
+            this.isAddressArraySingle(this.bolt12Offer) &&
+            this.isSingleAddressType('bolt12Offer')
         );
     }
 
     @computed public get isSingleOnchainAddress(): boolean {
         return (
-            this.onchainAddress &&
-            this.onchainAddress.length === 1 &&
-            this.onchainAddress[0] !== '' &&
-            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.bolt12Address ||
-                !this.bolt12Address[0] ||
-                this.bolt12Address[0] === '') &&
-            (!this.pubkey[0] || this.pubkey[0] === '') &&
-            (!this.bolt12Offer ||
-                !this.bolt12Offer[0] ||
-                this.bolt12Offer[0] === '')
+            this.isAddressArraySingle(this.onchainAddress) &&
+            this.isSingleAddressType('onchainAddress')
         );
     }
 
     @computed public get isSinglePubkey(): boolean {
         return (
-            this.pubkey &&
-            this.pubkey.length === 1 &&
-            this.pubkey[0] !== '' &&
-            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.bolt12Address ||
-                !this.bolt12Address[0] ||
-                this.bolt12Address[0] === '') &&
-            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
-            (!this.bolt12Offer ||
-                !this.bolt12Offer[0] ||
-                this.bolt12Offer[0] === '')
+            this.isAddressArraySingle(this.pubkey) &&
+            this.isSingleAddressType('pubkey')
         );
     }
 
     @computed public get isSingleCashuPubkey(): boolean {
         return (
-            this.cashuPubkey &&
-            this.cashuPubkey.length === 1 &&
-            this.cashuPubkey[0] !== '' &&
-            (!this.lnAddress[0] || this.lnAddress[0] === '') &&
-            (!this.bolt12Address ||
-                !this.bolt12Address[0] ||
-                this.bolt12Address[0] === '') &&
-            (!this.onchainAddress[0] || this.onchainAddress[0] === '') &&
-            (!this.bolt12Offer ||
-                !this.bolt12Offer[0] ||
-                this.bolt12Offer[0] === '')
+            this.isAddressArraySingle(this.cashuPubkey) &&
+            this.isSingleAddressType('cashuPubkey')
         );
     }
 
     @computed public get hasLnAddress(): boolean {
-        return this.lnAddress?.length > 0 && this.lnAddress[0] !== '';
+        return !this.isAddressArrayEmpty(this.lnAddress);
     }
 
     @computed public get hasBolt12Address(): boolean {
-        return this.bolt12Address?.length > 0 && this.bolt12Address[0] !== '';
+        return !this.isAddressArrayEmpty(this.bolt12Address);
     }
 
     @computed public get hasBolt12Offer(): boolean {
-        return this.bolt12Offer?.length > 0 && this.bolt12Offer[0] !== '';
+        return !this.isAddressArrayEmpty(this.bolt12Offer);
     }
 
     @computed public get hasOnchainAddress(): boolean {
-        return this.onchainAddress?.length > 0 && this.onchainAddress[0] !== '';
+        return !this.isAddressArrayEmpty(this.onchainAddress);
     }
 
     @computed public get hasPubkey(): boolean {
-        return this.pubkey?.length > 0 && this.pubkey[0] !== '';
+        return !this.isAddressArrayEmpty(this.pubkey);
     }
 
     @computed public get hasCashuPubkey(): boolean {
-        return this.cashuPubkey?.length > 0 && this.cashuPubkey[0] !== '';
+        return !this.isAddressArrayEmpty(this.cashuPubkey);
     }
 
     @computed public get hasMultiplePayableAddresses(): boolean {

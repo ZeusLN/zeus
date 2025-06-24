@@ -39,7 +39,6 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
         const { settings } = SettingsStore;
         const { privacy } = settings;
         const { selectedMintPubkey } = CashuStore;
-
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const URIs = (props: { uris: Array<string> }) => {

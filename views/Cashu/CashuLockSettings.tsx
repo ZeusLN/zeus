@@ -14,40 +14,27 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import DropdownSetting from '../../components/DropdownSetting';
-
 import ContactStore from '../../stores/ContactStore';
-
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
+import { MintTokenParams } from './MintToken';
 
+export interface CashuLockSettingsParams extends MintTokenParams {
+    onSave?: (pubkey: string, duration: string) => void;
+    currentLockPubkey?: string;
+    currentDuration?: string;
+    destination?: string | null;
+    hasCashuPubkey?: boolean;
+    selectedDurationIndex?: number;
+}
 interface CashuLockSettingsProps {
     navigation: StackNavigationProp<any, any>;
     ContactStore: ContactStore;
-    route: Route<
-        'CashuLockSettings',
-        {
-            onSave?: (pubkey: string, duration: string) => void;
-            currentLockPubkey?: string;
-            currentDuration?: string;
-            destination?: string | null;
-            contactName?: string;
-            hasCashuPubkey?: boolean;
-            fromMintToken?: boolean;
-            memo?: string;
-            value?: string;
-            satAmount?: string | number;
-            showCustomDuration?: boolean;
-            customDurationValue?: string;
-            customDurationUnit?: string;
-            duration?: string;
-            selectedDurationIndex?: number;
-        }
-    >;
+    route: Route<'CashuLockSettings', CashuLockSettingsParams>;
 }
-
 interface CashuLockSettingsState {
     pubkey: string;
     contactName: string;
@@ -150,8 +137,8 @@ export default class CashuLockSettings extends React.Component<
 
     handleFocus = () => {
         const { route } = this.props;
-        const { params } = route;
-        if (params?.destination) {
+        const params: CashuLockSettingsParams = route.params || {};
+        if (params.destination) {
             this.setState({
                 contactName: params.contactName || '',
                 pubkey: params.destination,
@@ -169,16 +156,7 @@ export default class CashuLockSettings extends React.Component<
                 error: ''
             });
         }
-        this.props.navigation.setParams({
-            destination: undefined,
-            contactName: undefined,
-            hasCashuPubkey: undefined,
-            duration: undefined,
-            showCustomDuration: undefined,
-            customDurationValue: undefined,
-            customDurationUnit: undefined,
-            selectedDurationIndex: undefined
-        });
+        this.props.navigation.setParams({} as MintTokenParams);
     };
 
     handleContactSelection(pubkey: string) {
@@ -267,12 +245,16 @@ export default class CashuLockSettings extends React.Component<
 
     getCustomDurationString = () => {
         const { customDurationValue, customDurationUnit } = this.state;
-
         if (!customDurationValue) return '';
-
         const value = parseInt(customDurationValue, 10);
-        const unitKey = customDurationUnit.toLowerCase();
-        return `${value} ${value === 1 ? unitKey : unitKey + 's'}`;
+        const baseUnit = customDurationUnit.endsWith('s')
+            ? customDurationUnit.slice(0, -1)
+            : customDurationUnit;
+        const finalUnit = value === 1 ? baseUnit : baseUnit + 's';
+        const capitalizedUnit =
+            finalUnit.charAt(0).toUpperCase() + finalUnit.slice(1);
+
+        return `${value} ${capitalizedUnit}`;
     };
 
     handleSave = () => {
@@ -295,10 +277,10 @@ export default class CashuLockSettings extends React.Component<
         }
 
         const finalDuration = showCustomDuration
-            ? `${customDurationValue} ${customDurationUnit}`
+            ? this.getCustomDurationString()
             : DURATION_OPTIONS[selectedDurationIndex];
 
-        this.props.navigation.popTo('MintToken', {
+        const params: MintTokenParams = {
             pubkey,
             duration: finalDuration,
             fromLockSettings: true,
@@ -311,7 +293,8 @@ export default class CashuLockSettings extends React.Component<
                 customDurationValue,
                 customDurationUnit
             })
-        });
+        };
+        this.props.navigation.popTo('MintToken', params);
     };
 
     checkClipboardContent = async () => {
@@ -359,44 +342,6 @@ export default class CashuLockSettings extends React.Component<
         }
     };
 
-    handleQRScanResult = (scannedPubkey: string) => {
-        const cleanedPubkey = scannedPubkey.trim();
-        const validationError = this.validatePubkey(cleanedPubkey);
-        if (!validationError) {
-            this.setState({
-                pubkey: cleanedPubkey,
-                error: '',
-                isPubkeyValid: true
-            });
-        } else {
-            if (cleanedPubkey && !this.validatePubkey(cleanedPubkey)) {
-                this.setState({
-                    pubkey: cleanedPubkey,
-                    error: '',
-                    isPubkeyValid: true
-                });
-            } else {
-                this.setState({
-                    error: validationError,
-                    isPubkeyValid: false
-                });
-            }
-        }
-    };
-
-    getDynamicStyles = () => {
-        return {
-            cancelButton: {
-                ...styles.cancelButton,
-                backgroundColor: themeColor('secondary')
-            },
-            cancelButtonText: {
-                ...styles.cancelButtonText,
-                color: themeColor('text')
-            }
-        };
-    };
-
     isFormValid = () => {
         const {
             pubkey,
@@ -414,12 +359,13 @@ export default class CashuLockSettings extends React.Component<
     };
 
     onBack = () => {
-        this.props.navigation.popTo('MintToken', {
+        const params: MintTokenParams = {
             fromLockSettings: true,
             pubkey: '',
             duration: '',
             showCustomDuration: false
-        });
+        };
+        this.props.navigation.popTo('MintToken', params);
     };
 
     render() {
