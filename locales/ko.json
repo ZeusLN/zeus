@@ -625,7 +625,7 @@
     "views.PaymentRequest.mpp.explainer1": "다중 경로 결제는 하나의 결제를 여러 개의 소액 결제로 나누어, 네트워크 상의 다양한 경로를 통해 전달하는 기술입니다.",
     "views.PaymentRequest.mpp.explainer2": "결제 성공률을 높이기 위해 이 옵션을 활성화된 상태로 유지하세요.",
     "views.PaymentRequest.amp": "원자 다중 경로 결제 시도",
-    "views.PaymentRequest.amp.explainer1": "Atomic Multi-Path Payments(AMP)는 다중 경로 결제의 한 형태로, 각 결제 조각이 목적지에서 원자적으로(atomic) 다시 결합됩니다.\n즉, 모든 조각이 함께 성공하거나, 전부 실패합니다.",
+    "views.PaymentRequest.amp.explainer1": "Atomic Multi-Path Payments(AMP)는 다중 경로 결제의 한 형태로, 각 결제 조각이 목적지에서 원자적으로(atomic) 다시 결합됩니다. 즉, 모든 부분이 함께 성공하거나, 전부 실패합니다.",
     "views.PaymentRequest.amp.explainer2": "이 방식은 현재 LND에서만 지원됩니다.",
     "views.PaymentRequest.maxParts": "최대 부품",
     "views.PaymentRequest.maxShardAmt": "최대 샤드 수량",
