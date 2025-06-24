@@ -254,12 +254,16 @@ export default class CashuTokenView extends React.Component<
                             />
                         )}
 
-                        {decoded.getLocktime && (
+                        {decoded.getLockPubkey && (
                             <KeyValue
                                 keyValue={localeString('cashu.locktime')}
-                                value={DateTimeUtils.listFormattedDate(
+                                value={
                                     decoded.getLocktime
-                                )}
+                                        ? DateTimeUtils.listFormattedDate(
+                                              decoded.getLocktime
+                                          )
+                                        : localeString('cashu.duration.forever')
+                                }
                                 sensitive
                             />
                         )}

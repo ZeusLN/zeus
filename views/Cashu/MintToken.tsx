@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -20,29 +20,28 @@ import ContactStore from '../../stores/ContactStore';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
+export interface MintTokenParams {
+    amount?: string;
+    pubkey?: string;
+    contactName?: string;
+    locktime?: number;
+    memo?: string;
+    value?: string;
+    satAmount?: string | number;
+    account?: string;
+    duration?: string;
+    fromLockSettings?: boolean;
+    showCustomDuration?: boolean;
+    customDurationValue?: string;
+    customDurationUnit?: string;
+}
+
 interface MintTokenProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ContactStore: ContactStore;
-    route: Route<
-        'MintToken',
-        {
-            amount?: string;
-            pubkey?: string;
-            contactName?: string;
-            locktime?: number;
-            memo?: string;
-            value?: string;
-            satAmount?: string | number;
-            account?: string;
-            duration?: string;
-            fromLockSettings?: boolean;
-            showCustomDuration?: boolean;
-            customDurationValue?: string;
-            customDurationUnit?: string;
-        }
-    >;
+    route: Route<'MintToken', MintTokenParams>;
 }
 
 interface MintTokenState {
@@ -90,7 +89,8 @@ export default class MintToken extends React.Component<
 
         clearToken();
 
-        const { amount } = route.params ?? {};
+        const params: MintTokenParams = route.params ?? {};
+        const { amount } = params;
 
         if (amount && amount != '0') {
             this.setState({
@@ -111,7 +111,7 @@ export default class MintToken extends React.Component<
 
     handleScreenFocus = () => {
         const { route } = this.props;
-        const params = route.params || {};
+        const params: MintTokenParams = route.params || {};
 
         if (params.fromLockSettings) {
             const stateUpdate: Partial<MintTokenState> = {
@@ -147,7 +147,6 @@ export default class MintToken extends React.Component<
         }
         const parts = duration.split(' ');
         if (parts.length !== 2) return 0;
-
         const value = parseInt(parts[0], 10);
         const unit = parts[1];
         if (isNaN(value) || value <= 0) return 0;
@@ -196,24 +195,13 @@ export default class MintToken extends React.Component<
             customDurationUnit: ''
         });
 
-        this.props.navigation.setParams({
-            amount: undefined,
-            pubkey: undefined,
-            contactName: undefined,
-            locktime: undefined,
-            memo: undefined,
-            value: undefined,
-            satAmount: undefined,
-            duration: undefined,
-            fromLockSettings: undefined,
-            showCustomDuration: undefined,
-            customDurationValue: undefined,
-            customDurationUnit: undefined
-        });
+        // Reset all params at once
+        this.props.navigation.setParams({} as MintTokenParams);
     }
 
     handleLockSettingsPress = () => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
+        const params: MintTokenParams = route.params || {};
         const {
             memo,
             value,
@@ -226,6 +214,7 @@ export default class MintToken extends React.Component<
             customDurationUnit
         } = this.state;
         navigation.navigate('CashuLockSettings', {
+            ...params,
             currentLockPubkey: pubkey,
             currentDuration: duration,
             fromMintToken: true,
@@ -265,7 +254,6 @@ export default class MintToken extends React.Component<
     render() {
         const { CashuStore, navigation } = this.props;
         const { memo, value, satAmount, pubkey, duration } = this.state;
-        const { fontScale } = Dimensions.get('window');
 
         const { mintToken, mintingToken, loadingMsg } = CashuStore;
         const loading = CashuStore.loading || this.state.loading;
@@ -274,37 +262,41 @@ export default class MintToken extends React.Component<
 
         const isAmountValid = satAmount && Number(satAmount) > 0;
 
-        const dynamicStyles = {
-            text: {
-                ...styles.text,
-                color: themeColor('secondaryText')
-            },
-            loadingText: {
-                marginTop: 35,
-                fontFamily: 'PPNeueMontreal-Book',
-                fontSize: 16 / fontScale,
-                color: themeColor('text'),
-                textAlign: 'center' as const
-            },
-            lockButton: {
-                ...styles.lockButton,
-                backgroundColor: themeColor('secondary'),
-                borderColor: themeColor('text')
-            },
-            lockButtonText: {
-                ...styles.lockButtonText,
-                color: themeColor('text')
-            },
-            mintButton: {
-                backgroundColor: isAmountValid
-                    ? themeColor('text')
-                    : themeColor('secondary')
-            },
-            mintButtonText: {
-                color: isAmountValid
-                    ? themeColor('secondary')
-                    : themeColor('text')
-            }
+        const handleMintEcashToken = () => {
+            const lockSeconds = pubkey
+                ? this.convertDurationToSeconds(duration)
+                : 0;
+
+            const params = {
+                memo,
+                value: satAmount.toString() || '0',
+                ...(pubkey && {
+                    pubkey,
+                    lockTime:
+                        lockSeconds && lockSeconds > 0
+                            ? Math.floor(Date.now() / 1000) + lockSeconds
+                            : undefined
+                })
+            };
+            mintToken(params).then(
+                (
+                    result:
+                        | {
+                              token: string;
+                              decoded: CashuToken;
+                          }
+                        | undefined
+                ) => {
+                    if (result?.token && result.decoded) {
+                        const { token, decoded } = result;
+                        this.resetForm();
+                        navigation.navigate('CashuToken', {
+                            token,
+                            decoded
+                        });
+                    }
+                }
+            );
         };
 
         return (
@@ -335,7 +327,16 @@ export default class MintToken extends React.Component<
                                 <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />
                                     {loadingMsg && (
-                                        <Text style={dynamicStyles.loadingText}>
+                                        <Text
+                                            style={{
+                                                marginTop: 35,
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 16,
+                                                color: themeColor('text'),
+                                                textAlign: 'center'
+                                            }}
+                                        >
                                             {loadingMsg}
                                         </Text>
                                     )}
@@ -344,7 +345,14 @@ export default class MintToken extends React.Component<
                             {!loading && !mintingToken && (
                                 <>
                                     <>
-                                        <Text style={dynamicStyles.text}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {localeString('cashu.mint')}
                                         </Text>
                                         <View
@@ -359,7 +367,14 @@ export default class MintToken extends React.Component<
                                         </View>
                                     </>
                                     <>
-                                        <Text style={dynamicStyles.text}>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
                                             {localeString('views.Receive.memo')}
                                         </Text>
                                         <TextInput
@@ -408,12 +423,16 @@ export default class MintToken extends React.Component<
                                                 styles.lockButtonContainer
                                             }
                                             secondary={true}
-                                            buttonStyle={
-                                                dynamicStyles.lockButton
-                                            }
-                                            titleStyle={
-                                                dynamicStyles.lockButtonText
-                                            }
+                                            buttonStyle={{
+                                                ...styles.lockButton,
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderColor: themeColor('text')
+                                            }}
+                                            titleStyle={{
+                                                ...styles.lockButtonText,
+                                                color: themeColor('text')
+                                            }}
                                         />
                                     </View>
 
@@ -422,61 +441,17 @@ export default class MintToken extends React.Component<
                                             title={localeString(
                                                 'cashu.mintEcashToken'
                                             )}
-                                            onPress={() => {
-                                                const lockSeconds = pubkey
-                                                    ? this.convertDurationToSeconds(
-                                                          duration
-                                                      )
-                                                    : 0;
-                                                const params: any = {
-                                                    memo,
-                                                    value:
-                                                        satAmount.toString() ||
-                                                        '0'
-                                                };
-
-                                                if (pubkey && lockSeconds) {
-                                                    params.pubkey = pubkey;
-                                                    params.lockTime =
-                                                        Math.floor(
-                                                            Date.now() / 1000
-                                                        ) + lockSeconds;
-                                                }
-                                                mintToken(params).then(
-                                                    (
-                                                        result:
-                                                            | {
-                                                                  token: string;
-                                                                  decoded: CashuToken;
-                                                              }
-                                                            | undefined
-                                                    ) => {
-                                                        if (
-                                                            result?.token &&
-                                                            result.decoded
-                                                        ) {
-                                                            const {
-                                                                token,
-                                                                decoded
-                                                            } = result;
-                                                            this.resetForm();
-                                                            navigation.navigate(
-                                                                'CashuToken',
-                                                                {
-                                                                    token,
-                                                                    decoded
-                                                                }
-                                                            );
-                                                        }
-                                                    }
-                                                );
+                                            onPress={handleMintEcashToken}
+                                            buttonStyle={{
+                                                backgroundColor: isAmountValid
+                                                    ? themeColor('text')
+                                                    : themeColor('secondary')
                                             }}
-                                            buttonStyle={
-                                                dynamicStyles.mintButton
-                                            }
-                                            titleStyle={
-                                                dynamicStyles.mintButtonText
-                                            }
+                                            titleStyle={{
+                                                color: isAmountValid
+                                                    ? themeColor('secondary')
+                                                    : themeColor('text')
+                                            }}
                                             disabled={!isAmountValid}
                                         />
                                     </View>
