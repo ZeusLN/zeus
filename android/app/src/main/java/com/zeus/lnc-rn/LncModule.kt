@@ -209,7 +209,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun createRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean, isTestnet: Boolean = false, promise: Promise) {
+  fun createRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean = false, isTestnet: Boolean = false, promise: Promise) {
      Log.d("createRefundTransaction called", "");
 
      try {
