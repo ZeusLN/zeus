@@ -7,10 +7,13 @@ interface ValidationResult {
     error?: string;
 }
 
+export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
+
 export class WIFUtils {
     validateWIF(wif: string): ValidationResult {
         try {
-            if (!['K', 'L', '5'].includes(wif[0])) {
+            if (!['K', 'L', '5', 'c', '9'].includes(wif[0])) {
+                // 'K', 'L', '5' are the prefixes for mainnet, 'c', '9' are the prefixes for testnet
                 return {
                     isValid: false,
                     error: localeString('views.Wif.invalidPrefix')
