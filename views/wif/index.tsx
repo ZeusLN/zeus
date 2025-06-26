@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -291,14 +291,14 @@ export default class WIFSweeper extends React.Component<
                             />
                         </View>
                         <Button
-                            title={localeString('views.Wif.sweep')}
+                            title={localeString('views.Wif.createTransaction')}
                             onPress={() => {
                                 const { isValid, error } = wifUtils.validateWIF(
                                     this.state.privateKey
                                 );
                                 if (isValid) {
-                                    // Continue with sweep process
-                                    // this.props.SweepStore.sweepBtc(this.state.privateKey);
+                                    // go to the broadcast screen
+                                    Alert.alert('Sweep', 'Sweep');
                                 } else {
                                     this.props.SweepStore.sweepError = true;
                                     this.props.SweepStore.sweepErrorMsg =
