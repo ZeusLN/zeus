@@ -344,8 +344,13 @@ export default class SwapDetails extends React.Component<
                     }
                     break;
 
+                case 'invoice.failedToPay':
                 case 'transaction.lockupFailed':
-                    if (isSubmarineSwap) {
+                case 'swap.expired':
+                    if (
+                        isSubmarineSwap &&
+                        !this.state.swapData?.lockupTransaction?.hex
+                    ) {
                         const lockupTx = await SwapStore?.getLockupTransaction(
                             createdResponse.id
                         );
@@ -356,11 +361,17 @@ export default class SwapDetails extends React.Component<
                             }
                         }));
                     }
+
+                    if (data?.failureReason) {
+                        webSocket.close();
+                        this.setState({
+                            error: data?.failureReason,
+                            socketConnected: false
+                        });
+                    }
                     break;
 
                 case 'transaction.claimed':
-                case 'invoice.failedToPay':
-                case 'swap.expired':
                     webSocket.close();
                     data?.failureReason &&
                         this.setState({
@@ -758,10 +769,11 @@ export default class SwapDetails extends React.Component<
         const failure = failureReason || swapData.failureReason;
 
         const showRefundButton =
-            updates === 'invoice.failedToPay' ||
-            updates === 'transaction.lockupFailed' ||
-            (isSubmarineSwap && updates === 'swap.expired') ||
-            (failure && error);
+            swapData.lockupTransaction &&
+            (updates === 'invoice.failedToPay' ||
+                updates === 'transaction.lockupFailed' ||
+                (isSubmarineSwap && updates === 'swap.expired') ||
+                (failure && error));
 
         return (
             <Screen>
