@@ -30,6 +30,7 @@ import { WarningMessage } from '../components/SuccessErrorMessage';
 import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore from '../stores/ChannelsStore';
 import InvoicesStore from '../stores/InvoicesStore';
+import SwapStore from '../stores/SwapStore';
 import TransactionsStore, { SendPaymentReq } from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
@@ -47,6 +48,7 @@ import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import QR from '../assets/images/SVG/QR.svg';
 import SwapIcon from '../assets/images/SVG/Swap.svg';
+import BigNumber from 'bignumber.js';
 
 const zaplockerDestinations = [
     // OLYMPUS
@@ -59,6 +61,7 @@ interface InvoiceProps {
     navigation: StackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
+    SwapStore: SwapStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
     ChannelsStore: ChannelsStore;
@@ -84,6 +87,7 @@ interface InvoiceState {
     zaplockerToggle: boolean;
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
+    validAmountToSwap: boolean;
 }
 
 @inject(
@@ -94,7 +98,8 @@ interface InvoiceState {
     'ChannelsStore',
     'NodeInfoStore',
     'LnurlPayStore',
-    'SettingsStore'
+    'SettingsStore',
+    'SwapStore'
 )
 @observer
 export default class PaymentRequest extends React.Component<
@@ -119,7 +124,8 @@ export default class PaymentRequest extends React.Component<
         settingsToggle: false,
         zaplockerToggle: false,
         lightningReadyToSend: false,
-        slideToPayThreshold: 10000
+        slideToPayThreshold: 10000,
+        validAmountToSwap: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -138,12 +144,15 @@ export default class PaymentRequest extends React.Component<
             }
         }
 
+        const validAmountToSwap = this.isAmountValidToSwap();
+
         this.setState({
             feeOption,
             feeLimitSat: settings?.payments?.defaultFeeFixed || '100',
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
-            slideToPayThreshold: settings?.payments?.slideToPayThreshold
+            slideToPayThreshold: settings?.payments?.slideToPayThreshold,
+            validAmountToSwap
         });
 
         if (implementation === 'embedded-lnd') {
@@ -154,6 +163,64 @@ export default class PaymentRequest extends React.Component<
             });
         }
     }
+
+    isAmountValidToSwap(): boolean {
+        const { SwapStore, InvoicesStore } = this.props;
+
+        const subInfo: any = SwapStore.subInfo;
+        const { pay_req } = InvoicesStore;
+        const requestAmount = pay_req && pay_req.getRequestAmount;
+
+        if (!subInfo) {
+            return false;
+        }
+
+        const min = this.calculateLimit(subInfo.limits.minimal || 0).toNumber();
+        const max = this.calculateLimit(subInfo.limits.maximal || 0).toNumber();
+        const minBN = new BigNumber(min);
+        const maxBN = new BigNumber(max);
+
+        const input = this.calculateLimit(requestAmount || 0);
+
+        return input.gte(minBN) && input.lte(maxBN);
+    }
+
+    bigCeil = (big: BigNumber): BigNumber => {
+        return big.integerValue(BigNumber.ROUND_CEIL);
+    };
+
+    calculateSendAmount = (
+        receiveAmount: BigNumber,
+        serviceFee: number,
+        minerFee: number
+    ): BigNumber => {
+        if (receiveAmount.isNaN() || receiveAmount.isLessThanOrEqualTo(0)) {
+            return new BigNumber(0);
+        }
+        return this.bigCeil(
+            receiveAmount
+                .plus(
+                    this.bigCeil(
+                        receiveAmount.times(new BigNumber(serviceFee).div(100))
+                    )
+                )
+                .plus(minerFee)
+        );
+    };
+
+    calculateLimit = (limit: number): any => {
+        const { subInfo } = this.props.SwapStore;
+        const info: any = subInfo;
+        const serviceFeePct = info?.fees?.percentage || 0;
+        const networkFeeBigNum = new BigNumber(info?.fees?.minerFees || 0);
+        const networkFee = networkFeeBigNum.toNumber();
+
+        return this.calculateSendAmount(
+            new BigNumber(limit),
+            serviceFeePct,
+            networkFee
+        );
+    };
 
     componentWillUnmount(): void {
         this.isComponentMounted = false;
@@ -436,32 +503,39 @@ export default class PaymentRequest extends React.Component<
             </TouchableOpacity>
         );
 
-        const SwapButton = () => (
-            <TouchableOpacity
-                onPress={() => {
-                    const amountToSwap = isNoAmountInvoice
-                        ? this.state.satAmount
-                        : requestAmount;
-                    if (paymentRequest && amountToSwap) {
-                        navigation.navigate('Swaps', {
-                            initialInvoice: paymentRequest,
-                            initialAmountSats: amountToSwap.toString(),
-                            initialReverse: false // OnChain -> LN for paying a LN invoice
-                        });
+        const SwapButton = () => {
+            const { validAmountToSwap } = this.state;
+
+            if (!validAmountToSwap) return null;
+
+            return (
+                <TouchableOpacity
+                    onPress={() => {
+                        const amountToSwap = isNoAmountInvoice
+                            ? this.state.satAmount
+                            : requestAmount;
+                        if (paymentRequest && amountToSwap) {
+                            navigation.navigate('Swaps', {
+                                initialInvoice: paymentRequest,
+                                initialAmountSats: amountToSwap.toString(),
+                                initialReverse: false // OnChain -> LN for paying a LN invoice
+                            });
+                        }
+                    }}
+                    disabled={
+                        !paymentRequest ||
+                        (!isNoAmountInvoice && !requestAmount)
                     }
-                }}
-                disabled={
-                    !paymentRequest || (!isNoAmountInvoice && !requestAmount)
-                }
-            >
-                <SwapIcon
-                    fill={themeColor('text')}
-                    width="36"
-                    height="26"
-                    style={{ marginRight: 10 }}
-                />
-            </TouchableOpacity>
-        );
+                >
+                    <SwapIcon
+                        fill={themeColor('text')}
+                        width="36"
+                        height="26"
+                        style={{ marginRight: 10 }}
+                    />
+                </TouchableOpacity>
+            );
+        };
 
         return (
             <Screen>
