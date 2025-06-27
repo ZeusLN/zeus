@@ -172,6 +172,16 @@ export default class ChannelView extends React.Component<
         }
     }
 
+    componentDidMount() {
+        const { channel } = this.state;
+
+        const closeAddress: string | undefined = channel?.close_address;
+
+        if (closeAddress) {
+            this.setState({ deliveryAddress: closeAddress });
+        }
+    }
+
     findContactByPubkey = (pubkey: string) => {
         const { ContactStore } = this.props;
         const { contacts } = ContactStore;
@@ -314,6 +324,8 @@ export default class ChannelView extends React.Component<
         const lurkerMode = privacy && privacy.lurkerMode;
         const { testnet } = NodeInfoStore;
         const { closeChannelErr, closingChannel } = ChannelsStore;
+
+        const closeAddress: string | undefined = channel?.close_address;
 
         const {
             channel_point,
@@ -1200,9 +1212,15 @@ export default class ChannelView extends React.Component<
                                                     ...styles.text,
                                                     color: themeColor('text')
                                                 }}
-                                                infoModalText={localeString(
-                                                    'views.Channel.externalAddress.info'
-                                                )}
+                                                infoModalText={
+                                                    closeAddress
+                                                        ? localeString(
+                                                              'views.Channel.externalAddress.info2'
+                                                          )
+                                                        : localeString(
+                                                              'views.Channel.externalAddress.info1'
+                                                          )
+                                                }
                                             >
                                                 {localeString(
                                                     'views.Channel.externalAddress'
@@ -1211,12 +1229,19 @@ export default class ChannelView extends React.Component<
                                             <TextInput
                                                 placeholder={'bc1...'}
                                                 value={deliveryAddress}
-                                                onChangeText={(text: string) =>
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
                                                     this.setState({
                                                         deliveryAddress: text
-                                                    })
+                                                    });
+                                                }}
+                                                locked={
+                                                    closingChannel ||
+                                                    (closeAddress !==
+                                                        undefined &&
+                                                        closeAddress !== '')
                                                 }
-                                                locked={closingChannel}
                                             />
                                         </>
                                     )}
