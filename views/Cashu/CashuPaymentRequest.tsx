@@ -157,11 +157,8 @@ export default class CashuPaymentRequest extends React.Component<
     sendPayment = ({
         amount // used only for no-amount invoices
     }: SendPaymentReq) => {
-        const { CashuStore, SettingsStore, TransactionsStore, navigation } =
-            this.props;
+        const { CashuStore, SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
-
-        TransactionsStore.donationIsPaid = false;
 
         const enableDonations = settings?.payments?.enableDonations;
         const { donationAmount } = this.state;
