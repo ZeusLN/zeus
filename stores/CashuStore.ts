@@ -1564,7 +1564,7 @@ export default class CashuStore {
             }
 
             if (
-                !success ||
+                (!isDonationPayment && !success) ||
                 proofsToSend === undefined ||
                 proofsToKeep === undefined ||
                 newCounterValue === undefined
@@ -1609,7 +1609,11 @@ export default class CashuStore {
                     CashuUtils.sumProofsValue(meltResponse?.change)
             );
 
-            this.paymentPreimage = meltResponse.quote.payment_preimage!!;
+            const paymentPreimage = meltResponse.quote.payment_preimage!!;
+
+            if (!isDonationPayment) {
+                this.paymentPreimage = paymentPreimage;
+            }
 
             const payment = new CashuPayment({
                 ...this.payReq,
@@ -1618,7 +1622,7 @@ export default class CashuStore {
                 meltResponse,
                 amount: meltResponse.quote.amount,
                 fee: realFee,
-                payment_preimage: this.paymentPreimage,
+                payment_preimage: paymentPreimage,
                 mintUrl
             });
 
@@ -1648,33 +1652,30 @@ export default class CashuStore {
             return payment;
         } catch (err: any) {
             console.log('paying ln invoice from ecash error', err);
-            if (!isDonationPayment) {
-                const mintQuote = await wallet!!.checkMeltQuote(
-                    this.meltQuote!!.quote
-                );
-                if (mintQuote.state == MeltQuoteState.PAID) {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.alreadyPaid'
-                    );
-                    this.loading = false;
-                    return;
-                } else if (mintQuote.state == MeltQuoteState.PENDING) {
-                    this.paymentError = true;
-                    this.paymentErrorMsg = localeString(
-                        'stores.CashuStore.pending'
-                    );
-                    this.loading = false;
-                    return;
-                }
+            const mintQuote = await wallet!!.checkMeltQuote(
+                this.meltQuote!!.quote
+            );
+            if (mintQuote.state == MeltQuoteState.PAID) {
                 this.paymentError = true;
-                this.paymentErrorMsg = String(err.message);
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.alreadyPaid'
+                );
                 this.loading = false;
+                return;
+            } else if (mintQuote.state == MeltQuoteState.PENDING) {
+                this.paymentError = true;
+                this.paymentErrorMsg = localeString(
+                    'stores.CashuStore.pending'
+                );
+                this.loading = false;
+                return;
             }
             await this.removeMintProofs(mintUrl, this.proofsToUse!!);
             await this.addMintProofs(mintUrl, proofs!!);
-
-            return { donationError: 'Donation payment failed' };
+            this.paymentError = true;
+            this.paymentErrorMsg = String(err.message);
+            this.loading = false;
+            return;
         }
     };
 
