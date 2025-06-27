@@ -156,8 +156,7 @@ export default class OpenChannel extends React.Component<
             simpleTaprootChannel:
                 settings?.channels?.simpleTaprootChannel !== null
                     ? settings.channels.simpleTaprootChannel
-                    : false,
-            close_address: settings.channels.closeAddress || ''
+                    : false
         });
     }
 
