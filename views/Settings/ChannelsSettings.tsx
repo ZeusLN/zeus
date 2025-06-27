@@ -1,12 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
-import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import SettingsStore from '../../stores/SettingsStore';
@@ -25,7 +24,6 @@ interface ChannelsSettingsState {
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
-    closeAddress: string;
     lsps1ShowPurchaseButton: boolean;
 }
 
@@ -40,7 +38,6 @@ export default class ChannelsSettings extends React.Component<
         privateChannel: true,
         scidAlias: true,
         simpleTaprootChannel: false,
-        closeAddress: '',
         lsps1ShowPurchaseButton: true
     };
 
@@ -63,7 +60,6 @@ export default class ChannelsSettings extends React.Component<
                 settings?.channels?.simpleTaprootChannel !== null
                     ? settings.channels.simpleTaprootChannel
                     : false,
-            closeAddress: settings?.channels?.closeAddress || '',
             lsps1ShowPurchaseButton:
                 settings?.lsps1ShowPurchaseButton !== null
                     ? settings.lsps1ShowPurchaseButton
@@ -87,7 +83,6 @@ export default class ChannelsSettings extends React.Component<
             privateChannel,
             scidAlias,
             simpleTaprootChannel,
-            closeAddress,
             lsps1ShowPurchaseButton
         } = this.state;
         const { settings, updateSettings }: any = SettingsStore;
@@ -133,32 +128,6 @@ export default class ChannelsSettings extends React.Component<
                                 channels: {
                                     ...settings.channels,
                                     min_confs: newMinConfs
-                                }
-                            });
-                        }}
-                    />
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                        infoModalText={localeString(
-                            'views.OpenChannel.closeAddressExplainer'
-                        )}
-                    >
-                        {localeString('views.OpenChannel.closeAddress')}
-                    </Text>
-                    <TextInput
-                        placeholder={'bc1...'}
-                        value={closeAddress}
-                        onChangeText={async (text: string) => {
-                            this.setState({
-                                closeAddress: text
-                            });
-                            await updateSettings({
-                                channels: {
-                                    ...settings.channels,
-                                    closeAddress: text
                                 }
                             });
                         }}

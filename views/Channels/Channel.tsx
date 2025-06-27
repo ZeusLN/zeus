@@ -177,7 +177,7 @@ export default class ChannelView extends React.Component<
 
         const closeAddress: string | undefined = channel?.close_address;
 
-        if (closeAddress && closeAddress !== '') {
+        if (closeAddress) {
             this.setState({ deliveryAddress: closeAddress });
         }
     }
@@ -1213,8 +1213,7 @@ export default class ChannelView extends React.Component<
                                                     color: themeColor('text')
                                                 }}
                                                 infoModalText={
-                                                    closeAddress &&
-                                                    closeAddress !== ''
+                                                    closeAddress
                                                         ? localeString(
                                                               'views.Channel.externalAddress.info2'
                                                           )
