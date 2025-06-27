@@ -5,10 +5,13 @@ import {
     NativeEventSubscription,
     StyleSheet,
     Text,
-    View
+    View,
+    TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { getRouteStack } from '../NavigationService';
 
 import LnurlPaySuccess from './LnurlPay/Success';
@@ -19,12 +22,17 @@ import PaidIndicator from '../components/PaidIndicator';
 import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
+import KeyValue from '../components/KeyValue';
+import Amount from '../components/Amount';
+import ModalBox from '../components/ModalBox';
 
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
 
+import Base64Utils from '../utils/Base64Utils';
+import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -33,7 +41,10 @@ import Storage from '../storage';
 import Clock from '../assets/images/SVG/Clock.svg';
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
+import Gift from '../assets/images/SVG/gift.svg';
 import CopyBox from '../components/CopyBox';
+import LoadingIndicator from '../components/LoadingIndicator';
+import BigNumber from 'bignumber.js';
 
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
@@ -41,12 +52,29 @@ interface SendingLightningProps {
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
+    route: Route<
+        'SendingLightning',
+        {
+            donationAmount?: string;
+            enableDonations: boolean;
+        }
+    >;
 }
 
 interface SendingLightningState {
     storedNotes: string;
     wasSuccessful: boolean;
     currentPayment: any;
+    paymentType: string;
+    payingDonation: boolean;
+    showDonationInfo: boolean;
+    donationHandled: boolean;
+    donationPreimage: string;
+    amountDonated: number | null;
+    donationEnhancedPath: any;
+    donationPathExists: boolean;
+    donationFee: string;
+    donationFeePercentage: string;
 }
 
 @inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
@@ -57,19 +85,32 @@ export default class SendingLightning extends React.Component<
 > {
     private backPressSubscription: NativeEventSubscription;
 
+    focusListener: any;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.state = {
             storedNotes: '',
             currentPayment: null,
-            wasSuccessful: false
+            wasSuccessful: false,
+            payingDonation: false,
+            showDonationInfo: false,
+            donationHandled: false,
+            donationPreimage: '',
+            amountDonated: null,
+            paymentType: 'main',
+            donationEnhancedPath: null,
+            donationPathExists: false,
+            donationFee: '',
+            donationFeePercentage: ''
         };
     }
 
     componentDidMount() {
         const { TransactionsStore, navigation } = this.props;
 
-        navigation.addListener('focus', () => {
+        this.focusListener = navigation.addListener('focus', () => {
+            this.setState({ showDonationInfo: false });
             const noteKey: string = TransactionsStore.noteKey;
             if (!noteKey) return;
             Storage.getItem(noteKey)
@@ -90,8 +131,10 @@ export default class SendingLightning extends React.Component<
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
-        const { TransactionsStore } = this.props;
+        const { TransactionsStore, route } = this.props;
+        const { donationIsPaid } = TransactionsStore;
         const wasSuccessful = this.successfullySent(TransactionsStore);
+        const { donationAmount, enableDonations } = route.params;
 
         if (wasSuccessful && !this.state.wasSuccessful) {
             this.fetchPayments();
@@ -99,7 +142,391 @@ export default class SendingLightning extends React.Component<
         } else if (!wasSuccessful && this.state.wasSuccessful) {
             this.setState({ wasSuccessful: false }); // Reset success state if needed
         }
+
+        if (
+            wasSuccessful &&
+            !this.state.wasSuccessful &&
+            enableDonations &&
+            donationAmount &&
+            !donationIsPaid
+        ) {
+            this.setState(
+                {
+                    payingDonation: true,
+                    paymentType: 'donation'
+                },
+                () => {
+                    this.loadLnurl()
+                        .then(async (payment_request) => {
+                            if (payment_request) {
+                                try {
+                                    const result =
+                                        await TransactionsStore.sendPaymentSilently(
+                                            {
+                                                payment_request
+                                            }
+                                        );
+
+                                    const { payment_error, status } =
+                                        result || {};
+
+                                    const isFailure =
+                                        (typeof status === 'string' &&
+                                            status === 'FAILED') ||
+                                        (typeof payment_error === 'string' &&
+                                            payment_error !== '');
+
+                                    if (isFailure) {
+                                        this.setState({
+                                            payingDonation: false,
+                                            amountDonated: parseFloat(
+                                                donationAmount ?? ''
+                                            )
+                                        });
+                                        return;
+                                    }
+
+                                    TransactionsStore.donationIsPaid = true;
+
+                                    let payment_preimage;
+                                    let donationEnhancedPath = null;
+                                    let donationPathExists = false;
+                                    let donationFee = '';
+                                    let donationFeePercentage = '';
+                                    let payment: any;
+
+                                    const amountDonated =
+                                        result?.num_satoshis ||
+                                        result?.value_sat ||
+                                        result.amount_msat / 1000;
+
+                                    if (
+                                        result?.amount_msat &&
+                                        result?.amount_sent_msat
+                                    ) {
+                                        const msatSent =
+                                            +result.amount_sent_msat
+                                                .toString()
+                                                .replace('msat', '');
+                                        const msat = +result.amount_msat
+                                            .toString()
+                                            .replace('msat', '');
+
+                                        donationFee = (
+                                            (msatSent - msat) /
+                                            1000
+                                        ).toString();
+                                    }
+
+                                    const preimage = result?.payment_preimage;
+
+                                    if (preimage) {
+                                        if (
+                                            typeof preimage !== 'string' &&
+                                            preimage.data
+                                        ) {
+                                            payment_preimage =
+                                                Base64Utils.bytesToHex(
+                                                    preimage.data
+                                                );
+                                        } else if (
+                                            typeof preimage === 'string'
+                                        ) {
+                                            payment_preimage = preimage;
+                                        }
+                                    }
+
+                                    const { PaymentsStore } = this.props;
+                                    const payments =
+                                        await PaymentsStore.getPayments({
+                                            maxPayments: 1,
+                                            reversed: true
+                                        });
+
+                                    payment = payments?.[0];
+
+                                    if (payment?.fee_msat) {
+                                        donationFee = (
+                                            Number(payment.fee_msat) / 1000
+                                        ).toString();
+                                    }
+
+                                    donationFeePercentage =
+                                        Number(
+                                            new BigNumber(donationFee)
+                                                .div(amountDonated)
+                                                .times(100)
+                                                .toFixed(3)
+                                        )
+                                            .toString()
+                                            .replace(/-/g, '') + '%';
+
+                                    if (BackendUtils.isLNDBased()) {
+                                        donationEnhancedPath =
+                                            payment?.enhancedPath;
+                                        donationPathExists =
+                                            donationEnhancedPath?.length > 0 &&
+                                            donationEnhancedPath[0][0];
+                                    }
+
+                                    this.setState({
+                                        payingDonation: false,
+                                        donationHandled: true,
+                                        donationPreimage:
+                                            payment_preimage || '',
+                                        amountDonated,
+                                        donationEnhancedPath,
+                                        donationPathExists,
+                                        donationFee,
+                                        donationFeePercentage
+                                    });
+                                } catch (err) {
+                                    this.setState({
+                                        payingDonation: false
+                                    });
+                                }
+                            } else {
+                                this.setState({ payingDonation: false });
+                            }
+                        })
+                        .catch((err) => {
+                            console.error('Unexpected error:', err);
+                            this.setState({ payingDonation: false });
+                        });
+                }
+            );
+        }
     }
+
+    loadLnurl = async () => {
+        const donationAddress = 'tips@pay.zeusln.app';
+        const { route } = this.props;
+        const { donationAmount } = route.params;
+
+        const [username, bolt11Domain] = donationAddress.split('@');
+        const url = bolt11Domain.includes('.onion')
+            ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
+            : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+
+        try {
+            const response = await ReactNativeBlobUtil.fetch('GET', url);
+            const lnurlData = response.json();
+            const amount = parseFloat(donationAmount ?? '') * 1000;
+            const callbackUrl = `${lnurlData.callback}?amount=${amount}`;
+
+            const invoiceResponse = await ReactNativeBlobUtil.fetch(
+                'GET',
+                callbackUrl
+            );
+            const invoiceData = invoiceResponse.json();
+
+            return invoiceData.pr;
+        } catch (err) {
+            console.error('loadLnurl error:', err);
+            return null;
+        }
+    };
+
+    renderInfoModal = () => {
+        const {
+            showDonationInfo,
+            donationPreimage,
+            donationHandled,
+            amountDonated,
+            donationEnhancedPath,
+            donationPathExists,
+            donationFee,
+            donationFeePercentage
+        } = this.state;
+
+        const { navigation } = this.props;
+
+        return (
+            <ModalBox
+                isOpen={showDonationInfo}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        showDonationInfo: false
+                    });
+                }}
+                position="center"
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        {donationHandled ? (
+                            <>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('text'),
+                                        marginBottom: 12,
+                                        fontSize: 18,
+                                        textAlign: 'center'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.PaymentRequest.thankYouForDonation'
+                                    )}
+                                </Text>
+                                <View
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: -10
+                                    }}
+                                >
+                                    <KeyValue
+                                        keyValue={localeString(
+                                            'views.PaymentRequest.amountDonated'
+                                        )}
+                                        value={
+                                            <Amount
+                                                sats={amountDonated?.toString()}
+                                                sensitive
+                                                toggleable
+                                            />
+                                        }
+                                    />
+                                </View>
+                                {donationFee && donationFeePercentage && (
+                                    <View
+                                        style={{
+                                            width: '100%'
+                                        }}
+                                    >
+                                        <KeyValue
+                                            keyValue={localeString(
+                                                'views.Payment.fee'
+                                            )}
+                                            value={
+                                                <Row>
+                                                    <Amount
+                                                        sats={donationFee}
+                                                        debit
+                                                        sensitive
+                                                        toggleable
+                                                    />
+                                                    {donationFeePercentage && (
+                                                        <Text
+                                                            style={{
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {` (${donationFeePercentage})`}
+                                                        </Text>
+                                                    )}
+                                                </Row>
+                                            }
+                                        />
+                                    </View>
+                                )}
+
+                                {donationPreimage && (
+                                    <View
+                                        style={{
+                                            width: '100%',
+                                            marginTop: donationFee ? 12 : 16
+                                        }}
+                                    >
+                                        <CopyBox
+                                            heading={localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )}
+                                            headingCopied={`${localeString(
+                                                'views.Payment.paymentPreimage'
+                                            )} ${localeString(
+                                                'components.ExternalLinkModal.copied'
+                                            )}`}
+                                            theme="dark"
+                                            URL={donationPreimage}
+                                        />
+                                    </View>
+                                )}
+                                {donationPathExists && (
+                                    <Button
+                                        title={`${localeString(
+                                            'views.Payment.title'
+                                        )} ${
+                                            donationEnhancedPath?.length > 1
+                                                ? `${localeString(
+                                                      'views.Payment.paths'
+                                                  )} (${
+                                                      donationEnhancedPath.length
+                                                  })`
+                                                : localeString(
+                                                      'views.Payment.path'
+                                                  )
+                                        } `}
+                                        onPress={() => {
+                                            this.setState({
+                                                showDonationInfo: false
+                                            });
+                                            navigation.navigate(
+                                                'PaymentPaths',
+                                                {
+                                                    enhancedPath:
+                                                        donationEnhancedPath
+                                                }
+                                            );
+                                        }}
+                                        buttonStyle={{
+                                            height: 40,
+                                            width: '100%'
+                                        }}
+                                        containerStyle={{ marginTop: 30 }}
+                                    />
+                                )}
+                            </>
+                        ) : (
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    fontSize: 18,
+                                    marginBottom: 20,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {localeString(
+                                    'views.SendingLightning.donationFailed'
+                                )}
+                            </Text>
+                        )}
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() =>
+                                this.setState({ showDonationInfo: false })
+                            }
+                            containerStyle={{
+                                marginTop: donationPathExists ? 14 : 18
+                            }}
+                            tertiary
+                        />
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
 
     fetchPayments = async () => {
         const { PaymentsStore, TransactionsStore } = this.props;
@@ -133,6 +560,9 @@ export default class SendingLightning extends React.Component<
     }
 
     componentWillUnmount(): void {
+        if (this.focusListener) {
+            this.focusListener();
+        }
         this.backPressSubscription?.remove();
     }
 
@@ -164,7 +594,13 @@ export default class SendingLightning extends React.Component<
             isIncomplete,
             noteKey
         } = TransactionsStore;
-        const { storedNotes, currentPayment } = this.state;
+        const {
+            storedNotes,
+            currentPayment,
+            donationHandled,
+            paymentType,
+            payingDonation
+        } = this.state;
 
         const enhancedPath = currentPayment?.enhancedPath;
 
@@ -180,6 +616,7 @@ export default class SendingLightning extends React.Component<
 
         return (
             <Screen>
+                {this.renderInfoModal()}
                 {loading && (
                     <View
                         style={{
@@ -203,6 +640,37 @@ export default class SendingLightning extends React.Component<
                         </Text>
                     </View>
                 )}
+                {paymentType === 'donation' && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            top: 10,
+                            right: 10,
+                            zIndex: 1
+                        }}
+                    >
+                        {payingDonation ? (
+                            <LoadingIndicator />
+                        ) : (
+                            <TouchableOpacity
+                                onPress={() =>
+                                    this.setState({ showDonationInfo: true })
+                                }
+                            >
+                                <Gift
+                                    fill={
+                                        donationHandled
+                                            ? themeColor('highlight')
+                                            : themeColor('error')
+                                    }
+                                    width={30}
+                                    height={30}
+                                />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
+
                 {!loading && (
                     <>
                         <View
