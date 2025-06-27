@@ -352,10 +352,6 @@ export default class SendingLightning extends React.Component<
 
         const { navigation } = this.props;
 
-        const amountLabel = `${amountDonated} ${
-            amountDonated === 1 ? 'sat' : 'sats'
-        }`;
-
         return (
             <ModalBox
                 isOpen={showDonationInfo}
@@ -522,8 +518,9 @@ export default class SendingLightning extends React.Component<
                                     textAlign: 'center'
                                 }}
                             >
-                                Your attempt to donate to ZEUS with{' '}
-                                {amountLabel} has failed.
+                                {localeString(
+                                    'views.SendingLightning.donationFailed'
+                                )}
                             </Text>
                         )}
                         <Button
