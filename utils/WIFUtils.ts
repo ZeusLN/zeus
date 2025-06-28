@@ -11,36 +11,53 @@ export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
 
 export class WIFUtils {
     validateWIF(wif: string): ValidationResult {
-        try {
-            if (!['K', 'L', '5', 'c', '9'].includes(wif[0])) {
-                // 'K', 'L', '5' are the prefixes for mainnet, 'c', '9' are the prefixes for testnet
-                return {
-                    isValid: false,
-                    error: localeString('views.Wif.invalidPrefix')
-                };
-            }
+        const firstChar = wif[0];
 
-            if (wif.length !== 51 && wif.length !== 52) {
-                return {
-                    isValid: false,
-                    error: localeString('views.Wif.invalidLength')
-                };
-            }
-
-            const decoded = b58.decode(wif);
-            if (decoded.length !== 33 && decoded.length !== 34) {
-                return {
-                    isValid: false,
-                    error: localeString('views.Wif.invalidFormat')
-                };
-            }
-
-            return { isValid: true };
-        } catch (err) {
+        if (!['K', 'L', '5', 'c', '9'].includes(firstChar)) {
             return {
                 isValid: false,
-                error: localeString('views.Wif.invalidWif')
+                error: localeString('views.Wif.invalidPrefix')
             };
+        }
+
+        if (wif.length !== 51 && wif.length !== 52) {
+            return {
+                isValid: false,
+                error: localeString('views.Wif.invalidLength')
+            };
+        }
+
+        if (
+            !/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/.test(
+                wif
+            )
+        ) {
+            return {
+                isValid: false,
+                error: localeString('views.Wif.invalidBase58Chars')
+            };
+        }
+
+        const decoded = b58.decode(wif);
+        if (
+            decoded.length !== 33 &&
+            decoded.length !== 34 &&
+            decoded.length !== 38
+        ) {
+            return {
+                isValid: false,
+                error: localeString('views.Wif.invalidFormat')
+            };
+        }
+
+        return { isValid: true };
+    }
+
+    baseUrl(network: string) {
+        if (network === 'mainnet') {
+            return 'https://blockstream.info/api';
+        } else if (network === 'testnet') {
+            return 'https://blockstream.info/testnet/api';
         }
     }
 }
