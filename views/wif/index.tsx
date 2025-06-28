@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -22,7 +22,6 @@ import OnchainFeeInput from '../../components/OnchainFeeInput';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { Text } from 'react-native-elements';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import ShowHideToggle from '../../components/ShowHideToggle';
@@ -92,6 +91,23 @@ export default class WIFSweeper extends React.Component<
         }
     }
 
+    async createTransaction() {
+        const { navigation } = this.props;
+        const { destination, privateKey } = this.state;
+
+        const { isValid, error } = wifUtils.validateWIF(this.state.privateKey);
+        if (isValid) {
+            navigation.navigate('WIFTransactionDetails', {
+                destination,
+                p: privateKey
+            });
+        } else {
+            this.props.SweepStore.sweepError = true;
+            this.props.SweepStore.sweepErrorMsg =
+                error || localeString('views.Wif.invalidWif');
+        }
+    }
+
     render() {
         const { navigation, SweepStore, InvoicesStore } = this.props;
         const {
@@ -137,6 +153,7 @@ export default class WIFSweeper extends React.Component<
                         <View>
                             <ErrorMessage
                                 message={
+                                    error ||
                                     sweepErrorMsg ||
                                     localeString('views.Wif.invalidWif')
                                 }
@@ -227,14 +244,28 @@ export default class WIFSweeper extends React.Component<
                                             destination: '',
                                             onChainAddressloading: true
                                         });
-                                        await this.props.SweepStore.fetchOnChainBalance(
-                                            this.state.privateKey
-                                        );
+                                        const { isValid, error } =
+                                            wifUtils.validateWIF(privateKey);
+                                        if (isValid) {
+                                            await this.props.SweepStore.prepareSweepInputs(
+                                                privateKey
+                                            );
+                                        } else {
+                                            this.setState({
+                                                error:
+                                                    error ||
+                                                    localeString(
+                                                        'views.Wif.invalidWif'
+                                                    ),
+                                                onChainAddressloading: false
+                                            });
+                                            return;
+                                        }
                                         await InvoicesStore.createUnifiedInvoice(
                                             {
                                                 memo: '',
                                                 value:
-                                                    SweepStore.onChainBalance ??
+                                                    SweepStore.onChainBalance.toString() ??
                                                     '10',
                                                 expiry: '3600'
                                             }
@@ -292,13 +323,19 @@ export default class WIFSweeper extends React.Component<
                         </View>
                         <Button
                             title={localeString('views.Wif.createTransaction')}
-                            onPress={() => {
+                            onPress={async () => {
                                 const { isValid, error } = wifUtils.validateWIF(
                                     this.state.privateKey
                                 );
                                 if (isValid) {
-                                    // go to the broadcast screen
-                                    Alert.alert('Sweep', 'Sweep');
+                                    await this.props.SweepStore.finalizeSweepTransaction();
+                                    navigation.navigate(
+                                        'WIFTransactionDetails',
+                                        {
+                                            destination,
+                                            p: privateKey
+                                        }
+                                    );
                                 } else {
                                     this.props.SweepStore.sweepError = true;
                                     this.props.SweepStore.sweepErrorMsg =
