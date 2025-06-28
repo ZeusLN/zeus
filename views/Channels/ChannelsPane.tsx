@@ -282,16 +282,14 @@ export default class ChannelsPane extends React.PureComponent<
     }
 
     async disconnectPeer() {
+        this.closeDisconnectModal();
+
         const { selectedPeer } = this.state;
         const { ChannelsStore } = this.props;
+
         if (!selectedPeer) return;
 
-        try {
-            await ChannelsStore?.disconnectPeer(selectedPeer.pubkey);
-            this.closeDisconnectModal();
-        } catch (e: any) {
-            this.closeDisconnectModal();
-        }
+        await ChannelsStore?.disconnectPeer(selectedPeer.pubkey);
     }
 
     renderItem = ({ item }: { item: Channel }) => {
