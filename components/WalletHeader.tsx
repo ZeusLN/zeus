@@ -455,7 +455,11 @@ export default class WalletHeader extends React.Component<
 
         const SearchButton = () => (
             <TouchableOpacity
-                onPress={() => ChannelsStore!.toggleSearch()}
+                onPress={() =>
+                    ChannelsStore!.toggleSearch(
+                        ChannelsStore?.channelsView || ChannelsView.Channels
+                    )
+                }
                 accessibilityLabel={localeString('general.search')}
             >
                 <Search
@@ -672,7 +676,7 @@ export default class WalletHeader extends React.Component<
                 />
 
                 {this.props.peers && (
-                    <View style={{ paddingTop: 10, paddingHorizontal: 30 }}>
+                    <View style={{ paddingTop: 10 }}>
                         <ToggleButton
                             options={[
                                 {

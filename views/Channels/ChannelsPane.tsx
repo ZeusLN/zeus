@@ -8,7 +8,8 @@ import {
     TouchableHighlight,
     TouchableOpacity,
     ScrollView,
-    Platform
+    Platform,
+    Dimensions
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
@@ -456,7 +457,8 @@ export default class ChannelsPane extends React.PureComponent<
             filteredChannels,
             filteredPendingChannels,
             filteredClosedChannels,
-            showSearch,
+            showChannelsSearch,
+            showPeersSearch,
             setChannelsType,
             channelsType
         } = ChannelsStore!;
@@ -580,7 +582,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     }}
                                 />
                             )}
-                        {showSearch && <ChannelsFilter />}
+                        {showChannelsSearch && <ChannelsFilter />}
                         {loading ? (
                             <View style={{ marginTop: 40 }}>
                                 <LoadingIndicator />
@@ -735,6 +737,17 @@ export default class ChannelsPane extends React.PureComponent<
                                     dismissable
                                 />
                             )}
+                            {showPeersSearch && (
+                                <View
+                                    style={{ paddingTop: 10, paddingLeft: 10 }}
+                                >
+                                    <ChannelsFilter
+                                        width={
+                                            Dimensions.get('window').width - 20
+                                        }
+                                    />
+                                </View>
+                            )}
                             {loading ? (
                                 <View style={{ marginTop: 40 }}>
                                     <LoadingIndicator />
@@ -752,8 +765,8 @@ export default class ChannelsPane extends React.PureComponent<
                                     refreshing={ChannelsStore?.loading}
                                     data={
                                         BackendUtils.isLNDBased()
-                                            ? ChannelsStore?.peers
-                                            : ChannelsStore?.peers?.filter(
+                                            ? ChannelsStore?.filteredPeers
+                                            : ChannelsStore?.filteredPeers?.filter(
                                                   (peer) => {
                                                       return (
                                                           peer.connected &&
@@ -841,7 +854,9 @@ export default class ChannelsPane extends React.PureComponent<
                                                     </Text>
 
                                                     <View
-                                                        style={{ marginTop: 8 }}
+                                                        style={{
+                                                            marginTop: 8
+                                                        }}
                                                     >
                                                         {peer.ping_time && (
                                                             <Text
