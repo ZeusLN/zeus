@@ -5,14 +5,24 @@ import { getPublicKey } from '@noble/secp256k1';
 
 import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
-import { AddressType } from '../utils/WIFUtils';
+import wifUtils, { AddressType } from '../utils/WIFUtils';
+// import ECPairFactory from 'ecpair';
+// import ecc from '../zeus_modules/noble_ecc';
+// const ECPair = ECPairFactory(ecc);
 
 export default class SweepStore {
     @observable loading: boolean = false;
     @observable sweepErrorMsg: string | null = null;
     @observable sweepError: boolean = false;
     @observable sweepTxHex: string | null = null;
-    @observable onChainBalance: string;
+    @observable onChainBalance: number;
+    @observable destination: string;
+    @observable txHex: string | null = null;
+    @observable fee: number = 0;
+    @observable feeRate: number = 0;
+    @observable addressType: AddressType = 'p2wpkh';
+    @observable utxos: any[] = [];
+    @observable psbt: bitcoin.Psbt;
 
     nodeInfoStore: NodeInfoStore;
 
@@ -32,12 +42,9 @@ export default class SweepStore {
     }
 
     async getUtxosFromAddress(address: string, network: string) {
-        const baseUrl =
-            network === 'mainnet'
-                ? 'https://blockstream.info/api'
-                : 'https://blockstream.info/testnet/api';
-
-        const res = await fetch(`${baseUrl}/address/${address}/utxo`);
+        const res = await fetch(
+            `${wifUtils.baseUrl(network)}/address/${address}/utxo`
+        );
         if (!res.ok) {
             throw new Error(`Error fetching UTXOs`);
         }
@@ -101,17 +108,17 @@ export default class SweepStore {
     }
 
     @action
-    async fetchOnChainBalance(wif: string) {
+    async prepareSweepInputs(wif: string) {
+        const { nodeInfo } = this.nodeInfoStore;
+        const network = nodeInfo?.isTestNet
+            ? nodeInfo?.isRegTest
+                ? bitcoin.networks.regtest
+                : bitcoin.networks.testnet
+            : bitcoin.networks.bitcoin;
+
+        const networkStr = nodeInfo?.isTestNet ? 'testnet' : 'mainnet';
+
         try {
-            const { nodeInfo } = this.nodeInfoStore;
-            const network = nodeInfo?.isTestNet
-                ? nodeInfo?.isRegTest
-                    ? bitcoin.networks.regtest
-                    : bitcoin.networks.testnet
-                : bitcoin.networks.bitcoin;
-
-            const networkStr = nodeInfo?.isTestNet ? 'testnet' : 'mainnet';
-
             const { privateKey } = wifDecode(wif);
             const publicKey = Buffer.from(getPublicKey(privateKey, true));
 
@@ -122,8 +129,162 @@ export default class SweepStore {
                 this.getUtxosFromAddress
             );
 
-            const totalSats = this.getOnChainBalanceFromUtxos(result.utxos);
-            this.onChainBalance = totalSats.toString();
+            this.addressType = result.type;
+            this.utxos = result.utxos;
+            let totalSats = 0;
+
+            this.psbt = new bitcoin.Psbt({ network });
+
+            if (this.addressType === 'p2pkh') {
+                for (const utxo of this.utxos) {
+                    const { txid, vout } = utxo;
+                    totalSats += utxo.value;
+                    const res = await fetch(
+                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}/hex`
+                    );
+                    if (!res.ok)
+                        throw new Error(`Failed to fetch tx hex for ${txid}`);
+
+                    const rawTxHex = await res.text();
+
+                    this.psbt.addInput({
+                        hash: txid,
+                        index: vout,
+                        nonWitnessUtxo: Buffer.from(rawTxHex, 'hex')
+                    });
+                }
+            } else if (this.addressType === 'p2sh-p2wpkh') {
+                for (const utxo of this.utxos) {
+                    const { txid, vout } = utxo;
+
+                    const res = await fetch(
+                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
+                    );
+                    if (!res.ok)
+                        throw new Error(
+                            `Failed to fetch tx details for ${txid}`
+                        );
+                    const tx = await res.json();
+
+                    const output = tx.vout[vout];
+                    if (!output)
+                        throw new Error(
+                            `Output ${vout} not found in tx ${txid}`
+                        );
+
+                    const value = Math.round(output.value);
+                    totalSats += value;
+
+                    const scriptPubKeyHex = output.scriptpubkey;
+                    const script = Buffer.from(scriptPubKeyHex, 'hex');
+
+                    this.psbt.addInput({
+                        hash: txid,
+                        index: vout,
+                        witnessUtxo: {
+                            script,
+                            value
+                        },
+                        redeemScript: bitcoin.payments.p2wpkh({
+                            pubkey: utxo.pubkey
+                        }).output
+                    });
+                }
+            } else if (this.addressType === 'p2wpkh') {
+                for (const utxo of this.utxos) {
+                    const { txid, vout } = utxo;
+
+                    const res = await fetch(
+                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
+                    );
+                    if (!res.ok)
+                        throw new Error(
+                            `Failed to fetch tx details for ${txid}`
+                        );
+
+                    const tx = await res.json();
+                    const output = tx.vout[vout];
+
+                    if (!output)
+                        throw new Error(
+                            `Output index ${vout} not found in tx ${txid}`
+                        );
+
+                    const value = Math.round(output.value);
+                    totalSats += value;
+
+                    const scriptPubKeyHex = output.scriptpubkey;
+                    const script = Buffer.from(scriptPubKeyHex, 'hex');
+
+                    this.psbt.addInput({
+                        hash: txid,
+                        index: vout,
+                        witnessUtxo: {
+                            script,
+                            value
+                        }
+                    });
+                }
+            } else if (this.addressType === 'p2tr') {
+                for (const utxo of this.utxos) {
+                    const { txid, vout } = utxo;
+
+                    const res = await fetch(
+                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
+                    );
+                    if (!res.ok) throw new Error(`Failed to fetch tx ${txid}`);
+                    const tx = await res.json();
+
+                    const output = tx.vout[vout];
+                    if (!output)
+                        throw new Error(
+                            `Output ${vout} not found in tx ${txid}`
+                        );
+
+                    const value = Math.round(output.value);
+                    totalSats += value;
+
+                    const script = Buffer.from(output.scriptpubkey, 'hex');
+
+                    this.psbt.addInput({
+                        hash: txid,
+                        index: vout,
+                        witnessUtxo: {
+                            script,
+                            value
+                        },
+                        tapInternalKey: utxo.internalPubkey
+                    });
+                }
+            }
+            this.onChainBalance = totalSats;
+            console.log('onChainBalance', this.onChainBalance);
+        } catch (err: any) {
+            this.sweepError = true;
+            this.sweepErrorMsg = err.message;
+        }
+    }
+
+    @action
+    async finalizeSweepTransaction() {
+        try {
+            console.log('finalizeSweepTransaction', this.psbt);
+            // this.psbt.addOutput({
+            //     address: this.destination,
+            //     value: this.onChainBalance,
+            // });
+
+            // const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey));
+            // const signer: bitcoin.Signer = {
+            //     publicKey: Buffer.from(keyPair.publicKey),
+            //     sign: (hash: Buffer, lowR?: boolean) => Buffer.from(keyPair.sign(hash, lowR)),
+            // };
+            // this.psbt.signAllInputs(signer);
+
+            // this.psbt.finalizeAllInputs();
+
+            // const txHex = psbt.extractTransaction().toHex();
+            // this.txHex = txHex;
         } catch (err: any) {
             this.sweepError = true;
             this.sweepErrorMsg = err.message;
