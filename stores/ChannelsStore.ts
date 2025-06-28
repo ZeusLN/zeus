@@ -742,6 +742,7 @@ export default class ChannelsStore {
                 this.peers = this.peers.filter(
                     (peer: Peer) => peer.pubkey !== pubkey
                 );
+                this.filterPeers();
                 this.loading = false;
             });
 
