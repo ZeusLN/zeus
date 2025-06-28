@@ -846,6 +846,7 @@
     "views.Wif.sweepError": "Error sweeping WIF",
     "views.Wif.destinationOnChainAddress": "Destination on-chain address",
     "views.Wif.createTransaction": "Create Transaction",
+    "views.Wif.invalidBase58Chars": "Invalid base58 characters",
     "views.Settings.title": "Settings",
     "views.Settings.enabled": "Enabled",
     "views.Settings.disabled": "Disabled",
