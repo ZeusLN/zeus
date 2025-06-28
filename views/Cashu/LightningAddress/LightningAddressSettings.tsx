@@ -242,6 +242,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 />
                             </View>
                         </View>
+
                         {mintsNotConfigured ? (
                             <View style={{ marginTop: 20 }}>
                                 <Button
@@ -251,34 +252,135 @@ export default class CashuLightningAddressSettings extends React.Component<
                                 />
                             </View>
                         ) : (
-                            <View style={{ marginTop: 10 }}>
-                                <DropdownSetting
-                                    title={localeString('cashu.mint')}
-                                    titleColor={themeColor('text')}
-                                    selectedValue={
-                                        CashuStore?.cashuWallets[mintUrl]
-                                            ?.mintInfo?.name ||
-                                        mintUrl ||
-                                        ''
-                                    }
-                                    values={mintList}
-                                    onValueChange={async (value: string) => {
-                                        await update({
-                                            mint_url: value
-                                        }).then(async () => {
-                                            this.setState({
-                                                mintUrl: value
-                                            });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
+                            <>
+                                <View style={{ marginTop: 10 }}>
+                                    <DropdownSetting
+                                        title={localeString('cashu.mint')}
+                                        titleColor={themeColor('text')}
+                                        selectedValue={
+                                            CashuStore?.cashuWallets[mintUrl]
+                                                ?.mintInfo?.name ||
+                                            mintUrl ||
+                                            ''
+                                        }
+                                        values={mintList}
+                                        onValueChange={async (
+                                            value: string
+                                        ) => {
+                                            await update({
+                                                mint_url: value
+                                            }).then(async () => {
+                                                this.setState({
                                                     mintUrl: value
-                                                }
+                                                });
+                                                await updateSettings({
+                                                    lightningAddress: {
+                                                        ...settings.lightningAddress,
+                                                        mintUrl: value
+                                                    }
+                                                });
                                             });
-                                        });
+                                        }}
+                                    />
+                                </View>
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        marginTop: 20
                                     }}
-                                />
-                            </View>
+                                >
+                                    <View style={{ flex: 1 }}>
+                                        <Text
+                                            style={{
+                                                color: themeColor('text'),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                fontSize: 17
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.LightningAddressInfo.rotateMints'
+                                            )}
+                                        </Text>
+                                    </View>
+                                    <View
+                                        style={{
+                                            alignSelf: 'center',
+                                            marginLeft: 5
+                                        }}
+                                    >
+                                        <Switch
+                                            value={CashuStore.rotateMints}
+                                            onValueChange={async (
+                                                value: boolean
+                                            ) => {
+                                                await CashuStore.setRotateMints(
+                                                    value
+                                                );
+                                            }}
+                                        />
+                                    </View>
+                                </View>
+                                {CashuStore.rotateMints && (
+                                    <View style={{ marginTop: 20 }}>
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'views.Cashu.LightningAddressInfo.selectRotationDuration'
+                                            )}
+                                            titleColor={themeColor('text')}
+                                            selectedValue={CashuStore.mintRotationInterval.toString()}
+                                            values={[
+                                                {
+                                                    key: '12 hours',
+                                                    value: '43200000'
+                                                },
+                                                {
+                                                    key: '24 hours',
+                                                    value: '86400000'
+                                                },
+                                                {
+                                                    key: '48 hours',
+                                                    value: '172800000'
+                                                },
+                                                {
+                                                    key: '7 days',
+                                                    value: '604800000'
+                                                }
+                                            ]}
+                                            onValueChange={async (
+                                                value: string
+                                            ) => {
+                                                await CashuStore.setMintRotationInterval(
+                                                    parseInt(value)
+                                                );
+                                            }}
+                                        />
+                                        <View style={{ marginTop: 10 }}>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    ),
+                                                    fontSize: 14,
+                                                    fontFamily:
+                                                        'PPNeueMontreal-Book'
+                                                }}
+                                            >
+                                                {CashuStore.lastMintRotation > 0
+                                                    ? `${localeString(
+                                                          'views.Cashu.LightningAddressInfo.nextRotation'
+                                                      )}: ${new Date(
+                                                          CashuStore.lastMintRotation +
+                                                              CashuStore.mintRotationInterval
+                                                      ).toLocaleString()}`
+                                                    : localeString(
+                                                          'views.Cashu.LightningAddressInfo.rotationNotStarted'
+                                                      )}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                )}
+                            </>
                         )}
                         <ZeusPayPlusSettings navigation={navigation} />
                         <ListItem
