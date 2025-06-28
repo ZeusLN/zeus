@@ -518,9 +518,8 @@ export default class Receive extends React.Component<
             return false;
         };
 
-        // Check for existing invoice first
-        checkExistingInvoice().then((invoiceReused) => {
-            if (invoiceReused) return;
+        checkExistingInvoice().then((canReuseInvoice) => {
+            if (canReuseInvoice) return;
 
             createUnifiedInvoice({
                 memo: lspIsActive

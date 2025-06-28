@@ -605,9 +605,8 @@ export default class PosStore {
         Storage.removeItem(`pos-invoice-${orderId}`);
 
     public isInvoiceValid = (invoiceInfo: orderInvoiceInfo): boolean => {
-        const now = Date.now() / 1000; // Current time in seconds
+        const now = Date.now() / 1000;
         const expiryTime = invoiceInfo.createdAt + invoiceInfo.expirySeconds;
-        // Add 60 second buffer to avoid edge cases
         return expiryTime > now + 60;
     };
 
