@@ -52,6 +52,7 @@ const fixedAliases: aliases = {
     '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581':
         'Olympus by ZEUS'
 };
+ChannelsView;
 
 export default class ChannelsStore {
     @observable public loading = false;
@@ -94,13 +95,15 @@ export default class ChannelsStore {
     @observable public filteredChannels: Array<Channel> = [];
     @observable public filteredPendingChannels: Array<Channel> = [];
     @observable public filteredClosedChannels: Array<Channel> = [];
+    @observable public filteredPeers: Array<Peer> = [];
     @observable public filterOptions: Array<string> = [];
     @observable public sort = {
         param: 'channelCapacity',
         dir: 'DESC',
         type: 'numeric'
     };
-    @observable public showSearch: boolean = false;
+    @observable public showChannelsSearch: boolean = false;
+    @observable public showPeersSearch: boolean = false;
     // aliasMap
     @observable public aliasMap = observable.map({});
     // external account funding
@@ -202,6 +205,7 @@ export default class ChannelsStore {
         this.filteredChannels = [];
         this.filteredPendingChannels = [];
         this.filteredClosedChannels = [];
+        this.filteredPeers = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
@@ -217,6 +221,7 @@ export default class ChannelsStore {
         this.filterChannels();
         this.filterPendingChannels();
         this.filterClosedChannels();
+        this.filterPeers();
     };
 
     @action
@@ -295,6 +300,15 @@ export default class ChannelsStore {
 
     private filterClosedChannels = () => {
         this.filteredClosedChannels = this.filter(this.enrichedClosedChannels);
+    };
+
+    private filterPeers = () => {
+        const query = this.search.toLocaleLowerCase();
+        this.filteredPeers = this.peers.filter(
+            (peer: Peer) =>
+                peer.alias?.toLocaleLowerCase().includes(query) ||
+                peer.pubkey?.toLocaleLowerCase().includes(query)
+        );
     };
 
     public getNodeInfo = (pubkey: string) => {
@@ -688,6 +702,7 @@ export default class ChannelsStore {
                 this.peers = response.map((peerData: any) => {
                     return new Peer(peerData);
                 });
+                this.filterPeers();
                 this.loading = false;
             });
         } catch (error: any) {
@@ -1133,7 +1148,11 @@ export default class ChannelsStore {
         this.channelsView = view;
     };
 
-    public toggleSearch = () => {
-        this.showSearch = !this.showSearch;
+    public toggleSearch = (type: ChannelsView) => {
+        if (type === ChannelsView.Channels) {
+            this.showChannelsSearch = !this.showChannelsSearch;
+        } else {
+            this.showPeersSearch = !this.showPeersSearch;
+        }
     };
 }
