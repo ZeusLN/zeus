@@ -307,12 +307,20 @@ export default class StandalonePosPane extends React.PureComponent<
             product.price.toString().replace(/,/g, '.')
         );
 
-        const item = order.line_items.find(
-            (item) =>
-                item.name === product.name &&
-                (item.base_price_money.amount === productCalcPrice ||
-                    item.base_price_money.sats === productCalcPrice)
-        );
+        const item = order.line_items.find((item) => {
+            const nameMatches = item.name === product.name;
+            const taxMatches = item.taxPercentage === product.taxPercentage;
+
+            let priceMatches = false;
+            if (product.pricedIn === PricedIn.Fiat) {
+                priceMatches =
+                    item.base_price_money.amount === productCalcPrice;
+            } else {
+                priceMatches = item.base_price_money.sats === productCalcPrice;
+            }
+
+            return nameMatches && priceMatches && taxMatches;
+        });
 
         if (item) {
             item.quantity++;
@@ -320,6 +328,7 @@ export default class StandalonePosPane extends React.PureComponent<
             order.line_items.push({
                 name: product.name,
                 quantity: 1,
+                taxPercentage: product.taxPercentage || '',
                 base_price_money: {
                     amount:
                         product.pricedIn === PricedIn.Fiat

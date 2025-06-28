@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { Icon, ListItem } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -16,6 +16,7 @@ import {
 } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
 import SettingsStore, {
@@ -518,6 +519,9 @@ export default class PointOfSale extends React.Component<
                                         color: themeColor('secondaryText'),
                                         fontFamily: 'PPNeueMontreal-Book'
                                     }}
+                                    infoModalText={localeString(
+                                        'views.Settings.POS.taxPercentage.global.info'
+                                    )}
                                 >
                                     {localeString(
                                         'views.Settings.POS.taxPercentage'
