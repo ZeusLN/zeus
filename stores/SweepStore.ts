@@ -7,7 +7,7 @@ import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 import wifUtils, { AddressType } from '../utils/WIFUtils';
 // import ECPairFactory from 'ecpair';
-// import ecc from '../zeus_modules/noble_ecc';
+import ecc from '../zeus_modules/noble_ecc';
 // const ECPair = ECPairFactory(ecc);
 
 export default class SweepStore {
@@ -19,10 +19,13 @@ export default class SweepStore {
     @observable destination: string;
     @observable txHex: string | null = null;
     @observable fee: number = 0;
-    @observable feeRate: number = 0;
+    @observable feeRate: string = '';
     @observable addressType: AddressType = 'p2wpkh';
     @observable utxos: any[] = [];
     @observable psbt: bitcoin.Psbt;
+    @observable privateKey: string;
+    @observable wif: string;
+    @observable network: bitcoin.Network;
 
     nodeInfoStore: NodeInfoStore;
 
@@ -109,22 +112,25 @@ export default class SweepStore {
 
     @action
     async prepareSweepInputs(wif: string) {
+        this.wif = wif;
         const { nodeInfo } = this.nodeInfoStore;
         const network = nodeInfo?.isTestNet
             ? nodeInfo?.isRegTest
                 ? bitcoin.networks.regtest
                 : bitcoin.networks.testnet
             : bitcoin.networks.bitcoin;
+        this.network = network;
 
         const networkStr = nodeInfo?.isTestNet ? 'testnet' : 'mainnet';
 
         try {
-            const { privateKey } = wifDecode(wif);
+            const { privateKey } = wifDecode(this.wif);
+            this.privateKey = Buffer.from(privateKey).toString('hex');
             const publicKey = Buffer.from(getPublicKey(privateKey, true));
 
             const result = await this.detectAddressWithUtxos(
                 publicKey,
-                network,
+                this.network,
                 networkStr,
                 this.getUtxosFromAddress
             );
@@ -133,7 +139,7 @@ export default class SweepStore {
             this.utxos = result.utxos;
             let totalSats = 0;
 
-            this.psbt = new bitcoin.Psbt({ network });
+            this.psbt = new bitcoin.Psbt({ network: this.network });
 
             if (this.addressType === 'p2pkh') {
                 for (const utxo of this.utxos) {
@@ -266,26 +272,54 @@ export default class SweepStore {
     }
 
     @action
-    async finalizeSweepTransaction() {
+    async finalizeSweepTransaction(feeRate: string) {
         try {
-            console.log('finalizeSweepTransaction', this.psbt);
-            // this.psbt.addOutput({
-            //     address: this.destination,
-            //     value: this.onChainBalance,
-            // });
+            this.feeRate = feeRate;
+            const privateKey = Buffer.from(this.privateKey, 'hex');
+            const publicKey = ecc.pointFromScalar(privateKey, true);
+            if (!publicKey)
+                throw new Error(localeString('views.Wif.invalidPrivateKey'));
+            const signer: bitcoin.Signer = {
+                publicKey: Buffer.from(publicKey),
+                sign: (hash: Buffer) => Buffer.from(ecc.sign(hash, privateKey))
+            };
 
-            // const keyPair = ECPair.fromPrivateKey(Buffer.from(privateKey));
-            // const signer: bitcoin.Signer = {
-            //     publicKey: Buffer.from(keyPair.publicKey),
-            //     sign: (hash: Buffer, lowR?: boolean) => Buffer.from(keyPair.sign(hash, lowR)),
-            // };
-            // this.psbt.signAllInputs(signer);
+            const base = 10000000;
+            const txBuildCounter = Date.now() % 10000;
+            this.psbt.setLocktime(base + txBuildCounter); // under 500 million
+            const dummyPsbt = bitcoin.Psbt.fromBuffer(this.psbt.toBuffer(), {
+                network: this.network
+            });
+            console.log('before addOutput', this.onChainBalance);
+            dummyPsbt.addOutput({
+                address: this.destination,
+                value: this.onChainBalance
+            });
+            dummyPsbt.signAllInputs(signer);
+            dummyPsbt.finalizeAllInputs();
+            const dummyTx = dummyPsbt.extractTransaction();
+            const vbytes = dummyTx.virtualSize();
+            console.log('vbytes', vbytes);
+            this.fee = Math.ceil(vbytes * Number(feeRate));
+            const valueToSend = this.onChainBalance - this.fee;
+            if (valueToSend <= 0)
+                throw new Error('Fee exceeds the available balance');
 
-            // this.psbt.finalizeAllInputs();
-
-            // const txHex = psbt.extractTransaction().toHex();
-            // this.txHex = txHex;
+            this.psbt.addOutput({
+                address: this.destination,
+                value: valueToSend
+            });
+            this.psbt.signAllInputs(signer);
+            this.psbt.finalizeAllInputs();
+            const txHex = this.psbt.extractTransaction().toHex();
+            this.txHex = txHex;
+            console.log('txHex', txHex);
+            console.log('fee', this.fee);
+            console.log('feeRate', this.feeRate);
+            console.log('onChainBalance', this.onChainBalance);
+            console.log('valueToSend', valueToSend);
         } catch (err: any) {
+            console.log('err', err);
             this.sweepError = true;
             this.sweepErrorMsg = err.message;
         }
