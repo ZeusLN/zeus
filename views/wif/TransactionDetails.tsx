@@ -9,7 +9,7 @@ import SweepStore from '../../stores/SweepStore';
 interface SweepProps {
     SweepStore: SweepStore;
     navigation: StackNavigationProp<any, any>;
-    route: Route<'Sweep', { destination: string; p: string }>;
+    route: Route<'Sweep', { p: string }>;
 }
 
 @inject('SweepStore')
@@ -23,7 +23,9 @@ export default class WIFTransactionDetails extends React.Component<SweepProps> {
                     style={{ fontSize: 20, fontWeight: 'bold', color: 'white' }}
                 >
                     Transaction Details
-                    {SweepStore.txHex}
+                    <Text>fee: {SweepStore.fee.toString()}</Text>
+                    <Text>feeRate: {SweepStore.feeRate.toString()}</Text>
+                    <Text>txHex: {SweepStore.txHex?.toString()}</Text>
                 </Text>
             </View>
         );
