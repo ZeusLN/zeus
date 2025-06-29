@@ -38,18 +38,17 @@ interface SweepProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     SweepStore: SweepStore;
-    route: Route<'Sweep', { destination: string; p: string }>;
+    route: Route<'Sweep', { p: string }>;
 }
 
 interface SweepState {
     privateKey: string;
     hidden: boolean;
     isValid: boolean;
-    destination: string;
     error: string;
     loading: boolean;
     onChainAddressloading: boolean;
-    fee: string;
+    feeRate: string;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SweepStore', 'InvoicesStore')
@@ -62,11 +61,10 @@ export default class WIFSweeper extends React.Component<
         privateKey: '',
         hidden: true,
         isValid: false,
-        destination: '',
         error: '',
         loading: false,
         onChainAddressloading: false,
-        fee: ''
+        feeRate: ''
     };
 
     componentDidMount() {
@@ -91,33 +89,15 @@ export default class WIFSweeper extends React.Component<
         }
     }
 
-    async createTransaction() {
-        const { navigation } = this.props;
-        const { destination, privateKey } = this.state;
-
-        const { isValid, error } = wifUtils.validateWIF(this.state.privateKey);
-        if (isValid) {
-            navigation.navigate('WIFTransactionDetails', {
-                destination,
-                p: privateKey
-            });
-        } else {
-            this.props.SweepStore.sweepError = true;
-            this.props.SweepStore.sweepErrorMsg =
-                error || localeString('views.Wif.invalidWif');
-        }
-    }
-
     render() {
         const { navigation, SweepStore, InvoicesStore } = this.props;
         const {
             privateKey,
             hidden,
-            destination,
             error,
             loading,
             onChainAddressloading,
-            fee
+            feeRate
         } = this.state;
         const { sweepError, sweepErrorMsg } = SweepStore;
 
@@ -207,8 +187,8 @@ export default class WIFSweeper extends React.Component<
                                               true
                                           )
                                         : false;
+                                    this.props.SweepStore.destination = text;
                                     this.setState({
-                                        destination: text,
                                         isValid,
                                         error: ''
                                     });
@@ -223,7 +203,7 @@ export default class WIFSweeper extends React.Component<
                                 style={{
                                     marginHorizontal: 20
                                 }}
-                                value={destination}
+                                value={SweepStore.destination}
                             />
                             {onChainAddressloading && (
                                 <View style={styles.loadingOverlay}>
@@ -240,8 +220,8 @@ export default class WIFSweeper extends React.Component<
                             <Button
                                 onPress={async () => {
                                     try {
+                                        this.props.SweepStore.destination = '';
                                         this.setState({
-                                            destination: '',
                                             onChainAddressloading: true
                                         });
                                         const { isValid, error } =
@@ -271,9 +251,9 @@ export default class WIFSweeper extends React.Component<
                                             }
                                         );
                                         if (InvoicesStore.onChainAddress) {
+                                            this.props.SweepStore.destination =
+                                                InvoicesStore.onChainAddress;
                                             this.setState({
-                                                destination:
-                                                    InvoicesStore.onChainAddress,
                                                 error: '',
                                                 isValid: true,
                                                 onChainAddressloading: false
@@ -299,7 +279,9 @@ export default class WIFSweeper extends React.Component<
                                     'views.Swaps.generateOnchainAddress'
                                 )}
                                 secondary
-                                disabled={!privateKey || !!destination}
+                                disabled={
+                                    !privateKey || !!SweepStore.destination
+                                }
                             />
                         </View>
                         <View
@@ -314,9 +296,9 @@ export default class WIFSweeper extends React.Component<
                                 {localeString('views.Send.feeSatsVbyte')}
                             </Text>
                             <OnchainFeeInput
-                                fee={fee}
+                                fee={feeRate}
                                 onChangeFee={(text: string) =>
-                                    this.setState({ fee: text })
+                                    this.setState({ feeRate: text })
                                 }
                                 navigation={navigation}
                             />
@@ -328,11 +310,12 @@ export default class WIFSweeper extends React.Component<
                                     this.state.privateKey
                                 );
                                 if (isValid) {
-                                    await this.props.SweepStore.finalizeSweepTransaction();
+                                    await this.props.SweepStore.finalizeSweepTransaction(
+                                        feeRate
+                                    );
                                     navigation.navigate(
                                         'WIFTransactionDetails',
                                         {
-                                            destination,
                                             p: privateKey
                                         }
                                     );
@@ -343,7 +326,11 @@ export default class WIFSweeper extends React.Component<
                                         localeString('views.Wif.invalidWif');
                                 }
                             }}
-                            disabled={!privateKey || loading || !destination}
+                            disabled={
+                                !privateKey ||
+                                loading ||
+                                !SweepStore.destination
+                            }
                             containerStyle={{ paddingBottom: 30 }}
                         />
                     </View>

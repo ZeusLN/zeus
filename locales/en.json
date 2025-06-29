@@ -847,6 +847,7 @@
     "views.Wif.destinationOnChainAddress": "Destination on-chain address",
     "views.Wif.createTransaction": "Create Transaction",
     "views.Wif.invalidBase58Chars": "Invalid base58 characters",
+    "views.Wif.invalidPrivateKey": "Invalid private key",
     "views.Settings.title": "Settings",
     "views.Settings.enabled": "Enabled",
     "views.Settings.disabled": "Disabled",
