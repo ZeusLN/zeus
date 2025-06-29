@@ -128,7 +128,7 @@ export const createRefundTransaction = async ({
     timeoutBlockHeight,
     destinationAddress,
     lockupAddress,
-    cooperative,
+    cooperative = false,
     isTestnet
 }: {
     endpoint: string;
