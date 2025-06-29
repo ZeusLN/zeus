@@ -142,7 +142,7 @@ export const createRefundTransaction = async ({
     timeoutBlockHeight: number;
     destinationAddress: string;
     lockupAddress: string;
-    cooperative: boolean;
+    cooperative?: boolean;
     isTestnet?: boolean;
 }): Promise<string> => {
     try {
