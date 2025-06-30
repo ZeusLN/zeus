@@ -68,6 +68,16 @@ export function ChannelItem({
     const percentOfLargest = largestTotal
         ? (Number(localBalance) + Number(remoteBalance)) / largestTotal
         : 1.0;
+
+    const safeLocalBalance = Number(localBalance) || 0;
+    const safeSendingCapacity = Number(sendingCapacity || localBalance) || 0;
+    const safeReceivingCapacity =
+        Number(receivingCapacity || remoteBalance) || 0;
+    const outboundSats = isBelowReserve
+        ? safeLocalBalance
+        : safeSendingCapacity;
+    const inboundSats = safeReceivingCapacity;
+
     return (
         <View
             style={{
@@ -138,18 +148,24 @@ export function ChannelItem({
                 {expirationStatus && <Tag status={expirationStatus} />}
                 {status && <Tag status={status} />}
             </Row>
-            {localBalance &&
-                remoteBalance &&
-                !(localBalance == 0 && remoteBalance == 0) && (
+            {Number(localBalance) >= 0 &&
+                Number(remoteBalance) >= 0 &&
+                !(
+                    Number(localBalance) === 0 && Number(remoteBalance) === 0
+                ) && (
                     <Row style={{ marginTop: 15, marginBottom: 15 }}>
                         <BalanceBar
-                            outbound={lurkerMode ? 50 : Number(localBalance)}
-                            inbound={lurkerMode ? 50 : Number(remoteBalance)}
+                            outbound={
+                                lurkerMode ? 50 : Number(localBalance) || 0
+                            }
+                            inbound={
+                                lurkerMode ? 50 : Number(remoteBalance) || 0
+                            }
                             outboundReserve={
-                                lurkerMode ? 0 : Number(outboundReserve)
+                                lurkerMode ? 0 : Number(outboundReserve) || 0
                             }
                             inboundReserve={
-                                lurkerMode ? 0 : Number(inboundReserve)
+                                lurkerMode ? 0 : Number(inboundReserve) || 0
                             }
                             offline={isOffline}
                             percentOfLargest={percentOfLargest}
@@ -160,11 +176,7 @@ export function ChannelItem({
             {!hideLabels && (
                 <Row justify="space-between">
                     <Amount
-                        sats={
-                            isBelowReserve
-                                ? localBalance
-                                : sendingCapacity || localBalance
-                        }
+                        sats={outboundSats}
                         sensitive
                         accessible
                         accessibilityLabel={localeString(
@@ -176,7 +188,7 @@ export function ChannelItem({
                         color={isBelowReserve ? 'warningReserve' : undefined}
                     />
                     <Amount
-                        sats={receivingCapacity || remoteBalance}
+                        sats={inboundSats}
                         sensitive
                         accessible
                         accessibilityLabel={localeString(
