@@ -22,7 +22,8 @@ export const openChannelSync = async (
     spend_unconfirmed?: boolean,
     simpleTaprootChannel?: boolean,
     fund_max?: boolean,
-    utxos?: Array<string>
+    utxos?: Array<string>,
+    close_address?: string
 ): Promise<lnrpc.ChannelPoint> => {
     const response = await sendCommand<
         lnrpc.IOpenChannelRequest,
@@ -49,6 +50,7 @@ export const openChannelSync = async (
                   min_confs,
                   spend_unconfirmed,
                   fund_max,
+                  close_address,
                   outpoints: utxos
                       ? utxos.map((utxo: string) => {
                             const [txid_str, output_index] = utxo.split(':');
@@ -75,6 +77,7 @@ export const openChannelSync = async (
                   scid_alias: scidAlias,
                   min_confs,
                   spend_unconfirmed,
+                  close_address,
                   outpoints: utxos
                       ? utxos.map((utxo: string) => {
                             const [txid_str, output_index] = utxo.split(':');

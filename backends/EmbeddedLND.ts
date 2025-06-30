@@ -123,7 +123,8 @@ export default class EmbeddedLND extends LND {
             data.spend_unconfirmed,
             data.simpleTaprootChannel,
             data.fundMax,
-            data.utxos
+            data.utxos,
+            data.close_address
         );
     openChannelStream = async (data: OpenChannelRequest) => {
         return await new Promise((resolve, reject) => {
