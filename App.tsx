@@ -30,6 +30,7 @@ import {
     posStore,
     settingsStore,
     swapStore,
+    sweepStore,
     syncStore,
     transactionsStore,
     unitsStore,
@@ -245,6 +246,8 @@ import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
+import WIFSweeper from './views/wif';
+import WIFTransactionDetails from './views/wif/TransactionDetails';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -302,6 +305,7 @@ export default class App extends React.PureComponent {
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
+                SweepStore={sweepStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -1155,6 +1159,16 @@ export default class App extends React.PureComponent {
                                                         name="NodeConfigExportImport" // @ts-ignore:next-line
                                                         component={
                                                             NodeConfigExportImport
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WIFSweeper" // @ts-ignore:next-line
+                                                        component={WIFSweeper}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WIFTransactionDetails" // @ts-ignore:next-line
+                                                        component={
+                                                            WIFTransactionDetails
                                                         }
                                                     />
                                                 </Stack.Navigator>
