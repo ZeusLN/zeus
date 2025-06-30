@@ -135,6 +135,7 @@ export default class ContactStore {
                 bolt12Address: prefillContact.bolt12Address || [],
                 bolt12Offer: prefillContact.bolt12Offer || [],
                 pubkey: prefillContact.pubkey || [],
+                cashuPubkey: prefillContact.cashuPubkey || [],
                 onchainAddress: prefillContact.onchainAddress || [],
                 nip05: prefillContact.nip05 || [],
                 nostrNpub: prefillContact.nostrNpub || [],

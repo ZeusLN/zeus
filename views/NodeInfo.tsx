@@ -15,14 +15,16 @@ import { numberWithCommas } from '../utils/UnitsUtils';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
+import CashuStore from '../stores/CashuStore';
 
 interface NodeInfoProps {
     navigation: StackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
+    CashuStore: CashuStore;
 }
 
-@inject('NodeInfoStore', 'SettingsStore')
+@inject('NodeInfoStore', 'SettingsStore', 'CashuStore')
 @observer
 export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
     UNSAFE_componentWillMount() {
@@ -31,10 +33,12 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
     }
 
     render() {
-        const { navigation, NodeInfoStore, SettingsStore } = this.props;
+        const { navigation, NodeInfoStore, SettingsStore, CashuStore } =
+            this.props;
         const { nodeInfo } = NodeInfoStore;
         const { settings } = SettingsStore;
         const { privacy } = settings;
+        const { selectedMintPubkey } = CashuStore;
         const lurkerMode = (privacy && privacy.lurkerMode) || false;
 
         const URIs = (props: { uris: Array<string> }) => {
@@ -79,6 +83,15 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     />
                 )}
 
+                {settings.ecash.enableCashu && selectedMintPubkey && (
+                    <KeyValue
+                        keyValue={localeString(
+                            'views.Settings.AddContact.cashuPubkey'
+                        )}
+                        value={selectedMintPubkey}
+                        sensitive
+                    />
+                )}
                 {nodeInfo.version && (
                     <KeyValue
                         keyValue={localeString(

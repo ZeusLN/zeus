@@ -23,6 +23,7 @@ import {
 import CashuToken from '../../models/CashuToken';
 
 import BackendUtils from '../../utils/BackendUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -238,6 +239,31 @@ export default class CashuTokenView extends React.Component<
                                         : 'views.Invoice.settleDate'
                                 )}
                                 value={getDisplayTime}
+                                sensitive
+                            />
+                        )}
+
+                        {decoded.getLockPubkey && (
+                            <KeyValue
+                                keyValue={localeString('cashu.lockTo')}
+                                value={
+                                    decoded.getContactName ||
+                                    decoded.getLockPubkey
+                                }
+                                sensitive
+                            />
+                        )}
+
+                        {decoded.getLockPubkey && (
+                            <KeyValue
+                                keyValue={localeString('cashu.locktime')}
+                                value={
+                                    decoded.getLocktime
+                                        ? DateTimeUtils.listFormattedDate(
+                                              decoded.getLocktime
+                                          )
+                                        : localeString('cashu.duration.forever')
+                                }
                                 sensitive
                             />
                         )}
