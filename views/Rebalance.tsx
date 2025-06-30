@@ -924,7 +924,6 @@ export default class Rebalance extends React.Component<
         channel: Channel,
         type?: ChannelType
     ): React.ReactElement => {
-        // Use helper method for balance calculations - DRY principle
         const balanceData = this.createBalanceDisplayData(channel, type);
 
         return (
