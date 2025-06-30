@@ -507,6 +507,108 @@ export const signMessage = async (
     return response;
 };
 
+/**
+ * Sign a message with an on-chain address.
+ *
+ * This method returns the compact signature (base64 encoded) created with
+ * the private key of the provided address. This requires the address to be
+ * solely based on a public key lock (no scripts).
+ *
+ * Supported address types: P2PKH, P2WKH, NP2WKH, P2TR.
+ *
+ * @param msg - The message to sign
+ * @param addr - The on-chain address to sign with
+ * @throws Error if the address isn't owned by the wallet or signing fails
+ * @returns Promise with the signature
+ */
+export const signMessageWithAddr = async (
+    msg: Uint8Array,
+    addr: string
+): Promise<walletrpc.SignMessageWithAddrResponse> => {
+    try {
+        const response = await sendCommand<
+            walletrpc.ISignMessageWithAddrRequest,
+            walletrpc.SignMessageWithAddrRequest,
+            walletrpc.SignMessageWithAddrResponse
+        >({
+            request: walletrpc.SignMessageWithAddrRequest,
+            response: walletrpc.SignMessageWithAddrResponse,
+            method: 'WalletKitSignMessageWithAddr',
+            options: {
+                msg,
+                addr
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error('Error in signMessageWithAddr:', error);
+        throw error;
+    }
+};
+
+/**
+ * Verify a message signature with an on-chain address.
+ *
+ * This method returns the validity and the recovered public key of the provided
+ * compact signature (base64 encoded). The verification checks that the signature
+ * is valid and that the recovered public key matches the provided address.
+ *
+ * Supported address types: P2PKH, P2WKH, NP2WKH, P2TR.
+ *
+ * @param msg - The message that was signed
+ * @param signature - The signature to verify (base64 encoded)
+ * @param addr - The address to verify against
+ * @throws Error if verification fails
+ * @returns Promise with the verification result (valid and recovered pubkey)
+ */
+export const verifyMessageWithAddr = async (
+    msg: Uint8Array,
+    signature: string,
+    addr: string
+): Promise<walletrpc.VerifyMessageWithAddrResponse> => {
+    try {
+        // Extra validation
+        if (!addr || addr.trim() === '') {
+            throw new Error('Address is required for on-chain verification');
+        }
+
+        if (!signature || signature.trim() === '') {
+            throw new Error('Signature is required for verification');
+        }
+
+        if (!msg || msg.length === 0) {
+            throw new Error('Message is required for verification');
+        }
+
+        // Enhanced signature debugging
+        let signatureToUse = signature;
+
+        const response = await sendCommand<
+            walletrpc.IVerifyMessageWithAddrRequest,
+            walletrpc.VerifyMessageWithAddrRequest,
+            walletrpc.VerifyMessageWithAddrResponse
+        >({
+            request: walletrpc.VerifyMessageWithAddrRequest,
+            response: walletrpc.VerifyMessageWithAddrResponse,
+            method: 'WalletKitVerifyMessageWithAddr',
+            options: {
+                msg,
+                signature: signatureToUse,
+                addr
+            }
+        });
+
+        return response;
+    } catch (error) {
+        console.error(
+            `[lndmobile/wallet.ts] Error in verifyMessageWithAddr:`,
+            error
+        );
+        throw error;
+    }
+};
+
 // TODO exception?
 // TODO move to a more appropiate file?
 export const subscribeInvoices = async (): Promise<string> => {
