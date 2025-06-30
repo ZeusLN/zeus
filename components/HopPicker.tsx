@@ -306,7 +306,8 @@ export default class ChannelPicker extends React.Component<
                     <Text
                         style={{
                             ...styles.text,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            marginLeft: 8
                         }}
                     >
                         {title || DEFAULT_TITLE}
