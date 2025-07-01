@@ -484,36 +484,83 @@ export default class Receive extends React.Component<
         blindedPaths?: boolean,
         addressType?: string
     ) => {
-        const { InvoicesStore } = this.props;
-        const { lspIsActive, receiverName } = this.state;
+        const { InvoicesStore, PosStore } = this.props;
+        const { lspIsActive, receiverName, orderId, orderTip, exchangeRate } =
+            this.state;
         const { createUnifiedInvoice } = InvoicesStore;
 
-        createUnifiedInvoice({
-            memo: lspIsActive
-                ? ''
-                : receiverName
-                ? `${receiverName}:  ${memo}`
-                : memo || '',
-            value: amount || '0',
-            expiry: expirySeconds || '3600',
-            ampInvoice: lspIsActive ? false : ampInvoice || false,
-            blindedPaths: lspIsActive ? false : blindedPaths || false,
-            routeHints: lspIsActive ? false : routeHints || false,
-            addressType: BackendUtils.supportsAddressTypeSelection()
-                ? addressType || '1'
-                : undefined,
-            noLsp: !lspIsActive
-        }).then(
-            ({
-                rHash,
-                onChainAddress
-            }: {
-                rHash: string;
-                onChainAddress?: string;
-            }) => {
-                this.subscribeInvoice(rHash, onChainAddress);
+        // POS invoice reuse logic
+        const checkExistingInvoice = async () => {
+            if (orderId) {
+                try {
+                    const existingInvoice = await PosStore.getOrderInvoiceById(
+                        orderId
+                    );
+                    if (
+                        existingInvoice &&
+                        PosStore.canReuseInvoice(
+                            existingInvoice,
+                            amount || '0',
+                            orderTip,
+                            exchangeRate
+                        )
+                    ) {
+                        // Reuse existing invoice
+                        InvoicesStore.payment_request =
+                            existingInvoice.payment_request;
+                        this.subscribeInvoice(existingInvoice.rHash);
+                        return true;
+                    }
+                } catch (error) {
+                    console.warn('Error checking existing invoice:', error);
+                }
             }
-        );
+            return false;
+        };
+
+        checkExistingInvoice().then((canReuseInvoice) => {
+            if (canReuseInvoice) return;
+
+            createUnifiedInvoice({
+                memo: lspIsActive
+                    ? ''
+                    : receiverName
+                    ? `${receiverName}:  ${memo}`
+                    : memo || '',
+                value: amount || '0',
+                expiry: expirySeconds || '3600',
+                ampInvoice: lspIsActive ? false : ampInvoice || false,
+                blindedPaths: lspIsActive ? false : blindedPaths || false,
+                routeHints: lspIsActive ? false : routeHints || false,
+                addressType: BackendUtils.supportsAddressTypeSelection()
+                    ? addressType || '1'
+                    : undefined,
+                noLsp: !lspIsActive
+            }).then(
+                ({
+                    rHash,
+                    onChainAddress
+                }: {
+                    rHash: string;
+                    onChainAddress?: string;
+                }) => {
+                    // Store invoice for POS orders
+                    if (orderId && InvoicesStore.payment_request) {
+                        PosStore.recordInvoice({
+                            orderId,
+                            payment_request: InvoicesStore.payment_request,
+                            rHash,
+                            exchangeRate,
+                            amount: amount || '0',
+                            tip: orderTip,
+                            createdAt: Math.floor(Date.now() / 1000),
+                            expirySeconds: expirySeconds || '3600'
+                        });
+                    }
+                    this.subscribeInvoice(rHash, onChainAddress);
+                }
+            );
+        });
     };
 
     autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
@@ -710,19 +757,23 @@ export default class Receive extends React.Component<
                                     Number(invoice.amt_paid_sat)
                                 );
 
-                                PosStore.recordPayment({
-                                    orderId,
-                                    orderTotal,
-                                    orderTip,
-                                    exchangeRate,
-                                    rate,
-                                    type: 'ln',
-                                    tx: invoice.payment_request,
-                                    preimage: Base64Utils.bytesToHex(
-                                        // @ts-ignore:next-line
-                                        invoice.r_preimage
-                                    )
-                                });
+                                if (orderId) {
+                                    PosStore.recordPayment({
+                                        orderId,
+                                        orderTotal,
+                                        orderTip,
+                                        exchangeRate,
+                                        rate,
+                                        type: 'ln',
+                                        tx: invoice.payment_request,
+                                        preimage: Base64Utils.bytesToHex(
+                                            // @ts-ignore:next-line
+                                            invoice.r_preimage
+                                        )
+                                    });
+                                    // Clear stored invoice after successful payment
+                                    PosStore.clearOrderInvoice(orderId);
+                                }
                                 this.listener?.remove();
                             }
                         } catch (error) {
@@ -768,7 +819,7 @@ export default class Receive extends React.Component<
                                 setWatchedInvoicePaid(
                                     Number(transaction.amount)
                                 );
-                                if (orderId)
+                                if (orderId) {
                                     PosStore.recordPayment({
                                         orderId,
                                         orderTotal,
@@ -778,6 +829,9 @@ export default class Receive extends React.Component<
                                         type: 'onchain',
                                         tx: transaction.tx_hash
                                     });
+                                    // Clear stored invoice after successful payment
+                                    PosStore.clearOrderInvoice(orderId);
+                                }
                                 this.listenerSecondary?.remove();
                             }
                         } catch (error) {
@@ -818,7 +872,7 @@ export default class Receive extends React.Component<
                                 }
                                 if (result.settled) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
-                                    if (orderId)
+                                    if (orderId) {
                                         PosStore.recordPayment({
                                             orderId,
                                             orderTotal,
@@ -829,6 +883,9 @@ export default class Receive extends React.Component<
                                             tx: result.payment_request,
                                             preimage: result.r_preimage
                                         });
+                                        // Clear stored invoice after successful payment
+                                        PosStore.clearOrderInvoice(orderId);
+                                    }
                                     this.listener?.remove();
                                 }
                             } catch (error) {
@@ -871,7 +928,7 @@ export default class Receive extends React.Component<
                                     Number(result.amount) >= Number(value)
                                 ) {
                                     setWatchedInvoicePaid(result.amount);
-                                    if (orderId)
+                                    if (orderId) {
                                         PosStore.recordPayment({
                                             orderId,
                                             orderTotal,
@@ -881,6 +938,9 @@ export default class Receive extends React.Component<
                                             type: 'onchain',
                                             tx: result.tx_hash
                                         });
+                                        // Clear stored invoice after successful payment
+                                        PosStore.clearOrderInvoice(orderId);
+                                    }
                                     this.listenerSecondary?.remove();
                                 }
                             } catch (error) {
@@ -911,7 +971,7 @@ export default class Receive extends React.Component<
                                     Number(result.amt_paid_sat) !== 0
                                 ) {
                                     setWatchedInvoicePaid(result.amt_paid_sat);
-                                    if (orderId)
+                                    if (orderId) {
                                         PosStore.recordPayment({
                                             orderId,
                                             orderTotal,
@@ -921,6 +981,9 @@ export default class Receive extends React.Component<
                                             type: 'ln',
                                             tx: result.payment_request
                                         });
+                                        // Clear stored invoice after successful payment
+                                        PosStore.clearOrderInvoice(orderId);
+                                    }
                                     this.clearIntervals();
                                     break;
                                 }
@@ -964,7 +1027,7 @@ export default class Receive extends React.Component<
                                         output.address === onChainAddress
                                     ) {
                                         setWatchedInvoicePaid(output.amount);
-                                        if (orderId)
+                                        if (orderId) {
                                             PosStore.recordPayment({
                                                 orderId,
                                                 orderTotal,
@@ -974,6 +1037,9 @@ export default class Receive extends React.Component<
                                                 type: 'onchain',
                                                 tx: result.tx_hash
                                             });
+                                            // Clear stored invoice after successful payment
+                                            PosStore.clearOrderInvoice(orderId);
+                                        }
                                         this.clearIntervals();
                                         // break parent loop
                                         i = txs.length;
@@ -1008,7 +1074,7 @@ export default class Receive extends React.Component<
                                     setWatchedInvoicePaid(
                                         result.amount_received_msat / 1000
                                     );
-                                    if (orderId)
+                                    if (orderId) {
                                         PosStore.recordPayment({
                                             orderId,
                                             orderTotal,
@@ -1018,6 +1084,9 @@ export default class Receive extends React.Component<
                                             type: 'ln',
                                             tx: result.bolt11
                                         });
+                                        // Clear stored invoice after successful payment
+                                        PosStore.clearOrderInvoice(orderId);
+                                    }
                                     this.clearIntervals();
                                     break;
                                 }
@@ -1042,7 +1111,7 @@ export default class Receive extends React.Component<
                                 Number(result.amt) !== 0
                             ) {
                                 setWatchedInvoicePaid(result.amt);
-                                if (orderId)
+                                if (orderId) {
                                     PosStore.recordPayment({
                                         orderId,
                                         orderTotal,
@@ -1053,6 +1122,9 @@ export default class Receive extends React.Component<
                                         tx: result.payment_request,
                                         preimage: result.r_preimage
                                     });
+                                    // Clear stored invoice after successful payment
+                                    PosStore.clearOrderInvoice(orderId);
+                                }
                                 this.clearIntervals();
                                 break;
                             }

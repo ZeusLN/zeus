@@ -23,6 +23,17 @@ export interface orderPaymentInfo {
     preimage?: string;
 }
 
+export interface orderInvoiceInfo {
+    orderId: string;
+    payment_request: string;
+    rHash: string;
+    exchangeRate: string;
+    amount: string;
+    tip: string;
+    createdAt: number;
+    expirySeconds: string;
+}
+
 export const LEGACY_POS_HIDDEN_KEY = 'pos-hidden';
 export const LEGACY_POS_STANDALONE_KEY = 'pos-standalone';
 
@@ -95,6 +106,28 @@ export default class PosStore {
             tx,
             preimage
         });
+
+    public recordInvoice = ({
+        orderId,
+        payment_request,
+        rHash,
+        exchangeRate,
+        amount,
+        tip,
+        createdAt,
+        expirySeconds
+    }: orderInvoiceInfo) => {
+        Storage.setItem(`pos-invoice-${orderId}`, {
+            orderId,
+            payment_request,
+            rHash,
+            exchangeRate,
+            amount,
+            tip,
+            createdAt,
+            expirySeconds
+        });
+    };
 
     public clearCurrentOrder = () => (this.currentOrder = null);
 
@@ -557,6 +590,39 @@ export default class PosStore {
         if (payment) {
             return JSON.parse(payment);
         }
+    };
+
+    public getOrderInvoiceById = async (
+        orderId: string
+    ): Promise<orderInvoiceInfo | undefined> => {
+        const invoice = await Storage.getItem(`pos-invoice-${orderId}`);
+        if (invoice) {
+            return JSON.parse(invoice);
+        }
+    };
+
+    public clearOrderInvoice = (orderId: string) =>
+        Storage.removeItem(`pos-invoice-${orderId}`);
+
+    public isInvoiceValid = (invoiceInfo: orderInvoiceInfo): boolean => {
+        const now = Date.now() / 1000;
+        const expiryTime =
+            invoiceInfo.createdAt + parseInt(invoiceInfo.expirySeconds, 10);
+        return expiryTime > now + 60;
+    };
+
+    public canReuseInvoice = (
+        invoiceInfo: orderInvoiceInfo,
+        currentAmount: string,
+        currentTip: string,
+        currentExchangeRate: string
+    ): boolean => {
+        return (
+            this.isInvoiceValid(invoiceInfo) &&
+            invoiceInfo.amount === currentAmount &&
+            invoiceInfo.tip === currentTip &&
+            invoiceInfo.exchangeRate === currentExchangeRate
+        );
     };
 
     @action
