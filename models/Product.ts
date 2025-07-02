@@ -20,7 +20,7 @@ export default class Product extends BaseModel {
     @observable public price: string;
     @observable public category: string;
     @observable public status: ProductStatus;
-
+    @observable public taxPercentage?: string;
     @computed public get model(): string {
         return 'Product';
     }

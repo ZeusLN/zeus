@@ -22,6 +22,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import TextInput from '../../components/TextInput';
 import AmountInput from '../../components/AmountInput';
 import Switch from '../../components/Switch';
+import Text from '../../components/Text';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -108,7 +109,8 @@ export default class ProductDetails extends React.Component<
                         pricedIn: PricedIn.Fiat,
                         price: '',
                         category: '',
-                        status: ProductStatus.Active
+                        status: ProductStatus.Active,
+                        taxPercentage: ''
                     }),
                     isLoading: false,
                     isExisting: false
@@ -124,20 +126,35 @@ export default class ProductDetails extends React.Component<
 
                 if (product) {
                     if (this.props.UnitsStore.units !== product.pricedIn) {
-                        // change unit to match product
                         while (
                             this.props.UnitsStore.units !== product.pricedIn
                         ) {
                             this.props.UnitsStore.changeUnits();
                         }
                     }
-
                     this.setState({
                         categories: categoryOptions,
                         product,
                         isLoading: false,
                         isExisting: true
                     });
+                } else {
+                    this.setState({
+                        categories: categoryOptions,
+                        product: new Product({
+                            id: uuidv4(),
+                            name: '',
+                            sku: '',
+                            pricedIn: PricedIn.Fiat,
+                            price: '',
+                            category: '',
+                            status: ProductStatus.Active,
+                            taxPercentage: ''
+                        }),
+                        isLoading: false,
+                        isExisting: false
+                    });
+                    return;
                 }
             }
         } catch (error) {
@@ -163,6 +180,16 @@ export default class ProductDetails extends React.Component<
                         value = value.replace(/^0+(?=\d)/, '');
                     }
                     value = value;
+                    break;
+
+                case 'taxPercentage':
+                    if (value.includes('-')) {
+                        return;
+                    }
+                    value = value.replace(',', '.');
+                    if (value !== '' && isNaN(parseFloat(value))) {
+                        return;
+                    }
                     break;
             }
             product[field] = value;
@@ -349,6 +376,37 @@ export default class ProductDetails extends React.Component<
                                                 );
                                                 this.setValue('price', price);
                                             }}
+                                        />
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                marginBottom: 5
+                                            }}
+                                            infoModalText={localeString(
+                                                'views.Settings.POS.taxPercentage.info'
+                                            )}
+                                        >
+                                            {localeString(
+                                                'views.Settings.POS.taxPercentage'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            placeholder="0"
+                                            value={product?.taxPercentage}
+                                            keyboardType="decimal-pad"
+                                            onChangeText={(text: string) => {
+                                                this.setValue(
+                                                    'taxPercentage',
+                                                    text
+                                                );
+                                            }}
+                                            suffix="%"
+                                            right={20}
+                                            style={styles.textInput}
                                         />
                                         <DropdownSetting
                                             title={localeString(
