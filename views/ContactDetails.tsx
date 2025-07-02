@@ -27,6 +27,7 @@ import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
 import Star from '../assets/images/SVG/Star.svg';
 import QR from '../assets/images/SVG/QR.svg';
+import Ecash from '../assets/images/SVG/Ecash.svg';
 
 import { themeColor } from '../utils/ThemeUtils';
 import LinkingUtils from '../utils/LinkingUtils';
@@ -44,6 +45,7 @@ interface ContactDetailsProps {
             isNostrContact: boolean;
             contactId: string;
             nostrContact: any;
+            cashuLockData?: any;
         }
     >;
     ContactStore: ContactStore;
@@ -71,6 +73,7 @@ export default class ContactDetails extends React.Component<
                 bolt12Offer: [''],
                 onchainAddress: [''],
                 pubkey: [''],
+                cashuPubkey: [''],
                 nip05: [''],
                 nostrNpub: [''],
                 name: '',
@@ -139,6 +142,18 @@ export default class ContactDetails extends React.Component<
         navigation.navigate('Send', {
             destination: address,
             contactName: contact.name
+        });
+    };
+
+    selectCashuPubkeyForLocking = (cashuPubkey: string) => {
+        const { navigation, route } = this.props;
+        const { contact } = this.state;
+        const { cashuLockData } = route.params || {};
+
+        navigation.navigate('CashuLockSettings', {
+            destination: cashuPubkey,
+            contactName: contact.name,
+            ...cashuLockData
         });
     };
 
@@ -218,8 +233,10 @@ export default class ContactDetails extends React.Component<
 
     render() {
         const { isLoading, isNostrContact } = this.state;
-        const { navigation, ContactStore } = this.props;
+        const { navigation, ContactStore, route } = this.props;
         const { setPrefillContact } = ContactStore;
+        const { cashuLockData } = route.params || {};
+        const fromCashuLockSettings = cashuLockData?.fromCashuLockSettings;
 
         const contact = new Contact(this.state.contact);
         const nostrContact = this.props.route.params?.nostrContact;
@@ -393,7 +410,7 @@ export default class ContactDetails extends React.Component<
                                     .replace(/\s+/g, ' ')}
                             </Text>
 
-                            {contact.hasLnAddress && (
+                            {!fromCashuLockSettings && contact.hasLnAddress && (
                                 <View>
                                     {contact.lnAddress.map(
                                         (address: string, index: number) => (
@@ -430,44 +447,54 @@ export default class ContactDetails extends React.Component<
                                 </View>
                             )}
 
-                            {contact.hasBolt12Address && (
-                                <View>
-                                    {contact.bolt12Address.map(
-                                        (address: string, index: number) => (
-                                            <TouchableOpacity
-                                                key={index}
-                                                onPress={() =>
-                                                    this.sendAddress(address)
-                                                }
-                                            >
-                                                <View style={styles.contactRow}>
-                                                    <LightningBolt />
-                                                    <Text
-                                                        style={{
-                                                            ...styles.contactFields,
-                                                            color: themeColor(
-                                                                'chain'
-                                                            )
-                                                        }}
+                            {!fromCashuLockSettings &&
+                                contact.hasBolt12Address && (
+                                    <View>
+                                        {contact.bolt12Address.map(
+                                            (
+                                                address: string,
+                                                index: number
+                                            ) => (
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    onPress={() =>
+                                                        this.sendAddress(
+                                                            address
+                                                        )
+                                                    }
+                                                >
+                                                    <View
+                                                        style={
+                                                            styles.contactRow
+                                                        }
                                                     >
-                                                        {address.length > 23
-                                                            ? `${address.substring(
-                                                                  0,
-                                                                  10
-                                                              )}...${address.substring(
-                                                                  address.length -
+                                                        <LightningBolt />
+                                                        <Text
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {address.length > 23
+                                                                ? `${address.substring(
+                                                                      0,
                                                                       10
-                                                              )}`
-                                                            : address}
-                                                    </Text>
-                                                </View>
-                                            </TouchableOpacity>
-                                        )
-                                    )}
-                                </View>
-                            )}
+                                                                  )}...${address.substring(
+                                                                      address.length -
+                                                                          10
+                                                                  )}`
+                                                                : address}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )
+                                        )}
+                                    </View>
+                                )}
 
-                            {contact.hasBolt12Offer && (
+                            {!fromCashuLockSettings && contact.hasBolt12Offer && (
                                 <View>
                                     {contact.bolt12Offer.map(
                                         (address: string, index: number) => (
@@ -504,7 +531,7 @@ export default class ContactDetails extends React.Component<
                                 </View>
                             )}
 
-                            {contact.hasPubkey && (
+                            {!fromCashuLockSettings && contact.hasPubkey && (
                                 <View>
                                     {contact.pubkey.map(
                                         (address: string, index: number) => (
@@ -544,21 +571,27 @@ export default class ContactDetails extends React.Component<
                                 </View>
                             )}
 
-                            {contact.hasOnchainAddress && (
+                            {contact.hasCashuPubkey && (
                                 <View>
-                                    {contact.onchainAddress.map(
+                                    {contact.cashuPubkey.map(
                                         (address: string, index: number) => (
                                             <TouchableOpacity
                                                 key={index}
                                                 onPress={() =>
-                                                    this.sendAddress(address)
+                                                    fromCashuLockSettings
+                                                        ? this.selectCashuPubkeyForLocking(
+                                                              address
+                                                          )
+                                                        : this.sendAddress(
+                                                              address
+                                                          )
                                                 }
                                             >
                                                 <View
                                                     key={index}
                                                     style={styles.contactRow}
                                                 >
-                                                    <BitcoinIcon />
+                                                    <Ecash fill={'#FACC15'} />
                                                     <Text
                                                         style={{
                                                             ...styles.contactFields,
@@ -584,7 +617,55 @@ export default class ContactDetails extends React.Component<
                                 </View>
                             )}
 
-                            {contact.hasNip05 && (
+                            {!fromCashuLockSettings &&
+                                contact.hasOnchainAddress && (
+                                    <View>
+                                        {contact.onchainAddress.map(
+                                            (
+                                                address: string,
+                                                index: number
+                                            ) => (
+                                                <TouchableOpacity
+                                                    key={index}
+                                                    onPress={() =>
+                                                        this.sendAddress(
+                                                            address
+                                                        )
+                                                    }
+                                                >
+                                                    <View
+                                                        key={index}
+                                                        style={
+                                                            styles.contactRow
+                                                        }
+                                                    >
+                                                        <BitcoinIcon />
+                                                        <Text
+                                                            style={{
+                                                                ...styles.contactFields,
+                                                                color: themeColor(
+                                                                    'chain'
+                                                                )
+                                                            }}
+                                                        >
+                                                            {address.length > 23
+                                                                ? `${address.substring(
+                                                                      0,
+                                                                      10
+                                                                  )}...${address.substring(
+                                                                      address.length -
+                                                                          10
+                                                                  )}`
+                                                                : address}
+                                                        </Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            )
+                                        )}
+                                    </View>
+                                )}
+
+                            {!fromCashuLockSettings && contact.hasNip05 && (
                                 <View>
                                     {contact.nip05.map(
                                         (value: string, index: number) => (
@@ -624,7 +705,7 @@ export default class ContactDetails extends React.Component<
                                 </View>
                             )}
 
-                            {contact.hasNpub && (
+                            {!fromCashuLockSettings && contact.hasNpub && (
                                 <View>
                                     {contact.nostrNpub.map(
                                         (value: string, index: number) => (
