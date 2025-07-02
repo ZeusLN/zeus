@@ -1569,7 +1569,7 @@
     "stores.CashuStore.pending": "Payment is pending.",
     "stores.CashuStore.claimError": "Error claiming token",
     "stores.CashuStore.claimError.keyMismatch": "Wallet key mismatch",
-    "stores.CashuStore.claimError.lockedToWallet": "This token is locked to a different wallet, can not receive it",
+    "stores.CashuStore.claimError.lockedToWallet": "This token is locked to a different wallet, can not redeem it",
     "stores.CashuStore.claimError.inconsistentLocking": "Token is locked to multiple different wallets",
     "stores.CashuStore.errorMintingToken": "Error minting token",
     "stores.CashuStore.notEnoughFunds": "Not enough funds to cover payment",
