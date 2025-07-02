@@ -1098,7 +1098,7 @@
     "views.Activity.noActivity": "No activity yet",
     "views.Activity.expired": "Expired",
     "views.Activity.youSent": "You sent",
-    "views.Activity.youWithdrew": "You withdrew",
+    "views.Activity.outgoingWithdrawal": "Outgoing withdrawal",
     "views.Activity.pendingWithdrawal": "Pending withdrawal",
     "views.Activity.youReceived": "You received",
     "views.Activity.youReceivedAmp": "You received (AMP)",
