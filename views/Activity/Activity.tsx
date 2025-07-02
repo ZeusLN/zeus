@@ -130,7 +130,7 @@ const ActivityListItem = React.memo(
 
         if (item instanceof WithdrawalRequest) {
             displayName = item.used
-                ? localeString('views.Activity.youWithdrew')
+                ? localeString('views.Activity.outgoingWithdrawal')
                 : localeString('views.Activity.pendingWithdrawal');
         } else if (item instanceof Invoice) {
             displayName = item.isPaid
