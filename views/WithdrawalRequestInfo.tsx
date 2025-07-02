@@ -50,12 +50,14 @@ export default class WithdrawalRequestInfo extends React.Component<
         invreq: string;
         label: string;
     }) => {
-        const { navigation } = this.props;
+        const { navigation, route } = this.props;
         const uniqueLabel = `${label}-${Date.now()}`;
+        const { bolt12 } = route.params;
 
         navigation.navigate('RedeemWithdrawalRequest', {
             invreq,
-            label: uniqueLabel
+            label: uniqueLabel,
+            bolt12
         });
     };
 

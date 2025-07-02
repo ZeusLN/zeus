@@ -18,6 +18,8 @@ import PaidIndicator from '../components/PaidIndicator';
 import Button from '../components/Button';
 import { Row } from '../components/layout/Row';
 
+import Storage from '../storage';
+
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -32,6 +34,7 @@ interface RedeemWithdrawalRequestProps {
         params: {
             invreq: string;
             label: string;
+            bolt12: string;
         };
     };
     navigation: StackNavigationProp<any, any>;
@@ -45,8 +48,7 @@ interface RedeemWithdrawalRequestState {
     loading: boolean;
     error: string | null;
     redemptionResult: any;
-    storedNote: string;
-    noteKey: string;
+    storedNotes: string;
 }
 
 @inject('InvoicesStore', 'NotesStore')
@@ -63,21 +65,29 @@ export default class RedeemWithdrawalRequest extends React.Component<
             loading: true,
             error: null,
             redemptionResult: null,
-            storedNote: '',
-            noteKey: ''
+            storedNotes: ''
         };
     }
 
     componentDidMount() {
-        const { invreq, label } = this.props.route.params;
-        const { NotesStore } = this.props;
-
-        const getNoteKey = `note-${invreq}` || '';
-        const noteKey = NotesStore.notes[getNoteKey] || '';
-
-        this.setState({ noteKey });
+        const { invreq, label, bolt12 } = this.props.route.params;
+        const { navigation } = this.props;
 
         this.handleRedemption({ invreq, label });
+
+        navigation.addListener('focus', () => {
+            const noteKey = `note-${bolt12 || ''}`;
+            if (!noteKey) return;
+            Storage.getItem(noteKey)
+                .then((storedNotes) => {
+                    if (storedNotes) {
+                        this.setState({ storedNotes });
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error retrieving notes:', error);
+                });
+        });
 
         this.backPressSubscription = BackHandler.addEventListener(
             'hardwareBackPress',
@@ -122,16 +132,21 @@ export default class RedeemWithdrawalRequest extends React.Component<
         } catch (error: any) {
             this.setState({
                 loading: false,
-                error: error.message || 'Failed to redeem withdrawal request'
+                error:
+                    error.message ||
+                    localeString(
+                        'stores.InvoicesStore.errorRedeemingWithdrawalRequest'
+                    )
             });
         }
     }
 
     render() {
-        const { error, loading, redemptionResult, storedNote, noteKey } =
-            this.state;
+        const { error, loading, redemptionResult, storedNotes } = this.state;
         const windowSize = Dimensions.get('window');
         const { navigation } = this.props;
+        const { bolt12 } = this.props.route.params;
+        const noteKey = `note-${bolt12 || ''}`;
 
         return (
             <Screen>
@@ -160,159 +175,105 @@ export default class RedeemWithdrawalRequest extends React.Component<
                     </View>
                 )}
 
-                {!loading && !error && redemptionResult && (
-                    <View style={styles.content}>
-                        <Wordmark
-                            height={windowSize.width * 0.25}
-                            width={windowSize.width}
-                            fill={themeColor('highlight')}
-                            style={{ marginBottom: windowSize.height * 0.02 }}
-                        />
-                        <PaidIndicator />
-                        <View
-                            style={{
-                                alignItems: 'center',
-                                paddingTop: windowSize.height * 0.05
-                            }}
-                        >
-                            <SuccessAnimation />
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    paddingTop: windowSize.height * 0.03,
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize:
-                                        windowSize.width *
-                                        windowSize.scale *
-                                        0.017
-                                }}
-                            >
-                                {localeString(
-                                    'views.WithdrawalRedemption.success'
-                                )}
-                            </Text>
-                            <View
-                                style={{
-                                    width: '90%',
-                                    paddingTop: windowSize.height * 0.06
-                                }}
-                            >
-                                <CopyBox
-                                    heading={localeString(
-                                        'views.Invoice.paymentHash'
-                                    )}
-                                    headingCopied={`${localeString(
-                                        'views.Invoice.paymentHash'
-                                    )} ${localeString(
-                                        'components.ExternalLinkModal.copied'
-                                    )}`}
-                                    theme="dark"
-                                    URL={redemptionResult.payment_hash}
-                                />
-                            </View>
-                        </View>
-                    </View>
-                )}
-
-                {!loading && error && (
+                {!loading && (
                     <View
                         style={{
                             ...styles.content,
-                            height: '80%',
-                            justifyContent: 'center',
-                            alignItems: 'center'
+                            paddingTop: windowSize.height * 0.05
                         }}
                     >
-                        <ErrorIcon
-                            height={windowSize.width * 0.25}
-                            width={windowSize.width}
-                            fill={themeColor('highlight')}
-                        />
-                        <Text
-                            style={{
-                                color: themeColor('warning'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 32,
-                                marginTop: windowSize.height * 0.07
-                            }}
-                        >
-                            {localeString('general.error')}
-                        </Text>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text
-                                style={{
-                                    color: themeColor('text'),
-                                    paddingTop: windowSize.height * 0.03,
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    fontSize:
-                                        windowSize.width *
-                                        windowSize.scale *
-                                        0.017
-                                }}
-                            >
-                                {error}
-                            </Text>
-                        </View>
+                        {!!redemptionResult && !error && (
+                            <>
+                                <Wordmark
+                                    height={windowSize.width * 0.25}
+                                    width={windowSize.width}
+                                    fill={themeColor('highlight')}
+                                />
+                                <PaidIndicator />
+                                <View style={{ alignItems: 'center' }}>
+                                    <SuccessAnimation />
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            paddingTop:
+                                                windowSize.height * 0.03,
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize:
+                                                windowSize.width *
+                                                windowSize.scale *
+                                                0.017
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.WithdrawalRedemption.success'
+                                        )}
+                                    </Text>
+                                </View>
+                                <View style={{ width: '90%' }}>
+                                    <CopyBox
+                                        heading={localeString(
+                                            'views.Payment.paymentHash'
+                                        )}
+                                        headingCopied={`${localeString(
+                                            'views.Payment.paymentHash'
+                                        )} ${localeString(
+                                            'components.ExternalLinkModal.copied'
+                                        )}`}
+                                        theme="dark"
+                                        URL={redemptionResult.payment_hash}
+                                    />
+                                </View>
+                            </>
+                        )}
+                        {error && (
+                            <View style={{ alignItems: 'center' }}>
+                                <ErrorIcon
+                                    width={windowSize.height * 0.13}
+                                    height={windowSize.height * 0.13}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('warning'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 32,
+                                        marginTop: windowSize.height * 0.07
+                                    }}
+                                >
+                                    {localeString('general.error')}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize:
+                                            windowSize.width *
+                                            windowSize.scale *
+                                            0.014,
+                                        textAlign: 'center',
+                                        marginTop: windowSize.height * 0.025,
+                                        padding: 5
+                                    }}
+                                >
+                                    {error}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 )}
-
                 {!loading && (error || redemptionResult) && (
-                    <View
-                        style={{
-                            position: 'absolute',
-                            bottom: 10,
-                            width: '100%',
-                            paddingHorizontal: '5%'
-                        }}
-                    >
-                        {!!error && (
-                            <Row
-                                align="center"
-                                style={{
-                                    alignSelf: 'center',
-                                    justifyContent: 'center',
-                                    marginBottom: 20,
-                                    width: '100%'
-                                }}
-                            >
-                                <Button
-                                    title={localeString(
-                                        'views.SendingLightning.tryAgain'
-                                    )}
-                                    icon={{
-                                        name: 'return-up-back',
-                                        type: 'ionicon',
-                                        size: 25
-                                    }}
-                                    onPress={() => navigation.goBack()}
-                                    buttonStyle={{
-                                        backgroundColor: 'white',
-                                        height: 40,
-                                        width: '100%'
-                                    }}
-                                    containerStyle={{
-                                        width: '100%',
-                                        maxWidth: '100%',
-                                        alignSelf: 'stretch'
-                                    }}
-                                    adaptiveWidth
-                                />
-                            </Row>
-                        )}
-
-                        {!!redemptionResult && (
-                            <Row
-                                align="center"
-                                style={{
-                                    alignSelf: 'center',
-                                    justifyContent: 'center',
-                                    marginBottom: 10,
-                                    width: '100%'
-                                }}
-                            >
+                    <>
+                        <Row
+                            align="flex-end"
+                            style={{
+                                marginBottom: 5,
+                                bottom: 25,
+                                alignSelf: 'center'
+                            }}
+                        >
+                            {noteKey && !error && (
                                 <Button
                                     title={
-                                        storedNote
+                                        storedNotes
                                             ? localeString(
                                                   'views.SendingLightning.UpdateNote'
                                               )
@@ -326,56 +287,74 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                         })
                                     }
                                     secondary
-                                    adaptiveWidth
+                                    buttonStyle={{ height: 40, width: '100%' }}
+                                    containerStyle={{
+                                        maxWidth: '100%'
+                                    }}
+                                />
+                            )}
+                        </Row>
+
+                        <View
+                            style={[
+                                styles.buttons,
+                                !noteKey && { marginTop: 14 }
+                            ]}
+                        >
+                            {!!error && (
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.tryAgain'
+                                    )}
+                                    icon={{
+                                        name: 'return-up-back',
+                                        type: 'ionicon',
+                                        size: 25
+                                    }}
+                                    onPress={() => navigation.goBack()}
+                                    buttonStyle={{
+                                        backgroundColor: 'white',
+                                        height: 40
+                                    }}
+                                    containerStyle={{
+                                        width: '100%',
+                                        margin: 10
+                                    }}
+                                />
+                            )}
+
+                            <Row
+                                align="flex-end"
+                                style={{
+                                    alignSelf: 'center'
+                                }}
+                            >
+                                <Button
+                                    title={localeString(
+                                        'views.SendingLightning.goToWallet'
+                                    )}
+                                    icon={{
+                                        name: 'list',
+                                        size: 25,
+                                        color: themeColor('background')
+                                    }}
+                                    onPress={() => {
+                                        navigation.popTo('Wallet');
+                                    }}
                                     buttonStyle={{
                                         height: 40,
                                         width: '100%'
                                     }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
                                     containerStyle={{
-                                        width: '100%',
-                                        maxWidth: '100%',
-                                        alignSelf: 'stretch'
+                                        maxWidth: '100%'
                                     }}
                                 />
                             </Row>
-                        )}
-
-                        <Row
-                            align="center"
-                            style={{
-                                alignSelf: 'center',
-                                justifyContent: 'center',
-                                width: '100%'
-                            }}
-                        >
-                            <Button
-                                title={localeString(
-                                    'views.SendingLightning.goToWallet'
-                                )}
-                                icon={{
-                                    name: 'list',
-                                    size: 25,
-                                    color: themeColor('background')
-                                }}
-                                onPress={() => {
-                                    navigation.popTo('Wallet');
-                                }}
-                                buttonStyle={{
-                                    height: 40,
-                                    width: '100%'
-                                }}
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
-                                containerStyle={{
-                                    width: '100%',
-                                    maxWidth: '100%',
-                                    alignSelf: 'stretch'
-                                }}
-                                adaptiveWidth
-                            />
-                        </Row>
-                    </View>
+                        </View>
+                    </>
                 )}
             </Screen>
         );
@@ -384,9 +363,15 @@ export default class RedeemWithdrawalRequest extends React.Component<
 
 const styles = StyleSheet.create({
     content: {
+        flex: 1,
         alignItems: 'center',
-        justifyContent: 'flex-start',
-        paddingTop: Dimensions.get('window').height * 0.12,
-        width: '100%'
+        justifyContent: 'space-evenly',
+        height: '100%'
+    },
+    buttons: {
+        width: '100%',
+        justifyContent: 'space-between',
+        gap: 15,
+        bottom: 15
     }
 });
