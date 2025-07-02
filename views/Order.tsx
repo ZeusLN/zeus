@@ -24,9 +24,9 @@ import TextInput from '../components/TextInput';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
-import { calculateTotalSats } from '../utils/TipUtils';
 
 import BackendUtils from '../utils/BackendUtils';
+import { calculateTotalSats } from '../utils/TipUtils';
 import FiatStore from '../stores/FiatStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
@@ -186,16 +186,77 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        const taxSats = fiatEnabled // Use the defined fiatEnabled
-            ? new BigNumber(order.total_tax_money.amount)
-                  .div(100)
-                  .div(rate)
-                  .multipliedBy(SATS_PER_BTC)
-                  .toFixed(0)
-            : new BigNumber(subTotalSats)
-                  .multipliedBy(new BigNumber(taxPercentage || '0'))
-                  .dividedBy(100)
-                  .toFixed(0);
+        // Calculate tax using individual product rates when available (for receipt)
+        const calculateTaxSatsForReceipt = () => {
+            const hasIndividualTaxRatesForReceipt = lineItems?.some(
+                (item: any) => item.taxPercentage
+            );
+
+            if (fiatEnabled && !hasIndividualTaxRatesForReceipt) {
+                return new BigNumber(order.total_tax_money.amount)
+                    .div(100)
+                    .div(rate)
+                    .multipliedBy(SATS_PER_BTC)
+                    .toFixed(0);
+            }
+
+            // Check if any line items have individual tax rates
+            const hasIndividualTaxRates = lineItems?.some(
+                (item: any) => item.taxPercentage
+            );
+
+            if (hasIndividualTaxRates) {
+                let totalTaxSats = new BigNumber(0);
+                lineItems?.forEach((item: any) => {
+                    // Use individual tax rate if set and not empty, otherwise use global rate
+                    const itemTaxRate =
+                        item.taxPercentage || taxPercentage || '0';
+
+                    const validTaxRate = itemTaxRate || '0';
+
+                    const fiatPriced = item.base_price_money.amount > 0;
+                    let itemSubtotalSats: string;
+
+                    if (fiatPriced) {
+                        let fiatAmount = new BigNumber(
+                            item.base_price_money.amount
+                        ).multipliedBy(item.quantity);
+                        if (settings.pos.posEnabled === PosEnabled.Square) {
+                            fiatAmount = fiatAmount.div(100);
+                        }
+                        itemSubtotalSats = fiatAmount
+                            .div(rate)
+                            .multipliedBy(SATS_PER_BTC)
+                            .integerValue(BigNumber.ROUND_HALF_UP)
+                            .toFixed(0);
+                    } else {
+                        itemSubtotalSats = new BigNumber(
+                            item.base_price_money.sats || 0
+                        )
+                            .multipliedBy(item.quantity)
+                            .toFixed(0);
+                    }
+
+                    const itemTaxSats = new BigNumber(itemSubtotalSats)
+                        .multipliedBy(new BigNumber(validTaxRate))
+                        .dividedBy(100)
+                        .integerValue(BigNumber.ROUND_HALF_UP)
+                        .toFixed(0);
+
+                    totalTaxSats = totalTaxSats.plus(itemTaxSats);
+                });
+
+                return totalTaxSats.toFixed(0);
+            } else {
+                // Use global tax rate for all items
+                return new BigNumber(subTotalSats)
+                    .multipliedBy(new BigNumber(taxPercentage || '0'))
+                    .dividedBy(100)
+                    .toFixed(0);
+            }
+        };
+
+        const taxSats = calculateTaxSatsForReceipt();
 
         // sats
         // total amount is subtotal + tip + tax
@@ -345,7 +406,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                     'sats'
                 );
             }
-
             templateHtml += receiptHtmlRow(keyValue, displayValue);
         });
 
@@ -392,13 +452,55 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             );
         }
 
+        // Determine tax display label for receipt
+        const getReceiptTaxLabel = () => {
+            if (!lineItems || lineItems.length === 0) {
+                return localeString('pos.views.Order.tax');
+            }
+
+            // Get all unique tax rates used in the order
+            const taxRates = new Set<string>();
+            lineItems.forEach((item: any) => {
+                // Use individual tax rate if set and not empty, otherwise use global rate
+                const itemTaxRate = item.taxPercentage || taxPercentage || '0';
+
+                // Ensure valid rate for display
+                const displayTaxRate = itemTaxRate || '0';
+                taxRates.add(displayTaxRate);
+            });
+
+            const uniqueRates = Array.from(taxRates);
+
+            if (uniqueRates.length === 1) {
+                // All items have the same tax rate
+                const rate = uniqueRates[0];
+                if (rate === '0') {
+                    return localeString('pos.views.Order.tax');
+                }
+                return `${localeString('pos.views.Order.tax')} (${rate}%)`;
+            } else {
+                // Multiple different tax rates - show breakdown
+                const rateList = uniqueRates
+                    .filter((rate) => rate !== '0')
+                    .map((rate) => `${rate}%`)
+                    .join(', ');
+
+                if (rateList === '') {
+                    return localeString('pos.views.Order.tax');
+                }
+
+                return `${localeString('pos.views.Order.tax')} (${rateList})`;
+            }
+        };
+
         templateHtml += receiptHtmlRow(
-            `${localeString('pos.views.Order.tax')}${
-                taxPercentage && Number(taxPercentage) > 0
-                    ? ` (${taxPercentage}%)`
-                    : ''
-            }`,
-            order.getTaxMoneyDisplay
+            getReceiptTaxLabel(),
+            this.props.FiatStore.formatAmountForDisplay(
+                new BigNumber(taxSats)
+                    .multipliedBy(rate)
+                    .dividedBy(SATS_PER_BTC)
+                    .toFixed(2)
+            )
         );
 
         templateHtml += receiptHtmlRow(
@@ -500,15 +602,14 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             ? `${merchantName} POS powered by ZEUS - Order ${order?.id}`
             : `ZEUS POS - Order ${order?.id}`;
 
-        // round to nearest sat
         let subTotalSats: string;
         if (settings.pos.posEnabled === PosEnabled.Square) {
             subTotalSats = new BigNumber(order?.total_money.amount)
-                // subtract tax for subtotal if using Square
                 .minus(order?.total_tax_money.amount)
                 .div(100)
                 .div(rate)
                 .multipliedBy(SATS_PER_BTC)
+                .integerValue(BigNumber.ROUND_HALF_UP)
                 .toFixed(0);
         } else {
             subTotalSats =
@@ -518,6 +619,7 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                           .div(100)
                           .div(rate)
                           .multipliedBy(SATS_PER_BTC)
+                          .integerValue(BigNumber.ROUND_HALF_UP)
                           .toFixed(0);
         }
 
@@ -526,16 +628,63 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
 
-        const taxSats = fiatEnabled
-            ? new BigNumber(order?.total_tax_money.amount)
-                  .div(100)
-                  .div(rate)
-                  .multipliedBy(SATS_PER_BTC)
-                  .toFixed(0)
-            : new BigNumber(subTotalSats)
-                  .multipliedBy(new BigNumber(taxPercentage || '0'))
-                  .dividedBy(100)
-                  .toFixed(0);
+        const calculateTaxSats = () => {
+            const hasIndividualTaxRates = lineItems?.some(
+                (item: any) => item.taxPercentage
+            );
+
+            if (hasIndividualTaxRates) {
+                let totalTaxSats = new BigNumber(0);
+                lineItems?.forEach((item: any) => {
+                    const itemTaxRate =
+                        item.taxPercentage || taxPercentage || '0';
+
+                    const validTaxRate = itemTaxRate || '0';
+
+                    const fiatPriced = item.base_price_money.amount > 0;
+                    let itemSubtotalSats: string;
+
+                    if (fiatPriced) {
+                        let fiatAmount = new BigNumber(
+                            item.base_price_money.amount
+                        ).multipliedBy(item.quantity);
+                        // Only divide by 100 if using Square (amount is in cents)
+                        if (settings.pos.posEnabled === PosEnabled.Square) {
+                            fiatAmount = fiatAmount.div(100);
+                        }
+                        itemSubtotalSats = fiatAmount
+                            .div(rate)
+                            .multipliedBy(SATS_PER_BTC)
+                            .integerValue(BigNumber.ROUND_HALF_UP)
+                            .toFixed(0);
+                    } else {
+                        itemSubtotalSats = new BigNumber(
+                            item.base_price_money.sats || 0
+                        )
+                            .multipliedBy(item.quantity)
+                            .toFixed(0);
+                    }
+
+                    const itemTaxSats = new BigNumber(itemSubtotalSats)
+                        .multipliedBy(new BigNumber(validTaxRate))
+                        .dividedBy(100)
+                        .integerValue(BigNumber.ROUND_HALF_UP)
+                        .toFixed(0);
+
+                    totalTaxSats = totalTaxSats.plus(itemTaxSats);
+                });
+
+                return totalTaxSats.toFixed(0);
+            } else {
+                return new BigNumber(subTotalSats)
+                    .multipliedBy(new BigNumber(taxPercentage || '0'))
+                    .dividedBy(100)
+                    .integerValue(BigNumber.ROUND_HALF_UP)
+                    .toFixed(0);
+            }
+        };
+
+        const taxSats = calculateTaxSats();
 
         const twentyPercentButton = () => (
             <Text
@@ -743,28 +892,72 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                 : item.base_price_money.amount
                             : item.base_price_money.sats;
 
+                        const itemTaxRate = item.taxPercentage
+                            ? ` + ${item.taxPercentage}% ${localeString(
+                                  'pos.views.Order.tax'
+                              )}`
+                            : taxPercentage
+                            ? ` + ${taxPercentage}% ${localeString(
+                                  'pos.views.Order.tax'
+                              )}`
+                            : '';
+
                         let unitDisplayValue, totalDisplayValue;
                         if (fiatPriced) {
-                            unitDisplayValue = UnitsStore.getFormattedAmount(
-                                new BigNumber(unitPrice).toFixed(2),
-                                'fiat'
+                            unitDisplayValue = FiatStore.formatAmountForDisplay(
+                                new BigNumber(unitPrice).toFixed(2)
                             );
-                            totalDisplayValue = UnitsStore.getFormattedAmount(
-                                new BigNumber(unitPrice)
-                                    .multipliedBy(item.quantity)
-                                    .toFixed(2),
-                                'fiat'
-                            );
+                            totalDisplayValue =
+                                FiatStore.formatAmountForDisplay(
+                                    new BigNumber(unitPrice)
+                                        .multipliedBy(item.quantity)
+                                        .toFixed(2)
+                                ) + itemTaxRate;
                         } else {
                             unitDisplayValue = UnitsStore.getFormattedAmount(
                                 unitPrice,
                                 'sats'
                             );
-                            totalDisplayValue = UnitsStore.getFormattedAmount(
-                                new BigNumber(unitPrice)
-                                    .multipliedBy(item.quantity)
-                                    .toString(),
-                                'sats'
+                            const baseDisplayValue =
+                                bitcoinUnits === 'sats' ? (
+                                    <Amount
+                                        fixedUnits="sats"
+                                        sats={new BigNumber(unitPrice)
+                                            .multipliedBy(item.quantity)
+                                            .toString()}
+                                    />
+                                ) : (
+                                    <Amount
+                                        fixedUnits="BTC"
+                                        sats={new BigNumber(unitPrice)
+                                            .multipliedBy(item.quantity)
+                                            .toString()}
+                                    />
+                                );
+                            totalDisplayValue = (
+                                <View
+                                    style={{
+                                        display: 'flex',
+                                        flexDirection: 'row'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {baseDisplayValue}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book'
+                                        }}
+                                    >
+                                        {itemTaxRate}
+                                    </Text>
+                                </View>
                             );
                         }
 
@@ -1091,22 +1284,47 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                         </>
                     )}
 
-                    <KeyValue
-                        keyValue={`${localeString('pos.views.Order.tax')}${
-                            taxPercentage && Number(taxPercentage) > 0
-                                ? ` (${taxPercentage}%)`
-                                : ''
-                        }`}
-                        value={
-                            fiatEnabled ? (
-                                order.getTaxMoneyDisplay
-                            ) : bitcoinUnits === 'sats' ? (
-                                <Amount fixedUnits="sats" sats={taxSats} />
-                            ) : (
-                                <Amount fixedUnits="BTC" sats={taxSats} />
-                            )
-                        }
-                    />
+                    {fiatEnabled && (
+                        <KeyValue
+                            keyValue={localeString('pos.views.Order.taxFiat')}
+                            value={FiatStore.formatAmountForDisplay(
+                                new BigNumber(taxSats)
+                                    .multipliedBy(rate)
+                                    .dividedBy(SATS_PER_BTC)
+                                    .toFixed(2)
+                            )}
+                        />
+                    )}
+
+                    <TouchableOpacity
+                        onPress={() => {
+                            this.setState({
+                                bitcoinUnits:
+                                    this.state.bitcoinUnits === 'sats'
+                                        ? 'BTC'
+                                        : 'sats'
+                            });
+                        }}
+                    >
+                        <KeyValue
+                            keyValue={
+                                lineItems?.some(
+                                    (item: any) => item.taxPercentage
+                                )
+                                    ? localeString('pos.views.Order.taxBitcoin')
+                                    : `${localeString(
+                                          'pos.views.Order.tax'
+                                      )} (${taxPercentage || '0'}%)`
+                            }
+                            value={
+                                bitcoinUnits === 'sats' ? (
+                                    <Amount fixedUnits="sats" sats={taxSats} />
+                                ) : (
+                                    <Amount fixedUnits="BTC" sats={taxSats} />
+                                )
+                            }
+                        />
+                    </TouchableOpacity>
 
                     {fiatEnabled && (
                         <KeyValue
