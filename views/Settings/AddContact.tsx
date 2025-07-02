@@ -36,7 +36,7 @@ import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
-
+import Ecash from '../../assets/images/SVG/Ecash.svg';
 interface ContactInputFieldProps {
     icon: React.ReactNode;
     value: string;
@@ -69,6 +69,7 @@ interface Contact {
     nip05: string[];
     nostrNpub: string[];
     pubkey: string[];
+    cashuPubkey: string[];
     name: string;
     description: string;
     contactId: string;
@@ -85,6 +86,7 @@ interface AddContactState {
     nip05: string[];
     nostrNpub: string[];
     pubkey: string[];
+    cashuPubkey: string[];
     name: string;
     description: string;
     photo: string | null;
@@ -95,6 +97,7 @@ interface AddContactState {
     isValidBolt12Address: boolean[];
     isValidBolt12Offer: boolean[];
     isValidPubkey: boolean[];
+    isValidCashuPubkey: boolean[];
     isValidOnchainAddress: boolean[];
     isValidNIP05: boolean[];
     isValidNpub: boolean[];
@@ -170,6 +173,7 @@ export default class AddContact extends React.Component<
             nip05: [],
             nostrNpub: [],
             pubkey: [],
+            cashuPubkey: [],
             name: '',
             description: '',
             photo: null,
@@ -180,6 +184,7 @@ export default class AddContact extends React.Component<
             isValidBolt12Address: [],
             isValidBolt12Offer: [],
             isValidPubkey: [],
+            isValidCashuPubkey: [],
             isValidOnchainAddress: [],
             isValidNIP05: [],
             isValidNpub: []
@@ -353,6 +358,19 @@ export default class AddContact extends React.Component<
         }));
     };
 
+    onChangeCashuPubkey = (text: string, index: number) => {
+        const isValid = AddressUtils.isValidLightningPubKey(text);
+
+        this.setState((prevState) => ({
+            isValidCashuPubkey: Object.assign(
+                [...prevState.isValidCashuPubkey],
+                {
+                    [index]: isValid
+                }
+            )
+        }));
+    };
+
     onChangeOnchainAddress = (text: string, index: number) => {
         const isValid = AddressUtils.isValidBitcoinAddress(text, true); // Pass true for testnet
 
@@ -429,6 +447,9 @@ export default class AddContact extends React.Component<
                 ).fill(true),
                 isValidPubkey: Array(
                     ContactStore.prefillContact.pubkey?.length || 1
+                ).fill(true),
+                isValidCashuPubkey: Array(
+                    ContactStore.prefillContact.cashuPubkey?.length || 1
                 ).fill(true),
                 isValidOnchainAddress: Array(
                     ContactStore.prefillContact.onchainAddress?.length || 1
@@ -551,10 +572,12 @@ export default class AddContact extends React.Component<
             nip05,
             nostrNpub,
             pubkey,
+            cashuPubkey,
             isValidLightningAddress,
             isValidBolt12Address,
             isValidBolt12Offer,
             isValidPubkey,
+            isValidCashuPubkey,
             isValidOnchainAddress,
             isValidNIP05,
             isValidNpub
@@ -597,6 +620,17 @@ export default class AddContact extends React.Component<
                 localeString('views.Settings.AddContact.pubkey')
             );
         }
+        if (cashuPubkey?.length > 0) {
+            addFieldsToArray(
+                cashuPubkey,
+                'cashuPubkey',
+                <Ecash fill={'#FACC15'} />,
+                isValidCashuPubkey,
+                this.onChangeCashuPubkey,
+                localeString('views.Settings.AddContact.cashuPubkey')
+            );
+        }
+
         if (onchainAddress?.length > 0) {
             addFieldsToArray(
                 onchainAddress,
@@ -640,6 +674,7 @@ export default class AddContact extends React.Component<
             nip05,
             nostrNpub,
             pubkey,
+            cashuPubkey,
             name,
             description,
             photo,
@@ -649,7 +684,8 @@ export default class AddContact extends React.Component<
             isValidBolt12Offer,
             isValidNIP05,
             isValidNpub,
-            isValidPubkey
+            isValidPubkey,
+            isValidCashuPubkey
         } = this.state;
 
         const dynamicStyles = {
@@ -708,7 +744,12 @@ export default class AddContact extends React.Component<
                 value: 'pubkey',
                 icon: <LightningBolt />
             },
-
+            {
+                key: 'Cashu pubkey',
+                translateKey: 'views.Settings.AddContact.cashuPubkey',
+                value: 'cashuPubkey',
+                icon: <Ecash fill={'#FACC15'} />
+            },
             {
                 key: 'Onchain address',
                 translateKey: 'views.Settings.AddContact.onchainAddress',
@@ -995,6 +1036,8 @@ export default class AddContact extends React.Component<
                                     isValidBolt12Offer.includes(false)) ||
                                 (pubkey.length > 0 &&
                                     isValidPubkey.includes(false)) ||
+                                (cashuPubkey.length > 0 &&
+                                    isValidCashuPubkey.includes(false)) ||
                                 (onchainAddress.length > 0 &&
                                     isValidOnchainAddress.includes(false)) ||
                                 (nip05.length > 0 &&
@@ -1017,6 +1060,9 @@ export default class AddContact extends React.Component<
                                     (pubkey.length > 0 &&
                                         pubkey[0] &&
                                         isValidPubkey[0]) ||
+                                    (cashuPubkey.length > 0 &&
+                                        cashuPubkey[0] &&
+                                        isValidCashuPubkey[0]) ||
                                     (nip05.length > 0 &&
                                         nip05[0] &&
                                         isValidNIP05[0]) ||

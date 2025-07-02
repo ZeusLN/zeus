@@ -213,6 +213,7 @@ import CashuToken from './views/Cashu/CashuToken';
 import MintToken from './views/Cashu/MintToken';
 import UnspentTokens from './views/Cashu/UnspentTokens';
 import CashuSeed from './views/Cashu/CashuSeed';
+import CashuLockSettings from './views/Cashu/CashuLockSettings';
 
 // Cashu Lightning address
 import CreateCashuLightningAddress from './views/Cashu/LightningAddress/CreateCashuLightningAddress';
@@ -1060,6 +1061,12 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="MintToken" // @ts-ignore:next-line
                                                         component={MintToken}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="CashuLockSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            CashuLockSettings
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="UnspentTokens" // @ts-ignore:next-line
