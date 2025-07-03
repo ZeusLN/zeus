@@ -475,6 +475,7 @@ export default class CashuTokenView extends React.Component<
                                             ? cashuBcurPart
                                             : cashuBBQrParts[cashuFrameIndex]
                                     }
+                                    copyValue={`cashu:${token}`}
                                     truncateLongValue
                                     expanded
                                 />

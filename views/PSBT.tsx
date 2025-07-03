@@ -368,6 +368,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                     ? bbqrParts[frameIndex]
                                                     : bcurPart
                                             }
+                                            copyValue={fundedPsbt}
                                             truncateLongValue
                                             expanded
                                         />
