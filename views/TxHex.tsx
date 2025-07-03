@@ -376,6 +376,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                     ? bbqrParts[frameIndex]
                                                     : bcurPart
                                             }
+                                            copyValue={txHex}
                                             truncateLongValue
                                             expanded
                                         />
