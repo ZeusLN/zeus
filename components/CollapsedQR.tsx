@@ -79,7 +79,8 @@ function ValueText({ value, truncateLongValue, valueStyle }: ValueTextProps) {
                 style={{
                     ...styles.value,
                     ...valueStyle,
-                    color: themeColor('secondaryText')
+                    color: themeColor('secondaryText'),
+                    minHeight: state.numberOfValueLines ? 50 : undefined
                 }}
                 numberOfLines={state.numberOfValueLines}
             >
