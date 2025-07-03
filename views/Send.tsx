@@ -32,6 +32,7 @@ import InvoicesStore from '../stores/InvoicesStore';
 import ModalStore from '../stores/ModalStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import SettingsStore from '../stores/SettingsStore';
+import SwapStore from '../stores/SwapStore';
 import TransactionsStore from '../stores/TransactionsStore';
 import UnitsStore from '../stores/UnitsStore';
 import UTXOsStore from '../stores/UTXOsStore';
@@ -66,6 +67,7 @@ import Contact from '../models/Contact';
 import TransactionRequest, {
     AdditionalOutput
 } from '../models/TransactionRequest';
+import BigNumber from 'bignumber.js';
 
 interface SendProps {
     exitSetup: any;
@@ -79,6 +81,7 @@ interface SendProps {
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
     UTXOsStore: UTXOsStore;
+    SwapStore: SwapStore;
     route: Route<
         'Send',
         {
@@ -117,6 +120,7 @@ interface SendState {
     account: string;
     additionalOutputs: Array<AdditionalOutput>;
     fundMax: boolean;
+    validAmountToSwap: boolean;
 }
 
 @inject(
@@ -128,7 +132,8 @@ interface SendState {
     'SettingsStore',
     'TransactionsStore',
     'UnitsStore',
-    'UTXOsStore'
+    'UTXOsStore',
+    'SwapStore'
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
@@ -184,7 +189,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             clearOnBackPress,
             account: 'default',
             additionalOutputs: [],
-            fundMax: false
+            fundMax: false,
+            validAmountToSwap: false
         };
     }
 
@@ -204,6 +210,74 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         if (this.listener && this.listener.stop) this.listener.stop();
     }
+
+    async componentDidUpdate() {
+        const { SwapStore } = this.props;
+
+        if (this.state.satAmount !== '0') {
+            const reverseInfo: any = SwapStore.reverseInfo;
+
+            const validAmountToSwap = this.isAmountValidToSwap(
+                reverseInfo,
+                this.state.satAmount
+            );
+
+            if (validAmountToSwap !== this.state.validAmountToSwap) {
+                this.setState({
+                    validAmountToSwap
+                });
+            }
+        }
+    }
+
+    isAmountValidToSwap(
+        reverseInfo: any,
+        requestAmount: number | string | null
+    ): boolean {
+        if (!reverseInfo) {
+            return false;
+        }
+        const serviceFeePct = reverseInfo?.fees?.percentage || 0;
+        const networkFeeBigNum = new BigNumber(
+            reverseInfo?.fees?.minerFees?.claim || 0
+        ).plus(reverseInfo?.fees?.minerFees?.lockup || 0);
+        const networkFee = networkFeeBigNum.toNumber();
+
+        const min = reverseInfo.limits.minimal || 0;
+        const max = reverseInfo.limits.maximal || 0;
+        const minBN = new BigNumber(min);
+        const maxBN = new BigNumber(max);
+
+        const satAmountNew = new BigNumber(requestAmount || 0);
+
+        let input: any;
+        input = this.calculateSendAmount(
+            satAmountNew,
+            serviceFeePct,
+            networkFee
+        );
+
+        return input.gte(minBN) && input.lte(maxBN);
+    }
+
+    bigCeil = (big: BigNumber): BigNumber => {
+        return big.integerValue(BigNumber.ROUND_CEIL);
+    };
+
+    calculateSendAmount = (
+        receiveAmount: BigNumber,
+        serviceFee: number,
+        minerFee: number
+    ): BigNumber => {
+        if (receiveAmount.isNaN() || receiveAmount.isLessThanOrEqualTo(0)) {
+            return new BigNumber(0);
+        }
+        return this.bigCeil(
+            receiveAmount
+                .plus(minerFee)
+                .div(new BigNumber(1).minus(new BigNumber(serviceFee).div(100)))
+        );
+    };
 
     UNSAFE_componentWillReceiveProps(nextProps: any) {
         const { route, UnitsStore } = nextProps;
@@ -677,7 +751,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             contactName,
             additionalOutputs,
             fundMax,
-            account
+            account,
+            validAmountToSwap
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -734,7 +809,8 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 </View>
                             )}
                             {transactionType === 'On-chain' &&
-                                BackendUtils.supportsOnchainSends() && (
+                                BackendUtils.supportsOnchainSends() &&
+                                validAmountToSwap && (
                                     <View
                                         style={{
                                             marginLeft: 10,
