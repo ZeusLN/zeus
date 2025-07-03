@@ -26,9 +26,22 @@ export default class ZeusPayPlusSettings extends React.Component<
     render() {
         const { navigation, LightningAddressStore, hidePills, showPerks } =
             this.props;
-        const { zeusPlusExpiresAt } = LightningAddressStore!!;
+        const { zeusPlusExpiresAt, legacyAccount } = LightningAddressStore!!;
 
         const zeusPayPlus = !!zeusPlusExpiresAt;
+
+        const LegacyPill = () =>
+            !hidePills ? (
+                <Pill
+                    title={localeString('views.LightningAddress.legacyAccount')}
+                    textColor={themeColor('text')}
+                    borderColor={themeColor('text')}
+                    width={160}
+                    height={30}
+                />
+            ) : (
+                <></>
+            );
 
         const PlusPill = () =>
             !hidePills ? (
@@ -51,6 +64,17 @@ export default class ZeusPayPlusSettings extends React.Component<
                 width={100}
                 height={30}
             />
+        );
+
+        const LegacyNavIcon = () => (
+            <>
+                <LegacyPill />
+                <Icon
+                    name="keyboard-arrow-right"
+                    color={themeColor('text')}
+                    style={{ marginLeft: 5 }}
+                />
+            </>
         );
 
         const NavIcon = () =>
@@ -83,7 +107,7 @@ export default class ZeusPayPlusSettings extends React.Component<
                         marginTop: 20
                     }}
                     onPress={() =>
-                        zeusPayPlus
+                        legacyAccount || zeusPayPlus
                             ? navigation.navigate('ChangeAddress')
                             : null
                     }
@@ -100,7 +124,7 @@ export default class ZeusPayPlusSettings extends React.Component<
                             )}
                         </ListItem.Title>
                     </ListItem.Content>
-                    <NavIcon />
+                    {legacyAccount ? <LegacyNavIcon /> : <NavIcon />}
                 </ListItem>
                 <ListItem
                     containerStyle={{
