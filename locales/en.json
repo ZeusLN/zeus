@@ -1344,6 +1344,7 @@
     "views.LightningAddress.ZeusPayPlus.extend": "Extend subscription",
     "views.LightningAddress.ZeusPayPlus.subActive": "Subscription Active",
     "views.LightningAddress.ZeusPayPlus.noActiveSub": "No active subscription",
+    "views.LightningAddress.legacyAccount": "Legacy account",
     "views.Settings.Attestations.title": "Attestations",
     "views.Settings.Attestations.noAttestationsFound": "No attestations found",
     "views.Settings.Attestation.title": "Attestation",
