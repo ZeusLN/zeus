@@ -18,6 +18,7 @@ export default class SweepStore {
     @observable onChainBalance: number;
     @observable destination: string;
     @observable txHex: string | null = null;
+    @observable txId: string | null = null;
     @observable fee: number = 0;
     @observable feeRate: string = '';
     @observable addressType: AddressType = 'p2wpkh';
@@ -26,6 +27,9 @@ export default class SweepStore {
     @observable privateKey: string;
     @observable wif: string;
     @observable network: bitcoin.Network;
+    @observable vBytes: number;
+    @observable bytes: number;
+    @observable valueToSend: number;
 
     nodeInfoStore: NodeInfoStore;
 
@@ -134,6 +138,8 @@ export default class SweepStore {
                 networkStr,
                 this.getUtxosFromAddress
             );
+
+            console.log(result);
 
             this.addressType = result.type;
             this.utxos = result.utxos;
@@ -266,6 +272,7 @@ export default class SweepStore {
             this.onChainBalance = totalSats;
             console.log('onChainBalance', this.onChainBalance);
         } catch (err: any) {
+            console.log(err);
             this.sweepError = true;
             this.sweepErrorMsg = err.message;
         }
@@ -299,25 +306,24 @@ export default class SweepStore {
             dummyPsbt.finalizeAllInputs();
             const dummyTx = dummyPsbt.extractTransaction();
             const vbytes = dummyTx.virtualSize();
-            console.log('vbytes', vbytes);
+            this.vBytes = vbytes;
             this.fee = Math.ceil(vbytes * Number(feeRate));
-            const valueToSend = this.onChainBalance - this.fee;
-            if (valueToSend <= 0)
+            this.valueToSend = this.onChainBalance - this.fee;
+
+            if (this.valueToSend <= 0)
                 throw new Error('Fee exceeds the available balance');
 
             this.psbt.addOutput({
                 address: this.destination,
-                value: valueToSend
+                value: this.valueToSend
             });
             this.psbt.signAllInputs(signer);
             this.psbt.finalizeAllInputs();
-            const txHex = this.psbt.extractTransaction().toHex();
-            this.txHex = txHex;
-            console.log('txHex', txHex);
-            console.log('fee', this.fee);
-            console.log('feeRate', this.feeRate);
-            console.log('onChainBalance', this.onChainBalance);
-            console.log('valueToSend', valueToSend);
+            const tx = this.psbt.extractTransaction();
+            this.txHex = tx.toHex();
+            this.bytes = this.txHex.length / 2;
+            this.txId = tx.getId();
+            console.log(this.txHex);
         } catch (err: any) {
             console.log('err', err);
             this.sweepError = true;
