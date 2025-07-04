@@ -9,6 +9,13 @@ interface ValidationResult {
 
 export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
 
+export const addressTypeLabels = {
+    p2pkh: 'Legacy',
+    'p2sh-p2wpkh': 'Nested SegWit',
+    p2wpkh: 'Native SegWit',
+    p2tr: 'Taproot'
+};
+
 export class WIFUtils {
     validateWIF(wif: string): ValidationResult {
         const firstChar = wif[0];
