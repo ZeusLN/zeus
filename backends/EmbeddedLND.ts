@@ -354,4 +354,5 @@ export default class EmbeddedLND extends LND {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => true;
+    supportsWatchtowers = () => false;
 }

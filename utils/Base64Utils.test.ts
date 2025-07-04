@@ -90,6 +90,23 @@ describe('Base64Utils', () => {
         });
     });
 
+    describe('base64ToBase64Url', () => {
+        it('converts base64 string to base64url string', () => {
+            expect(Base64Utils.base64ToBase64Url('VGVzdCBzdHJpbmc=')).toEqual(
+                'VGVzdCBzdHJpbmc'
+            );
+            expect(
+                Base64Utils.base64ToBase64Url('dGVzdCBzdHJpbmcgd2l0aCArLyA=')
+            ).toEqual('dGVzdCBzdHJpbmcgd2l0aCArLyA');
+            expect(Base64Utils.base64ToBase64Url('SGVsbG8gV29ybGQ+')).toEqual(
+                'SGVsbG8gV29ybGQ-'
+            );
+            expect(
+                Base64Utils.base64ToBase64Url('QWJjZGVmZ2hpamtsbW5vcA==')
+            ).toEqual('QWJjZGVmZ2hpamtsbW5vcA');
+        });
+    });
+
     describe('base64UrlToHex', () => {
         it('converts base64-encoded macaroon to hex', () => {
             const macaroonBase64 =
