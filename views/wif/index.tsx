@@ -68,6 +68,7 @@ export default class WIFSweeper extends React.Component<
     };
 
     componentDidMount() {
+        this.props.InvoicesStore.reset();
         this.props.SweepStore.resetSweepError();
         this.initFromProps(this.props);
     }
@@ -143,7 +144,7 @@ export default class WIFSweeper extends React.Component<
 
                     <View style={{ padding: 20, flex: 1 }}>
                         <Text style={{ color: themeColor('secondaryText') }}>
-                            {localeString('views.Wif.enterPrivatekey')}
+                            {localeString('views.Wif.enterPrivateKey')}
                         </Text>
 
                         <View
@@ -154,7 +155,7 @@ export default class WIFSweeper extends React.Component<
                         >
                             <TextInput
                                 placeholder={localeString(
-                                    'views.Wif.enterPrivatekeyPlaceholder'
+                                    'views.Wif.enterPrivateKeyPlaceholder'
                                 )}
                                 value={privateKey}
                                 onChangeText={(text: string) =>
@@ -224,22 +225,23 @@ export default class WIFSweeper extends React.Component<
                                         this.setState({
                                             onChainAddressloading: true
                                         });
-                                        const { isValid, error } =
+                                        const { isValid } =
                                             wifUtils.validateWIF(privateKey);
                                         if (isValid) {
                                             await this.props.SweepStore.prepareSweepInputs(
                                                 privateKey
                                             );
                                         } else {
-                                            this.setState({
-                                                error:
-                                                    error ||
-                                                    localeString(
-                                                        'views.Wif.invalidWif'
-                                                    ),
-                                                onChainAddressloading: false
-                                            });
-                                            return;
+                                            throw new Error(
+                                                localeString(
+                                                    'views.Wif.invalidWif'
+                                                )
+                                            );
+                                        }
+                                        if (!SweepStore.onChainBalance) {
+                                            throw new Error(
+                                                'The unspent outputs from this private key contain insufficient funds to spend(0 sats).'
+                                            );
                                         }
                                         await InvoicesStore.createUnifiedInvoice(
                                             {
@@ -259,18 +261,15 @@ export default class WIFSweeper extends React.Component<
                                                 onChainAddressloading: false
                                             });
                                         } else {
-                                            this.setState({
-                                                error: localeString(
+                                            throw new Error(
+                                                localeString(
                                                     'views.Swaps.generateOnchainAddressFailed'
-                                                ),
-                                                onChainAddressloading: false
-                                            });
+                                                )
+                                            );
                                         }
                                     } catch (e: any) {
                                         this.setState({
-                                            error: localeString(
-                                                'views.Swaps.generateOnchainAddressFailed'
-                                            ),
+                                            error: e.message,
                                             onChainAddressloading: false
                                         });
                                     }
@@ -313,12 +312,9 @@ export default class WIFSweeper extends React.Component<
                                     await this.props.SweepStore.finalizeSweepTransaction(
                                         feeRate
                                     );
-                                    navigation.navigate(
-                                        'WIFTransactionDetails',
-                                        {
-                                            p: privateKey
-                                        }
-                                    );
+                                    navigation.navigate('TxHex', {
+                                        txHex: SweepStore.txHex
+                                    });
                                 } else {
                                     this.props.SweepStore.sweepError = true;
                                     this.props.SweepStore.sweepErrorMsg =
