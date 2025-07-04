@@ -251,7 +251,6 @@ import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
 import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
 import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
-import WIFTransactionDetails from './views/wif/TransactionDetails';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
@@ -1219,12 +1218,6 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="WIFSweeper" // @ts-ignore:next-line
                                                         component={WIFSweeper}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="WIFTransactionDetails" // @ts-ignore:next-line
-                                                        component={
-                                                            WIFTransactionDetails
-                                                        }
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
