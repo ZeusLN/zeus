@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import BigNumber from 'bignumber.js';
 
+import Button from '../../components/Button';
 import Text from '../../components/Text';
 import { Row } from '../../components/layout/Row';
 
@@ -11,6 +11,7 @@ import LightningAddressStore from '../../stores/LightningAddressStore';
 import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import UrlUtils from '../../utils/UrlUtils';
 
 interface ZeusPayPlusPerksListProps {
     LightningAddressStore?: LightningAddressStore;
@@ -23,39 +24,11 @@ export default class ZeusPayPlusPerksList extends React.Component<
     {}
 > {
     render() {
-        const perks = [
-            {
-                title: 'Custom handles',
-                active: true
-            },
-            {
-                title: 'Donation web portal',
-                active: true
-            },
-            {
-                title: 'Point of Sale web portal',
-                active: true
-            },
-            {
-                title: 'LSP channel lease discounts',
-                active: true,
-                value: `-${new BigNumber(
-                    this.props.LightningAddressStore?.zeusPlusDiscount || 0
-                ).times(100)}%`
-            },
-            {
-                title: 'Early access to new features',
-                active: false
-            },
-            {
-                title: 'Exclusive merch',
-                active: false
-            }
-        ];
+        const { perks } = this.props.LightningAddressStore!;
 
         return (
             <ScrollView style={{ margin: 10 }}>
-                {perks.map((perk, index) => (
+                {perks?.map((perk, index) => (
                     <View
                         key={`perk-${index}`}
                         style={{
@@ -72,7 +45,7 @@ export default class ZeusPayPlusPerksList extends React.Component<
                             >
                                 {`• ${perk.title}`}
                             </Text>
-                            {!perk.active && (
+                            {perk.comingSoon && (
                                 <Text
                                     style={{
                                         ...styles.comingSoon,
@@ -95,6 +68,25 @@ export default class ZeusPayPlusPerksList extends React.Component<
                                 </Text>
                             )}
                         </Row>
+                        {perk.note && (
+                            <Text
+                                style={{
+                                    ...styles.note,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {perk.note}
+                            </Text>
+                        )}
+                        {perk.links?.map((link, index) => (
+                            <View style={styles.button}>
+                                <Button
+                                    title={link.title}
+                                    onPress={() => UrlUtils.goToUrl(link.url)}
+                                    secondary={index !== 0}
+                                />
+                            </View>
+                        ))}
                     </View>
                 ))}
             </ScrollView>
@@ -108,12 +100,21 @@ const styles = StyleSheet.create({
         fontSize: 30,
         marginBottom: 5
     },
+    note: {
+        fontFamily: 'PPNeueMontreal-Book',
+        fontSize: 15,
+        marginBottom: 5
+    },
     comingSoon: {
         fontFamily: font('marlideBold'),
-        fontSize: 20
+        fontSize: 15
     },
     value: {
         fontFamily: font('marlideBold'),
         fontSize: 35
+    },
+    button: {
+        marginTop: 10,
+        marginBottom: 10
     }
 });
