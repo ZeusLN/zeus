@@ -53,6 +53,19 @@ interface Auth {
     signature: string;
 }
 
+interface Perk {
+    title: string;
+    note?: string;
+    value?: string;
+    links?: PerkLink[];
+    comingSoon?: boolean;
+}
+
+interface PerkLink {
+    title: string;
+    url: string;
+}
+
 export default class LightningAddressStore {
     @observable public lightningAddress: string;
     @observable public lightningAddressHandle: string;
@@ -63,6 +76,7 @@ export default class LightningAddressStore {
     @observable public zeusPlusAnnualFeeSats: any;
     @observable public zeusPlusDiscount: any;
     @observable public legacyAccount: boolean = false;
+    @observable public perks: Perk[] = [];
     @observable public loading: boolean = false;
     @observable public redeeming: boolean = false;
     @observable public redeemingAll: boolean = false;
@@ -615,6 +629,7 @@ export default class LightningAddressStore {
                 plusAnnualFeeSats,
                 plusDiscount,
                 legacyAccount,
+                perks,
                 deviceToken
             } = statusData;
 
@@ -640,6 +655,7 @@ export default class LightningAddressStore {
                 this.zeusPlusAnnualFeeSats = plusAnnualFeeSats;
                 this.zeusPlusDiscount = plusDiscount;
                 this.legacyAccount = legacyAccount;
+                this.perks = perks;
                 this.serviceDeviceToken = deviceToken;
                 if (handle && domain) {
                     this.lightningAddress = `${handle}@${domain}`;
@@ -1317,6 +1333,7 @@ export default class LightningAddressStore {
         this.zeusPlusAnnualFeeSats = undefined;
         this.zeusPlusDiscount = undefined;
         this.legacyAccount = false;
+        this.perks = [];
     };
 
     @action
