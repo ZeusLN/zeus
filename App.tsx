@@ -248,7 +248,6 @@ import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 import WIFSweeper from './views/wif';
-import WIFTransactionDetails from './views/wif/TransactionDetails';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 
@@ -1171,12 +1170,6 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="WIFSweeper" // @ts-ignore:next-line
                                                         component={WIFSweeper}
-                                                    />
-                                                    <Stack.Screen
-                                                        name="WIFTransactionDetails" // @ts-ignore:next-line
-                                                        component={
-                                                            WIFTransactionDetails
-                                                        }
                                                     />
                                                 </Stack.Navigator>
                                             </NavigationContainer>
