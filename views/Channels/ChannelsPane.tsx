@@ -868,7 +868,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 ]}
                                                             >
                                                                 {`${localeString(
-                                                                    'views.OpenChannel.pingTime'
+                                                                    'views.ChannelsPane.pingTime'
                                                                 )}: ${
                                                                     peer.ping_time
                                                                 }ms`}
@@ -886,7 +886,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 ]}
                                                             >
                                                                 {`${localeString(
-                                                                    'views.OpenChannel.satsSent'
+                                                                    'views.ChannelsPane.satsSent'
                                                                 )}: ${UnitsStore?.getFormattedAmount(
                                                                     peer.sats_sent,
                                                                     'sats'
@@ -905,11 +905,71 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 ]}
                                                             >
                                                                 {`${localeString(
-                                                                    'views.OpenChannel.satsRecv'
+                                                                    'views.ChannelsPane.satsRecv'
                                                                 )}: ${UnitsStore?.getFormattedAmount(
                                                                     peer.sats_recv,
                                                                     'sats'
                                                                 )}`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.bytesSent && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.ChannelsPane.bytesSent'
+                                                                )}: ${
+                                                                    peer.bytesSent
+                                                                } B`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.bytesRecv && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.ChannelsPane.bytesRecv'
+                                                                )}: ${
+                                                                    peer.bytesRecv
+                                                                } B`}
+                                                            </Text>
+                                                        )}
+                                                        {peer.inbound && (
+                                                            <Text
+                                                                style={[
+                                                                    styles.peerStatsText,
+                                                                    {
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }
+                                                                ]}
+                                                            >
+                                                                {`${localeString(
+                                                                    'views.Channel.inbound'
+                                                                )}: ${
+                                                                    peer.inbound
+                                                                        ? localeString(
+                                                                              'general.true'
+                                                                          )
+                                                                        : localeString(
+                                                                              'general.false'
+                                                                          )
+                                                                }`}
                                                             </Text>
                                                         )}
                                                         {peer.connected && (
@@ -924,7 +984,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 ]}
                                                             >
                                                                 {`${localeString(
-                                                                    'views.OpenChannel.connected'
+                                                                    'views.ChannelsPane.connected'
                                                                 )}: ${
                                                                     peer.connected
                                                                         ? localeString(
@@ -992,7 +1052,7 @@ export default class ChannelsPane extends React.PureComponent<
                                             ]}
                                         >
                                             {localeString(
-                                                'views.OpenChannel.noPeers'
+                                                'views.ChannelsPane.noPeers'
                                             )}
                                         </Text>
                                     }
@@ -1032,7 +1092,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     }}
                                 >
                                     {localeString(
-                                        'views.OpenChannel.disconnectPeerModalTitle'
+                                        'views.ChannelsPane.disconnectPeerModalTitle'
                                     )}
                                 </Text>
 
@@ -1045,7 +1105,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     }}
                                 >
                                     {localeString(
-                                        'views.OpenChannel.disconnectPeerModalText'
+                                        'views.ChannelsPane.disconnectPeerModalText'
                                     )}
                                 </Text>
 

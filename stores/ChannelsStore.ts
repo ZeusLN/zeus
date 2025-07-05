@@ -697,7 +697,6 @@ export default class ChannelsStore {
 
         try {
             const response = await BackendUtils.listPeers();
-
             runInAction(() => {
                 this.peers = response.map((peerData: any) => {
                     return new Peer(peerData);
@@ -710,7 +709,7 @@ export default class ChannelsStore {
                 this.error = true;
                 this.errorListPeers =
                     error.message ??
-                    localeString('views.OpenChannel.peersFetchFailed');
+                    localeString('views.ChannelsPane.peersFetchFailed');
                 this.loading = false;
             });
         }
@@ -728,13 +727,15 @@ export default class ChannelsStore {
             );
 
             if (!isPeer) {
-                throw new Error(localeString('views.OpenChannel.peerNotFound'));
+                throw new Error(
+                    localeString('views.ChannelsPane.peerNotFound')
+                );
             }
             const res = await BackendUtils.disconnectPeer(pubkey);
 
             if (!res) {
                 throw new Error(
-                    localeString('views.OpenChannel.peerNotConnected')
+                    localeString('views.ChannelsPane.peerNotConnected')
                 );
             }
 
@@ -752,7 +753,7 @@ export default class ChannelsStore {
             this.errorDisconnectPeer =
                 error?.message?.message ||
                 error?.message ||
-                localeString('views.OpenChannel.disconnectPeerFailed');
+                localeString('views.ChannelsPane.disconnectPeerFailed');
             this.loading = false;
 
             return false;
