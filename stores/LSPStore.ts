@@ -231,7 +231,7 @@ export default class LSPStore {
     };
 
     @action
-    public getZeroConfFee = (amount_msat: number) => {
+    public getZeroConfFee = (amount_msat: number): Promise<number> => {
         const { settings } = this.settingsStore;
 
         return new Promise((resolve, reject) => {
@@ -253,20 +253,21 @@ export default class LSPStore {
                     const status = response.info().status;
                     const data = response.json();
                     if (status == 200) {
-                        runInAction(() => {
-                            this.zeroConfFee =
-                                data.fee_amount_msat !== undefined
-                                    ? Number.parseInt(
-                                          (
-                                              Number(data.fee_amount_msat) /
-                                              1000
-                                          ).toString()
-                                      )
-                                    : undefined;
-                            this.feeId = data.id;
-                            this.flow_error = false;
-                        });
-                        resolve(this.zeroConfFee);
+                        if (data.fee_amount_msat !== undefined) {
+                            runInAction(() => {
+                                this.zeroConfFee = Number.parseInt(
+                                    (
+                                        Number(data.fee_amount_msat) / 1000
+                                    ).toString()
+                                );
+                                this.feeId = data.id;
+                                this.flow_error = false;
+                                resolve(this.zeroConfFee);
+                            });
+                        } else {
+                            this.flow_error = true;
+                            reject();
+                        }
                     } else {
                         this.flow_error = true;
                         reject();
