@@ -26,7 +26,9 @@ const {
     lookupInvoice,
     fundingStateStep,
     sendCustomMessage,
-    subscribeCustomMessages
+    subscribeCustomMessages,
+    listPeers,
+    disconnectPeer
 } = lndMobile.index;
 const {
     channelBalance,
@@ -165,6 +167,42 @@ export default class EmbeddedLND extends LND {
             );
         });
     };
+
+    listPeers = async (): Promise<any[]> => {
+        try {
+            const response = await listPeers();
+            const formattedPeers = (response?.peers || []).map((peer: any) => {
+                const formattedPeer = {
+                    pub_key: peer.pub_key || '',
+                    address: peer.address || '',
+                    bytes_sent: peer.bytes_sent || '0',
+                    bytes_recv: peer.bytes_recv || '0',
+                    ping_time: peer.ping_time || '0',
+                    sync_type: peer.sync_type || '',
+                    sat_sent: peer.sats_sent || '0',
+                    sat_recv: peer.sats_recv || '0',
+                    inbound: peer.inbound || false,
+                    flap_count: peer.flap_count || '0'
+                };
+                return formattedPeer;
+            });
+            return formattedPeers;
+        } catch (error) {
+            console.error('Error fetching peers:', error);
+            throw error;
+        }
+    };
+
+    disconnectPeer = async (pubkey: string): Promise<boolean | null> => {
+        try {
+            await disconnectPeer(pubkey);
+            return true;
+        } catch (error) {
+            console.error(`Error while disconnecting peer ${pubkey}:`, error);
+            return null;
+        }
+    };
+
     connectPeer = async (data: any) =>
         await connectPeer(data.addr.pubkey, data.addr.host, data.perm);
     decodePaymentRequest = async (urlParams?: string[]) =>
@@ -314,6 +352,7 @@ export default class EmbeddedLND extends LND {
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
 
+    supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;
     supportsLnurlAuth = () => true;
