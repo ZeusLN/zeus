@@ -78,8 +78,9 @@ export default class UnitsStore {
         fixedUnits?: string;
         noCommas?: boolean;
     }): ValueDisplayProps => {
-        const { settings } = this.settingsStore;
-        const { fiat, display } = settings;
+        const { settings, selectedForceFiat } = this.settingsStore;
+        const { display } = settings;
+        const fiat = selectedForceFiat || settings.fiat;
         const showAllDecimalPlaces: boolean =
             (display && display.showAllDecimalPlaces) || false;
         const units = fixedUnits || this.units;
