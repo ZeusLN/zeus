@@ -316,6 +316,7 @@ export default class EmbeddedLND extends LND {
 
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;
+    supportsAddressMessageVerification = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
