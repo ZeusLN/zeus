@@ -83,7 +83,7 @@ export default class NodeInfo extends React.Component<NodeInfoProps, {}> {
                     />
                 )}
 
-                {settings.ecash.enableCashu && selectedMintPubkey && (
+                {settings?.ecash?.enableCashu && selectedMintPubkey && (
                     <KeyValue
                         keyValue={localeString(
                             'views.Settings.AddContact.cashuPubkey'
