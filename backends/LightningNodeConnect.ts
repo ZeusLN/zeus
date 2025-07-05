@@ -580,6 +580,25 @@ export default class LightningNodeConnect {
         return isSupportedVersion(version, minVersion, eosVersion);
     };
 
+    listPeers = async () => {
+        try {
+            const res = await this.lnc.lnd.lightning.listPeers({});
+            return res.peers ?? [];
+        } catch (err) {
+            console.error('listPeers error:', err);
+        }
+    };
+
+    disconnectPeer = async (pubkey: string) => {
+        try {
+            await this.lnc.lnd.lightning.disconnectPeer({ pubKey: pubkey });
+            return true;
+        } catch (error) {
+            console.error(`Error disconnecting peer ${pubkey}:`, error);
+            return null;
+        }
+    };
+
     supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsAddressMessageSigning = () => true;
