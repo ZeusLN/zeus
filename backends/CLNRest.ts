@@ -205,6 +205,12 @@ export default class CLNRest {
         const channels = await this.postRequest('/v1/listpeerchannels');
         return await listPeers(channels);
     };
+    getChannelInfo = (shortChanId: string) => {
+        const data = this.postRequest('/v1/listchannels', {
+            short_channel_id: shortChanId
+        });
+        return data;
+    };
     getBlockchainBalance = () =>
         this.postRequest('/v1/listfunds').then((res) => {
             return getBalance(res);
@@ -404,6 +410,15 @@ export default class CLNRest {
         };
     };
 
+    getForwardingHistory = () => {
+        const data = this.postRequest('/v1/listforwards', {
+            status: 'settled',
+            limit: 10000000,
+            index: 'created'
+        });
+        return data;
+    };
+
     // BOLT 12 / Offers
     listOffers = () =>
         this.postRequest('/v1/listoffers', { active_only: true });
@@ -450,7 +465,7 @@ export default class CLNRest {
     supportsAccounts = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
-    singleFeesEarnedTotal = () => true;
+    singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsNestedSegWit = () => false;
     supportsTaproot = () => true;
@@ -470,6 +485,7 @@ export default class CLNRest {
     supportsAddressesWithDerivationPaths = () => false;
     supportsOffers = () => true;
     isLNDBased = () => false;
+    supportsForwardingHistory = () => true;
     supportInboundFees = () => false;
     supportsDevTools = () => true;
     supportsCashuWallet = () => false;

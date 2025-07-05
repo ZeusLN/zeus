@@ -155,6 +155,7 @@ class BackendUtils {
     supportsHopPicking = () => this.call('supportsHopPicking');
     supportsAccounts = () => this.call('supportsAccounts');
     supportsRouting = () => this.call('supportsRouting');
+    supportsForwardingHistory = () => this.call('supportsForwardingHistory');
     supportsNodeInfo = () => this.call('supportsNodeInfo');
     singleFeesEarnedTotal = () => this.call('singleFeesEarnedTotal');
     supportsAddressTypeSelection = () =>

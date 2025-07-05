@@ -29,7 +29,7 @@ export default class FeeStore {
     @observable public monthEarned: string | number;
     @observable public totalEarned: string | number;
 
-    @observable public forwardingEvents: Array<any> = [];
+    @observable public forwardingEvents: Array<ForwardEvent> = [];
     @observable public lastOffsetIndex: number;
     @observable public forwardingHistoryError = false;
 
@@ -209,34 +209,52 @@ export default class FeeStore {
     };
 
     @action
-    public getForwardingHistory = (params?: any) => {
+    public getForwardingHistory = (params?: number) => {
         if (this.loading) return;
         this.loading = true;
         this.forwardingEvents = [];
         this.forwardingHistoryError = false;
         this.earnedDuringTimeframe = new BigNumber(0);
-        BackendUtils.getForwardingHistory(params)
-            .then((data: any) => {
-                runInAction(() => {
-                    this.forwardingEvents = data.forwarding_events
-                        .map((event: any) => new ForwardEvent(event))
-                        .reverse();
+        const response = BackendUtils.getForwardingHistory(params);
 
-                    // Add up fees earned for this timeframe
-                    // Uses BigNumber to prevent rounding errors in the add operation
-                    this.forwardingEvents.forEach(
-                        (event: ForwardEvent) =>
-                            (this.earnedDuringTimeframe =
+        response
+            .then((data: any) => {
+                try {
+                    runInAction(() => {
+                        let rawEvents =
+                            data.forwarding_events || data.forwards || [];
+
+                        if (!BackendUtils.isLNDBased() && params != null) {
+                            const cutoffTime =
+                                Date.now() / 1000 - params * 3600;
+                            rawEvents = rawEvents.filter(
+                                (event: any) =>
+                                    event.resolved_time >= cutoffTime
+                            );
+                        }
+
+                        this.forwardingEvents = rawEvents
+                            .map((event: any) => new ForwardEvent(event))
+                            .reverse();
+
+                        this.forwardingEvents.forEach((event: ForwardEvent) => {
+                            this.earnedDuringTimeframe =
                                 this.earnedDuringTimeframe.plus(
                                     Number(event.fee_msat) / 1000
-                                ))
-                    );
+                                );
+                        });
 
-                    this.lastOffsetIndex = data.last_offset_index;
-                    this.loading = false;
-                });
+                        this.lastOffsetIndex = data.last_offset_index;
+                        this.loading = false;
+                    });
+                } catch (e: any) {
+                    this.forwardingError();
+                }
             })
-            .catch(() => this.forwardingError());
+            .catch((e: any) => {
+                console.error('Fetching forwarding history failed:', e);
+                this.forwardingError();
+            });
     };
 
     @action

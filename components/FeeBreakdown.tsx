@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-
+import { Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -14,10 +14,10 @@ import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
 import BackendUtils from '../utils/BackendUtils';
 
-import { Divider } from 'react-native-elements';
-
 import Amount from './Amount';
 import KeyValue from './KeyValue';
+
+import { RoutingPolicy } from '../models/ChannelInfo';
 
 interface FeeBreakdownProps {
     ChannelsStore?: ChannelsStore;
@@ -62,23 +62,32 @@ export default class FeeBreakdown extends React.Component<
         const { loading, chanInfo } = ChannelsStore!;
         const { nodeInfo, testnet } = NodeInfoStore!;
         const { nodeId } = nodeInfo;
+        let localPolicy: RoutingPolicy | undefined;
+        let remotePolicy: RoutingPolicy | undefined;
 
-        let localPolicy, remotePolicy;
         if (
             chanInfo &&
             chanInfo[channelId] &&
             chanInfo[channelId].node1Pub === nodeId
         ) {
-            localPolicy = chanInfo[channelId].node1Policy;
-            remotePolicy = chanInfo[channelId].node2Policy;
+            localPolicy =
+                chanInfo[channelId].node1Policy ||
+                ChannelsStore!.getNodePolicy(channelId); // This is specifically for CLNRest nodes, because the ChannelInfo model of CLNRest does not return the node policy.
+            remotePolicy =
+                chanInfo[channelId].node2Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
         }
         if (
             chanInfo &&
             chanInfo[channelId] &&
             chanInfo[channelId].node2Pub === nodeId
         ) {
-            localPolicy = chanInfo[channelId].node2Policy;
-            remotePolicy = chanInfo[channelId].node1Policy;
+            localPolicy =
+                chanInfo[channelId].node2Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
+            remotePolicy =
+                chanInfo[channelId].node1Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
         }
 
         return (
@@ -331,7 +340,7 @@ export default class FeeBreakdown extends React.Component<
                                 'views.Channel.lastLocalUpdate'
                             )}
                             value={DateTimeUtils.listFormattedDate(
-                                localPolicy.last_update
+                                localPolicy.last_update!
                             )}
                         />
                         <KeyValue
@@ -339,7 +348,7 @@ export default class FeeBreakdown extends React.Component<
                                 'views.Channel.lastRemoteUpdate'
                             )}
                             value={DateTimeUtils.listFormattedDate(
-                                remotePolicy.last_update
+                                remotePolicy.last_update!
                             )}
                         />
                         <KeyValue
