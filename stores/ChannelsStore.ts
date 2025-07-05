@@ -309,6 +309,7 @@ export default class ChannelsStore {
                 peer.alias?.toLocaleLowerCase().includes(query) ||
                 peer.pubkey?.toLocaleLowerCase().includes(query)
         );
+        console.log(JSON.stringify(this.filteredPeers[0]));
     };
 
     public getNodeInfo = (pubkey: string) => {
@@ -697,7 +698,6 @@ export default class ChannelsStore {
 
         try {
             const response = await BackendUtils.listPeers();
-
             runInAction(() => {
                 this.peers = response.map((peerData: any) => {
                     return new Peer(peerData);
