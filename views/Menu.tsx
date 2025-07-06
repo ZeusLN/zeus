@@ -438,13 +438,9 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                 >
                                     <View style={styles.icon}>
                                         <MintIcon
-                                            height={19.25}
-                                            width={22}
-                                            fill={
-                                                youveGotSats
-                                                    ? themeColor('highlight')
-                                                    : themeColor('text')
-                                            }
+                                            height={24}
+                                            width={24}
+                                            fill={themeColor('text')}
                                         />
                                     </View>
                                     <Text
