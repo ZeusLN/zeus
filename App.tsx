@@ -210,7 +210,7 @@ import Mint from './views/Cashu/Mint';
 import Mints from './views/Cashu/Mints';
 import AddMint from './views/Cashu/AddMint';
 import CashuToken from './views/Cashu/CashuToken';
-import MintToken from './views/Cashu/MintToken';
+import SendEcash from './views/Cashu/SendEcash';
 import UnspentTokens from './views/Cashu/UnspentTokens';
 import CashuSeed from './views/Cashu/CashuSeed';
 import CashuLockSettings from './views/Cashu/CashuLockSettings';
@@ -1059,8 +1059,8 @@ export default class App extends React.PureComponent {
                                                         component={CashuToken}
                                                     />
                                                     <Stack.Screen
-                                                        name="MintToken" // @ts-ignore:next-line
-                                                        component={MintToken}
+                                                        name="SendEcash" // @ts-ignore:next-line
+                                                        component={SendEcash}
                                                     />
                                                     <Stack.Screen
                                                         name="CashuLockSettings" // @ts-ignore:next-line
