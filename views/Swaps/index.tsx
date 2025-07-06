@@ -41,7 +41,7 @@ import ExchangeBitcoinSVG from '../../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../../assets/images/SVG/ExchangeFiat.svg';
 import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
-import OrderList from '../../assets/images/SVG/order-list.svg';
+import History from '../../assets/images/SVG/History.svg';
 import { Icon } from 'react-native-elements';
 
 interface SwapProps {
@@ -500,7 +500,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 }}
                 accessibilityLabel={localeString('general.add')}
             >
-                <OrderList
+                <History
                     fill={themeColor('text')}
                     width="40"
                     height="40"

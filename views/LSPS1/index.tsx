@@ -14,7 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
-import OrderList from '../../assets/images/SVG/order-list.svg';
+import History from '../../assets/images/SVG/History.svg';
 import OlympusSVG from '../../assets/images/SVG/Olympus.svg';
 
 import Button from '../../components/Button';
@@ -293,7 +293,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const result = createOrderResponse?.result || createOrderResponse;
         const payment = result?.payment;
 
-        const OrderlistBtn = () => (
+        const HistoryBtn = () => (
             <TouchableOpacity
                 style={{ marginTop: -10 }}
                 onPress={() => {
@@ -301,7 +301,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                 }}
                 accessibilityLabel={localeString('general.add')}
             >
-                <OrderList
+                <History
                     fill={themeColor('text')}
                     width="40"
                     height="40"
@@ -408,7 +408,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                         <Row>
                             <SettingsBtn />
                             {!LSPStore.loadingLSPS1 && !LSPStore.error && (
-                                <OrderlistBtn />
+                                <HistoryBtn />
                             )}
                         </Row>
                     }
