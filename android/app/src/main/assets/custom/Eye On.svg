@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="30px" height="30px" viewBox="0 0 30 30" enable-background="new 0 0 30 30" xml:space="preserve">
+<path d="M15,10c-4.971,0-9,2.239-9,5c0,2.762,4.029,5,9,5s9-2.238,9-5C24,12.239,19.971,10,15,10z M15,19
+	c-2.209,0-4-1.791-4-4s1.791-4,4-4s4,1.791,4,4S17.209,19,15,19z"/>
+<circle cx="15" cy="15" r="2"/>
+</svg>
