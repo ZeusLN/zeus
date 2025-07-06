@@ -62,7 +62,6 @@ export default class Tools extends React.Component<ToolsProps, {}> {
             null;
 
         const forwardArrowColor = themeColor('secondaryText');
-        console.log(BackendUtils.supportsWatchtowers());
         return (
             <Screen>
                 <Header
@@ -120,7 +119,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {selectedNode && BackendUtils.supportsWatchtowers() && (
+                    {selectedNode && BackendUtils.supportsWatchtowersClient() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

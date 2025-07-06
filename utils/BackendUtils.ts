@@ -193,7 +193,7 @@ class BackendUtils {
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
-    supportsWatchtowers = () => this.call('supportsWatchtowers');
+    supportsWatchtowersClient = () => this.call('supportsWatchtowersClient');
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
     connect = (...args: any[]) => this.call('connect', args);

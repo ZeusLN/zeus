@@ -187,12 +187,8 @@ export default class WatchTowerDetails extends React.Component<
                                 )}
                                 value={
                                     displayData.active_session_candidate
-                                        ? localeString(
-                                              'views.Tools.watchtowers.active'
-                                          )
-                                        : localeString(
-                                              'views.Tools.watchtowers.inactive'
-                                          )
+                                        ? localeString('general.active')
+                                        : localeString('general.inactive')
                                 }
                                 valueIndicatorColor={
                                     displayData.active_session_candidate
@@ -203,7 +199,7 @@ export default class WatchTowerDetails extends React.Component<
                             />
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.Tools.watchtowers.pubkey'
+                                    'views.Settings.AddContact.pubkey'
                                 )}
                                 value={Base64Utils.base64ToHex(
                                     displayData.pubkey
@@ -233,7 +229,7 @@ export default class WatchTowerDetails extends React.Component<
 
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.Tools.watchtowers.activeCandidate'
+                                    'general.activeCandidate'
                                 )}
                                 value={
                                     displayData.active_session_candidate
@@ -302,9 +298,7 @@ export default class WatchTowerDetails extends React.Component<
                                         ? localeString(
                                               'views.Settings.AddEditNode.tapToConfirm'
                                           )
-                                        : localeString(
-                                              'views.Tools.watchtowers.deactivate'
-                                          )
+                                        : localeString('general.deactivate')
                                 }
                                 onPress={this.deactivateWatchtower}
                                 disabled={loading}

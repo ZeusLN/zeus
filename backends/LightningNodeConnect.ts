@@ -549,7 +549,7 @@ export default class LightningNodeConnect {
         const { isSupportedVersion } = VersionUtils;
         return isSupportedVersion(version, minVersion, eosVersion);
     };
-
+    supportsWatchtowersClient = () => false;
     supportsMessageSigning = () => this.permSignMessage;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => this.permSendCoins;

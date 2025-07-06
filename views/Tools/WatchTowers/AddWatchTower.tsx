@@ -1,14 +1,9 @@
 import * as React from 'react';
-import {
-    Text,
-    View,
-    StyleSheet,
-    TextInput,
-    TouchableOpacity
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-
+import TextInput from '../../../components/TextInput';
+import Text from '../../../components/Text';
 import Button from '../../../components/Button';
 import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
@@ -179,25 +174,20 @@ export default class AddWatchtower extends React.Component<
 
                     <View style={styles.inputContainer}>
                         <Text
-                            style={[
-                                styles.label,
-                                { color: themeColor('text') }
-                            ]}
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
                         >
                             {localeString('views.OpenChannel.nodePubkey')}
                         </Text>
                         <TextInput
-                            style={[
-                                styles.input,
-                                {
-                                    backgroundColor: themeColor('secondary'),
-                                    color: this.state.isPubkeyValid
-                                        ? themeColor('text')
-                                        : '#FF6B6B'
-                                }
-                            ]}
+                            style={{
+                                ...styles.input,
+                                backgroundColor: themeColor('secondary')
+                            }}
                             value={pubkey}
-                            onChangeText={(text) => {
+                            onChangeText={(text: string) => {
                                 const isValid = this.validatePubkey(text);
                                 this.setState({
                                     pubkey: text,
@@ -205,37 +195,37 @@ export default class AddWatchtower extends React.Component<
                                     isPubkeyValid: isValid
                                 });
                             }}
+                            textColor={
+                                isPubkeyValid ? themeColor('text') : '#FF6B6B'
+                            }
                             placeholder={'02abc...'}
                             placeholderTextColor={themeColor('secondaryText')}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            editable={!loading}
                         />
                     </View>
 
                     <View style={styles.inputContainer}>
                         <Text
-                            style={[
-                                styles.label,
-                                { color: themeColor('text') }
-                            ]}
+                            style={{
+                                ...styles.label,
+                                color: themeColor('text')
+                            }}
                         >
                             {localeString(
                                 'views.Tools.watchtowers.addWatchtower.address'
                             )}
                         </Text>
                         <TextInput
-                            style={[
-                                styles.input,
-                                {
-                                    backgroundColor: themeColor('secondary'),
-                                    color: this.state.isAddressValid
-                                        ? themeColor('text')
-                                        : '#FF6B6B'
-                                }
-                            ]}
+                            style={{
+                                ...styles.input,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                            textColor={
+                                isAddressValid ? themeColor('text') : '#FF6B6B'
+                            }
                             value={address}
-                            onChangeText={(text) => {
+                            onChangeText={(text: string) => {
                                 const isValid = this.validateAddress(text);
                                 this.setState({
                                     address: text,
@@ -249,16 +239,15 @@ export default class AddWatchtower extends React.Component<
                             placeholderTextColor={themeColor('secondaryText')}
                             autoCapitalize="none"
                             autoCorrect={false}
-                            editable={!loading}
                         />
                     </View>
 
                     <View style={styles.descriptionContainer}>
                         <Text
-                            style={[
-                                styles.description,
-                                { color: themeColor('secondaryText') }
-                            ]}
+                            style={{
+                                ...styles.description,
+                                color: themeColor('secondaryText')
+                            }}
                         >
                             {localeString(
                                 'views.Tools.watchtowers.addWatchtower.explainer'

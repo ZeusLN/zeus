@@ -802,7 +802,7 @@ export default class LND {
             )}`,
             {}
         );
-    supportsWatchtowers = () => true;
+    supportsWatchtowersClient = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;

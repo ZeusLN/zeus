@@ -60,6 +60,8 @@ const {
     getTransactions,
     sendCoins
 } = lndMobile.onchain;
+const { addTower, removeTower, listTowers, getTowerInfo, getStats, getPolicy } =
+    lndMobile.wtclient;
 
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
@@ -289,6 +291,33 @@ export default class EmbeddedLND extends LND {
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
 
+    // watchtower client
+    addWatchtower = async (data: { pubkey: string; address: string }) =>
+        await addTower(data.pubkey, data.address);
+
+    removeWatchtower = async (pubkey: string) => await removeTower(pubkey);
+
+    listWatchtowers = async (params?: {
+        include_sessions?: boolean;
+        exclude_exhausted_sessions?: boolean;
+    }) => {
+        console.log('Calling list method');
+        return await listTowers(params?.include_sessions);
+    };
+
+    getWatchtowerInfo = async (
+        pubkey: string,
+        params?: {
+            include_sessions?: boolean;
+            exclude_exhausted_sessions?: boolean;
+        }
+    ) => await getTowerInfo(pubkey, params?.include_sessions);
+
+    getWatchtowerStats = async () => await getStats();
+
+    getWatchtowerPolicy = async (policy_type?: number) =>
+        await getPolicy(policy_type);
+
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
@@ -328,5 +357,5 @@ export default class EmbeddedLND extends LND {
     isLNDBased = () => true;
     supportInboundFees = () => this.supports('v0.18.0');
     supportsCashuWallet = () => true;
-    supportsWatchtowers = () => false;
+    supportsWatchtowersClient = () => this.supports('v0.15.0');
 }

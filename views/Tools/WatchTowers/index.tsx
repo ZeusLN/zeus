@@ -128,13 +128,15 @@ export default class WatchTowers extends React.Component<
         if (!searchQuery) return watchtowers;
 
         return watchtowers.filter((watchtower) => {
-            const pubkeyMatch = watchtower.pubkey
+            const pubkeyHex = Base64Utils.base64ToHex(watchtower.pubkey);
+            const pubkeyMatch = pubkeyHex
                 .toLowerCase()
                 .includes(searchQuery.toLowerCase());
 
-            const addressMatch = watchtower.addresses.some((address) =>
-                address.toLowerCase().includes(searchQuery.toLowerCase())
-            );
+            const addressMatch =
+                watchtower.addresses?.some((address) =>
+                    address.toLowerCase().includes(searchQuery.toLowerCase())
+                ) || false;
 
             return pubkeyMatch || addressMatch;
         });
@@ -187,15 +189,6 @@ export default class WatchTowers extends React.Component<
                             </Text>
                         )}
                     </View>
-                </View>
-
-                <View style={styles.watchtowerControls}>
-                    <Icon
-                        name="chevron-right"
-                        type="feather"
-                        size={20}
-                        color={themeColor('secondaryText')}
-                    />
                 </View>
             </TouchableOpacity>
         </>
@@ -255,7 +248,7 @@ export default class WatchTowers extends React.Component<
                     }}
                     rightComponent={
                         loading ? (
-                            <LoadingIndicator size={30} />
+                            <LoadingIndicator size={40} />
                         ) : !error ? (
                             <TouchableOpacity
                                 onPress={() =>
