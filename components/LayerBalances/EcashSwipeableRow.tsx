@@ -66,8 +66,8 @@ export default class EcashSwipeableRow extends Component<
                 navigation.navigate('ReceiveEcash');
             } else if (text === localeString('cashu.mints')) {
                 navigation.navigate('Mints', { account });
-            } else if (text === localeString('cashu.mintToken')) {
-                navigation.navigate('MintToken');
+            } else if (text === localeString('cashu.sendEcash')) {
+                navigation.navigate('SendEcash');
             } else if (text === localeString('general.send')) {
                 navigation.navigate('Send');
             }
@@ -97,7 +97,7 @@ export default class EcashSwipeableRow extends Component<
                                 height={30}
                             />
                         )}
-                        {text === localeString('cashu.mintToken') && (
+                        {text === localeString('cashu.sendEcash') && (
                             <MintToken
                                 fill={
                                     themeColor('action') ||
@@ -156,8 +156,8 @@ export default class EcashSwipeableRow extends Component<
                 BackendUtils.supportsCoinControl() ? 210 : 140,
                 progress
             )}
-            {this.renderAction(localeString('cashu.mintToken'), 200, progress)}
             {this.renderAction(localeString('cashu.mints'), 200, progress)}
+            {this.renderAction(localeString('cashu.sendEcash'), 200, progress)}
             {this.renderAction(
                 localeString('general.send'),
                 BackendUtils.supportsCoinControl() ? 210 : 140,

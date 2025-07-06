@@ -703,7 +703,7 @@ export default class KeypadPane extends React.PureComponent<
                         <TouchableOpacity
                             key="send-mint-token"
                             onPress={async () => {
-                                navigation.navigate('MintToken', {
+                                navigation.navigate('SendEcash', {
                                     amount: amount !== '0' ? amount : ''
                                 });
                                 this.modalBoxRef.current?.close();
@@ -730,7 +730,7 @@ export default class KeypadPane extends React.PureComponent<
                                         color: themeColor('text')
                                     }}
                                 >
-                                    {localeString('cashu.mintEcashToken')}
+                                    {localeString('general.ecash')}
                                 </Text>
                             </Row>
                         </TouchableOpacity>

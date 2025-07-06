@@ -20,9 +20,9 @@ import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import ContactIcon from '../../assets/images/SVG/PeersContact.svg';
-import { MintTokenParams } from './MintToken';
+import { SendEcashParams } from './SendEcash';
 
-export interface CashuLockSettingsParams extends MintTokenParams {
+export interface CashuLockSettingsParams extends SendEcashParams {
     onSave?: (pubkey: string, duration: string) => void;
     currentLockPubkey?: string;
     currentDuration?: string;
@@ -156,7 +156,7 @@ export default class CashuLockSettings extends React.Component<
                 error: ''
             });
         }
-        this.props.navigation.setParams({} as MintTokenParams);
+        this.props.navigation.setParams({} as SendEcashParams);
     };
 
     handleContactSelection(pubkey: string) {
@@ -280,7 +280,7 @@ export default class CashuLockSettings extends React.Component<
             ? this.getCustomDurationString()
             : DURATION_OPTIONS[selectedDurationIndex];
 
-        const params: MintTokenParams = {
+        const params: SendEcashParams = {
             pubkey,
             duration: finalDuration,
             fromLockSettings: true,
@@ -294,7 +294,7 @@ export default class CashuLockSettings extends React.Component<
                 customDurationUnit
             })
         };
-        this.props.navigation.popTo('MintToken', params);
+        this.props.navigation.popTo('SendEcash', params);
     };
 
     checkClipboardContent = async () => {
@@ -359,13 +359,13 @@ export default class CashuLockSettings extends React.Component<
     };
 
     onBack = () => {
-        const params: MintTokenParams = {
+        const params: SendEcashParams = {
             fromLockSettings: true,
             pubkey: '',
             duration: '',
             showCustomDuration: false
         };
-        this.props.navigation.popTo('MintToken', params);
+        this.props.navigation.popTo('SendEcash', params);
     };
 
     render() {

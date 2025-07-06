@@ -20,7 +20,7 @@ import ContactStore from '../../stores/ContactStore';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
-export interface MintTokenParams {
+export interface SendEcashParams {
     amount?: string;
     pubkey?: string;
     contactName?: string;
@@ -36,15 +36,15 @@ export interface MintTokenParams {
     customDurationUnit?: string;
 }
 
-interface MintTokenProps {
+interface SendEcashProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
     ContactStore: ContactStore;
-    route: Route<'MintToken', MintTokenParams>;
+    route: Route<'SendEcash', SendEcashParams>;
 }
 
-interface MintTokenState {
+interface SendEcashState {
     loading: boolean;
     memo: string;
     value: string;
@@ -60,11 +60,11 @@ interface MintTokenState {
 
 @inject('CashuStore', 'UnitsStore', 'ContactStore')
 @observer
-export default class MintToken extends React.Component<
-    MintTokenProps,
-    MintTokenState
+export default class SendEcash extends React.Component<
+    SendEcashProps,
+    SendEcashState
 > {
-    constructor(props: MintTokenProps) {
+    constructor(props: SendEcashProps) {
         super(props);
         this.state = {
             loading: true,
@@ -89,7 +89,7 @@ export default class MintToken extends React.Component<
 
         clearToken();
 
-        const params: MintTokenParams = route.params ?? {};
+        const params: SendEcashParams = route.params ?? {};
         const { amount } = params;
 
         if (amount && amount != '0') {
@@ -111,10 +111,10 @@ export default class MintToken extends React.Component<
 
     handleScreenFocus = () => {
         const { route } = this.props;
-        const params: MintTokenParams = route.params || {};
+        const params: SendEcashParams = route.params || {};
 
         if (params.fromLockSettings) {
-            const stateUpdate: Partial<MintTokenState> = {
+            const stateUpdate: Partial<SendEcashState> = {
                 pubkey: params.pubkey ?? this.state.pubkey,
                 duration: params.duration ?? this.state.duration,
                 locktime: this.convertDurationToSeconds(params.duration),
@@ -130,7 +130,7 @@ export default class MintToken extends React.Component<
                 customDurationUnit:
                     params.customDurationUnit ?? this.state.customDurationUnit
             };
-            this.setState(stateUpdate as MintTokenState, () => {
+            this.setState(stateUpdate as SendEcashState, () => {
                 const updatedParams = { ...params };
                 delete updatedParams.fromLockSettings;
                 this.props.navigation.setParams(updatedParams);
@@ -196,12 +196,12 @@ export default class MintToken extends React.Component<
         });
 
         // Reset all params at once
-        this.props.navigation.setParams({} as MintTokenParams);
+        this.props.navigation.setParams({} as SendEcashParams);
     }
 
     handleLockSettingsPress = () => {
         const { navigation, route } = this.props;
-        const params: MintTokenParams = route.params || {};
+        const params: SendEcashParams = route.params || {};
         const {
             memo,
             value,
@@ -306,7 +306,7 @@ export default class MintToken extends React.Component<
                     navigateBackOnBackPress={false}
                     onBack={this.onBack}
                     centerComponent={{
-                        text: localeString('cashu.mintEcashToken'),
+                        text: localeString('cashu.sendEcash'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -439,7 +439,7 @@ export default class MintToken extends React.Component<
                                     <View style={styles.button}>
                                         <Button
                                             title={localeString(
-                                                'cashu.mintEcashToken'
+                                                'cashu.sendEcash'
                                             )}
                                             onPress={handleMintEcashToken}
                                             buttonStyle={{
