@@ -19,6 +19,7 @@ import CoinsIcon from '../assets/images/SVG/Coins.svg';
 import ForwardIcon from '../assets/images/SVG/Caret Right-3.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
 import GearIcon from '../assets/images/SVG/Gear.svg';
+import MintIcon from '../assets/images/SVG/Mint.svg';
 import NodeOn from '../assets/images/SVG/Node On.svg';
 import Olympus from '../assets/images/SVG/Olympus.svg';
 import KeyIcon from '../assets/images/SVG/Key.svg';
@@ -418,6 +419,50 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                             )}
                         </View>
                     )}
+
+                    {selectedNode &&
+                        BackendUtils.supportsCashuWallet() &&
+                        SettingsStore.settings?.ecash?.enableCashu && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.columnField}
+                                    onPress={() => navigation.navigate('Mints')}
+                                >
+                                    <View style={styles.icon}>
+                                        <MintIcon
+                                            height={19.25}
+                                            width={22}
+                                            fill={
+                                                youveGotSats
+                                                    ? themeColor('highlight')
+                                                    : themeColor('text')
+                                            }
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString('cashu.cashuMints')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
 
                     {selectedNode &&
                         BackendUtils.supportsCustomPreimages() &&
