@@ -248,17 +248,26 @@ export default class WatchTowers extends React.Component<
                     }}
                     rightComponent={
                         loading ? (
-                            <LoadingIndicator size={40} />
+                            <View style={{ marginRight: 8 }}>
+                                <LoadingIndicator size={24} />
+                            </View>
                         ) : !error ? (
                             <TouchableOpacity
                                 onPress={() =>
                                     navigation.navigate('AddWatchtower')
                                 }
+                                style={{
+                                    width: 32,
+                                    height: 32,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    marginRight: 8
+                                }}
                             >
                                 <Icon
                                     name="plus"
                                     type="feather"
-                                    size={40}
+                                    size={36}
                                     color={themeColor('text')}
                                 />
                             </TouchableOpacity>

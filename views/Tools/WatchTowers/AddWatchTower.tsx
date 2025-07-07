@@ -154,22 +154,27 @@ export default class AddWatchtower extends React.Component<
                             }}
                         >
                             {loading && (
-                                <View style={{ marginRight: 15 }}>
-                                    <LoadingIndicator size={30} />
+                                <View style={{ marginRight: 12 }}>
+                                    <LoadingIndicator size={24} />
                                 </View>
                             )}
                             <TouchableOpacity onPress={this.handleScan}>
                                 <Scan
                                     fill={themeColor('text')}
-                                    width={30}
-                                    height={30}
+                                    width={24}
+                                    height={24}
                                 />
                             </TouchableOpacity>
                         </View>
                     }
                     navigation={navigation}
                 />
-                <View style={styles.container}>
+                <View
+                    style={{
+                        ...styles.container,
+                        backgroundColor: themeColor('background')
+                    }}
+                >
                     {error && <ErrorMessage message={error} />}
 
                     <View style={styles.inputContainer}>
@@ -196,7 +201,9 @@ export default class AddWatchtower extends React.Component<
                                 });
                             }}
                             textColor={
-                                isPubkeyValid ? themeColor('text') : '#FF6B6B'
+                                isPubkeyValid
+                                    ? themeColor('text')
+                                    : themeColor('error')
                             }
                             placeholder={'02abc...'}
                             placeholderTextColor={themeColor('secondaryText')}
@@ -222,7 +229,9 @@ export default class AddWatchtower extends React.Component<
                                 backgroundColor: themeColor('secondary')
                             }}
                             textColor={
-                                isAddressValid ? themeColor('text') : '#FF6B6B'
+                                isAddressValid
+                                    ? themeColor('text')
+                                    : themeColor('error')
                             }
                             value={address}
                             onChangeText={(text: string) => {
@@ -275,31 +284,29 @@ export default class AddWatchtower extends React.Component<
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 15
+        padding: 16
     },
     inputContainer: {
-        marginBottom: 20
+        marginBottom: 16
     },
     label: {
-        fontSize: 16,
-        marginBottom: 8
+        fontSize: 15,
+        fontFamily: 'PPNeueMontreal-Medium'
     },
     input: {
         borderRadius: 8,
         padding: 12,
-        fontSize: 16
+        fontSize: 15,
+        fontFamily: 'PPNeueMontreal-Book'
     },
     descriptionContainer: {
-        marginBottom: 30
+        marginTop: 8,
+        marginBottom: 24
     },
     description: {
         fontSize: 14,
         lineHeight: 20,
-        marginBottom: 10
-    },
-    formatDescription: {
-        fontSize: 12,
-        fontStyle: 'italic',
-        lineHeight: 18
+        fontFamily: 'PPNeueMontreal-Book',
+        opacity: 0.8
     }
 });

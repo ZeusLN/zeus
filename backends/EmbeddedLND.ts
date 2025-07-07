@@ -301,7 +301,6 @@ export default class EmbeddedLND extends LND {
         include_sessions?: boolean;
         exclude_exhausted_sessions?: boolean;
     }) => {
-        console.log('Calling list method');
         return await listTowers(params?.include_sessions);
     };
 

@@ -66,7 +66,6 @@ export const removeTower = async (
 export const listTowers = async (
     includeSessions: boolean = false
 ): Promise<wtclientrpc.ListTowersResponse> => {
-    console.log('Calling listTowers with method: ListTowers');
     const response = await sendCommand<
         wtclientrpc.IListTowersRequest,
         wtclientrpc.ListTowersRequest,
