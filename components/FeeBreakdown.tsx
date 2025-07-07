@@ -117,6 +117,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    exact={true}
                                 />
                             }
                         />
@@ -141,6 +142,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    exact={true}
                                 />
                             }
                         />
@@ -169,6 +171,7 @@ export default class FeeBreakdown extends React.Component<
                                                 }
                                                 toggleable
                                                 sensitive
+                                                exact={true}
                                             />
                                         }
                                     />
@@ -200,6 +203,7 @@ export default class FeeBreakdown extends React.Component<
                                                 }
                                                 toggleable
                                                 sensitive
+                                                exact={true}
                                             />
                                         }
                                     />
@@ -268,6 +272,7 @@ export default class FeeBreakdown extends React.Component<
                                     }`}
                                     toggleable
                                     sensitive
+                                    exact={true}
                                 />
                             }
                         />
@@ -278,6 +283,7 @@ export default class FeeBreakdown extends React.Component<
                                     sats={Number(remotePolicy.min_htlc) / 1000}
                                     toggleable
                                     sensitive
+                                    exact={true}
                                 />
                             }
                         />
@@ -290,6 +296,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    exact={true}
                                 />
                             }
                         />
@@ -303,6 +310,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    exact={true}
                                 />
                             }
                         />
@@ -366,6 +374,7 @@ export default class FeeBreakdown extends React.Component<
                                         sats={total_satoshis_received}
                                         sensitive
                                         toggleable
+                                        exact={true}
                                     />
                                 }
                             />
@@ -381,6 +390,7 @@ export default class FeeBreakdown extends React.Component<
                                         sats={total_satoshis_sent}
                                         sensitive
                                         toggleable
+                                        exact={true}
                                     />
                                 }
                             />
@@ -414,6 +424,7 @@ export default class FeeBreakdown extends React.Component<
                                         sats={commit_fee}
                                         toggleable
                                         sensitive
+                                        exact={true}
                                     />
                                 }
                                 sensitive
