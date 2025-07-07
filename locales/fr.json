@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Solde (descendant)",
     "views.OnChainAddresses.createAddress": "Créer une adresse",
     "views.OnChainAddresses.changeAddresses": "Adresses de changement",
-    "views.Cashu.ReceiveEcash.title": "Recevoir des e-cash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Lire le token depuis le presse-papiers",
     "views.Cashu.CashuInvoice.title": "Facture Cashu",
     "views.Cashu.CashuPayment.title": "Paiement Cashu",
