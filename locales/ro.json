@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Balanţa (descendent)",
     "views.OnChainAddresses.createAddress": "Creați adresa",
     "views.OnChainAddresses.changeAddresses": "Adrese de rest",
-    "views.Cashu.ReceiveEcash.title": "Primește ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Citește tokenul din clipboard",
     "views.Cashu.CashuInvoice.title": "Factură Cashu",
     "views.Cashu.CashuPayment.title": "Plată în ecash",
