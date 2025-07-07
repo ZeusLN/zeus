@@ -287,61 +287,42 @@ const ActivityListItem = React.memo(
                             {displayName}
                         </ListItem.Title>
 
-                        {item.invreq_id ? (
-                            <View
-                                style={{
-                                    ...styles.rightCell,
-                                    flexDirection: 'row',
-                                    flexWrap: 'wrap',
-                                    columnGap: 5,
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Amount
-                                    sats={(
-                                        item.invreq_amount_msat / 1000
-                                    ).toString()}
-                                    sensitive
-                                    color={getRightTitleTheme(item)}
-                                />
-                            </View>
-                        ) : (
-                            <View
-                                style={{
-                                    ...styles.rightCell,
-                                    flexDirection: 'row',
-                                    flexWrap: 'wrap',
-                                    columnGap: 5,
-                                    justifyContent: 'flex-end',
-                                    alignItems: 'center'
-                                }}
-                            >
-                                <Amount
-                                    sats={item.getAmount}
-                                    sensitive
-                                    color={getRightTitleTheme(item)}
-                                />
-                                {!!item.getFee && item.getFee != 0 && (
-                                    <>
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontSize: 16
-                                            }}
-                                        >
-                                            +
-                                        </Text>
-                                        <Amount
-                                            sats={item.getFee}
-                                            sensitive
-                                            color={getRightTitleTheme(item)}
-                                            fee
-                                        />
-                                    </>
-                                )}
-                            </View>
-                        )}
+                        <View
+                            style={{
+                                ...styles.rightCell,
+                                flexDirection: 'row',
+                                flexWrap: 'wrap',
+                                columnGap: 5,
+                                rowGap: -5,
+                                justifyContent: 'flex-end'
+                            }}
+                        >
+                            <Amount
+                                sats={item.getAmount}
+                                sensitive
+                                color={getRightTitleTheme(item)}
+                                showRoundingIndicator={true}
+                            />
+                            {!!item.getFee && item.getFee != 0 && (
+                                <>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontSize: 16
+                                        }}
+                                    >
+                                        +
+                                    </Text>
+                                    <Amount
+                                        sats={item.getFee}
+                                        sensitive
+                                        color={getRightTitleTheme(item)}
+                                        fee
+                                        showRoundingIndicator={true}
+                                    />
+                                </>
+                            )}
+                        </View>
                     </View>
 
                     <View style={styles.row}>
