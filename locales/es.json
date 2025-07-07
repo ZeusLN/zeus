@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Equilibrio (descendente)",
     "views.OnChainAddresses.createAddress": "Crear dirección",
     "views.OnChainAddresses.changeAddresses": "Direcciónes de cambio",
-    "views.Cashu.ReceiveEcash.title": "Recibir Ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Leer el token del portapapeles",
     "views.Cashu.CashuInvoice.title": "Factura Cashu",
     "views.Cashu.CashuPayment.title": "Pago en efectivo",
