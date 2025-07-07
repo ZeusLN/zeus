@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "餘額(多到少)",
     "views.OnChainAddresses.createAddress": "產生位址",
     "views.OnChainAddresses.changeAddresses": "找零位址",
-    "views.Cashu.ReceiveEcash.title": "收 Ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "從剪貼簿讀取代幣",
     "views.Cashu.CashuInvoice.title": "Cashu 帳單",
     "views.Cashu.CashuPayment.title": "Cashu 付款",
