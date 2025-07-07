@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Saldo (laskeva)",
     "views.OnChainAddresses.createAddress": "Luo osoite",
     "views.OnChainAddresses.changeAddresses": "Vaihtorahaosoitteet",
-    "views.Cashu.ReceiveEcash.title": "Receive Ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Read token from clipboard",
     "views.Cashu.CashuInvoice.title": "Cashu Invoice",
     "views.Cashu.CashuPayment.title": "Cashu Payment",
