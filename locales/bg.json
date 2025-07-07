@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Баланс (низходящ)",
     "views.OnChainAddresses.createAddress": "Създай адрес",
     "views.OnChainAddresses.changeAddresses": "Смени адреси",
-    "views.Cashu.ReceiveEcash.title": "Полуки Ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Read token from clipboard",
     "views.Cashu.CashuInvoice.title": "Cashu Фактура",
     "views.Cashu.CashuPayment.title": "Cashu Плащане",
