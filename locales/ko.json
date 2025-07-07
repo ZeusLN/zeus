@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "잔액 (내림차순)",
     "views.OnChainAddresses.createAddress": "주소 생성",
     "views.OnChainAddresses.changeAddresses": "주소 변경",
-    "views.Cashu.ReceiveEcash.title": "Ecash 받기",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "클립보드에서 토큰 읽기",
     "views.Cashu.CashuInvoice.title": "Cashu 인보이스",
     "views.Cashu.CashuPayment.title": "Cashu 결제",
