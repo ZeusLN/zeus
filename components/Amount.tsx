@@ -27,7 +27,6 @@ interface AmountDisplayProps {
     unit: Units;
     symbol?: string;
     negative?: boolean;
-    plural?: boolean;
     rtl?: boolean;
     space?: boolean;
     jumboText?: boolean;
@@ -45,6 +44,8 @@ interface AmountDisplayProps {
     fiatRatesLoading?: boolean;
     accessible?: boolean;
     accessibilityLabel?: string;
+    exact?: boolean;
+    showRoundingIndicator?: boolean;
 }
 
 interface SymbolProps {
@@ -56,7 +57,6 @@ function AmountDisplay({
     unit,
     symbol,
     negative = false,
-    plural = false,
     rtl = false,
     space = false,
     jumboText = false,
@@ -67,7 +67,9 @@ function AmountDisplay({
     fee = false,
     fiatRatesLoading = false,
     accessible,
-    accessibilityLabel
+    accessibilityLabel,
+    exact = false,
+    showRoundingIndicator = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -116,169 +118,168 @@ function AmountDisplay({
         </Body>
     );
 
+    const RoundingIndicator = () => (
+        <Body
+            jumbo={jumboText}
+            defaultSize={defaultTextSize}
+            color={color}
+            colorOverride={colorOverride}
+            accessible={accessible}
+        >
+            ~
+        </Body>
+    );
+
     const TextSpace = () => (
         <Body jumbo={jumboText} color={color} colorOverride={colorOverride}>
             {' '}
         </Body>
     );
 
-    // TODO this could probably be made more readable by componentizing the repeat bits
-    switch (unit) {
-        case 'sats':
-            const hideMsats =
-                !settingsStore?.settings?.display?.showMillisatoshiAmounts;
-            if (hideMsats) {
-                const [wholeSats] = amount.toString().split('.');
-                amount = wholeSats;
-                plural = amount === '1' ? false : true;
-            }
-            return (
-                <Row
-                    style={styles.row}
-                    accessible={accessible}
-                    accessibilityLabel={accessibilityLabel}
-                >
-                    {pending && <Pending />}
-                    <View style={styles.textContainer}>
+    const renderSatsAmount = (
+        displayAmount: string,
+        shouldShowRounding: boolean
+    ) => {
+        const isPlural = displayAmount !== '1';
+
+        return (
+            <Row
+                style={styles.row}
+                accessible={accessible}
+                accessibilityLabel={accessibilityLabel}
+            >
+                {pending && <Pending />}
+                <View style={styles.textContainer}>
+                    {shouldShowRounding && <RoundingIndicator />}
+                    <Body
+                        jumbo={jumboText}
+                        defaultSize={defaultTextSize}
+                        color={color}
+                        colorOverride={colorOverride}
+                        accessible={accessible}
+                    >
+                        {negative ? '-' : ''}
+                        {displayAmount}
+                    </Body>
+                    <Spacer width={2} />
+                    <View accessible={accessible}>
                         <Body
-                            jumbo={jumboText}
+                            secondary
+                            small={!jumboText}
                             defaultSize={defaultTextSize}
                             color={color}
                             colorOverride={colorOverride}
                             accessible={accessible}
                         >
-                            {negative ? '-' : ''}
-                            {amount}
+                            {isPlural ? 'sats' : 'sat'}
+                            {fee
+                                ? ' ' +
+                                  formatInlineNoun(
+                                      localeString('views.Payment.fee')
+                                  )
+                                : ''}
                         </Body>
-                        <Spacer width={2} />
-                        <View accessible={accessible}>
-                            <Body
-                                secondary
-                                small={!jumboText}
-                                defaultSize={defaultTextSize}
-                                color={color}
-                                colorOverride={colorOverride}
-                                accessible={accessible}
-                            >
-                                {plural ? 'sats' : 'sat'}
-                                {fee
-                                    ? ' ' +
-                                      formatInlineNoun(
-                                          localeString('views.Payment.fee')
-                                      )
-                                    : ''}
-                            </Body>
-                        </View>
                     </View>
-                </Row>
-            );
+                </View>
+            </Row>
+        );
+    };
+
+    const renderCurrencyAmount = () => {
+        const commonContent = (
+            <>
+                {unit !== 'BTC' && !exact && (
+                    <ApproximateSymbol accessible={accessible} />
+                )}
+                {amount !== 'N/A' && unit === 'fiat' && (
+                    <FiatSymbol accessible />
+                )}
+                {space ? <TextSpace /> : <Spacer width={1} />}
+                <Body
+                    jumbo={jumboText}
+                    defaultSize={defaultTextSize}
+                    color={color}
+                    colorOverride={colorOverride}
+                    accessible={accessible}
+                >
+                    {negative ? '-' : ''}
+                    {amount === 'N/A' && fiatRatesLoading ? (
+                        <LoadingIndicator size={20} />
+                    ) : unit === 'BTC' ? (
+                        formatBitcoinWithSpaces(amount)
+                    ) : (
+                        amount.toString()
+                    )}
+                </Body>
+                {unit === 'BTC' && amount !== 'N/A' && (
+                    <FiatSymbol accessible />
+                )}
+            </>
+        );
+
+        const feeSection = fee && (
+            <>
+                <Spacer width={2} />
+                <View>
+                    <Body
+                        secondary
+                        small={!jumboText}
+                        defaultSize={defaultTextSize}
+                        color={color}
+                        colorOverride={colorOverride}
+                    >
+                        {formatInlineNoun(localeString('views.Payment.fee'))}
+                    </Body>
+                </View>
+            </>
+        );
+
+        return (
+            <Row
+                style={styles.row}
+                accessible={accessible}
+                accessibilityLabel={accessibilityLabel}
+            >
+                {!rtl && pending && <Pending />}
+                <View style={styles.textContainer}>
+                    {rtl && feeSection}
+                    {commonContent}
+                    {!rtl && feeSection}
+                </View>
+                {rtl && pending && <Pending />}
+            </Row>
+        );
+    };
+
+    switch (unit) {
+        case 'sats':
+            const hideMsats =
+                !settingsStore?.settings?.display?.showMillisatoshiAmounts;
+
+            if (exact) {
+                // For exact amounts, never round
+                return renderSatsAmount(amount.toString(), false);
+            } else {
+                const [, decimalPart] = amount.toString().split('.');
+                const hasDecimals = decimalPart && Number(decimalPart) > 0;
+
+                const shouldRound =
+                    hasDecimals && (hideMsats || showRoundingIndicator);
+                const displayAmount = shouldRound
+                    ? Math.round(Number(amount)).toString()
+                    : amount.toString();
+                const shouldShowRounding = Boolean(
+                    shouldRound && showRoundingIndicator
+                );
+
+                return renderSatsAmount(displayAmount, shouldShowRounding);
+            }
         case 'BTC':
         case 'fiat':
-            if (rtl) {
-                return (
-                    <Row
-                        style={styles.row}
-                        accessible={accessible}
-                        accessibilityLabel={accessibilityLabel}
-                    >
-                        <View style={styles.textContainer}>
-                            {fee && (
-                                <>
-                                    <Body
-                                        secondary
-                                        small={!jumboText}
-                                        defaultSize={defaultTextSize}
-                                        color={color}
-                                        colorOverride={colorOverride}
-                                    >
-                                        {formatInlineNoun(
-                                            localeString('views.Payment.fee')
-                                        )}
-                                    </Body>
-                                    <Spacer width={2} />
-                                </>
-                            )}
-                            <Body
-                                jumbo={jumboText}
-                                defaultSize={defaultTextSize}
-                                color={color}
-                                colorOverride={colorOverride}
-                                accessible={accessible}
-                            >
-                                {negative ? '-' : ''}
-                                {unit !== 'BTC' && (
-                                    <ApproximateSymbol
-                                        accessible={accessible}
-                                    />
-                                )}
-                                {amount === 'N/A' && fiatRatesLoading ? (
-                                    <LoadingIndicator size={20} />
-                                ) : unit === 'BTC' ? (
-                                    formatBitcoinWithSpaces(amount)
-                                ) : (
-                                    amount.toString()
-                                )}
-                            </Body>
-                            {space ? <TextSpace /> : <Spacer width={1} />}
-                            {amount !== 'N/A' && <FiatSymbol accessible />}
-                        </View>
-                        {pending && <Pending />}
-                    </Row>
-                );
-            } else {
-                return (
-                    <Row
-                        style={styles.row}
-                        accessible={accessible}
-                        accessibilityLabel={accessibilityLabel}
-                    >
-                        {pending && <Pending />}
-                        <View style={styles.textContainer}>
-                            {unit !== 'BTC' && (
-                                <ApproximateSymbol accessible={accessible} />
-                            )}
-                            {amount !== 'N/A' && <FiatSymbol accessible />}
-                            {space ? <TextSpace /> : <Spacer width={1} />}
-                            <Body
-                                jumbo={jumboText}
-                                defaultSize={defaultTextSize}
-                                color={color}
-                                colorOverride={colorOverride}
-                                accessible={accessible}
-                            >
-                                {negative ? '-' : ''}
-                                {amount === 'N/A' && fiatRatesLoading ? (
-                                    <LoadingIndicator size={20} />
-                                ) : unit === 'BTC' ? (
-                                    formatBitcoinWithSpaces(amount)
-                                ) : (
-                                    amount.toString()
-                                )}
-                            </Body>
-                            {fee && (
-                                <>
-                                    <Spacer width={2} />
-                                    <View>
-                                        <Body
-                                            secondary
-                                            small={!jumboText}
-                                            defaultSize={defaultTextSize}
-                                            color={color}
-                                            colorOverride={colorOverride}
-                                        >
-                                            {formatInlineNoun(
-                                                localeString(
-                                                    'views.Payment.fee'
-                                                )
-                                            )}
-                                        </Body>
-                                    </View>
-                                </>
-                            )}
-                        </View>
-                    </Row>
-                );
-            }
+            return renderCurrencyAmount();
+
+        default:
+            return null;
     }
 }
 
@@ -309,6 +310,8 @@ interface AmountProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     negative?: boolean;
+    exact?: boolean;
+    showRoundingIndicator?: boolean;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -331,7 +334,9 @@ export default class Amount extends React.Component<AmountProps, {}> {
             fee = false,
             accessible,
             accessibilityLabel,
-            negative = false
+            negative = false,
+            exact = false,
+            showRoundingIndicator = false
         } = this.props;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
@@ -384,6 +389,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             fiatRatesLoading={FiatStore.loading}
                             accessible={accessible}
                             accessibilityLabel={accessibilityLabel}
+                            exact={exact}
+                            showRoundingIndicator={showRoundingIndicator}
                         />
                     </TouchableOpacity>
                 );
@@ -402,6 +409,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     fiatRatesLoading={FiatStore.loading}
                     accessible={accessible}
                     accessibilityLabel={accessibilityLabel}
+                    exact={exact}
+                    showRoundingIndicator={showRoundingIndicator}
                 />
             );
         }
@@ -455,6 +464,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         fiatRatesLoading={FiatStore.loading}
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
+                        exact={exact}
+                        showRoundingIndicator={showRoundingIndicator}
                     />
                 </TouchableOpacity>
             );
@@ -473,6 +484,8 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 fiatRatesLoading={FiatStore.loading}
                 accessible={accessible}
                 accessibilityLabel={accessibilityLabel}
+                exact={exact}
+                showRoundingIndicator={showRoundingIndicator}
             />
         );
     }
