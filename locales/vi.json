@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Số dư (giảm dần)",
     "views.OnChainAddresses.createAddress": "Tạo địa chỉ",
     "views.OnChainAddresses.changeAddresses": "Đổi địa chỉ",
-    "views.Cashu.ReceiveEcash.title": "Nhận Ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Đọc mã thông báo từ khay nhớ tạm",
     "views.Cashu.CashuInvoice.title": "Hoá đơn Cashu",
     "views.Cashu.CashuPayment.title": "Thanh toán Cashu",
