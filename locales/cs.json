@@ -1499,7 +1499,7 @@
     "views.OnChainAddresses.sortBy.balanceDescending": "Zůstatek (sestupně)",
     "views.OnChainAddresses.createAddress": "Vytvořit adresu",
     "views.OnChainAddresses.changeAddresses": "Change adresy",
-    "views.Cashu.ReceiveEcash.title": "Přijmout Ecash",
+    "views.Cashu.ReceiveEcash.title": "Receive ecash",
     "views.Cashu.ReceiveEcash.readTokenFromClipboard": "Přečíst token ze schránky",
     "views.Cashu.CashuInvoice.title": "Cashu faktura",
     "views.Cashu.CashuPayment.title": "Cashu platba",
