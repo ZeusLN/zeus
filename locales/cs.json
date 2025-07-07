@@ -1044,7 +1044,7 @@
     "views.Settings.AddContact.lnAddress": "LN adresa",
     "views.Settings.AddContact.onchainAddress": "On-chain adresa",
     "views.Settings.AddContact.pubkey": "Veřejný klíč",
-    "views.Settings.AddContact.cashuPubkey": "Cashu Pubkey",
+    "views.Settings.AddContact.cashuPubkey": "Veřejný klíč Cashu",
     "views.Settings.AddContact.nip05": "NIP-05",
     "views.Settings.AddContact.nostrNpub": "Nostr npub",
     "views.Settings.AddContact.saveContact": "Uložit kontakt",
