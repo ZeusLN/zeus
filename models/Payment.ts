@@ -223,9 +223,15 @@ export default class Payment extends BaseModel {
     }
 
     @computed public get getFee(): string {
-        // lnd
-        if (this.fee_sat || this.fee_msat) {
-            return this.fee_sat || (Number(this.fee_msat) / 1000).toString();
+        // lnd - prefer fee_msat for precision when available, regardless of fee_sat
+        if (this.fee_msat && this.fee_msat !== '0') {
+            const feeInSats = Number(this.fee_msat) / 1000;
+            const result = feeInSats.toString();
+            return result;
+        }
+        if (this.fee_sat) {
+            const result = this.fee_sat;
+            return result;
         }
 
         // Core Lightning
