@@ -16,6 +16,7 @@ import ForwardIcon from '../../assets/images/SVG/Caret Right-3.svg';
 import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
+import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 
 import Header from '../../components/Header';
@@ -119,7 +120,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {selectedNode && (
+                    {selectedNode && BackendUtils.supportsChannelManagement() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
@@ -129,39 +130,68 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                                 marginVertical: 5
                             }}
                         >
-                            {BackendUtils.isLNDBased() && (
-                                <>
-                                    <TouchableOpacity
-                                        style={styles.columnField}
-                                        onPress={() =>
-                                            navigation.navigate('BumpFee')
-                                        }
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate('Rebalance')}
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <RebalanceIcon
+                                            fill={themeColor('text')}
+                                            width={23}
+                                            height={23}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
                                     >
-                                        <View style={styles.icon}>
-                                            <SpeedometerIcon
-                                                fill={themeColor('text')}
-                                                width={23}
-                                                height={23}
-                                            />
-                                        </View>
-                                        <Text
-                                            style={{
-                                                ...styles.columnText,
-                                                color: themeColor('text')
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.BumpFee.title'
-                                            )}
-                                        </Text>
-                                        <View style={styles.ForwardArrow}>
-                                            <ForwardIcon
-                                                stroke={forwardArrowColor}
-                                            />
-                                        </View>
-                                    </TouchableOpacity>
-                                </>
-                            )}
+                                        {localeString('views.Rebalance.title')}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {selectedNode && BackendUtils.isLNDBased() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                style={styles.columnField}
+                                onPress={() => navigation.navigate('BumpFee')}
+                            >
+                                <View style={styles.icon}>
+                                    <SpeedometerIcon
+                                        fill={themeColor('text')}
+                                        width={23}
+                                        height={23}
+                                    />
+                                </View>
+                                <Text
+                                    style={{
+                                        ...styles.columnText,
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {localeString('views.BumpFee.title')}
+                                </Text>
+                                <View style={styles.ForwardArrow}>
+                                    <ForwardIcon stroke={forwardArrowColor} />
+                                </View>
+                            </TouchableOpacity>
                         </View>
                     )}
 
