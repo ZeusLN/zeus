@@ -124,6 +124,22 @@ class BackendUtils {
     initChanAcceptor = (...args: any[]) => this.call('initChanAcceptor', args);
     rescan = (...args: any[]) => this.call('rescan', args);
 
+    listWatchtowers = (...args: any[]) => this.call('listWatchtowers', args);
+    addWatchtower = (...args: any[]) => this.call('addWatchtower', args);
+    removeWatchtower = (...args: any[]) => this.call('removeWatchtower', args);
+    getWatchtowerInfo = (...args: any[]) =>
+        this.call('getWatchtowerInfo', args);
+    deactivateWatchtower = (...args: any[]) =>
+        this.call('deactivateWatchtower', args);
+    activateWatchtower = (...args: any[]) =>
+        this.call('activateWatchtower', args);
+    getWatchtowerStats = (...args: any[]) =>
+        this.call('getWatchtowerStats', args);
+    getWatchtowerPolicy = (...args: any[]) =>
+        this.call('getWatchtowerPolicy', args);
+    terminateWatchtowerSession = (...args: any[]) =>
+        this.call('terminateWatchtowerSession', args);
+
     // BOLT 12 / Offers
     listOffers = (...args: any[]) => this.call('listOffers', args);
     createOffer = (...args: any[]) => this.call('createOffer', args);
@@ -138,7 +154,6 @@ class BackendUtils {
     supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
     supportsLSPS1rest = () => this.call('supportsLSPS1rest');
-
     supportsMessageSigning = () => this.call('supportsMessageSigning');
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
@@ -184,7 +199,7 @@ class BackendUtils {
     };
     supportsCashuWallet = () => this.call('supportsCashuWallet');
     supportsNestedSegWit = () => this.call('supportsNestedSegWit');
-
+    supportsWatchtowersClient = () => this.call('supportsWatchtowersClient');
     // LNC
     initLNC = (...args: any[]) => this.call('initLNC', args);
     connect = (...args: any[]) => this.call('connect', args);

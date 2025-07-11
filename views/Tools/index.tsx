@@ -17,6 +17,7 @@ import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
+import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
 
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
@@ -61,7 +62,6 @@ export default class Tools extends React.Component<ToolsProps, {}> {
             null;
 
         const forwardArrowColor = themeColor('secondaryText');
-
         return (
             <Screen>
                 <Header
@@ -119,6 +119,48 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
+                    {selectedNode && BackendUtils.supportsWatchtowersClient() && (
+                        <View
+                            style={{
+                                backgroundColor: themeColor('secondary'),
+                                width: '90%',
+                                borderRadius: 10,
+                                alignSelf: 'center',
+                                marginVertical: 5
+                            }}
+                        >
+                            <TouchableOpacity
+                                onPress={() =>
+                                    navigation.navigate('WatchTowers')
+                                }
+                            >
+                                <View style={styles.columnField}>
+                                    <View style={styles.icon}>
+                                        <WatchtowerIcon
+                                            fill={themeColor('text')}
+                                            width={23}
+                                            height={23}
+                                        />
+                                    </View>
+                                    <Text
+                                        style={{
+                                            ...styles.columnText,
+                                            color: themeColor('text')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Tools.watchtowers'
+                                        )}
+                                    </Text>
+                                    <View style={styles.ForwardArrow}>
+                                        <ForwardIcon
+                                            stroke={forwardArrowColor}
+                                        />
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                     {selectedNode && (
                         <View
                             style={{
