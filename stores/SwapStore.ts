@@ -1,9 +1,12 @@
 import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { ECPairFactory } from 'ecpair';
+import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
 import { randomBytes } from 'crypto';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
+import { HDKey } from '@scure/bip32';
+
+const bip39 = require('bip39');
 
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -24,6 +27,8 @@ export default class SwapStore {
     @observable public apiError = '';
     @observable public swaps: any = [];
     @observable public swapsLoading = false;
+    @observable public DERIVATION_PATH = 'm/44/0/0/0';
+    @observable ECPair: ECPairAPI;
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
@@ -210,21 +215,17 @@ export default class SwapStore {
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
         try {
-            console.log('Creating submarine swap...');
-            let refundPublicKey: any;
-            let refundPrivateKey: any;
-            const keys: any = ECPairFactory(ecc).makeRandom();
+            console.log('Creating submarine swap using rescue key...');
 
-            refundPrivateKey = Buffer.from(keys.privateKey).toString('hex');
-            refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
-            console.log(
-                'keys private key:',
-                Buffer.from(keys.privateKey).toString('hex')
+            const { keys, index } = await this.generateNewKey();
+            const refundPrivateKey = Buffer.from(keys.privateKey!).toString(
+                'hex'
             );
-            console.log(
-                'Keys public key:',
-                Buffer.from(keys.publicKey).toString('hex')
-            );
+            const refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
+
+            console.log('refundPrivateKey:', refundPrivateKey);
+            console.log('refundPublicKey:', refundPublicKey);
+            console.log('index used:', index);
 
             const response = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -630,5 +631,82 @@ export default class SwapStore {
             console.error('Error updating swap in storage:', error);
             throw error;
         }
+    };
+
+    @action
+    public getPath = (index: number) => `${this.DERIVATION_PATH}/${index}`;
+
+    @action
+    public mnemonicToHDKey = (mnemonic: string) => {
+        const seed = bip39.mnemonicToSeedSync(mnemonic);
+        const hdKey = HDKey.fromMasterSeed(seed);
+        return hdKey;
+    };
+
+    @action
+    public getXpub = (mnemonic: string) => {
+        return this.mnemonicToHDKey(mnemonic).publicExtendedKey;
+    };
+
+    @action
+    public deriveKey = async (index: number) => {
+        const mnemonic = await Storage.getItem('rescue-key');
+        if (!mnemonic) {
+            throw new Error('Rescue mnemonic not found in storage.');
+        }
+
+        console.log('Loaded mnemonic:', mnemonic);
+
+        const hdKey = this.mnemonicToHDKey(mnemonic);
+        const childKey = hdKey.derive(this.getPath(index));
+
+        if (!childKey.privateKey) {
+            throw new Error(`No private key at index ${index}`);
+        }
+
+        const ecPair = this.ECPair.fromPrivateKey(
+            Buffer.from(childKey.privateKey)
+        );
+
+        return ecPair;
+    };
+
+    @action
+    public generateRescueKey = async () => {
+        const existingMnemonic = await Storage.getItem('rescue-key');
+
+        if (!existingMnemonic) {
+            console.log('GENERATING RESCUE FILE...');
+            const mnemonic = bip39.generateMnemonic();
+            await Storage.setItem('rescue-key', mnemonic);
+            console.log('Generated rescue key:', mnemonic);
+        } else {
+            console.log('!Rescue key already exists!');
+        }
+
+        return existingMnemonic || (await Storage.getItem('rescue-key'));
+    };
+
+    @action
+    public getLastUsedKey = async (): Promise<number> => {
+        const storedKey = await Storage.getItem('lastUsedKey');
+        const index = storedKey ? parseInt(storedKey, 10) : 0;
+        console.log('Loaded lastUsedKey from storage:', index);
+        return index;
+    };
+
+    @action
+    public setLastUsedKey = async (val: number): Promise<void> => {
+        await Storage.setItem('lastUsedKey', val.toString());
+        console.log('Saved lastUsedKey to storage:', val);
+    };
+
+    @action
+    public generateNewKey = async () => {
+        const index = await this.getLastUsedKey();
+        await this.setLastUsedKey(index + 1);
+        console.log('Generating new key at index:', index);
+        const keys = await this.deriveKey(index);
+        return { index, keys };
     };
 }
