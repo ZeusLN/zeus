@@ -88,11 +88,10 @@ export default class Lockscreen extends React.Component<
         const { SettingsStore, navigation } = this.props;
         if (targetScreen) {
             navigation.popTo(targetScreen, { ...navigationParams });
-        } else if (
-            SettingsStore.settings.selectNodeOnStartup &&
-            SettingsStore.initialStart
-        ) {
-            navigation.popTo('Wallets');
+        } else if (SettingsStore.settings.selectNodeOnStartup) {
+            // Always navigate to Wallets when selectNodeOnStartup is enabled
+            // Remove the initialStart check to always enforce selection after unlock
+            navigation.replace('Wallets', { fromStartup: true });
         } else {
             // Default login flow
             // Resets navigation stack to previous screen
@@ -242,7 +241,14 @@ export default class Lockscreen extends React.Component<
             (pinAttempt && pinAttempt === pin)
         ) {
             SettingsStore.setLoginStatus(true);
-            if (
+
+            if (SettingsStore.settings.selectNodeOnStartup) {
+                // Always handle wallet selection after unlocking when selectNodeOnStartup is enabled
+                this.resetAuthenticationAttempts();
+
+                navigation.replace('Wallets', { fromStartup: true });
+                return;
+            } else if (
                 !(
                     SettingsStore.settings.selectNodeOnStartup &&
                     SettingsStore.initialStart
@@ -257,7 +263,8 @@ export default class Lockscreen extends React.Component<
                 this.deletePin();
             } else if (deleteDuressPin) {
                 this.deleteDuressPin();
-            } else {
+            } else if (!SettingsStore.settings.selectNodeOnStartup) {
+                // Only proceed with normal flow if selectNodeOnStartup is disabled
                 if (
                     (SettingsStore.settings?.pos?.posEnabled ||
                         PosEnabled.Disabled) !== PosEnabled.Disabled
