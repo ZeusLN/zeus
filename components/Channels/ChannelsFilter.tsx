@@ -10,7 +10,10 @@ import SortButton from '../../components/Channels/SortButton';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import ChannelsStore, { ChannelsType } from '../../stores/ChannelsStore';
+import ChannelsStore, {
+    ChannelsType,
+    ChannelsView
+} from '../../stores/ChannelsStore';
 
 const getChannelsSortKeys = (closed?: boolean) => {
     const sortKeys: any = [];
@@ -159,16 +162,20 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                         clearIcon={{ name: 'close', type: 'font-awesome' }}
                         showCancel={true}
                     />
-                    <SortButton
-                        onValueChange={(value: any) => {
-                            setSort(value);
-                        }}
-                        values={getChannelsSortKeys(
-                            channelsType === ChannelsType.Closed
-                        )}
-                    />
+                    {ChannelsStore?.channelsView === ChannelsView.Channels && (
+                        <SortButton
+                            onValueChange={(value: any) => {
+                                setSort(value);
+                            }}
+                            values={getChannelsSortKeys(
+                                channelsType === ChannelsType.Closed
+                            )}
+                        />
+                    )}
                 </Row>
-                <FilterOptions />
+                {ChannelsStore?.channelsView === ChannelsView.Channels && (
+                    <FilterOptions />
+                )}
             </View>
         );
     }
