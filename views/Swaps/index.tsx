@@ -4,6 +4,9 @@ import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';
+import { initEccLib } from 'bitcoinjs-lib';
+import { ECPairFactory } from 'ecpair';
+import ecc from '@bitcoinerlab/secp256k1';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -51,6 +54,7 @@ import OnChainSvg from '../../assets/images/SVG/DynamicSVG/OnChainSvg';
 import LightningSvg from '../../assets/images/SVG/DynamicSVG/LightningSvg';
 import History from '../../assets/images/SVG/History.svg';
 import { Icon } from 'react-native-elements';
+import KeyIcon from '../../assets/images/SVG/Key.svg';
 
 interface SwapProps {
     navigation: StackNavigationProp<any, 'Swaps'>;
@@ -80,6 +84,8 @@ interface SwapState {
     fee: string;
     feeSettingToggle: boolean;
     paramsProcessed?: boolean;
+    lastUsedKey?: number;
+    seedPhrase?: string[];
 }
 
 @inject(
@@ -108,7 +114,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         fetchingInvoice: false,
         fee: '',
         feeSettingToggle: false,
-        paramsProcessed: false
+        paramsProcessed: false,
+        lastUsedKey: 0,
+        seedPhrase: []
     };
 
     private _unsubscribe?: () => void;
@@ -194,7 +202,16 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         this.props.SwapStore.getSwapFees();
     }
 
-    componentDidMount() {
+    async componentDidMount() {
+        const { SwapStore } = this.props;
+        const { generateRescueKey } = SwapStore;
+
+        initEccLib(ecc);
+        SwapStore.ECPair = ECPairFactory(ecc);
+
+        const mnemonic = await generateRescueKey();
+        this.setState({ seedPhrase: mnemonic.split(' ') });
+
         this._unsubscribe = this.props.navigation.addListener(
             'blur',
             this.resetFields
@@ -445,6 +462,22 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             </TouchableOpacity>
         );
 
+        const RescueKeyPhrase = () => (
+            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
+                <KeyIcon
+                    onPress={async () => {
+                        navigation.navigate('Seed', {
+                            seedPhrase: this.state.seedPhrase
+                        });
+                    }}
+                    underlayColor="transparent"
+                    fill={themeColor('text')}
+                    width={32}
+                    height={32}
+                />
+            </TouchableOpacity>
+        );
+
         const min = calculateLimit(
             info?.limits?.minimal || 0,
             serviceFeePct,
@@ -479,6 +512,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     }}
                     rightComponent={
                         <Row>
+                            <RescueKeyPhrase />
                             <SettingsBtn />
                             <SwapsPaneBtn />
                         </Row>
