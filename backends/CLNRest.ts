@@ -432,8 +432,16 @@ export default class CLNRest {
         });
     };
 
+    listAddresses = () => this.postRequest('/v1/listaddresses');
+    signMessageWithAddr = (message: string, address: string) =>
+        this.postRequest('/v1/signmessagewithkey', {
+            message,
+            address
+        });
+
     supportsMessageSigning = () => true;
-    supportsAddressMessageSigning = () => false;
+    supportsAddressMessageSigning = () => this.supports('25.05');
+    supportsAddressMessageVerification = () => false;
     supportsLnurlAuth = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
@@ -467,7 +475,7 @@ export default class CLNRest {
     supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => true;
     supportsBolt11BlindedRoutes = () => false;
-    supportsAddressesWithDerivationPaths = () => false;
+    supportsAddressesWithDerivationPaths = () => true;
     supportsOffers = () => true;
     isLNDBased = () => false;
     supportInboundFees = () => false;
