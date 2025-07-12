@@ -20,15 +20,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 interface SelectCurrencyProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    route: Route<
-        'SelectCurrency',
-        {
-            currencyConverter?: boolean;
-            fromAmountInput?: boolean;
-            onSelect?: (value: string) => void;
-            selectedForceFiat?: string;
-        }
-    >;
+    route: Route<'SelectCurrency', { currencyConverter: boolean }>;
 }
 
 interface SelectCurrencyState {
@@ -94,12 +86,7 @@ export default class SelectCurrency extends React.Component<
 
         const { updateSettings, getSettings }: any = SettingsStore;
 
-        const {
-            currencyConverter = false,
-            fromAmountInput = false,
-            onSelect,
-            selectedForceFiat
-        } = route.params || {};
+        const currencyConverter = route.params?.currencyConverter;
 
         return (
             <Screen>
@@ -155,9 +142,6 @@ export default class SelectCurrency extends React.Component<
                                         navigation.popTo('CurrencyConverter', {
                                             selectedCurrency: item.value
                                         });
-                                    } else if (onSelect) {
-                                        onSelect(item.value);
-                                        navigation.goBack();
                                     } else {
                                         await updateSettings({
                                             fiat: item.value
@@ -172,16 +156,11 @@ export default class SelectCurrency extends React.Component<
                                     <ListItem.Title
                                         style={{
                                             color:
-                                                fromAmountInput &&
-                                                selectedForceFiat === item.value
-                                                    ? themeColor('highlight')
-                                                    : !fromAmountInput &&
-                                                      ((!currencyConverter &&
-                                                          selectedCurrency ===
-                                                              item.value) ||
-                                                          (!selectedCurrency &&
-                                                              item.value ===
-                                                                  DEFAULT_FIAT))
+                                                (!currencyConverter &&
+                                                    selectedCurrency ===
+                                                        item.value) ||
+                                                (!selectedCurrency &&
+                                                    item.value === DEFAULT_FIAT)
                                                     ? themeColor('highlight')
                                                     : themeColor('text'),
                                             fontFamily: 'PPNeueMontreal-Book'
@@ -190,13 +169,9 @@ export default class SelectCurrency extends React.Component<
                                         {item.key}
                                     </ListItem.Title>
                                 </ListItem.Content>
-
-                                {((!fromAmountInput &&
-                                    (selectedCurrency === item.value ||
-                                        (!selectedCurrency &&
-                                            item.value === DEFAULT_FIAT))) ||
-                                    (fromAmountInput &&
-                                        selectedForceFiat === item.value)) &&
+                                {(selectedCurrency === item.value ||
+                                    (!selectedCurrency &&
+                                        item.value === DEFAULT_FIAT)) &&
                                     !currencyConverter && (
                                         <View>
                                             <Icon
