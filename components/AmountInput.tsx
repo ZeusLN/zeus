@@ -12,10 +12,7 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore, {
-    CURRENCY_KEYS,
-    DEFAULT_FIAT
-} from '../stores/SettingsStore';
+import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
@@ -42,18 +39,12 @@ interface AmountInputProps {
 
 interface AmountInputState {
     satAmount: string | number;
-    forceFiat: string | undefined;
-    prevForceFiat: string | undefined;
 }
 
-const getSatAmount = (
-    amount: string | number,
-    forceUnit?: string,
-    forceFiat?: string
-) => {
+const getSatAmount = (amount: string | number, forceUnit?: string) => {
     const { fiatRates } = fiatStore;
     const { settings } = settingsStore;
-    const fiat = forceFiat || settings.fiat;
+    const { fiat } = settings;
     const { units } = unitsStore;
     const effectiveUnits = forceUnit || units;
 
@@ -106,7 +97,7 @@ const getAmount = (sats: string | number) => {
 
     const fiatEntry =
         fiat && fiatRates
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            ? fiatRates.find((entry: any) => entry.code === fiat)
             : null;
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
@@ -142,111 +133,58 @@ export default class AmountInput extends React.Component<
     constructor(props: any) {
         super(props);
 
-        const { amount, onAmountChange, SettingsStore } = props;
-        SettingsStore.selectedForceFiat =
-            SettingsStore.settings.fiat ?? DEFAULT_FIAT;
-
+        const { amount, onAmountChange } = props;
         let satAmount = '0';
         if (amount)
-            satAmount = getSatAmount(
-                amount,
-                props.forceUnit,
-                SettingsStore.selectedForceFiat
-            ).toString();
+            satAmount = getSatAmount(amount, props.forceUnit).toString();
 
         onAmountChange(amount, satAmount);
         this.state = {
-            satAmount,
-            forceFiat: '',
-            prevForceFiat: ''
+            satAmount
         };
     }
 
     componentDidMount() {
-        const { amount, onAmountChange, SettingsStore }: any = this.props;
-        const satAmount = getSatAmount(
-            amount,
-            this.props.forceUnit,
-            SettingsStore?.selectedForceFiat
-        );
+        const { amount, onAmountChange }: any = this.props;
+        const satAmount = getSatAmount(amount, this.props.forceUnit);
         onAmountChange(amount, satAmount);
-        this.setState({
-            satAmount,
-            forceFiat: SettingsStore?.selectedForceFiat
-        });
+        this.setState({ satAmount });
     }
 
-    componentDidUpdate(
-        prevProps: AmountInputProps,
-        prevState: AmountInputState
-    ) {
-        const { amount, forceUnit, SettingsStore, onAmountChange } = this.props;
-        const currentFiat = SettingsStore?.selectedForceFiat;
-
-        if (prevState.prevForceFiat !== currentFiat) {
-            const newSatAmount = getSatAmount(
-                amount || '',
-                forceUnit,
-                currentFiat
-            );
-            this.setState({
-                satAmount: newSatAmount,
-                forceFiat: currentFiat,
-                prevForceFiat: currentFiat
-            });
-            onAmountChange?.(amount || '', newSatAmount);
-            return;
-        }
-
-        if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
+    UNSAFE_componentWillReceiveProps(
+        nextProps: Readonly<AmountInputProps>
+    ): void {
+        const { amount, forceUnit } = nextProps;
+        if (forceUnit === 'sats' && forceUnit !== this.props.forceUnit) {
             const currentSatAmount = getSatAmount(
                 amount || '',
-                prevProps.forceUnit,
-                currentFiat
+                this.props.forceUnit
             );
             this.setState({ satAmount: currentSatAmount });
-            onAmountChange?.(currentSatAmount.toString(), currentSatAmount);
-            return;
-        }
-
-        if (forceUnit !== prevProps.forceUnit || amount !== prevProps.amount) {
-            const satAmount = getSatAmount(
-                amount || '',
-                forceUnit,
-                currentFiat
+            this.props.onAmountChange(
+                currentSatAmount.toString(),
+                currentSatAmount
             );
+        } else {
+            const satAmount = getSatAmount(amount || '', forceUnit);
             this.setState({ satAmount });
         }
     }
 
     onChangeUnits = () => {
-        const { amount, onAmountChange, UnitsStore, SettingsStore }: any =
-            this.props;
+        const { amount, onAmountChange, UnitsStore }: any = this.props;
         UnitsStore.changeUnits();
-        const satAmount = getSatAmount(
-            amount,
-            this.props.forceUnit,
-            SettingsStore.selectedForceFiat
-        );
+        const satAmount = getSatAmount(amount, this.props.forceUnit);
         onAmountChange(amount, satAmount);
         this.setState({ satAmount });
     };
 
-    navigateToCurrencySelection = () => {
-        const { SettingsStore }: any = this.props;
-
-        NavigationService.navigate('SelectCurrency', {
-            currencyConverter: false,
-            fromAmountInput: true,
-            selectedForceFiat: SettingsStore.selectedForceFiat,
-            onSelect: (value: string) => {
-                SettingsStore.setSelectedForceFiat(value);
-            }
-        });
-    };
-
     getFlagEmoji = (currencyValue: string) => {
-        if (currencyValue === 'XAF') {
+        if (
+            currencyValue === 'XAF' ||
+            currencyValue == 'XAU' ||
+            currencyValue == 'XAG'
+        ) {
             return '';
         }
         const currency = CURRENCY_KEYS.find(
@@ -280,7 +218,7 @@ export default class AmountInput extends React.Component<
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
-        const fiat = SettingsStore?.selectedForceFiat || settings.fiat;
+        const fiat = settings.fiat;
 
         return (
             <React.Fragment>
@@ -306,7 +244,9 @@ export default class AmountInput extends React.Component<
                         {fiatEnabled && effectiveUnits === 'fiat' && (
                             <TouchableOpacity
                                 onPress={() => {
-                                    this.navigateToCurrencySelection();
+                                    NavigationService.navigate(
+                                        'SelectCurrency'
+                                    );
                                 }}
                                 activeOpacity={0.5}
                                 style={{
@@ -368,8 +308,7 @@ export default class AmountInput extends React.Component<
                             const formatted = text.replace(/[^\d.,-]/g, '');
                             const satAmount = getSatAmount(
                                 formatted,
-                                forceUnit,
-                                SettingsStore?.selectedForceFiat
+                                forceUnit
                             );
                             onAmountChange(formatted, satAmount);
                             this.setState({ satAmount });
