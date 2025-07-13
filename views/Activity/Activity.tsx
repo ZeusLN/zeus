@@ -111,7 +111,7 @@ const ActivityListItem = React.memo(
                         if (timestamp) {
                             const invreqTime =
                                 dateTimeUtils.listFormattedDateShort(
-                                    Number(timestamp) / 1000
+                                    Math.round(Number(timestamp) / 1000)
                                 );
                             setInvreqTime(invreqTime);
                         }
@@ -129,7 +129,9 @@ const ActivityListItem = React.memo(
         let subTitle = item.model;
 
         if (item instanceof WithdrawalRequest) {
-            displayName = item.used
+            displayName = item.redeem
+                ? 'You withdrew'
+                : item.used
                 ? localeString('views.Activity.outgoingWithdrawal')
                 : localeString('views.Activity.pendingWithdrawal');
         } else if (item instanceof Invoice) {
@@ -580,7 +582,11 @@ export default class Activity extends React.PureComponent<
                 return 'highlight';
             }
 
-            if (item.used) {
+            if (!item.redeem) {
+                return 'warning';
+            }
+
+            if (item.redeem) {
                 return 'success';
             }
         }

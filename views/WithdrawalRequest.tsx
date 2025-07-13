@@ -111,6 +111,9 @@ export default class WithdrawalRequestView extends React.Component<
             </TouchableOpacity>
         );
 
+        const timestamp = withdrawalRequest.getTimestamp;
+        const date = timestamp && new Date(Number(timestamp) * 1000);
+
         return (
             <Screen>
                 <Header
@@ -133,10 +136,14 @@ export default class WithdrawalRequestView extends React.Component<
                 <ScrollView keyboardShouldPersistTaps="handled">
                     <View style={styles.center}>
                         <Amount
-                            sats={(
-                                Number(withdrawalRequest.invreq_amount_msat) /
-                                1000
-                            ).toString()}
+                            sats={
+                                withdrawalRequest.getAmount ||
+                                (
+                                    Number(
+                                        withdrawalRequest.invreq_amount_msat
+                                    ) / 1000
+                                ).toString()
+                            }
                             sensitive
                             jumboText
                             toggleable
@@ -148,55 +155,82 @@ export default class WithdrawalRequestView extends React.Component<
                             keyValue={localeString(
                                 'views.PaymentRequest.description'
                             )}
-                            value={withdrawalRequest.offer_description}
+                            value={
+                                withdrawalRequest.offer_description ||
+                                withdrawalRequest.description
+                            }
                             sensitive
                             color={themeColor('text')}
                         />
 
-                        <KeyValue
-                            color={
-                                active
-                                    ? themeColor('success')
-                                    : themeColor('error')
-                            }
-                            keyValue={localeString('general.active')}
-                            value={
-                                active
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            sensitive
-                        />
+                        {!withdrawalRequest.redeem && (
+                            <>
+                                <KeyValue
+                                    color={
+                                        active
+                                            ? themeColor('success')
+                                            : themeColor('error')
+                                    }
+                                    keyValue={localeString('general.active')}
+                                    value={
+                                        active
+                                            ? localeString('general.true')
+                                            : localeString('general.false')
+                                    }
+                                    sensitive
+                                />
 
-                        <KeyValue
-                            color={
-                                single_use
-                                    ? themeColor('success')
-                                    : themeColor('error')
-                            }
-                            keyValue={localeString('views.PayCode.singleUse')}
-                            value={
-                                single_use
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            sensitive
-                        />
+                                <KeyValue
+                                    color={
+                                        single_use
+                                            ? themeColor('success')
+                                            : themeColor('error')
+                                    }
+                                    keyValue={localeString(
+                                        'views.PayCode.singleUse'
+                                    )}
+                                    value={
+                                        single_use
+                                            ? localeString('general.true')
+                                            : localeString('general.false')
+                                    }
+                                    sensitive
+                                />
 
-                        <KeyValue
-                            color={
-                                used
-                                    ? themeColor('success')
-                                    : themeColor('error')
-                            }
-                            keyValue={localeString('general.used')}
-                            value={
-                                used
-                                    ? localeString('general.true')
-                                    : localeString('general.false')
-                            }
-                            sensitive
-                        />
+                                <KeyValue
+                                    color={
+                                        used
+                                            ? themeColor('success')
+                                            : themeColor('error')
+                                    }
+                                    keyValue={localeString('general.used')}
+                                    value={
+                                        used
+                                            ? localeString('general.true')
+                                            : localeString('general.false')
+                                    }
+                                    sensitive
+                                />
+                            </>
+                        )}
+
+                        {withdrawalRequest.status && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Transaction.status'
+                                )}
+                                value={
+                                    withdrawalRequest.status
+                                        ? withdrawalRequest.status
+                                              .charAt(0)
+                                              .toUpperCase() +
+                                          withdrawalRequest.status.slice(1)
+                                        : ''
+                                }
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        )}
 
                         {this.state.invreq_time && (
                             <KeyValue
@@ -208,14 +242,48 @@ export default class WithdrawalRequestView extends React.Component<
                             />
                         )}
 
-                        <KeyValue
-                            keyValue={localeString(
-                                'views.WithdrawalRequest.id'
-                            )}
-                            value={invreq_id}
-                            sensitive
-                            color={themeColor('text')}
-                        />
+                        {withdrawalRequest.getTimestamp && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.NodeInfo.ForwardingHistory.timestamp'
+                                )}
+                                value={date.toString()}
+                                sensitive
+                            />
+                        )}
+
+                        {!withdrawalRequest.redeem && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.WithdrawalRequest.id'
+                                )}
+                                value={invreq_id}
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        )}
+
+                        {withdrawalRequest.payment_hash && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Invoice.paymentHash'
+                                )}
+                                value={withdrawalRequest.payment_hash}
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        )}
+
+                        {withdrawalRequest.payment_preimage && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Payment.paymentPreimage'
+                                )}
+                                value={withdrawalRequest.payment_preimage}
+                                sensitive
+                                color={themeColor('text')}
+                            />
+                        )}
 
                         <KeyValue
                             keyValue={localeString('views.PayCode.bolt12')}

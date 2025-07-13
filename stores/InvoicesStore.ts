@@ -164,6 +164,37 @@ export default class InvoicesStore {
     };
 
     @action
+    public getRedeemedWithdrawalRequests = async () => {
+        this.loading = true;
+        try {
+            const { invoices } = await BackendUtils.listInvoices();
+            const invoicerequests = invoices.filter(
+                (invoice: any) => !!invoice.bolt12
+            );
+            runInAction(() => {
+                const enhancedRequests = invoicerequests
+                    .map(
+                        (withdrawalRequest: any) =>
+                            new WithdrawalRequest({
+                                ...withdrawalRequest,
+                                redeem: true
+                            })
+                    )
+                    .slice()
+                    .reverse();
+
+                for (const req of enhancedRequests) {
+                    this.withdrawalRequests.push(req);
+                }
+                this.loading = false;
+            });
+        } catch (error: any) {
+            this.withdrawalRequests = [];
+            this.loading = false;
+        }
+    };
+
+    @action
     public redeemWithdrawalRequest = async ({
         invreq,
         label

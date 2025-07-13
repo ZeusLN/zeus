@@ -266,7 +266,6 @@ export default class CLNRest {
                 invoiceList.push({
                     label: invoice[0],
                     bolt11: invoice[1],
-                    bolt12: invoice[2],
                     payment_hash: invoice[3],
                     amount_msat: invoice[4],
                     status: invoice[5],
@@ -464,6 +463,7 @@ export default class CLNRest {
             label
         });
     };
+    listInvoices = () => this.postRequest('/v1/listinvoices');
     createOffer = ({
         description,
         label,
