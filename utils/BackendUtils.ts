@@ -138,6 +138,7 @@ class BackendUtils {
         this.call('listWithdrawalRequests', args);
     redeemWithdrawalRequest = (...args: any[]) =>
         this.call('redeemWithdrawalRequest', args);
+    listInvoices = (...args: any[]) => this.call('listInvoices', args);
 
     // lndhub
     login = (...args: any[]) => this.call('login', args);

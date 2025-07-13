@@ -207,11 +207,10 @@ export default class ActivityStore {
                     const ts = await Storage.getItem(
                         `withdrawalRequest_${item.bolt12}`
                     );
-                    timestamp = Number(ts);
+                    timestamp = Math.round(Number(ts) / 1000);
                 } else {
                     timestamp = item.getTimestamp;
                 }
-
                 return [item, timestamp] as const;
             })
         );
@@ -229,8 +228,10 @@ export default class ActivityStore {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
-        if (BackendUtils.supportsWithdrawalRequests())
+        if (BackendUtils.supportsWithdrawalRequests()) {
             await this.invoicesStore.getWithdrawalRequests();
+            await this.invoicesStore.getRedeemedWithdrawalRequests();
+        }
         const sortedActivity = await this.getSortedActivity();
 
         runInAction(() => {
