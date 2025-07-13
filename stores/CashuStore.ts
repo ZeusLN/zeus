@@ -2196,8 +2196,19 @@ export default class CashuStore {
             await this.initializeWallet(mintUrl, true);
         }
 
-        const { wallet, proofs, counter } = this.cashuWallets[mintUrl];
+        const { wallet, proofs, counter, balanceSats } =
+            this.cashuWallets[mintUrl];
 
+        if (balanceSats < Number(value)) {
+            runInAction(() => {
+                this.mintingTokenError = true;
+                this.mintingToken = false;
+                this.error_msg = localeString(
+                    'stores.CashuStore.insufficientBalance'
+                );
+            });
+            return;
+        }
         const { proofsToUse } = this.getProofsToUse(proofs, Number(value));
 
         try {
