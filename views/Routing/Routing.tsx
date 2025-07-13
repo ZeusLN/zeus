@@ -52,7 +52,7 @@ export default class Routing extends React.PureComponent<
     UNSAFE_componentWillMount() {
         const { FeeStore } = this.props;
         FeeStore.getFees();
-        if (BackendUtils.isLNDBased()) {
+        if (BackendUtils.supportsForwardingHistory()) {
             FeeStore.getForwardingHistory(HOURS[0]);
         }
     }
@@ -69,8 +69,8 @@ export default class Routing extends React.PureComponent<
             >
                 <RoutingListItem
                     title={localeString('views.Routing.received')}
-                    fee={item.fee_msat / 1000}
-                    amountOut={item.amt_out}
+                    fee={item.feeSat}
+                    amountOut={item.amtOut}
                     date={item.getDateShort}
                 />
             </TouchableOpacity>
@@ -215,9 +215,9 @@ export default class Routing extends React.PureComponent<
                     monthEarned={monthEarned}
                     totalEarned={totalEarned}
                     timeframeEarned={earnedDuringTimeframe}
-                    fullSize={!BackendUtils.isLNDBased()}
+                    fullSize={!BackendUtils.supportsForwardingHistory()}
                 />
-                {BackendUtils.isLNDBased() && (
+                {BackendUtils.supportsForwardingHistory() && (
                     <View style={{ flex: 1 }}>
                         <ButtonGroup
                             onPress={(selectedIndex: number) => {
@@ -249,9 +249,11 @@ export default class Routing extends React.PureComponent<
                                 data={forwardingEvents}
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
-                                onRefresh={() =>
-                                    getForwardingHistory(HOURS[selectedIndex])
-                                }
+                                onRefresh={() => {
+                                    getForwardingHistory(
+                                        HOURS[this.state.selectedIndex]
+                                    );
+                                }}
                                 refreshing={false}
                                 keyExtractor={(item, index) =>
                                     `${item.getTime}-${index}`

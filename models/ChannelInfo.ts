@@ -1,7 +1,7 @@
 import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 
-interface RoutingPolicy {
+export interface RoutingPolicy {
     time_lock_delta: number;
     min_htlc: string;
     fee_base_msat: string;
@@ -27,6 +27,23 @@ export default class ChannelInfo extends BaseModel {
     node_1_policy?: RoutingPolicy;
     node_2_policy?: RoutingPolicy;
 
+    // CLNRest
+    channel_flags?: number;
+    message_flags?: number;
+    features?: string;
+    direction?: number;
+    source?: string;
+    destination?: string;
+    public?: boolean;
+    active?: boolean;
+    amount_msat?: number;
+    short_channel_id?: string;
+    delay: number;
+    htlc_minimum_msat: number;
+    htlc_maximum_msat: number;
+    base_fee_millisatoshi: number;
+    fee_per_millionth: number;
+
     @computed
     public get node1Policy(): RoutingPolicy | undefined {
         return this.node_1_policy || this.node1_policy;
@@ -39,11 +56,11 @@ export default class ChannelInfo extends BaseModel {
 
     @computed
     public get node1Pub(): string {
-        return this.node_1_pub || this.node1_pub || '';
+        return this.node_1_pub || this.node1_pub || this.source || '';
     }
 
     @computed
     public get node2Pub(): string {
-        return this.node_2_pub || this.node2_pub || '';
+        return this.node_2_pub || this.node2_pub || this.destination || '';
     }
 }

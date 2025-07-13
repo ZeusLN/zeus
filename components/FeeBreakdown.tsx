@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-
+import { Divider } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 
 import LoadingIndicator from '../components/LoadingIndicator';
@@ -13,8 +13,6 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
 import BackendUtils from '../utils/BackendUtils';
-
-import { Divider } from 'react-native-elements';
 
 import Amount from './Amount';
 import KeyValue from './KeyValue';
@@ -69,16 +67,24 @@ export default class FeeBreakdown extends React.Component<
             chanInfo[channelId] &&
             chanInfo[channelId].node1Pub === nodeId
         ) {
-            localPolicy = chanInfo[channelId].node1Policy;
-            remotePolicy = chanInfo[channelId].node2Policy;
+            localPolicy =
+                chanInfo[channelId].node1Policy ||
+                ChannelsStore!.getNodePolicy(channelId); // This is specifically for CLNRest nodes, because the ChannelInfo model of CLNRest does not return the node policy.
+            remotePolicy =
+                chanInfo[channelId].node2Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
         }
         if (
             chanInfo &&
             chanInfo[channelId] &&
             chanInfo[channelId].node2Pub === nodeId
         ) {
-            localPolicy = chanInfo[channelId].node2Policy;
-            remotePolicy = chanInfo[channelId].node1Policy;
+            localPolicy =
+                chanInfo[channelId].node2Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
+            remotePolicy =
+                chanInfo[channelId].node1Policy ||
+                ChannelsStore!.getNodePolicy(channelId);
         }
 
         return (
