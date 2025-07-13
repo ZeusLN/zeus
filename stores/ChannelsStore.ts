@@ -6,7 +6,7 @@ import { randomBytes } from 'react-native-randombytes';
 
 import Channel from '../models/Channel';
 import ClosedChannel from '../models/ClosedChannel';
-import ChannelInfo from '../models/ChannelInfo';
+import ChannelInfo, { RoutingPolicy } from '../models/ChannelInfo';
 import FundedPsbt from '../models/FundedPsbt';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
@@ -1012,12 +1012,16 @@ export default class ChannelsStore {
         }
 
         BackendUtils.getChannelInfo(chanId)
-            .then((data: any) =>
+            .then((data: any) => {
+                const rawChannels = data.channels || data;
+                const channels = BackendUtils.isLNDBased()
+                    ? rawChannels
+                    : rawChannels[0];
                 runInAction(() => {
-                    this.chanInfo[chanId] = new ChannelInfo(data);
+                    this.chanInfo[chanId] = new ChannelInfo(channels);
                     this.loading = false;
-                })
-            )
+                });
+            })
             .catch((error: any) => {
                 runInAction(() => {
                     this.errorMsgPeer = error.toString();
@@ -1025,6 +1029,21 @@ export default class ChannelsStore {
                     this.loading = false;
                 });
             });
+    };
+
+    // for CLNRest nodes, because the backend does not return the node policy.
+    public getNodePolicy = (chanId: string): RoutingPolicy => {
+        return {
+            time_lock_delta: this.chanInfo[chanId].delay,
+            min_htlc: this.chanInfo[chanId].htlc_minimum_msat.toString(),
+            fee_base_msat:
+                this.chanInfo[chanId].base_fee_millisatoshi.toString(),
+            fee_rate_milli_msat:
+                this.chanInfo[chanId].fee_per_millionth.toString(),
+            disabled: false,
+            max_htlc_msat: this.chanInfo[chanId].htlc_maximum_msat.toString(),
+            last_update: Number(this.chanInfo[chanId].last_update?.toString())
+        };
     };
 
     public setChannelsType = (type: ChannelsType) => {
