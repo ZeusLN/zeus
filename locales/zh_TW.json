@@ -1504,7 +1504,7 @@
     "views.Cashu.CashuInvoice.title": "Cashu 帳單",
     "views.Cashu.CashuPayment.title": "Cashu 付款",
     "cashu.mint": "鑄幣所",
-    "cashu.mints": "鑄幣所列表",
+    "cashu.mints": "鑄幣所",
     "cashu.cashuMints": "Cashu 鑄幣所",
     "cashu.mintUrl": "鑄幣所網址(URL)",
     "cashu.token": "Cashu 代幣",
