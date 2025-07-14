@@ -531,30 +531,28 @@ export default class WalletHeader extends React.Component<
             <>
                 <Header
                     leftComponent={
-                        loading ? undefined : (
-                            <Row style={{ flex: 1 }}>
-                                <MenuBadge navigation={navigation} />
-                                {!loading && paid && paid.length > 0 && (
-                                    <TouchableOpacity
-                                        onPress={() =>
-                                            navigation.navigate(
-                                                'LightningAddress',
-                                                {
-                                                    skipStatus: true
-                                                }
-                                            )
-                                        }
-                                        style={{ marginLeft: 20 }}
-                                    >
-                                        {redeemingAll ? (
-                                            <ZeusPayAnimated />
-                                        ) : (
-                                            <ZeusPay />
-                                        )}
-                                    </TouchableOpacity>
-                                )}
-                            </Row>
-                        )
+                        <Row style={{ flex: 1 }}>
+                            <MenuBadge navigation={navigation} />
+                            {!loading && paid && paid.length > 0 && (
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'LightningAddress',
+                                            {
+                                                skipStatus: true
+                                            }
+                                        )
+                                    }
+                                    style={{ marginLeft: 20 }}
+                                >
+                                    {redeemingAll ? (
+                                        <ZeusPayAnimated />
+                                    ) : (
+                                        <ZeusPay />
+                                    )}
+                                </TouchableOpacity>
+                            )}
+                        </Row>
                     }
                     centerComponent={
                         title ? (
