@@ -1102,40 +1102,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     />
                                 </View>
                             )}
-                            {!CashuStore.initializing && (
-                                <View
-                                    style={{
-                                        bottom: 15,
-                                        position: 'absolute',
-                                        alignSelf: 'center'
-                                    }}
-                                >
-                                    <Button
-                                        title={
-                                            settings.nodes
-                                                ? localeString(
-                                                      'views.Settings.title'
-                                                  )
-                                                : null
-                                        }
-                                        containerStyle={{
-                                            width: 320
-                                        }}
-                                        titleStyle={{
-                                            color: themeColor('text')
-                                        }}
-                                        onPress={() => {
-                                            if (settings.nodes)
-                                                protectedNavigation(
-                                                    navigation,
-                                                    'Menu'
-                                                );
-                                        }}
-                                        adaptiveWidth
-                                        iconOnly
-                                    />
-                                </View>
-                            )}
                         </Screen>
                     )}
             </View>
