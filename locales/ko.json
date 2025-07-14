@@ -1587,6 +1587,7 @@
     "stores.CashuStore.claimError.lockedToWallet": "이 토큰은 다른 지갑에 잠겨 있어 사용할 수 없습니다.",
     "stores.CashuStore.claimError.inconsistentLocking": "토큰이 여러 지갑에 잠겨 있습니다.",
     "stores.CashuStore.errorMintingToken": "토큰 민트 중 오류 발생",
+    "stores.CashuStore.insufficientBalance": "Insufficient balance",
     "stores.CashuStore.notEnoughFunds": "결제에 필요한 자금이 부족합니다",
     "stores.CashuStore.feeExceedsAmt": "전환 수수료가 토큰 수량을 초과하거나 동일합니다",
     "stores.CashuStore.autoSweep": "Cashu 자동 비우기",
