@@ -8,6 +8,7 @@ import Channel from '../models/Channel';
 import ClosedChannel from '../models/ClosedChannel';
 import ChannelInfo, { RoutingPolicy } from '../models/ChannelInfo';
 import FundedPsbt from '../models/FundedPsbt';
+import Peer from '../models/Peer';
 
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import CloseChannelRequest from '../models/CloseChannelRequest';
@@ -38,6 +39,11 @@ export enum ChannelsType {
     Closed = 2
 }
 
+export enum ChannelsView {
+    Channels = 'channels',
+    Peers = 'peers'
+}
+
 interface aliases {
     [index: string]: string;
 }
@@ -46,6 +52,7 @@ const fixedAliases: aliases = {
     '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581':
         'Olympus by ZEUS'
 };
+ChannelsView;
 
 export default class ChannelsStore {
     @observable public loading = false;
@@ -53,6 +60,8 @@ export default class ChannelsStore {
     @observable public errorPeerConnect = false;
     @observable public errorMsgChannel: string | null;
     @observable public errorMsgPeer: string | null;
+    @observable public errorListPeers: string | null;
+    @observable public errorDisconnectPeer: string | null;
     @observable public nodes: any = {};
     @observable public aliasesById: any = {};
     @observable public channels: Array<Channel> = [];
@@ -68,6 +77,7 @@ export default class ChannelsStore {
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
     @observable channelRequest: any;
+    @observable public peers: Array<Peer> = [];
     // redesign
     @observable public largestChannelSats = 0;
     @observable public totalOutbound = 0;
@@ -75,6 +85,7 @@ export default class ChannelsStore {
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
     @observable public channelsType = ChannelsType.Open;
+    @observable public channelsView: ChannelsView = ChannelsView.Channels;
     // enriched
     @observable public enrichedChannels: Array<Channel> = [];
     @observable public enrichedPendingChannels: Array<Channel> = [];
@@ -84,13 +95,15 @@ export default class ChannelsStore {
     @observable public filteredChannels: Array<Channel> = [];
     @observable public filteredPendingChannels: Array<Channel> = [];
     @observable public filteredClosedChannels: Array<Channel> = [];
+    @observable public filteredPeers: Array<Peer> = [];
     @observable public filterOptions: Array<string> = [];
     @observable public sort = {
         param: 'channelCapacity',
         dir: 'DESC',
         type: 'numeric'
     };
-    @observable public showSearch: boolean = false;
+    @observable public showChannelsSearch: boolean = false;
+    @observable public showPeersSearch: boolean = false;
     // aliasMap
     @observable public aliasMap = observable.map({});
     // external account funding
@@ -192,12 +205,14 @@ export default class ChannelsStore {
         this.filteredChannels = [];
         this.filteredPendingChannels = [];
         this.filteredClosedChannels = [];
+        this.filteredPeers = [];
         this.largestChannelSats = 0;
         this.totalOutbound = 0;
         this.totalInbound = 0;
         this.totalOffline = 0;
         this.channelsType = ChannelsType.Open;
         this.pendingHTLCs = [];
+        this.peers = [];
     };
 
     @action
@@ -206,6 +221,7 @@ export default class ChannelsStore {
         this.filterChannels();
         this.filterPendingChannels();
         this.filterClosedChannels();
+        this.filterPeers();
     };
 
     @action
@@ -284,6 +300,15 @@ export default class ChannelsStore {
 
     private filterClosedChannels = () => {
         this.filteredClosedChannels = this.filter(this.enrichedClosedChannels);
+    };
+
+    private filterPeers = () => {
+        const query = this.search.toLocaleLowerCase();
+        this.filteredPeers = this.peers.filter(
+            (peer: Peer) =>
+                peer.alias?.toLocaleLowerCase().includes(query) ||
+                peer.pubkey?.toLocaleLowerCase().includes(query)
+        );
     };
 
     public getNodeInfo = (pubkey: string) => {
@@ -662,6 +687,77 @@ export default class ChannelsStore {
                     });
                 });
         });
+    };
+
+    @action
+    public getPeers = async () => {
+        this.loading = true;
+        this.error = false;
+        this.errorListPeers = null;
+
+        try {
+            const response = await BackendUtils.listPeers();
+            runInAction(() => {
+                this.peers = response.map((peerData: any) => {
+                    return new Peer(peerData);
+                });
+                this.filterPeers();
+                this.loading = false;
+            });
+        } catch (error: any) {
+            runInAction(() => {
+                this.error = true;
+                this.errorListPeers =
+                    error.message ??
+                    localeString('views.ChannelsPane.peersFetchFailed');
+                this.loading = false;
+            });
+        }
+    };
+
+    @action
+    public disconnectPeer = async (pubkey: string) => {
+        this.loading = true;
+        this.error = false;
+        this.errorDisconnectPeer = null;
+
+        try {
+            const isPeer = this.peers.find(
+                (peer: Peer) => peer.pubkey === pubkey
+            );
+
+            if (!isPeer) {
+                throw new Error(
+                    localeString('views.ChannelsPane.peerNotFound')
+                );
+            }
+            const res = await BackendUtils.disconnectPeer(pubkey);
+
+            if (!res) {
+                throw new Error(
+                    localeString('views.ChannelsPane.peerNotConnected')
+                );
+            }
+
+            runInAction(() => {
+                this.peers = this.peers.filter(
+                    (peer: Peer) => peer.pubkey !== pubkey
+                );
+                this.filterPeers();
+                this.loading = false;
+            });
+
+            return true;
+        } catch (error: any) {
+            this.error = true;
+            this.errorDisconnectPeer =
+                error?.message?.message ||
+                error?.message ||
+                localeString('views.ChannelsPane.disconnectPeerFailed');
+            this.loading = false;
+
+            return false;
+        }
     };
 
     private handleChannelOpen = (request: any, outputs?: any) => {
@@ -1050,7 +1146,15 @@ export default class ChannelsStore {
         this.channelsType = type;
     };
 
-    public toggleSearch = () => {
-        this.showSearch = !this.showSearch;
+    public setChannelsView = (view: ChannelsView) => {
+        this.channelsView = view;
+    };
+
+    public toggleSearch = (type: ChannelsView) => {
+        if (type === ChannelsView.Channels) {
+            this.showChannelsSearch = !this.showChannelsSearch;
+        } else {
+            this.showPeersSearch = !this.showPeersSearch;
+        }
     };
 }

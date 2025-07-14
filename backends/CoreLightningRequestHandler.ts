@@ -70,7 +70,7 @@ export const getOffchainBalance = (data: any) => {
 };
 
 // Get your peers and the channel info for core lightning node
-export const listPeers = async (data: any) => {
+export const listPeerChannels = async (data: any) => {
     const formattedChannels = data.channels
         .map((peer: any) => {
             if (
@@ -157,6 +157,33 @@ export const listClosedChannels = (data: any) => {
     }));
 
     return { channels: formattedClosedChannels };
+};
+
+export const listPeers = async (data: any) => {
+    const formattedPeers = data.peers.map((peer: any) => {
+        return {
+            id: peer.id,
+            connected: peer.connected,
+            num_channels: peer.num_channels,
+            netaddr: peer.netaddr,
+            features: peer.features
+        };
+    });
+    const peersWithAliases = await Promise.all(
+        formattedPeers.map(async (n: any) => {
+            const { nodes } = await api.getNode({ id: n.id });
+
+            if (nodes.length) {
+                n.alias = nodes[0].alias || '';
+            } else {
+                n.alias = '';
+            }
+
+            return n;
+        })
+    );
+
+    return { peersWithAliases };
 };
 
 // Get all chain transactions from your core-lightnig node
