@@ -1,31 +1,37 @@
 import * as React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
 const { createRefundTransaction } = lndMobile.swaps;
 
-import Screen from '../../components/Screen';
+import Button from '../../components/Button';
+
 import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
+import LoadingIndicator from '../../components/LoadingIndicator';
+import OnchainFeeInput from '../../components/OnchainFeeInput';
+import Screen from '../../components/Screen';
+import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
-import OnchainFeeInput from '../../components/OnchainFeeInput';
-import Button from '../../components/Button';
 import {
     ErrorMessage,
     SuccessMessage
 } from '../../components/SuccessErrorMessage';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import Switch from '../../components/Switch';
+import { Row } from '../../components/layout/Row';
 
-import { themeColor } from '../../utils/ThemeUtils';
-import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
 
 import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import InvoicesStore from '../../stores/InvoicesStore';
+
+import CaretDown from '../../assets/images/SVG/Caret Down.svg';
+import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
 interface RefundSwapProps {
     navigation: any;
@@ -49,6 +55,7 @@ interface RefundSwapState {
     refundStatus: string;
     uncooperative: boolean;
     fetchingAddress: boolean;
+    rawToggle: boolean;
 }
 
 @inject('SwapStore', 'NodeInfoStore', 'InvoicesStore')
@@ -65,7 +72,8 @@ export default class RefundSwap extends React.Component<
         swapData: this.props.route.params.swapData,
         refundStatus: '',
         uncooperative: false,
-        fetchingAddress: false
+        fetchingAddress: false,
+        rawToggle: false
     };
 
     createRefundTransaction = async (
@@ -82,7 +90,7 @@ export default class RefundSwap extends React.Component<
                 swapId: swapData.id,
                 claimLeaf: swapData.swapTree.claimLeaf.output,
                 refundLeaf: swapData.swapTree.refundLeaf.output,
-                transactionHex: swapData.lockupTransaction.hex,
+                transactionHex: swapData.lockupTransaction?.hex,
                 privateKey: swapData.refundPrivateKey,
                 servicePubKey: swapData.claimPublicKey,
                 feeRate: Number(fee),
@@ -122,8 +130,26 @@ export default class RefundSwap extends React.Component<
             loading,
             refundStatus,
             uncooperative,
-            fetchingAddress
+            fetchingAddress,
+            rawToggle
         } = this.state;
+
+        const rawDetails = {
+            endpoint: swapData.endpoint.replace('/v2', ''),
+            swapId: swapData.id,
+            claimLeaf: swapData.swapTree.claimLeaf.output,
+            refundLeaf: swapData.swapTree.refundLeaf.output,
+            transactionHex: swapData.lockupTransaction?.hex,
+            privateKey: swapData.refundPrivateKey,
+            servicePubKey: swapData.claimPublicKey,
+            feeRate: Number(fee),
+            timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
+            destinationAddress,
+            lockupAddress: swapData.address,
+            cooperative: !uncooperative,
+            isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+        };
+
         return (
             <Screen>
                 <Header
@@ -146,7 +172,7 @@ export default class RefundSwap extends React.Component<
                     }
                     navigation={this.props.navigation}
                 />
-                <View style={{ paddingHorizontal: 20 }}>
+                <ScrollView style={{ flex: 1, paddingHorizontal: 20 }}>
                     {error && (
                         <View style={{ marginBottom: 10 }}>
                             <ErrorMessage message={error} />
@@ -255,74 +281,126 @@ export default class RefundSwap extends React.Component<
                         }
                         navigation={navigation}
                     />
-                    <Text
-                        style={{
-                            color: themeColor('secondaryText'),
-                            marginTop: 4
-                        }}
-                        infoModalText={localeString('views.Swaps.infoText')}
-                    >
-                        {localeString('views.Swaps.uncooperative')}
-                    </Text>
-                    <View
-                        style={{
-                            flex: 1,
-                            flexDirection: 'row',
-                            justifyContent: 'flex-end',
-                            marginTop: 4
-                        }}
-                    >
-                        <Switch
-                            value={uncooperative}
-                            onValueChange={async () => {
-                                this.setState({
-                                    uncooperative: !uncooperative
-                                });
+                    <Row>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                marginTop: 4
                             }}
-                        />
-                    </View>
-                </View>
+                            infoModalText={localeString('views.Swaps.infoText')}
+                        >
+                            {localeString('views.Swaps.uncooperative')}
+                        </Text>
+                        <View
+                            style={{
+                                flex: 1,
+                                flexDirection: 'row',
+                                justifyContent: 'flex-end',
+                                marginTop: 4
+                            }}
+                        >
+                            <Switch
+                                value={uncooperative}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        uncooperative: !uncooperative
+                                    });
+                                }}
+                            />
+                        </View>
+                    </Row>
 
-                <Button
-                    title={localeString('views.Swaps.initiateRefund')}
-                    onPress={async () => {
-                        this.setState({
-                            loading: true,
-                            error: '',
-                            refundStatus: ''
-                        });
+                    <TouchableOpacity
+                        onPress={() => {
+                            this.setState({
+                                rawToggle: !rawToggle
+                            });
+                        }}
+                    >
+                        <View
+                            style={{
+                                marginTop: 10,
+                                marginBottom: 10
+                            }}
+                        >
+                            <Row justify="space-between">
+                                <View style={{ width: '95%' }}>
+                                    <KeyValue
+                                        keyValue={'Raw details'}
+                                        color={themeColor('secondaryText')}
+                                    />
+                                </View>
+                                {rawToggle ? (
+                                    <CaretDown
+                                        fill={themeColor('secondaryText')}
+                                        width="20"
+                                        height="20"
+                                    />
+                                ) : (
+                                    <CaretRight
+                                        fill={themeColor('secondaryText')}
+                                        width="20"
+                                        height="20"
+                                    />
+                                )}
+                            </Row>
+                        </View>
+                    </TouchableOpacity>
 
-                        if (!swapData.lockupTransaction) {
-                            swapData.lockupTransaction =
-                                await SwapStore?.getLockupTransaction(
-                                    swapData.id
+                    {rawToggle &&
+                        Object.entries(rawDetails).map(([key, value]) => {
+                            if (!value) return;
+                            return (
+                                <KeyValue
+                                    keyValue={pascalToHumanReadable(key)}
+                                    value={value.toString()}
+                                />
+                            );
+                        })}
+                </ScrollView>
+
+                <View style={{ marginBottom: 15 }}>
+                    <Button
+                        title={localeString('views.Swaps.initiateRefund')}
+                        onPress={async () => {
+                            this.setState({
+                                loading: true,
+                                error: '',
+                                refundStatus: ''
+                            });
+
+                            if (!swapData.lockupTransaction) {
+                                swapData.lockupTransaction =
+                                    await SwapStore?.getLockupTransaction(
+                                        swapData.id
+                                    );
+                            }
+
+                            try {
+                                await this.createRefundTransaction(
+                                    swapData,
+                                    fee,
+                                    destinationAddress
                                 );
-                        }
 
-                        try {
-                            await this.createRefundTransaction(
-                                swapData,
-                                fee,
-                                destinationAddress
-                            );
-
-                            console.log(
-                                'Refund transaction created successfully.'
-                            );
-                        } catch (e) {
-                            console.error('Error in refund process:', e);
-                        } finally {
-                            this.setState({ loading: false });
+                                console.log(
+                                    'Refund transaction created successfully.'
+                                );
+                            } catch (e) {
+                                console.error('Error in refund process:', e);
+                            } finally {
+                                this.setState({ loading: false });
+                            }
+                        }}
+                        containerStyle={{ marginTop: 20 }}
+                        secondary
+                        disabled={
+                            !destinationAddress ||
+                            this.state.loading ||
+                            fetchingAddress
                         }
-                    }}
-                    containerStyle={{ marginTop: 20 }}
-                    secondary
-                    disabled={
-                        !destinationAddress ||
-                        this.state.loading ||
-                        fetchingAddress
-                    }
-                />
+                    />
+                </View>
             </Screen>
         );
     }
