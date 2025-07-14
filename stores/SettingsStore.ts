@@ -905,6 +905,11 @@ export const CURRENCY_KEYS = [
         supportedSources: ['Zeus', 'Yadio']
     },
     {
+        key: '🇸🇦 Saudi Riyal (SAR)',
+        value: 'SAR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    {
         key: 'Gold (XAU)',
         value: 'XAU',
         supportedSources: ['Zeus', 'Yadio']
