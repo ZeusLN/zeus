@@ -1587,6 +1587,7 @@
     "stores.CashuStore.claimError.lockedToWallet": "This token is locked to a different wallet, can not redeem it",
     "stores.CashuStore.claimError.inconsistentLocking": "Token is locked to multiple different wallets",
     "stores.CashuStore.errorMintingToken": "Eroare la generarea tokenului",
+    "stores.CashuStore.insufficientBalance": "Insufficient balance",
     "stores.CashuStore.notEnoughFunds": "Nu sunt suficiente fonduri pentru a acoperi plata",
     "stores.CashuStore.feeExceedsAmt": "Taxele de topire se potrivesc cu sau depășesc valoarea token-ului",
     "stores.CashuStore.autoSweep": "Curățare automată Cashu",
