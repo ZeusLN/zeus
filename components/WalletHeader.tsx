@@ -16,7 +16,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 
 import AlertStore from '../stores/AlertStore';
 import CashuStore from '../stores/CashuStore';
-import ChannelsStore from '../stores/ChannelsStore';
+import ChannelsStore, { ChannelsView } from '../stores/ChannelsStore';
 import LightningAddressStore from '../stores/LightningAddressStore';
 import ModalStore from '../stores/ModalStore';
 import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
@@ -53,6 +53,7 @@ import { balanceStore } from '../stores/Stores';
 
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
+import ToggleButton from './ToggleButton';
 
 const TorIcon = require('../assets/images/tor.png');
 
@@ -226,6 +227,7 @@ interface WalletHeaderProps {
     loading?: boolean;
     title?: string;
     channels?: boolean;
+    peers?: boolean;
 }
 
 interface WalletHeaderState {
@@ -248,7 +250,7 @@ export default class WalletHeader extends React.Component<
     WalletHeaderProps,
     WalletHeaderState
 > {
-    state = {
+    state: WalletHeaderState = {
         clipboard: ''
     };
 
@@ -453,7 +455,11 @@ export default class WalletHeader extends React.Component<
 
         const SearchButton = () => (
             <TouchableOpacity
-                onPress={() => ChannelsStore!.toggleSearch()}
+                onPress={() =>
+                    ChannelsStore!.toggleSearch(
+                        ChannelsStore?.channelsView || ChannelsView.Channels
+                    )
+                }
                 accessibilityLabel={localeString('general.search')}
             >
                 <Search
@@ -522,149 +528,181 @@ export default class WalletHeader extends React.Component<
         };
 
         return (
-            <Header
-                leftComponent={
-                    loading ? undefined : (
-                        <Row style={{ flex: 1 }}>
-                            <MenuBadge navigation={navigation} />
-                            {!loading && paid && paid.length > 0 && (
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        navigation.navigate(
-                                            'LightningAddress',
-                                            { skipStatus: true }
-                                        )
-                                    }
-                                    style={{ marginLeft: 20 }}
-                                >
-                                    {redeemingAll ? (
-                                        <ZeusPayAnimated />
-                                    ) : (
-                                        <ZeusPay />
-                                    )}
-                                </TouchableOpacity>
-                            )}
-                        </Row>
-                    )
-                }
-                centerComponent={
-                    title ? (
-                        <View style={{ flex: 1 }}>
-                            <Body bold>{title}</Body>
-                        </View>
-                    ) : settings.display && settings.display.displayNickname ? (
-                        <View style={{ top: 0 }}>
-                            <Row>
-                                <Text
-                                    style={{
-                                        color: themeColor('text'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        fontSize: 16
-                                    }}
-                                    onPress={() => {
-                                        navigation.navigate('Wallets');
-                                    }}
-                                >
-                                    {PrivacyUtils.sensitiveValue(
-                                        displayName
-                                    )?.toString()}
-                                </Text>
-                                <StatusBadges />
+            <>
+                <Header
+                    leftComponent={
+                        loading ? undefined : (
+                            <Row style={{ flex: 1 }}>
+                                <MenuBadge navigation={navigation} />
+                                {!loading && paid && paid.length > 0 && (
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            navigation.navigate(
+                                                'LightningAddress',
+                                                {
+                                                    skipStatus: true
+                                                }
+                                            )
+                                        }
+                                        style={{ marginLeft: 20 }}
+                                    >
+                                        {redeemingAll ? (
+                                            <ZeusPayAnimated />
+                                        ) : (
+                                            <ZeusPay />
+                                        )}
+                                    </TouchableOpacity>
+                                )}
                             </Row>
-                        </View>
-                    ) : (
-                        <Row style={{ alignItems: 'center', flexGrow: 1 }}>
-                            {!loading && <StatusBadges />}
-                        </Row>
-                    )
-                }
-                rightComponent={
-                    posStatus === 'active' ? (
-                        <Row>
-                            {!loading && (
-                                <>
-                                    <ActivityButton navigation={navigation} />
-                                    <TempleButton navigation={navigation} />
-                                </>
-                            )}
-                        </Row>
-                    ) : channels ? (
-                        <Row style={{ marginTop: 1 }}>
-                            <SearchButton />
-                            <OpenChannelButton />
-                        </Row>
-                    ) : (
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                alignItems: 'center'
-                            }}
-                        >
-                            {!loading &&
-                                (balanceStore.loadingBlockchainBalance ||
-                                    balanceStore.loadingLightningBalance ||
-                                    laLoading) && (
-                                    <View style={{ paddingRight: 15 }}>
-                                        <LoadingIndicator size={35} />
+                        )
+                    }
+                    centerComponent={
+                        title ? (
+                            <View
+                                style={{
+                                    flex: 1,
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Body>{title}</Body>
+                            </View>
+                        ) : settings.display &&
+                          settings.display.displayNickname ? (
+                            <View style={{ top: 0 }}>
+                                <Row>
+                                    <Text
+                                        style={{
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 16
+                                        }}
+                                        onPress={() => {
+                                            navigation.navigate('Wallets');
+                                        }}
+                                    >
+                                        {PrivacyUtils.sensitiveValue(
+                                            displayName
+                                        )?.toString()}
+                                    </Text>
+                                    <StatusBadges />
+                                </Row>
+                            </View>
+                        ) : (
+                            <Row style={{ alignItems: 'center', flexGrow: 1 }}>
+                                {!loading && <StatusBadges />}
+                            </Row>
+                        )
+                    }
+                    rightComponent={
+                        posStatus === 'active' ? (
+                            <Row>
+                                {!loading && (
+                                    <>
+                                        <ActivityButton
+                                            navigation={navigation}
+                                        />
+                                        <TempleButton navigation={navigation} />
+                                    </>
+                                )}
+                            </Row>
+                        ) : channels ? (
+                            <Row style={{ marginTop: 1 }}>
+                                <SearchButton />
+                                <OpenChannelButton />
+                            </Row>
+                        ) : (
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                {!loading &&
+                                    (balanceStore.loadingBlockchainBalance ||
+                                        balanceStore.loadingLightningBalance ||
+                                        laLoading) && (
+                                        <View style={{ paddingRight: 15 }}>
+                                            <LoadingIndicator size={35} />
+                                        </View>
+                                    )}
+                                {!loading && !!clipboard && (
+                                    <View style={{ marginRight: 15 }}>
+                                        <ClipboardBadge
+                                            navigation={navigation}
+                                            clipboard={clipboard}
+                                        />
                                     </View>
                                 )}
-                            {!loading && !!clipboard && (
-                                <View style={{ marginRight: 15 }}>
-                                    <ClipboardBadge
-                                        navigation={navigation}
-                                        clipboard={clipboard}
-                                    />
-                                </View>
-                            )}
-                            {!loading && unredeemedTokens?.length > 0 && (
-                                <View style={{ marginRight: 15 }}>
-                                    <UnredeemedTokensBadge
-                                        navigation={navigation}
-                                        clipboard={clipboard}
-                                    />
-                                </View>
-                            )}
-                            {!loading && pendingHTLCs?.length > 0 && (
-                                <View style={{ marginRight: 15 }}>
-                                    <PendingHtlcBadge
-                                        navigation={navigation}
-                                        clipboard={clipboard}
-                                    />
-                                </View>
-                            )}
-                            {!loading && isSyncing && (
-                                <View
-                                    style={{
-                                        marginRight: 15
-                                    }}
-                                >
-                                    <SyncBadge navigation={navigation} />
-                                </View>
-                            )}
-                            {!loading && AlertStore?.hasError && (
-                                <AlertButton />
-                            )}
-                            {posEnabled === PosEnabled.Disabled && (
-                                <View>
-                                    <NodeButton />
-                                </View>
-                            )}
-                            {!loading && posEnabled !== PosEnabled.Disabled && (
-                                <View
-                                    style={{
-                                        marginLeft: 15
-                                    }}
-                                >
-                                    <POSBadge
-                                        setPosStatus={setPosStatus}
-                                        getOrders={getOrders}
-                                    />
-                                </View>
-                            )}
-                        </View>
-                    )
-                }
-            />
+                                {!loading && unredeemedTokens?.length > 0 && (
+                                    <View style={{ marginRight: 15 }}>
+                                        <UnredeemedTokensBadge
+                                            navigation={navigation}
+                                            clipboard={clipboard}
+                                        />
+                                    </View>
+                                )}
+                                {!loading && pendingHTLCs?.length > 0 && (
+                                    <View style={{ marginRight: 15 }}>
+                                        <PendingHtlcBadge
+                                            navigation={navigation}
+                                            clipboard={clipboard}
+                                        />
+                                    </View>
+                                )}
+                                {!loading && isSyncing && (
+                                    <View style={{ marginRight: 15 }}>
+                                        <SyncBadge navigation={navigation} />
+                                    </View>
+                                )}
+                                {!loading && AlertStore?.hasError && (
+                                    <AlertButton />
+                                )}
+                                {posEnabled === PosEnabled.Disabled ? (
+                                    <View>
+                                        <NodeButton />
+                                    </View>
+                                ) : (
+                                    <View style={{ marginLeft: 15 }}>
+                                        <POSBadge
+                                            setPosStatus={setPosStatus}
+                                            getOrders={getOrders}
+                                        />
+                                    </View>
+                                )}
+                            </View>
+                        )
+                    }
+                />
+
+                {this.props.peers && (
+                    <View style={{ paddingTop: 10 }}>
+                        <ToggleButton
+                            options={[
+                                {
+                                    key: 'channels',
+                                    label: localeString(
+                                        'views.Wallet.Wallet.channels'
+                                    )
+                                },
+                                {
+                                    key: 'peers',
+                                    label: localeString('general.peers')
+                                }
+                            ]}
+                            value={
+                                this.props.ChannelsStore?.channelsView ||
+                                'channels'
+                            }
+                            onToggle={(view: string) => {
+                                this.props.ChannelsStore?.setChannelsView(
+                                    view as ChannelsView
+                                );
+                            }}
+                        />
+                    </View>
+                )}
+            </>
         );
     }
 }
