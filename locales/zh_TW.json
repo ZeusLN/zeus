@@ -1587,6 +1587,7 @@
     "stores.CashuStore.claimError.lockedToWallet": "這枚代幣是跟別的錢包綁定，無法兌換",
     "stores.CashuStore.claimError.inconsistentLocking": "代幣跟兩個以上的錢包綁定",
     "stores.CashuStore.errorMintingToken": "鑄造代幣時發生錯誤",
+    "stores.CashuStore.insufficientBalance": "Insufficient balance",
     "stores.CashuStore.notEnoughFunds": "沒有足夠支付的餘額",
     "stores.CashuStore.feeExceedsAmt": "熔解費用相等或超過代幣金額",
     "stores.CashuStore.autoSweep": "Cashu 自動清理",
