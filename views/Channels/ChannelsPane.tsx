@@ -547,22 +547,7 @@ export default class ChannelsPane extends React.PureComponent<
 
         return (
             <View style={{ flex: 1 }}>
-                <WalletHeader
-                    navigation={navigation}
-                    title={
-                        ChannelsStore?.channelsView === ChannelsView.Channels
-                            ? BackendUtils.supportsPendingChannels()
-                                ? localeString('views.Wallet.Wallet.channels')
-                                : `${localeString(
-                                      'views.Wallet.Wallet.channels'
-                                  )} (${filteredChannels?.length || 0})`
-                            : `${localeString('general.peers')} (${
-                                  ChannelsStore?.peers?.length || 0
-                              })`
-                    }
-                    peers={true}
-                    channels
-                />
+                <WalletHeader navigation={navigation} peers={true} channels />
                 {ChannelsStore?.channelsView === ChannelsView.Channels &&
                 this.state.activeTab === 0 ? (
                     <>

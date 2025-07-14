@@ -681,13 +681,18 @@ export default class WalletHeader extends React.Component<
                             options={[
                                 {
                                     key: 'channels',
-                                    label: localeString(
+                                    label: `${localeString(
                                         'views.Wallet.Wallet.channels'
-                                    )
+                                    )} (${
+                                        ChannelsStore?.filteredChannels
+                                            ?.length || 0
+                                    })`
                                 },
                                 {
                                     key: 'peers',
-                                    label: localeString('general.peers')
+                                    label: `${localeString('general.peers')} (${
+                                        ChannelsStore?.peers?.length || 0
+                                    })`
                                 }
                             ]}
                             value={
