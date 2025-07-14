@@ -1587,6 +1587,7 @@
     "stores.CashuStore.claimError.lockedToWallet": "This token is locked to a different wallet, can not redeem it",
     "stores.CashuStore.claimError.inconsistentLocking": "Token is locked to multiple different wallets",
     "stores.CashuStore.errorMintingToken": "Erro ao cunhar token",
+    "stores.CashuStore.insufficientBalance": "Insufficient balance",
     "stores.CashuStore.notEnoughFunds": "Fundos insuficientes para cobrir o pagamento",
     "stores.CashuStore.feeExceedsAmt": "Taxas de derretimento iguais ou superiores à quantidade de tokens",
     "stores.CashuStore.autoSweep": "Varredura automática de Cashu",
