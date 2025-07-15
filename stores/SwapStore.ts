@@ -655,8 +655,6 @@ export default class SwapStore {
             throw new Error('Rescue mnemonic not found in storage.');
         }
 
-        console.log('Loaded mnemonic:', mnemonic);
-
         const hdKey = this.mnemonicToHDKey(mnemonic);
         const childKey = hdKey.derive(this.getPath(index));
 
@@ -708,5 +706,63 @@ export default class SwapStore {
         console.log('Generating new key at index:', index);
         const keys = await this.deriveKey(index);
         return { index, keys };
+    };
+
+    @action
+    public getRescuableSwaps = async ({
+        seedArray
+    }: {
+        seedArray: string[];
+    }) => {
+        const mnemonic = seedArray.join(' ');
+
+        const { implementation } = this.settingsStore;
+        const { nodeInfo } = this.nodeInfoStore;
+        const nodePubkey = nodeInfo.nodeId;
+
+        if (mnemonic) {
+            const xpub = this.getXpub(mnemonic);
+
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${this.getHost}/swap/rescue`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    xpub
+                })
+            );
+
+            const importedSwaps = JSON.parse(response.data || '[]');
+            console.log('Rescued swaps:', importedSwaps);
+
+            if (importedSwaps.length > 0) {
+                const storedSwaps = await Storage.getItem('swaps');
+                const existingSwaps = storedSwaps
+                    ? JSON.parse(storedSwaps)
+                    : [];
+                const existingSwapIds = existingSwaps.map((s: any) => s.id);
+
+                const rescuedSwaps = importedSwaps
+                    .filter((swap: any) => !existingSwapIds.includes(swap.id))
+                    .map((swap: any) => ({
+                        ...swap,
+                        imported: true,
+                        implementation,
+                        nodePubkey,
+                        endpoint: this.getHost,
+                        serviceProvider: this.getServiceProvider,
+                        type: 'Submarine'
+                    }));
+
+                const updatedSwaps = [...existingSwaps, ...rescuedSwaps];
+
+                await Storage.setItem('swaps', JSON.stringify(updatedSwaps));
+                console.log('Rescued swaps saved to storage');
+            } else {
+                console.log('No swaps found for rescue');
+            }
+        }
     };
 }
