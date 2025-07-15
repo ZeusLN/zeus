@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import Header from '../../components/Header';
 import Amount from '../../components/Amount';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import Button from '../../components/Button';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -58,6 +59,11 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
 
     renderSwap = ({ item }: { item: any }) => {
         const { SwapStore } = this.props;
+
+        const createdAt =
+            typeof item.createdAt === 'number'
+                ? item.createdAt * 1000
+                : item.createdAt;
 
         return (
             <TouchableOpacity
@@ -145,39 +151,41 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         {item.id}
                     </Text>
                 </View>
-
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        marginBottom: 5
-                    }}
-                >
-                    <Text
+                {item.expectedAmount && (
+                    <View
                         style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book',
-                            fontSize: 16
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            marginBottom: 5
                         }}
                     >
-                        {item?.type === 'Submarine'
-                            ? `${localeString(
-                                  'views.SwapDetails.expectedAmount'
-                              )}`
-                            : `${localeString(
-                                  'views.SwapDetails.onchainAmount'
-                              )}`}
-                    </Text>
-                    <Amount
-                        sats={
-                            item?.type === 'Submarine'
-                                ? item.expectedAmount
-                                : item.onchainAmount
-                        }
-                        sensitive
-                        toggleable
-                    />
-                </View>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16
+                            }}
+                        >
+                            {item?.type === 'Submarine'
+                                ? `${localeString(
+                                      'views.SwapDetails.expectedAmount'
+                                  )}`
+                                : `${localeString(
+                                      'views.SwapDetails.onchainAmount'
+                                  )}`}
+                        </Text>
+                        <Amount
+                            sats={
+                                item?.type === 'Submarine'
+                                    ? item.expectedAmount
+                                    : item.onchainAmount
+                            }
+                            sensitive
+                            toggleable
+                        />
+                    </View>
+                )}
+
                 {item?.createdAt && (
                     <View
                         style={{
@@ -202,9 +210,35 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 fontSize: 16
                             }}
                         >
-                            {moment(item.createdAt).format(
-                                'MMM Do YYYY, h:mm:ss a'
-                            )}
+                            {moment(createdAt).format('MMM Do YYYY, h:mm:ss a')}
+                        </Text>
+                    </View>
+                )}
+                {item?.imported && (
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            marginBottom: 5
+                        }}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16
+                            }}
+                        >
+                            Imported
+                        </Text>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16
+                            }}
+                        >
+                            {localeString('general.true')}
                         </Text>
                     </View>
                 )}
@@ -247,6 +281,20 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         keyExtractor={(item) => item.id}
                         renderItem={this.renderSwap}
                         ItemSeparatorComponent={this.renderSeparator}
+                    />
+                )}
+                {!swapsLoading && (
+                    <Button
+                        title={localeString(
+                            'views.Swaps.SwapsPane.importExternalSwaps'
+                        )}
+                        secondary
+                        onPress={async () => {
+                            navigation.navigate('SeedRecovery', {
+                                restoreSwaps: true
+                            });
+                        }}
+                        containerStyle={{ paddingTop: 8 }}
                     />
                 )}
             </Screen>

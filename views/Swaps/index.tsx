@@ -465,7 +465,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const RescueKeyPhrase = () => (
             <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
                 <KeyIcon
-                    onPress={async () => {
+                    onPress={() => {
+                        console.log('hola');
                         navigation.navigate('Seed', {
                             seedPhrase: this.state.seedPhrase
                         });
@@ -512,9 +513,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     }}
                     rightComponent={
                         <Row>
-                            <RescueKeyPhrase />
-                            <SettingsBtn />
-                            <SwapsPaneBtn />
+                            {!loading && (
+                                <>
+                                    <RescueKeyPhrase />
+                                    <SettingsBtn />
+                                    <SwapsPaneBtn />
+                                </>
+                            )}
                         </Row>
                     }
                     onBack={() => {
