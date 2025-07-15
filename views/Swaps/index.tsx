@@ -466,7 +466,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
                 <KeyIcon
                     onPress={() => {
-                        console.log('hola');
                         navigation.navigate('Seed', {
                             seedPhrase: this.state.seedPhrase
                         });

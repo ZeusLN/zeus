@@ -7,10 +7,13 @@ import {
     TouchableOpacity,
     View,
     TextInput as TextInputRN,
-    Keyboard
+    Keyboard,
+    Alert
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
+import RNFS from 'react-native-fs';
+import DocumentPicker from 'react-native-document-picker';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -629,6 +632,67 @@ export default class SeedRecovery extends React.PureComponent<
                                     })}
                                 </View>
                             </ScrollView>
+                        )}
+                        {!showSuggestions && restoreSwaps && (
+                            <Button
+                                title={localeString(
+                                    'views.Swaps.rescueKey.upload'
+                                )}
+                                secondary
+                                onPress={async () => {
+                                    try {
+                                        const res =
+                                            await DocumentPicker.pickSingle({
+                                                type: [
+                                                    DocumentPicker.types
+                                                        .allFiles
+                                                ]
+                                            });
+
+                                        const content = await RNFS.readFile(
+                                            res.uri,
+                                            'utf8'
+                                        );
+                                        const importedData =
+                                            JSON.parse(content);
+
+                                        if (importedData.mnemonic) {
+                                            const words = importedData.mnemonic
+                                                .trim()
+                                                .split(/\s+/);
+                                            if (words.length === 12) {
+                                                this.setState({
+                                                    seedArray: words
+                                                });
+                                            } else {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'views.Swaps.rescueKey.invalid'
+                                                    )
+                                                );
+                                            }
+                                        } else {
+                                            Alert.alert(
+                                                localeString('general.error'),
+                                                localeString(
+                                                    'views.Tools.nodeConfigExportImport.importError'
+                                                )
+                                            );
+                                        }
+                                    } catch (err) {
+                                        if (DocumentPicker.isCancel(err)) {
+                                            this.setState({ loading: false });
+                                        } else {
+                                            Alert.alert(
+                                                localeString('general.error'),
+                                                localeString(
+                                                    'views.Tools.nodeConfigExportImport.importError'
+                                                )
+                                            );
+                                        }
+                                    }
+                                }}
+                            />
                         )}
                         {!showSuggestions && (
                             <View
