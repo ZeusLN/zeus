@@ -154,14 +154,10 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
 
                     Alert.alert(
                         localeString('general.success'),
-                        `${localeString(
-                            'views.Settings.rescueKey.download'
-                        )}\n\n${
+                        `${localeString('views.Swaps.rescueKey.download')}\n\n${
                             Platform.OS === 'android'
-                                ? localeString(
-                                      'views.Settings.rescueKey.android'
-                                  )
-                                : localeString('views.Settings.rescueKey.ios')
+                                ? localeString('views.Swaps.rescueKey.android')
+                                : localeString('views.Swaps.rescueKey.ios')
                         }`
                     );
 
@@ -423,7 +419,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 title={
                                     isRefundRescueKey
                                         ? localeString(
-                                              'views.Settings.rescueKey.backupComplete'
+                                              'views.Swaps.rescueKey.backupComplete'
                                           )
                                         : localeString(
                                               'views.Settings.Seed.backupComplete'
