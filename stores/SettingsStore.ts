@@ -910,6 +910,16 @@ export const CURRENCY_KEYS = [
         supportedSources: ['Zeus', 'Yadio']
     },
     {
+        key: '🇴🇲 Omani Rial (OMR)',
+        value: 'OMR',
+        supportedSources: ['Zeus', 'Yadio']
+    },
+    // {
+    //     key: '🇰🇼 Kuwaiti Dinar (KWD)',
+    //     value: 'KWD',
+    //     supportedSources: ['Zeus', 'Yadio']
+    // },
+    {
         key: 'Gold (XAU)',
         value: 'XAU',
         supportedSources: ['Zeus', 'Yadio']
