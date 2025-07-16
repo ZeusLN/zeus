@@ -42,6 +42,8 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import UrlUtils from '../utils/UrlUtils';
+import ExpressGraphSyncDetector from '../utils/ExpressGraphSyncDetector';
+import OnDemandGraphSync from '../utils/OnDemandGraphSync';
 
 import NavigationService from '../NavigationService';
 
@@ -129,6 +131,9 @@ export default class CashuStore {
     invoicesStore: InvoicesStore;
     channelsStore: ChannelsStore;
     modalStore: ModalStore;
+    expressGraphSyncDetector: ExpressGraphSyncDetector;
+    @observable expressGraphSyncModalCallback: (() => void) | null = null;
+    @observable pendingPaymentForModal: any = null;
 
     ndk: NDK;
 
@@ -142,6 +147,9 @@ export default class CashuStore {
         this.invoicesStore = invoicesStore;
         this.channelsStore = channelsStore;
         this.modalStore = modalStore;
+        this.expressGraphSyncDetector = new ExpressGraphSyncDetector(
+            settingsStore
+        );
     }
 
     @action
@@ -160,6 +168,36 @@ export default class CashuStore {
         this.clearInvoice();
         this.clearPayReq();
         this.shownThresholdModals = [];
+        this.expressGraphSyncModalCallback = null;
+        this.pendingPaymentForModal = null;
+    };
+
+    @action
+    public setExpressGraphSyncModalCallback = (
+        callback: (() => void) | null
+    ) => {
+        this.expressGraphSyncModalCallback = callback;
+    };
+
+    @action
+    public setPendingPaymentForModal = (paymentData: any) => {
+        this.pendingPaymentForModal = paymentData;
+    };
+
+    @action
+    public executePaymentAfterModal = () => {
+        if (!this.pendingPaymentForModal) {
+            console.error('No pending payment data for modal');
+            return;
+        }
+
+        const paymentData = this.pendingPaymentForModal;
+        this.pendingPaymentForModal = null;
+
+        // Continue with the payment
+        this.payLnInvoiceFromEcash({
+            amount: paymentData.amount
+        });
     };
 
     @action
@@ -1459,6 +1497,71 @@ export default class CashuStore {
     @action
     public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
         this.loading = true;
+
+        // Check if this is the first payment attempt and Express Graph Sync is disabled
+        try {
+            const detectionResult =
+                await this.expressGraphSyncDetector.detectPaymentAttempt();
+
+            // Check if we need to run on-demand graph sync for first session
+            const graphSyncStatus =
+                await OnDemandGraphSync.checkGraphSyncStatus();
+
+            if (graphSyncStatus.requiresSync && !graphSyncStatus.isCompleted) {
+                console.log(
+                    '[CashuStore] First session payment detected, ensuring graph sync...'
+                );
+
+                // Show loading indicator
+                runInAction(() => {
+                    this.loading = true;
+                    this.error = false;
+                    this.error_msg = localeString(
+                        'views.Wallet.Wallet.expressGraphSync'
+                    ).replace('Zeus', 'ZEUS');
+                });
+
+                // Run on-demand graph sync
+                const syncSuccess =
+                    await OnDemandGraphSync.ensureGraphSyncCompleted();
+
+                if (!syncSuccess) {
+                    runInAction(() => {
+                        this.loading = false;
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'stores.TransactionsStore.graphSyncRequired'
+                        );
+                    });
+                    return;
+                }
+
+                // Reset error state
+                runInAction(() => {
+                    this.error_msg = undefined;
+                });
+            }
+
+            if (
+                detectionResult.shouldPrompt &&
+                this.expressGraphSyncModalCallback
+            ) {
+                // Store the payment data for later execution
+                this.setPendingPaymentForModal({ amount });
+
+                // Reset loading state
+                this.loading = false;
+
+                // Trigger the modal display via callback
+                this.expressGraphSyncModalCallback();
+
+                // Return early - payment will be executed after modal interaction
+                return;
+            }
+        } catch (error) {
+            console.error('Error detecting first payment attempt:', error);
+            // On error, continue with payment
+        }
 
         const mintUrl = this.selectedMintUrl;
 

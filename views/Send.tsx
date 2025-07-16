@@ -51,12 +51,14 @@ import Screen from '../components/Screen';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
+import ExpressGraphSyncModal from '../components/ExpressGraphSyncModal';
 
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NFCUtils from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import RestartUtils from '../utils/RestartUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
 import ContactIcon from '../assets/images/SVG/PeersContact.svg';
@@ -137,6 +139,8 @@ interface SendState {
 )
 @observer
 export default class Send extends React.Component<SendProps, SendState> {
+    expressGraphSyncModalRef: React.RefObject<ExpressGraphSyncModal> =
+        React.createRef();
     listener: any;
     private backPressSubscription: NativeEventSubscription;
 
@@ -306,6 +310,13 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidMount() {
+        const { TransactionsStore } = this.props;
+
+        // Set up the Express Graph Sync modal callback
+        TransactionsStore.setExpressGraphSyncModalCallback(() => {
+            this.expressGraphSyncModalRef.current?.show();
+        });
+
         if (this.state.destination) {
             this.validateAddress(this.state.destination);
         }
@@ -318,6 +329,9 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     componentWillUnmount(): void {
         this.backPressSubscription?.remove();
+        // Clean up the modal callback
+        const { TransactionsStore } = this.props;
+        TransactionsStore.setExpressGraphSyncModalCallback(null);
     }
 
     subscribePayment = (streamingCall: string) => {
@@ -540,6 +554,54 @@ export default class Send extends React.Component<SendProps, SendState> {
         }
         TransactionsStore.sendCoins(request);
         navigation.navigate('SendingOnChain');
+    };
+
+    handleExpressGraphSyncEnable = async () => {
+        const { SettingsStore, TransactionsStore } = this.props;
+
+        // Update Express Graph Sync setting
+        await SettingsStore.updateSettings({
+            expressGraphSync: true
+        });
+
+        // Mark that the prompt has been shown
+        await TransactionsStore.expressGraphSyncDetector.markPromptShown();
+
+        // Get payment data for preservation
+        const pendingPayment = TransactionsStore.pendingPaymentForModal;
+
+        // Prepare payment data for restart
+        const paymentData = {
+            type: 'keysend' as const,
+            timestamp: Date.now(),
+            destination: pendingPayment?.pubkey,
+            amount: pendingPayment?.amount,
+            message: pendingPayment?.message
+        };
+
+        // Continue with the pending payment
+        TransactionsStore.executePaymentAfterModal();
+
+        // Schedule app restart with payment preservation
+        await RestartUtils.restartWithPaymentPreservation(paymentData, {
+            type: 'express-graph-sync-enabled',
+            timestamp: Date.now()
+        });
+    };
+
+    handleExpressGraphSyncSkip = async () => {
+        const { SettingsStore, TransactionsStore } = this.props;
+
+        // Mark that user skipped the prompt
+        await SettingsStore.updateSettings({
+            expressGraphSyncPromptSkipped: true
+        });
+
+        // Mark that the prompt has been shown
+        await TransactionsStore.expressGraphSyncDetector.markPromptShown();
+
+        // Continue with the pending payment
+        TransactionsStore.executePaymentAfterModal();
     };
 
     sendKeySendPayment = (satAmount: string | number) => {
@@ -1651,6 +1713,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                         </>
                     )}
                 </ScrollView>
+                <ExpressGraphSyncModal
+                    ref={this.expressGraphSyncModalRef}
+                    ModalStore={this.props.ModalStore}
+                    SettingsStore={this.props.SettingsStore}
+                    onEnableAndRestart={this.handleExpressGraphSyncEnable}
+                    onSkip={this.handleExpressGraphSyncSkip}
+                />
             </Screen>
         );
     }
