@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import {
-    Animated,
     FlatList,
     View,
     StyleSheet,
@@ -92,45 +91,6 @@ interface ChannelsState {
     disconnectModalVisible: boolean;
     selectedPeer: any;
 }
-
-const ColorChangingButton = ({ onPress }: { onPress: () => void }) => {
-    const [forward, setForward] = useState(true);
-    const animation = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            // Toggle animation direction
-            setForward((prev) => !prev);
-        }, 5000); // Change color gradient every 6 seconds
-
-        return () => clearInterval(interval); // Cleanup interval on component unmount
-    }, []);
-
-    useEffect(() => {
-        // Animate from 0 to 1 or from 1 to 0 based on 'forward' value
-        Animated.timing(animation, {
-            toValue: forward ? 1 : 0,
-            duration: 4500,
-            useNativeDriver: true
-        }).start();
-    }, [forward]);
-
-    const backgroundColor: any = animation.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['rgb(180, 26, 20)', 'rgb(255, 169, 0)'] // Red to Gold gradient
-    });
-
-    return (
-        <TouchableOpacity
-            onPress={onPress}
-            style={[styles.button, { backgroundColor }]}
-        >
-            <Text style={styles.buttonText}>
-                {localeString('views.LSPS1.purchaseInbound')}
-            </Text>
-        </TouchableOpacity>
-    );
-};
 
 @inject(
     'ChannelsStore',
@@ -444,8 +404,7 @@ export default class ChannelsPane extends React.PureComponent<
     render() {
         const Tab = createBottomTabNavigator();
 
-        const { ChannelsStore, SettingsStore, navigation, UnitsStore } =
-            this.props;
+        const { ChannelsStore, navigation, UnitsStore } = this.props;
         const {
             loading,
             getChannels,
@@ -460,8 +419,6 @@ export default class ChannelsPane extends React.PureComponent<
             setChannelsType,
             channelsType
         } = ChannelsStore!;
-
-        const { settings } = SettingsStore!;
 
         const Theme = {
             ...DefaultTheme,
@@ -556,15 +513,6 @@ export default class ChannelsPane extends React.PureComponent<
                             totalOutbound={totalOutbound}
                             totalOffline={totalOffline}
                         />
-                        {settings?.lsps1ShowPurchaseButton &&
-                            (BackendUtils.supportsLSPScustomMessage() ||
-                                BackendUtils.supportsLSPS1rest()) && (
-                                <ColorChangingButton
-                                    onPress={() => {
-                                        navigation.navigate('LSPS1');
-                                    }}
-                                />
-                            )}
                         {showChannelsSearch && <ChannelsFilter />}
                         {loading ? (
                             <View style={{ marginTop: 40 }}>
