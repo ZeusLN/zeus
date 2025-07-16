@@ -29,12 +29,13 @@ import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
 import InvoicesStore from '../stores/InvoicesStore';
 import NotesStore from '../stores/NotesStore';
 
+import WithdrawalRequest from '../models/WithdrawalRequest';
+
 interface RedeemWithdrawalRequestProps {
     route: {
         params: {
             invreq: string;
             label: string;
-            bolt12: string;
         };
     };
     navigation: StackNavigationProp<any, any>;
@@ -47,7 +48,7 @@ interface RedeemWithdrawalRequestProps {
 interface RedeemWithdrawalRequestState {
     loading: boolean;
     error: string | null;
-    redemptionResult: any;
+    redemptionResult: WithdrawalRequest | null;
     storedNotes: string;
 }
 
@@ -70,13 +71,13 @@ export default class RedeemWithdrawalRequest extends React.Component<
     }
 
     componentDidMount() {
-        const { invreq, label, bolt12 } = this.props.route.params;
+        const { invreq, label } = this.props.route.params;
         const { navigation } = this.props;
 
         this.handleRedemption({ invreq, label });
 
         navigation.addListener('focus', () => {
-            const noteKey = `note-${bolt12 || ''}`;
+            const noteKey = this.state.redemptionResult?.getNoteKey;
             if (!noteKey) return;
             Storage.getItem(noteKey)
                 .then((storedNotes) => {
@@ -145,8 +146,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
         const { error, loading, redemptionResult, storedNotes } = this.state;
         const windowSize = Dimensions.get('window');
         const { navigation } = this.props;
-        const { bolt12 } = this.props.route.params;
-        const noteKey = `note-${bolt12 || ''}`;
+        const noteKey = redemptionResult?.getNoteKey;
 
         return (
             <Screen>

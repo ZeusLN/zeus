@@ -41,7 +41,7 @@ export default class WithdrawalRequest extends BaseModel {
     }
 
     @computed public get getNoteKey(): string {
-        return `note-${this.bolt12 || ''}`;
+        return `note-${this.payment_hash || ''}`;
     }
 
     @computed public get getNote(): string {

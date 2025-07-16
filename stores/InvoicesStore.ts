@@ -201,12 +201,12 @@ export default class InvoicesStore {
     }: {
         invreq: string;
         label: string;
-    }) => {
+    }): Promise<WithdrawalRequest | null> => {
         this.loading = true;
         this.error = false;
         this.error_msg = null;
         try {
-            const response = await BackendUtils.redeemWithdrawalRequest({
+            let response = await BackendUtils.redeemWithdrawalRequest({
                 invreq,
                 label
             });
@@ -215,6 +215,7 @@ export default class InvoicesStore {
                 this.error = false;
                 this.error_msg = null;
             });
+            response = new WithdrawalRequest(response);
             return response;
         } catch (error: any) {
             let parsedError;
