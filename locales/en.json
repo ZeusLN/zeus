@@ -877,7 +877,6 @@
     "views.Settings.Invoices.memoExplainer": "A default memo to use for your invoices.",
     "views.Settings.Invoices.receiverNameExplainer": "A receiver name that is added to all of your invoices, to help payers identify who they are paying.",
     "views.Settings.Channels.title": "Channels settings",
-    "views.Settings.Channels.lsps1ShowPurchaseButton": "Show channel purchase button",
     "views.Settings.Privacy.blockExplorer": "Default Block explorer",
     "views.Settings.Privacy.BlockExplorer.custom": "Custom",
     "views.Settings.Privacy.customBlockExplorer": "Custom Block explorer",
