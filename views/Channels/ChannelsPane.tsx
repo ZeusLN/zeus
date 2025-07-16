@@ -855,8 +855,19 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 {`${localeString(
                                                                     'views.ChannelsPane.pingTime'
                                                                 )}: ${
-                                                                    peer.ping_time
-                                                                }ms`}
+                                                                    BackendUtils.isLNDBased()
+                                                                        ? (
+                                                                              peer.ping_time /
+                                                                              1000
+                                                                          ).toFixed(
+                                                                              peer.ping_time /
+                                                                                  1000 <
+                                                                                  0.01
+                                                                                  ? 3
+                                                                                  : 2
+                                                                          )
+                                                                        : peer.ping_time
+                                                                } ms`}
                                                             </Text>
                                                         )}
                                                         {peer.sats_sent && (
