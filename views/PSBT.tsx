@@ -18,11 +18,16 @@ import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
 import { splitQRs } from '../utils/BbqrUtils';
+import {
+    getQRAnimationInterval,
+    QRAnimationSpeed
+} from '../utils/QRAnimationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ChannelsStore from '../stores/ChannelsStore';
 import TransactionsStore from '../stores/TransactionsStore';
+import QRSpeedToggle from '../components/QRSpeedToggle';
 
 interface PSBTProps {
     navigation: StackNavigationProp<any, any>;
@@ -48,6 +53,7 @@ interface PSBTState {
     bcurEncoder: any;
     bcurPart: string;
     psbtDecoded?: PSBTDecoded;
+    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('ChannelsStore', 'TransactionsStore')
@@ -61,7 +67,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        psbtDecoded: undefined
+        psbtDecoded: undefined,
+        qrAnimationSpeed: 'fast'
     };
 
     UNSAFE_componentWillMount(): void {
@@ -139,6 +146,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
 
         const length = splitResult.parts.length;
 
+        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
+
         setInterval(() => {
             this.setState({
                 frameIndex:
@@ -149,7 +158,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                     this.state.bcurEncoder?.nextPart().toUpperCase() ||
                     undefined
             });
-        }, 1000);
+        }, interval);
     };
 
     render() {
@@ -371,6 +380,17 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                             copyValue={fundedPsbt}
                                             truncateLongValue
                                             expanded
+                                        />
+                                        <QRSpeedToggle
+                                            currentSpeed={
+                                                this.state.qrAnimationSpeed
+                                            }
+                                            onSpeedChange={(speed) => {
+                                                this.setState({
+                                                    qrAnimationSpeed: speed
+                                                });
+                                                this.generateInfo();
+                                            }}
                                         />
                                     </View>
                                     <View style={styles.button}>
