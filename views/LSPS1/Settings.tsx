@@ -7,7 +7,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
-import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -39,7 +38,6 @@ interface LSPS1SettingsState {
     pubkey: string;
     host: string;
     restHost: string;
-    lsps1ShowPurchaseButton: boolean;
     lsps1Token: string;
 }
 
@@ -55,7 +53,6 @@ export default class LSPS1Settings extends React.Component<
             pubkey: '',
             host: '',
             restHost: '',
-            lsps1ShowPurchaseButton: true,
             lsps1Token: ''
         };
     }
@@ -69,10 +66,6 @@ export default class LSPS1Settings extends React.Component<
             pubkey: LSPStore.getLSPSPubkey(),
             host: LSPStore.getLSPSHost(),
             restHost: LSPStore.getLSPS1Rest(),
-            lsps1ShowPurchaseButton:
-                settings?.lsps1ShowPurchaseButton !== null
-                    ? settings.lsps1ShowPurchaseButton
-                    : true,
             lsps1Token: settings?.lsps1Token || ''
         });
     }
@@ -103,8 +96,7 @@ export default class LSPS1Settings extends React.Component<
     };
 
     render() {
-        const { pubkey, host, restHost, lsps1ShowPurchaseButton, lsps1Token } =
-            this.state;
+        const { pubkey, host, restHost, lsps1Token } = this.state;
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { updateSettings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
@@ -266,33 +258,6 @@ export default class LSPS1Settings extends React.Component<
                             onPress={() => this.handleReset()}
                         />
                     )}
-
-                    <View style={{ marginTop: 20 }}>
-                        <Text
-                            style={{
-                                top: 20,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Channels.lsps1ShowPurchaseButton'
-                            )}
-                        </Text>
-                        <Switch
-                            value={lsps1ShowPurchaseButton}
-                            onValueChange={async () => {
-                                this.setState({
-                                    lsps1ShowPurchaseButton:
-                                        !lsps1ShowPurchaseButton
-                                });
-
-                                await updateSettings({
-                                    lsps1ShowPurchaseButton:
-                                        !lsps1ShowPurchaseButton
-                                });
-                            }}
-                        />
-                    </View>
                 </View>
                 <View style={{ marginBottom: 15 }}>
                     <View style={{ marginBottom: 10 }}>
