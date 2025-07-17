@@ -28,7 +28,9 @@
     "gen-proto": "pbjs -t static-module --keep-case -w es6 --force-long -o proto/lightning.js proto/*.proto proto/*/*.proto && pbts -o proto/lightning.d.ts proto/lightning.js",
     "gradlew": "cd android && ./gradlew",
     "android:clean": "yarn gradlew clean",
-    "fetch-libraries": "bash fetch-libraries.sh"
+    "fetch-libraries": "bash fetch-libraries.sh",
+    "fix-all": "yarn prettier-write && yarn lint-fix",
+"lint-fix": "eslint --ext .js,.ts,.tsx \"*.@(js|ts|tsx)\" . --fix"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.1.1",
