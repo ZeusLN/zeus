@@ -6,18 +6,20 @@ import Transaction from '../models/Transaction';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
+import WithdrawalRequest from '../models/WithdrawalRequest';
 
 class ActivityFilterUtils {
     public filterActivities(
-        activities: Array<Invoice | Payment | Transaction>,
+        activities: Array<Invoice | Payment | Transaction | WithdrawalRequest>,
         filter: Filter
-    ): Array<Invoice | Payment | Transaction> {
+    ): Array<Invoice | Payment | Transaction | WithdrawalRequest> {
         let filteredActivity = activities;
         if (filter.lightning == false) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>
                     !(
                         activity instanceof Invoice ||
+                        activity instanceof WithdrawalRequest ||
                         activity instanceof Payment
                     )
             );
@@ -148,9 +150,12 @@ class ActivityFilterUtils {
                 filter.startDate.getMonth(),
                 filter.startDate.getDate()
             );
-            filteredActivity = filteredActivity.filter(
-                (activity) => activity.getDate.getTime() >= startDate.getTime()
-            );
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity instanceof WithdrawalRequest) {
+                    return true;
+                }
+                return activity.getDate.getTime() >= startDate.getTime();
+            });
         }
 
         if (filter.endDate) {
@@ -163,9 +168,12 @@ class ActivityFilterUtils {
             )
                 .add(1, 'day')
                 .toDate();
-            filteredActivity = filteredActivity.filter(
-                (activity) => activity.getDate.getTime() < endDate.getTime()
-            );
+            filteredActivity = filteredActivity.filter((activity) => {
+                if (activity instanceof WithdrawalRequest) {
+                    return true;
+                }
+                return activity.getDate.getTime() < endDate.getTime();
+            });
         }
         if (filter.memo !== '') {
             const memoFilter = filter.memo.toLowerCase();
