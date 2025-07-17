@@ -23,6 +23,7 @@ import {
     SuccessMessage
 } from '../../components/SuccessErrorMessage';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
+import ModalBox from '../../components/ModalBox';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -56,6 +57,8 @@ import History from '../../assets/images/SVG/History.svg';
 import { Icon } from 'react-native-elements';
 import KeyIcon from '../../assets/images/SVG/Key.svg';
 
+import Storage from '../../storage';
+
 interface SwapProps {
     navigation: StackNavigationProp<any, 'Swaps'>;
     route: RouteProp<any, 'Swaps'>;
@@ -86,6 +89,8 @@ interface SwapState {
     paramsProcessed?: boolean;
     lastUsedKey?: number;
     seedPhrase?: string[];
+    isModalVisible: boolean;
+    showRescueKeyBtn: boolean;
 }
 
 @inject(
@@ -116,7 +121,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         feeSettingToggle: false,
         paramsProcessed: false,
         lastUsedKey: 0,
-        seedPhrase: []
+        seedPhrase: [],
+        isModalVisible: false,
+        showRescueKeyBtn: false
     };
 
     private _unsubscribe?: () => void;
@@ -204,18 +211,51 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
     async componentDidMount() {
         const { SwapStore } = this.props;
-        const { generateRescueKey } = SwapStore;
+
+        const checkAndShowModal = async () => {
+            if (!SwapStore.loading) {
+                const mnemonic = await Storage.getItem('rescue-key');
+                console.log('Existing mnemonic:', mnemonic);
+                if (mnemonic) {
+                    this.setState({
+                        showRescueKeyBtn: true,
+                        seedPhrase: mnemonic.split(' ')
+                    });
+                } else {
+                    this.setState({ isModalVisible: true });
+                }
+            } else {
+                setTimeout(checkAndShowModal, 100);
+            }
+        };
+
+        checkAndShowModal();
 
         initEccLib(ecc);
         SwapStore.ECPair = ECPairFactory(ecc);
 
-        const mnemonic = await generateRescueKey();
-        this.setState({ seedPhrase: mnemonic.split(' ') });
-
-        this._unsubscribe = this.props.navigation.addListener(
+        const unsubBlur = this.props.navigation.addListener(
             'blur',
             this.resetFields
         );
+        const unsubFocus = this.props.navigation.addListener(
+            'focus',
+            async () => {
+                const mnemonic = await Storage.getItem('rescue-key');
+                if (mnemonic) {
+                    this.setState({
+                        isModalVisible: false,
+                        showRescueKeyBtn: true,
+                        seedPhrase: mnemonic.split(' ')
+                    });
+                }
+            }
+        );
+
+        this._unsubscribe = () => {
+            unsubBlur();
+            unsubFocus();
+        };
     }
 
     async componentDidUpdate(
@@ -381,6 +421,112 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
     };
 
+    renderRescueKeyModal = () => {
+        const { isModalVisible } = this.state;
+
+        const { SwapStore, navigation } = this.props;
+
+        const { generateRescueKey } = SwapStore;
+
+        return (
+            <ModalBox
+                isOpen={isModalVisible}
+                style={{
+                    backgroundColor: 'transparent'
+                }}
+                onClosed={() => {
+                    this.setState({
+                        isModalVisible: false
+                    });
+                }}
+                position="center"
+            >
+                <View
+                    style={{
+                        flex: 1,
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}
+                >
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            borderRadius: 24,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
+                        }}
+                    >
+                        <>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    marginBottom: 12,
+                                    fontSize: 22,
+                                    textAlign: 'center',
+                                    fontWeight: 'bold'
+                                }}
+                            >
+                                {localeString('views.Swaps.rescueKey')}
+                            </Text>
+                            <Text
+                                style={{
+                                    fontFamily: 'PPNeueMontreal-Book',
+                                    color: themeColor('text'),
+                                    marginBottom: 12,
+                                    fontSize: 18,
+                                    textAlign: 'center'
+                                }}
+                            >
+                                {`${localeString(
+                                    'views.Swaps.rescueKey.modal.text1'
+                                )}\n\n${localeString(
+                                    'views.Swaps.rescueKey.modal.text2'
+                                )}\n\n${localeString(
+                                    'views.Swaps.rescueKey.modal.text3'
+                                )}`}
+                            </Text>
+                        </>
+
+                        <Button
+                            title={localeString(
+                                'views.Swaps.rescueKey.generateNewKey'
+                            )}
+                            onPress={async () => {
+                                const mnemonic = await generateRescueKey();
+                                if (!mnemonic) return;
+
+                                this.setState({
+                                    seedPhrase: mnemonic.split(' '),
+                                    isModalVisible: false,
+                                    showRescueKeyBtn: true
+                                });
+
+                                navigation.navigate('Seed', {
+                                    seedPhrase: mnemonic.split(' ')
+                                });
+                            }}
+                            containerStyle={{ marginTop: 16, marginBottom: 16 }}
+                        />
+
+                        <Button
+                            title={localeString(
+                                'views.Swaps.rescueKey.importExistingKey'
+                            )}
+                            onPress={() => {
+                                navigation.navigate('SeedRecovery', {
+                                    verifyRescueKey: true
+                                });
+                            }}
+                            tertiary
+                        />
+                    </View>
+                </View>
+            </ModalBox>
+        );
+    };
+
     render() {
         const {
             SwapStore,
@@ -403,7 +549,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             isValid,
             fetchingInvoice,
             fee,
-            feeSettingToggle
+            feeSettingToggle,
+            showRescueKeyBtn
         } = this.state;
         const { subInfo, reverseInfo, loading, apiError, clearError } =
             SwapStore;
@@ -462,21 +609,23 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             </TouchableOpacity>
         );
 
-        const RescueKeyPhrase = () => (
-            <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
-                <KeyIcon
-                    onPress={() => {
-                        navigation.navigate('Seed', {
-                            seedPhrase: this.state.seedPhrase
-                        });
-                    }}
-                    underlayColor="transparent"
-                    fill={themeColor('text')}
-                    width={32}
-                    height={32}
-                />
-            </TouchableOpacity>
-        );
+        const RescueKeyPhrase = () => {
+            return (
+                <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
+                    <KeyIcon
+                        onPress={() => {
+                            navigation.navigate('Seed', {
+                                seedPhrase: this.state.seedPhrase
+                            });
+                        }}
+                        underlayColor="transparent"
+                        fill={themeColor('text')}
+                        width={32}
+                        height={32}
+                    />
+                </TouchableOpacity>
+            );
+        };
 
         const min = calculateLimit(
             info?.limits?.minimal || 0,
@@ -501,6 +650,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         return (
             <Screen>
+                {this.renderRescueKeyModal()}
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -514,7 +664,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         <Row>
                             {!loading && (
                                 <>
-                                    <RescueKeyPhrase />
+                                    {showRescueKeyBtn ? (
+                                        <RescueKeyPhrase />
+                                    ) : (
+                                        <></>
+                                    )}
                                     <SettingsBtn />
                                     <SwapsPaneBtn />
                                 </>
@@ -1557,6 +1711,12 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         justifyContent: 'center',
         alignItems: 'center'
     }
