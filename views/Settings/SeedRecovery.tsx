@@ -41,11 +41,16 @@ import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 import SettingsStore from '../../stores/SettingsStore';
 import SwapStore from '../../stores/SwapStore';
 
+import Storage from '../../storage';
+
 interface SeedRecoveryProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     SwapStore: SwapStore;
-    route: Route<'SeedRecovery', { network: string; restoreSwaps?: boolean }>;
+    route: Route<
+        'SeedRecovery',
+        { network: string; restoreSwaps?: boolean; verifyRescueKey?: boolean }
+    >;
 }
 
 interface SeedRecoveryState {
@@ -67,6 +72,7 @@ interface SeedRecoveryState {
     errorCreatingWallet: boolean;
     errorMsg: string;
     restoreSwaps?: boolean;
+    verifyRescueKey?: boolean;
 }
 
 @inject('SettingsStore', 'SwapStore')
@@ -112,7 +118,8 @@ export default class SeedRecovery extends React.PureComponent<
     async initFromProps(props: SeedRecoveryProps) {
         const network = props.route.params?.network ?? 'mainnet';
         const restoreSwaps = props.route.params?.restoreSwaps ?? false;
-        this.setState({ network, restoreSwaps });
+        const verifyRescueKey = props.route.params?.verifyRescueKey ?? false;
+        this.setState({ network, restoreSwaps, verifyRescueKey });
     }
 
     async UNSAFE_componentWillMount() {
@@ -193,7 +200,8 @@ export default class SeedRecovery extends React.PureComponent<
             showSuggestions,
             filteredData,
             errorMsg,
-            restoreSwaps
+            restoreSwaps,
+            verifyRescueKey
         } = this.state;
 
         const filterData = (text: string) =>
@@ -223,9 +231,9 @@ export default class SeedRecovery extends React.PureComponent<
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
                                 if (
-                                    (this.state.restoreSwaps &&
+                                    ((restoreSwaps || verifyRescueKey) &&
                                         selectedWordIndex < 11) ||
-                                    (!this.state.restoreSwaps &&
+                                    ((!restoreSwaps || !verifyRescueKey) &&
                                         selectedWordIndex < 23)
                                 ) {
                                     this.setState({
@@ -389,6 +397,8 @@ export default class SeedRecovery extends React.PureComponent<
                     centerComponent={{
                         text: restoreSwaps
                             ? localeString('views.Swaps.restoreSwaps')
+                            : verifyRescueKey
+                            ? localeString('views.Swaps.rescueKey.import')
                             : localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
@@ -461,7 +471,7 @@ export default class SeedRecovery extends React.PureComponent<
                                             });
                                         }
                                         if (
-                                            this.state.restoreSwaps &&
+                                            (restoreSwaps || verifyRescueKey) &&
                                             (selectedWordIndex == null ||
                                                 selectedWordIndex >= 12)
                                         ) {
@@ -483,7 +493,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                     keyboardShouldPersistTaps="handled"
                                 >
-                                    {restoreSwaps ? (
+                                    {restoreSwaps || verifyRescueKey ? (
                                         <>
                                             <View
                                                 style={{
@@ -586,7 +596,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     )}
                                 </ScrollView>
 
-                                {!restoreSwaps && (
+                                {!(restoreSwaps || verifyRescueKey) && (
                                     <View
                                         style={{
                                             flexGrow: 1,
@@ -633,7 +643,7 @@ export default class SeedRecovery extends React.PureComponent<
                                 </View>
                             </ScrollView>
                         )}
-                        {!showSuggestions && restoreSwaps && (
+                        {!showSuggestions && (restoreSwaps || verifyRescueKey) && (
                             <Button
                                 title={localeString(
                                     'views.Swaps.rescueKey.upload'
@@ -721,6 +731,26 @@ export default class SeedRecovery extends React.PureComponent<
                                                     );
                                                 }
                                             );
+                                        } else if (verifyRescueKey) {
+                                            console.log(
+                                                'Verifying rescue key...'
+                                            );
+
+                                            const mnemonic = seedArray
+                                                .join(' ')
+                                                .trim();
+
+                                            await Storage.setItem(
+                                                'rescue-key',
+                                                mnemonic
+                                            );
+
+                                            console.log(
+                                                'Rescue key verified and saved!',
+                                                mnemonic
+                                            );
+
+                                            navigation.goBack();
                                         } else {
                                             restore();
                                         }
@@ -729,6 +759,10 @@ export default class SeedRecovery extends React.PureComponent<
                                         restoreSwaps
                                             ? localeString(
                                                   'views.Swaps.restoreSwaps'
+                                              )
+                                            : verifyRescueKey
+                                            ? localeString(
+                                                  'views.Swaps.rescueKey.import'
                                               )
                                             : network === 'mainnet'
                                             ? localeString(
@@ -739,7 +773,7 @@ export default class SeedRecovery extends React.PureComponent<
                                               )
                                     }
                                     disabled={
-                                        restoreSwaps
+                                        restoreSwaps || verifyRescueKey
                                             ? seedArray.length !== 12 ||
                                               seedArray.some((seed) => !seed)
                                             : seedArray.length !== 24 ||
