@@ -671,18 +671,12 @@ export default class SwapStore {
 
     @action
     public generateRescueKey = async () => {
-        const existingMnemonic = await Storage.getItem('rescue-key');
+        console.log('GENERATING RESCUE FILE...');
+        const mnemonic = bip39.generateMnemonic();
+        await Storage.setItem('rescue-key', mnemonic);
+        console.log('Generated rescue key:', mnemonic);
 
-        if (!existingMnemonic) {
-            console.log('GENERATING RESCUE FILE...');
-            const mnemonic = bip39.generateMnemonic();
-            await Storage.setItem('rescue-key', mnemonic);
-            console.log('Generated rescue key:', mnemonic);
-        } else {
-            console.log('!Rescue key already exists!');
-        }
-
-        return existingMnemonic || (await Storage.getItem('rescue-key'));
+        return mnemonic;
     };
 
     @action

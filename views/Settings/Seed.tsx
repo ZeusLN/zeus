@@ -410,11 +410,14 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    await Storage.setItem(
-                                        IS_BACKED_UP_KEY,
-                                        true
-                                    );
-                                    navigation.popTo('Wallet');
+                                    if (isRefundRescueKey) navigation.goBack();
+                                    else {
+                                        await Storage.setItem(
+                                            IS_BACKED_UP_KEY,
+                                            true
+                                        );
+                                        navigation.popTo('Wallet');
+                                    }
                                 }}
                                 title={
                                     isRefundRescueKey
