@@ -69,6 +69,7 @@ interface DisplaySettings {
 export enum PosEnabled {
     Disabled = 'disabled',
     Square = 'square',
+    Clover = 'clover',
     Standalone = 'standalone'
 }
 
@@ -77,6 +78,9 @@ interface PosSettings {
     squareEnabled?: boolean;
     squareAccessToken?: string;
     squareLocationId?: string;
+    cloverMerchantId?: string;
+    cloverApiToken?: string;
+    cloverDevMode?: boolean;
     merchantName?: string;
     confirmationPreference?: string;
     disableTips?: boolean;
@@ -1066,7 +1070,9 @@ export const POS_ENABLED_KEYS = [
         tanslateKey: 'views.Settings.POS.standalone',
         value: PosEnabled.Standalone
     },
-    { key: 'Square', value: PosEnabled.Square }
+    { key: 'Square', value: PosEnabled.Square },
+
+    { key: 'Clover', value: PosEnabled.Clover }
 ];
 
 export const LNDHUB_AUTH_MODES = [

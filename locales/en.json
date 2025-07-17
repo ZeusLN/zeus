@@ -912,6 +912,8 @@
     "views.Settings.POS.enablePos": "Enable POS integration",
     "views.Settings.POS.squareAccessToken": "Square Access token",
     "views.Settings.POS.squareLocationId": "Square Location ID",
+    "views.Settings.POS.cloverMerchantId": "Clover Merchant Identifier",
+    "views.Settings.POS.cloverApiToken": "Clover Api Token",
     "views.Settings.POS.merchantName": "Merchant name (Optional, used for invoice memos)",
     "views.Settings.POS.confPref": "Confirmation preference",
     "views.Settings.POS.disableTips": "Disable tips",
