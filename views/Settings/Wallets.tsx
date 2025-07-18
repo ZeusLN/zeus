@@ -82,6 +82,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         if (this.props.route?.params?.fromStartup) {
             this.setState({
                 fromStartup: true,
+                isSelecting: true, // Hide back button when coming from startup
                 selectedNode: null // Set selectedNode to null when in startup mode
             });
         }
