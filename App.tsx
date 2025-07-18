@@ -43,6 +43,7 @@ import ExternalLinkModal from './components/Modals/ExternalLinkModal';
 import AndroidNfcModal from './components/Modals/AndroidNfcModal';
 import InfoModal from './components/Modals/InfoModal';
 import ShareModal from './components/Modals/ShareModal';
+import NewChannelModal from './components/Modals/NewChannelModal';
 
 // Views
 import Transaction from './views/Transaction';
@@ -1208,6 +1209,8 @@ export default class App extends React.PureComponent {
                             <InfoModal />
                             {/* @ts-ignore:next-line */}
                             <ShareModal />
+                            {/* @ts-ignore:next-line */}
+                            <NewChannelModal />
                         </GestureHandlerRootView>
                     </PushNotificationManager>
                 </AppContainer>

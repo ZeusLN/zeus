@@ -473,7 +473,7 @@ export default class WalletHeader extends React.Component<
 
         const OpenChannelButton = () => (
             <TouchableOpacity
-                onPress={() => navigation.navigate('OpenChannel')}
+                onPress={() => ModalStore?.toggleNewChannelModal()}
                 accessibilityLabel={localeString('views.Wallet.Channels.open')}
             >
                 <Add

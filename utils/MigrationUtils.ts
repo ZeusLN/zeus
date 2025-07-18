@@ -189,10 +189,6 @@ class MigrationsUtils {
                 newSettings.lsps1Token = '';
             }
 
-            if (!newSettings?.lsps1ShowPurchaseButton) {
-                newSettings.lsps1ShowPurchaseButton = true;
-            }
-
             settingsStore.setSettings(JSON.stringify(newSettings));
             await EncryptedStorage.setItem(MOD_KEY4, 'true');
         }
