@@ -167,7 +167,7 @@ export default class PaymentView extends React.Component<
                             sensitive
                             toggleable
                             pending={isInTransit}
-                            exact={true}
+                            showExactAmount={true}
                         />
                     </View>
 
@@ -192,7 +192,7 @@ export default class PaymentView extends React.Component<
                                             debit
                                             sensitive
                                             toggleable
-                                            exact={true}
+                                            showExactAmount={true}
                                         />
                                         {getFeePercentage && (
                                             <Text
