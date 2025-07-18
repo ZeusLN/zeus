@@ -82,7 +82,7 @@ export default class PointOfSale extends React.Component<
             squareLocationId: settings?.pos?.squareLocationId || '',
             cloverMerchantId: settings?.pos?.cloverMerchantId || '',
             cloverApiToken: settings?.pos?.cloverApiToken || '',
-            cloverDevMode: settings?.pos?.cloverDevMode || '',
+            cloverDevMode: settings?.pos?.cloverDevMode || false,
             merchantName: settings?.pos?.merchantName || '',
             confirmationPreference:
                 settings?.pos?.confirmationPreference || 'lnOnly',

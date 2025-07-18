@@ -821,8 +821,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         <SquarePosPane navigation={navigation} />
                     )}
                     {posEnabled === PosEnabled.Clover && (
-                        // TODO: Put clover view
-                        // <CloverPosPane navigation={navigation} />
                         <CloverPosPane navigation={navigation} />
                     )}
                     {posEnabled === PosEnabled.Standalone && (
