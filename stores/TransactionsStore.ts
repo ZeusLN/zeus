@@ -16,6 +16,8 @@ import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
+import ExpressGraphSyncDetector from '../utils/ExpressGraphSyncDetector';
+import OnDemandGraphSync from '../utils/OnDemandGraphSync';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -63,10 +65,14 @@ export default class TransactionsStore {
     @observable broadcast_err: string | null;
     // coin control
     @observable funded_psbt: string = '';
+    // Express Graph Sync modal
+    @observable expressGraphSyncModalCallback: (() => void) | null = null;
+    @observable pendingPaymentForModal: any = null;
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
     channelsStore: ChannelsStore;
+    expressGraphSyncDetector: ExpressGraphSyncDetector;
 
     constructor(
         settingsStore: SettingsStore,
@@ -76,6 +82,9 @@ export default class TransactionsStore {
         this.settingsStore = settingsStore;
         this.nodeInfoStore = nodeInfoStore;
         this.channelsStore = channelsStore;
+        this.expressGraphSyncDetector = new ExpressGraphSyncDetector(
+            settingsStore
+        );
     }
 
     @action
@@ -97,6 +106,20 @@ export default class TransactionsStore {
         this.broadcast_txid = '';
         this.broadcast_err = null;
         this.funded_psbt = '';
+        this.expressGraphSyncModalCallback = null;
+        this.pendingPaymentForModal = null;
+    };
+
+    @action
+    public setExpressGraphSyncModalCallback = (
+        callback: (() => void) | null
+    ) => {
+        this.expressGraphSyncModalCallback = callback;
+    };
+
+    @action
+    public setPendingPaymentForModal = (paymentData: any) => {
+        this.pendingPaymentForModal = paymentData;
     };
 
     public getTransactions = async () => {
@@ -548,6 +571,109 @@ export default class TransactionsStore {
                 ? BackendUtils.sendKeysend
                 : BackendUtils.payLightningInvoice;
 
+        // Check if this is the first payment attempt and Express Graph Sync is disabled
+        this.expressGraphSyncDetector
+            .detectPaymentAttempt()
+            .then(async (detectionResult) => {
+                // Check if we need to run on-demand graph sync for first session
+                const graphSyncStatus =
+                    await OnDemandGraphSync.checkGraphSyncStatus();
+
+                if (
+                    graphSyncStatus.requiresSync &&
+                    !graphSyncStatus.isCompleted
+                ) {
+                    console.log(
+                        '[TransactionsStore] First session payment detected, ensuring graph sync...'
+                    );
+
+                    // Show loading indicator
+                    runInAction(() => {
+                        this.loading = true;
+                        this.error = false;
+                        this.error_msg = localeString(
+                            'views.Wallet.Wallet.expressGraphSync'
+                        ).replace('Zeus', 'ZEUS');
+                    });
+
+                    // Run on-demand graph sync
+                    const syncSuccess =
+                        await OnDemandGraphSync.ensureGraphSyncCompleted();
+
+                    if (!syncSuccess) {
+                        runInAction(() => {
+                            this.loading = false;
+                            this.error = true;
+                            this.error_msg = localeString(
+                                'stores.TransactionsStore.graphSyncRequired'
+                            );
+                        });
+                        return;
+                    }
+
+                    // Reset loading state
+                    runInAction(() => {
+                        this.error_msg = null;
+                    });
+                }
+
+                if (
+                    detectionResult.shouldPrompt &&
+                    this.expressGraphSyncModalCallback
+                ) {
+                    // Store the payment data for later execution
+                    this.setPendingPaymentForModal({
+                        payment_request,
+                        amount,
+                        pubkey,
+                        max_parts,
+                        max_shard_amt,
+                        fee_limit_sat,
+                        max_fee_percent,
+                        outgoing_chan_id,
+                        last_hop_pubkey,
+                        message,
+                        amp,
+                        timeout_seconds
+                    });
+
+                    // Trigger the modal display via callback
+                    this.expressGraphSyncModalCallback();
+
+                    // Return early - payment will be executed after modal interaction
+                    return;
+                }
+
+                // If no prompt needed, continue with payment
+                this.executePayment(data, payFunc);
+            })
+            .catch((error) => {
+                console.error('Error detecting first payment attempt:', error);
+                // On error, continue with payment
+                this.executePayment(data, payFunc);
+            });
+
+        // For LNC, we need to return something for streaming
+        if (this.settingsStore.implementation === 'lightning-node-connect') {
+            return payFunc(data);
+        }
+    };
+
+    @action
+    public executePaymentAfterModal = () => {
+        if (!this.pendingPaymentForModal) {
+            console.error('No pending payment data for modal');
+            return;
+        }
+
+        const paymentData = this.pendingPaymentForModal;
+        this.pendingPaymentForModal = null;
+
+        // Reconstruct the payment request
+        this.sendPayment(paymentData);
+    };
+
+    private executePayment = (data: any, payFunc: any) => {
         if (this.settingsStore.implementation === 'lightning-node-connect') {
             return payFunc(data);
         } else {
