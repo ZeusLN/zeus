@@ -1098,7 +1098,7 @@
     "views.Activity.noActivity": "目前還沒有異動紀錄",
     "views.Activity.expired": "已過期",
     "views.Activity.youSent": "送出",
-    "views.Activity.outgoingWithdrawal": "送出中的提領",
+    "views.Activity.outgoingWithdrawal": "送出中的取款",
     "views.Activity.pendingWithdrawal": "待結算的取款",
     "views.Activity.youReceived": "收到",
     "views.Activity.youReceivedAmp": "送出 (AMP)",
