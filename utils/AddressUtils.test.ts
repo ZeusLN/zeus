@@ -1109,4 +1109,38 @@ describe('AddressUtils', () => {
             }).toThrow('Unknown scriptPubKey format');
         });
     });
+
+    describe('isValidWithdrawalRequest', () => {
+        it('should validate valid withdrawal request strings', () => {
+            const validWithdrawalRequest =
+                'lnr1qqg24k0v4ygx67zt94pe8dy4vdrj7zszgan4qgqxyfhyvyg6pdvu4tcjvpp7kkal9rp57wj7xv4pl3ajku70rzy3pafqyfcstqssxp3405h56f855566kxfr0rqltj9w3gxp279eqryud6v9tzhjjnpy7pqgykutu3scypzk86nh9deln87f9g9309duehepgs4d7g9gtne05lfwmpfty0sas72rqelsgqr4fmaw7jg7k7fq60xun0cx67nhl8tceq';
+            expect(
+                AddressUtils.isValidWithdrawalRequest(validWithdrawalRequest)
+            ).toBeTruthy();
+        });
+
+        it('should validate withdrawal request strings with different lengths', () => {
+            const shortWithdrawalRequest =
+                'lnr1qqg24k0v4ygx67zt94pe8dy4vdrj7zszgan4qgqxyfhyvyg6pdvu4tcjvpp7kkal9rp57wj7xv4pl3ajku70rzy3pafqyfcstqssxp3405h56f855566kxfr0rqltj9w3gxp279eqryud6v9tzhjjnpy7pqgykutu3scypzk86nh9deln87f9g9309duehepgs4d7g9gtne05lfwmpfty0sas72rqelsgqr4fmaw7jg7k7fq60xun0cx67nhl8tce';
+            expect(
+                AddressUtils.isValidWithdrawalRequest(shortWithdrawalRequest)
+            ).toBeTruthy();
+        });
+
+        it("should invalidate strings that don't start with lnr1qqg", () => {
+            const invalidString =
+                'lnr2qqg24k0v4ygx67zt94pe8dy4vdrj7zszgan4qgqxyfhyvyg6pdvu4tcjvpp7kkal9rp57wj7xv4pl3ajku70rzy3pafqyfcstqssxp3405h56f855566kxfr0rqltj9w3gxp279eqryud6v9tzhjjnpy7pqgykutu3scypzk86nh9deln87f9g9309duehepgs4d7g9gtne05lfwmpfty0sas72rqelsgqr4fmaw7jg7k7fq60xun0cx67nhl8tceq';
+            expect(
+                AddressUtils.isValidWithdrawalRequest(invalidString)
+            ).toBeFalsy();
+        });
+
+        it('should invalidate strings with invalid characters', () => {
+            const invalidString =
+                'lnr1qqg24k0v4ygx67zt94pe8dy4vdrj7zszgan4qgqxyfhyvyg6pdvu4tcjvpp7kkal9rp57wj7xv4pl3ajku70rzy3pafqyfcstqssxp3405h56f855566kxfr0rqltj9w3gxp279eqryud6v9tzhjjnpy7pqgykutu3scypzk86nh9deln87f9g9309duehepgs4d7g9gtne05lfwmpfty0sas72rqelsgqr4fmaw7jg7k7fq60xun0cx67nhl8tce!';
+            expect(
+                AddressUtils.isValidWithdrawalRequest(invalidString)
+            ).toBeFalsy();
+        });
+    });
 });

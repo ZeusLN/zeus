@@ -771,6 +771,7 @@ export default class LND {
     supportsAccounts = () => this.supports('v0.13.0');
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
+    supportsWithdrawalRequests = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsNestedSegWit = () => true;

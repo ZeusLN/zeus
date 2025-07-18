@@ -371,6 +371,7 @@ export default class EmbeddedLND extends LND {
     supportsAccounts = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
+    supportsWithdrawalRequests = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => true;
     supportsNestedSegWit = () => true;

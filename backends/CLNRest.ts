@@ -266,7 +266,6 @@ export default class CLNRest {
                 invoiceList.push({
                     label: invoice[0],
                     bolt11: invoice[1],
-                    bolt12: invoice[2],
                     payment_hash: invoice[3],
                     amount_msat: invoice[4],
                     status: invoice[5],
@@ -439,6 +438,32 @@ export default class CLNRest {
     // BOLT 12 / Offers
     listOffers = () =>
         this.postRequest('/v1/listoffers', { active_only: true });
+    createWithdrawalRequest = ({
+        amount,
+        description
+    }: {
+        amount: string;
+        description: string;
+    }) => {
+        return this.postRequest('/v1/invoicerequest', {
+            amount: Number(amount),
+            description
+        });
+    };
+    listWithdrawalRequests = () => this.postRequest('/v1/listinvoicerequests');
+    redeemWithdrawalRequest = ({
+        invreq,
+        label
+    }: {
+        invreq: string;
+        label: string;
+    }) => {
+        return this.postRequest('/v1/sendinvoice', {
+            invreq,
+            label
+        });
+    };
+    listInvoices = () => this.postRequest('/v1/listinvoices');
     createOffer = ({
         description,
         label,
@@ -480,6 +505,7 @@ export default class CLNRest {
     supportsCoinControl = () => true;
     supportsChannelCoinControl = () => true;
     supportsHopPicking = () => false;
+    supportsWithdrawalRequests = () => true;
     supportsAccounts = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;

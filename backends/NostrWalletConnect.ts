@@ -101,6 +101,7 @@ export default class NostrWalletConnect {
     supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => false;
+    supportsWithdrawalRequests = () => false;
     singleFeesEarnedTotal = () => false;
     supportsAddressTypeSelection = () => false;
     supportsNestedSegWit = () => false;
