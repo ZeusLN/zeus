@@ -14,6 +14,7 @@ export interface LineItem {
     name: string;
     quantity: number;
     base_price_money: BasePriceMoney;
+    // Product ID used to identify products in Clover
     productId?: string;
     taxPercentage?: string;
 }

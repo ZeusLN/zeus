@@ -108,29 +108,32 @@ export default class PosStore {
             preimage
         });
 
-        Storage.getItem(`pos-clover-order-${orderId}`).then(
-            async (storedCloverOrder: any) => {
-                const cloverOrder = JSON.parse(storedCloverOrder);
-                if (cloverOrder) {
-                    try {
-                        await CloverUtils.recordCloverPayment(
-                            this.settingsStore,
-                            cloverOrder.orderId,
-                            cloverOrder.total,
-                            orderTip
-                                ? Number(orderTip) - cloverOrder.total
-                                : undefined
-                        );
-                    } catch (err) {
-                        console.log('Could not record clover payment.', err);
-                    }
+        if (this.settingsStore.settings.pos.posEnabled == PosEnabled.Clover) {
+            this.recordCloverPayment(orderId, orderTip);
+        }
+    };
 
-                    Storage.removeItem(`pos-clover-order-${orderId}`);
-                } else {
-                    console.log('Could not record clover payment.');
-                }
-            }
+    private recordCloverPayment = async (
+        orderId: string,
+        orderTip: string
+    ): Promise<void> => {
+        const storedCloverOrder: any = await Storage.getItem(
+            `pos-clover-order-${orderId}`
         );
+
+        const cloverOrder = JSON.parse(storedCloverOrder);
+        if (cloverOrder) {
+            await CloverUtils.recordCloverPayment(
+                this.settingsStore,
+                cloverOrder.orderId,
+                cloverOrder.total,
+                orderTip ? Number(orderTip) - cloverOrder.total : undefined
+            );
+
+            await Storage.removeItem(`pos-clover-order-${orderId}`);
+        } else {
+            throw Error('Could not record clover payment');
+        }
     };
 
     public recordInvoice = ({

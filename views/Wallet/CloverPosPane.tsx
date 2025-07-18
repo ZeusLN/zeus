@@ -60,11 +60,18 @@ interface ProductSectionList {
     data: ProductDataItems[];
 }
 
+enum FetchProductsError {
+    NONE,
+    INVALID_CONFIG,
+    ERROR
+}
+
 interface CloverPosPaneState {
     selectedIndex: number;
     search: string;
     fadeAnimation: any;
     productsList: Array<ProductSectionList>;
+    fetchProductsError: FetchProductsError;
     itemQty: number;
     totalMoneyDisplay: string;
 }
@@ -90,6 +97,7 @@ export default class CloverPosPane extends React.PureComponent<
             search: '',
             fadeAnimation: new Animated.Value(1),
             productsList: [],
+            fetchProductsError: FetchProductsError.NONE,
             itemQty: 0,
             totalMoneyDisplay: '0'
         };
@@ -138,16 +146,23 @@ export default class CloverPosPane extends React.PureComponent<
             console.error(
                 'Could not fetch products from clover. Pos is not properly configured'
             );
+            this.setState({
+                fetchProductsError: FetchProductsError.INVALID_CONFIG
+            });
             return;
         }
 
         let products;
+
         try {
             products = await CloverUtils.getCloverProducts(
                 this.props.SettingsStore as SettingsStore
             );
         } catch (err) {
-            console.log('Could not fetch products from clover', err);
+            console.log('Could not fetch products.', err);
+            this.setState({
+                fetchProductsError: FetchProductsError.ERROR
+            });
             return;
         }
 
@@ -167,6 +182,7 @@ export default class CloverPosPane extends React.PureComponent<
         }
 
         this.setState({
+            fetchProductsError: FetchProductsError.NONE,
             productsList: productsList.sort((a, b) => {
                 a.data[0].items = a.data[0].items.sort((_a, _b) =>
                     _a.name.localeCompare(_b.name)
@@ -263,7 +279,6 @@ export default class CloverPosPane extends React.PureComponent<
                 <TouchableHighlight
                     onPress={() => {
                         if (getRate() === '$N/A') return;
-                        console.log('item:', item);
                         navigation.navigate('Order', {
                             order: item
                         });
@@ -439,7 +454,13 @@ export default class CloverPosPane extends React.PureComponent<
             InventoryStore,
             navigation
         } = this.props;
-        const { search, selectedIndex, productsList, itemQty } = this.state;
+        const {
+            search,
+            selectedIndex,
+            productsList,
+            itemQty,
+            fetchProductsError
+        } = this.state;
         const { setFiltersPos } = ActivityStore!;
         const {
             getOrders,
@@ -704,85 +725,120 @@ export default class CloverPosPane extends React.PureComponent<
                         </Text>
                     )}
 
-                {!loading && selectedIndex === 0 && (
-                    <>
-                        <SectionList
-                            sections={productsList}
-                            renderSectionHeader={this.renderSectionHeader}
-                            stickySectionHeadersEnabled={false}
-                            renderItem={this.renderSection}
-                            keyExtractor={(_, index) => `${index}`}
-                            contentContainerStyle={{
-                                marginLeft: 10,
-                                marginRight: 10
-                            }}
-                        />
-                        <View
+                {!loading && fetchProductsError == FetchProductsError.ERROR && (
+                    <Text
+                        style={{
+                            color: themeColor('secondaryText'),
+                            marginTop: 20,
+                            textAlign: 'center'
+                        }}
+                    >
+                        {localeString(
+                            'pos.views.Wallet.CloverPosPane.fetchProductsError'
+                        )}
+                    </Text>
+                )}
+
+                {!loading &&
+                    fetchProductsError == FetchProductsError.INVALID_CONFIG && (
+                        <Text
                             style={{
-                                flexDirection: 'row',
-                                paddingLeft: 10,
-                                paddingRight: 10,
-                                paddingTop: 5,
-                                marginBottom: 10
+                                color: themeColor('secondaryText'),
+                                marginTop: 20,
+                                textAlign: 'center'
                             }}
                         >
-                            <Button
-                                title={`${localeString('general.charge')} (${
-                                    currentOrder
-                                        ? (itemQty > 0 ? `${itemQty} - ` : '') +
-                                          (fiatEnabled
-                                              ? this.state.totalMoneyDisplay
-                                              : ` ${this.props.UnitsStore?.getAmountFromSats(
-                                                    currentOrder?.total_money
-                                                        ?.sats
-                                                )}`)
-                                        : '0'
-                                })`}
-                                containerStyle={{
-                                    borderRadius: 12,
-                                    flex: 3,
-                                    marginRight: 5
-                                }}
-                                titleStyle={{
-                                    color: themeColor('background')
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: themeColor('highlight')
-                                }}
-                                disabled={disableButtons}
-                                onPress={async () => {
-                                    // there is no order so we can't charge
-                                    if (!currentOrder) return;
+                            {localeString(
+                                'pos.views.Wallet.CloverPosPane.InvalidConfigError'
+                            )}
+                        </Text>
+                    )}
 
-                                    // save the current order. This will move it to the open orders screen
-                                    await PosStore?.saveCloverOrder(
+                {!loading &&
+                    fetchProductsError == FetchProductsError.NONE &&
+                    selectedIndex === 0 && (
+                        <>
+                            <SectionList
+                                sections={productsList}
+                                renderSectionHeader={this.renderSectionHeader}
+                                stickySectionHeadersEnabled={false}
+                                renderItem={this.renderSection}
+                                keyExtractor={(_, index) => `${index}`}
+                                contentContainerStyle={{
+                                    marginLeft: 10,
+                                    marginRight: 10
+                                }}
+                            />
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    paddingLeft: 10,
+                                    paddingRight: 10,
+                                    paddingTop: 5,
+                                    marginBottom: 10
+                                }}
+                            >
+                                <Button
+                                    title={`${localeString(
+                                        'general.charge'
+                                    )} (${
                                         currentOrder
-                                    );
+                                            ? (itemQty > 0
+                                                  ? `${itemQty} - `
+                                                  : '') +
+                                              (fiatEnabled
+                                                  ? this.state.totalMoneyDisplay
+                                                  : ` ${this.props.UnitsStore?.getAmountFromSats(
+                                                        currentOrder
+                                                            ?.total_money?.sats
+                                                    )}`)
+                                            : '0'
+                                    })`}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 3,
+                                        marginRight: 5
+                                    }}
+                                    titleStyle={{
+                                        color: themeColor('background')
+                                    }}
+                                    buttonStyle={{
+                                        backgroundColor: themeColor('highlight')
+                                    }}
+                                    disabled={disableButtons}
+                                    onPress={async () => {
+                                        // there is no order so we can't charge
+                                        if (!currentOrder) return;
 
-                                    // now let's create the charge
-                                    navigation.navigate('Order', {
-                                        order: currentOrder
-                                    });
-                                }}
-                            />
-                            <Button
-                                title={localeString('general.clear')}
-                                containerStyle={{
-                                    borderRadius: 12,
-                                    flex: 1
-                                }}
-                                onPress={() => {
-                                    PosStore?.clearCurrentOrder();
-                                    this.setState({
-                                        itemQty: 0,
-                                        totalMoneyDisplay: '0'
-                                    });
-                                }}
-                                disabled={disableButtons}
-                            />
-                        </View>
-                    </>
-                )}
+                                        // save the current order. This will move it to the open orders screen
+                                        await PosStore?.saveCloverOrder(
+                                            currentOrder
+                                        );
+
+                                        // now let's create the charge
+                                        navigation.navigate('Order', {
+                                            order: currentOrder
+                                        });
+                                    }}
+                                />
+                                <Button
+                                    title={localeString('general.clear')}
+                                    containerStyle={{
+                                        borderRadius: 12,
+                                        flex: 1
+                                    }}
+                                    onPress={() => {
+                                        PosStore?.clearCurrentOrder();
+                                        this.setState({
+                                            itemQty: 0,
+                                            totalMoneyDisplay: '0'
+                                        });
+                                    }}
+                                    disabled={disableButtons}
+                                />
+                            </View>
+                        </>
+                    )}
 
                 {!loading &&
                     orders &&
