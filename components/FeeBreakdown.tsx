@@ -117,6 +117,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    showExactAmount={true}
                                 />
                             }
                         />
@@ -141,6 +142,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    showExactAmount={true}
                                 />
                             }
                         />
@@ -169,6 +171,7 @@ export default class FeeBreakdown extends React.Component<
                                                 }
                                                 toggleable
                                                 sensitive
+                                                showExactAmount={true}
                                             />
                                         }
                                     />
@@ -200,6 +203,7 @@ export default class FeeBreakdown extends React.Component<
                                                 }
                                                 toggleable
                                                 sensitive
+                                                showExactAmount={true}
                                             />
                                         }
                                     />
@@ -268,6 +272,7 @@ export default class FeeBreakdown extends React.Component<
                                     }`}
                                     toggleable
                                     sensitive
+                                    showExactAmount={true}
                                 />
                             }
                         />
@@ -278,6 +283,7 @@ export default class FeeBreakdown extends React.Component<
                                     sats={Number(remotePolicy.min_htlc) / 1000}
                                     toggleable
                                     sensitive
+                                    showExactAmount={true}
                                 />
                             }
                         />
@@ -290,6 +296,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    showExactAmount={true}
                                 />
                             }
                         />
@@ -303,6 +310,7 @@ export default class FeeBreakdown extends React.Component<
                                     }
                                     toggleable
                                     sensitive
+                                    showExactAmount={true}
                                 />
                             }
                         />
@@ -366,6 +374,7 @@ export default class FeeBreakdown extends React.Component<
                                         sats={total_satoshis_received}
                                         sensitive
                                         toggleable
+                                        showExactAmount={true}
                                     />
                                 }
                             />
@@ -381,6 +390,7 @@ export default class FeeBreakdown extends React.Component<
                                         sats={total_satoshis_sent}
                                         sensitive
                                         toggleable
+                                        showExactAmount={true}
                                     />
                                 }
                             />
@@ -414,6 +424,7 @@ export default class FeeBreakdown extends React.Component<
                                         sats={commit_fee}
                                         toggleable
                                         sensitive
+                                        showExactAmount={true}
                                     />
                                 }
                                 sensitive
