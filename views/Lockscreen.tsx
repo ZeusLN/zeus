@@ -88,11 +88,10 @@ export default class Lockscreen extends React.Component<
         const { SettingsStore, navigation } = this.props;
         if (targetScreen) {
             navigation.popTo(targetScreen, { ...navigationParams });
-        } else if (
-            SettingsStore.settings.selectNodeOnStartup &&
-            SettingsStore.initialStart
-        ) {
-            navigation.popTo('Wallets');
+        } else if (SettingsStore.settings.selectNodeOnStartup) {
+            // Always navigate to Wallets when selectNodeOnStartup is enabled
+            // Remove the initialStart check to always enforce selection after unlock
+            navigation.replace('Wallets', { fromStartup: true });
         } else {
             // Default login flow
             // Resets navigation stack to previous screen
@@ -242,7 +241,25 @@ export default class Lockscreen extends React.Component<
             (pinAttempt && pinAttempt === pin)
         ) {
             SettingsStore.setLoginStatus(true);
-            if (
+
+            // Check if we're modifying security settings first
+            if (modifySecurityScreen) {
+                this.resetAuthenticationAttempts();
+                navigation.popTo(modifySecurityScreen);
+                return;
+            } else if (deletePin) {
+                this.deletePin();
+                return;
+            } else if (deleteDuressPin) {
+                this.deleteDuressPin();
+                return;
+            } else if (SettingsStore.settings.selectNodeOnStartup) {
+                // Only handle wallet selection when NOT modifying security
+                this.resetAuthenticationAttempts();
+
+                navigation.replace('Wallets', { fromStartup: true });
+                return;
+            } else if (
                 !(
                     SettingsStore.settings.selectNodeOnStartup &&
                     SettingsStore.initialStart
@@ -250,14 +267,7 @@ export default class Lockscreen extends React.Component<
             ) {
                 LinkingUtils.handleInitialUrl(navigation);
             }
-            if (modifySecurityScreen) {
-                this.resetAuthenticationAttempts();
-                navigation.popTo(modifySecurityScreen);
-            } else if (deletePin) {
-                this.deletePin();
-            } else if (deleteDuressPin) {
-                this.deleteDuressPin();
-            } else {
+            if (!SettingsStore.settings.selectNodeOnStartup) {
                 if (
                     (SettingsStore.settings?.pos?.posEnabled ||
                         PosEnabled.Disabled) !== PosEnabled.Disabled
