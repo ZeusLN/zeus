@@ -2442,25 +2442,37 @@ export default class Receive extends React.Component<
                                                                     marginBottom: 10
                                                                 }}
                                                             >
-                                                                <Row justify="space-between">
+                                                                <Row
+                                                                    justify="space-between"
+                                                                    style={{
+                                                                        alignItems:
+                                                                            'center'
+                                                                    }}
+                                                                >
                                                                     <View
                                                                         style={{
                                                                             flex: 1
                                                                         }}
                                                                     >
-                                                                        <Row justify="space-between">
-                                                                            <Text
+                                                                        <Row
+                                                                            justify="space-between"
+                                                                            style={{
+                                                                                alignItems:
+                                                                                    'center'
+                                                                            }}
+                                                                        >
+                                                                            <View
                                                                                 style={{
-                                                                                    ...styles.secondaryText,
-                                                                                    color: themeColor(
-                                                                                        'text'
-                                                                                    )
+                                                                                    flex: 1
                                                                                 }}
                                                                             >
-                                                                                {localeString(
-                                                                                    'views.Receive.expiration'
-                                                                                )}
-                                                                            </Text>
+                                                                                <KeyValue
+                                                                                    keyValue={localeString(
+                                                                                        'views.Receive.expiration'
+                                                                                    )}
+                                                                                />
+                                                                            </View>
+
                                                                             {!durationSettingsToggle && (
                                                                                 <Text
                                                                                     style={{
@@ -2468,6 +2480,8 @@ export default class Receive extends React.Component<
                                                                                         color: themeColor(
                                                                                             'secondaryText'
                                                                                         ),
+                                                                                        textAlign:
+                                                                                            'center',
                                                                                         fontSize: 14
                                                                                     }}
                                                                                 >
@@ -2499,18 +2513,6 @@ export default class Receive extends React.Component<
 
                                                         {durationSettingsToggle && (
                                                             <>
-                                                                <Text
-                                                                    style={{
-                                                                        ...styles.secondaryText,
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        )
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'views.Receive.expiration'
-                                                                    )}
-                                                                </Text>
                                                                 <Row
                                                                     style={{
                                                                         width: '100%'
