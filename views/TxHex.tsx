@@ -26,6 +26,10 @@ import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
 import { splitQRs } from '../utils/BbqrUtils';
+import {
+    getQRAnimationInterval,
+    QRAnimationSpeed
+} from '../utils/QRAnimationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import PrivacyUtils from '../utils/PrivacyUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -34,6 +38,7 @@ import UrlUtils from '../utils/UrlUtils';
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
+import QRSpeedToggle from '../components/QRSpeedToggle';
 
 interface TxHexProps {
     navigation: StackNavigationProp<any, any>;
@@ -52,6 +57,7 @@ interface TxHexState {
     bcurEncoder: any;
     bcurPart: string;
     txDecoded?: any;
+    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
@@ -65,7 +71,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        txDecoded: undefined
+        txDecoded: undefined,
+        qrAnimationSpeed: 'fast' as QRAnimationSpeed
     };
 
     UNSAFE_componentWillMount(): void {
@@ -124,6 +131,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         });
 
         const length = splitResult.parts.length;
+        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
 
         setInterval(() => {
             this.setState({
@@ -133,7 +141,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                         : this.state.frameIndex + 1,
                 bcurPart: this.state.bcurEncoder?.nextPart() || undefined
             });
-        }, 1000);
+        }, interval);
     };
 
     render() {
@@ -379,6 +387,17 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                             copyValue={txHex}
                                             truncateLongValue
                                             expanded
+                                        />
+                                        <QRSpeedToggle
+                                            currentSpeed={
+                                                this.state.qrAnimationSpeed
+                                            }
+                                            onSpeedChange={(speed) => {
+                                                this.setState({
+                                                    qrAnimationSpeed: speed
+                                                });
+                                                this.generateInfo();
+                                            }}
                                         />
                                     </View>
                                     <View style={styles.button}>

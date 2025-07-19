@@ -31,6 +31,11 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Base64Utils from '../../utils/Base64Utils';
 import { splitQRs } from '../../utils/BbqrUtils';
+import {
+    getQRAnimationInterval,
+    QRAnimationSpeed
+} from '../../utils/QRAnimationUtils';
+import QRSpeedToggle from '../../components/QRSpeedToggle';
 
 interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
@@ -50,6 +55,7 @@ interface CashuTokenState {
     cashuFrameIndex: number;
     cashuBcurPart: string;
     isTokenTooLarge: boolean;
+    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('CashuStore', 'ChannelsStore')
@@ -68,7 +74,8 @@ export default class CashuTokenView extends React.Component<
         cashuBcurEncoder: undefined,
         cashuFrameIndex: 0,
         cashuBcurPart: '',
-        isTokenTooLarge: false
+        isTokenTooLarge: false,
+        qrAnimationSpeed: 'fast' as QRAnimationSpeed
     };
 
     async componentDidMount() {
@@ -146,6 +153,8 @@ export default class CashuTokenView extends React.Component<
             isTokenTooLarge: token.length > MAX_TOKEN_LENGTH
         });
 
+        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
+        console.log('interval', interval);
         setInterval(() => {
             this.setState((prevState: any) => ({
                 cashuFrameIndex:
@@ -154,7 +163,7 @@ export default class CashuTokenView extends React.Component<
                         : prevState.cashuFrameIndex + 1,
                 cashuBcurPart: encoder.nextPart()
             }));
-        }, 1000);
+        }, interval);
     };
 
     render() {
@@ -483,6 +492,16 @@ export default class CashuTokenView extends React.Component<
                                     }
                                     truncateLongValue
                                     expanded
+                                />
+                                <QRSpeedToggle
+                                    currentSpeed={this.state.qrAnimationSpeed}
+                                    onSpeedChange={(speed) => {
+                                        this.setState({
+                                            qrAnimationSpeed: speed
+                                        });
+                                        // Restart the animation with new speed
+                                        this.generateCashuInfo(token);
+                                    }}
                                 />
                             </View>
                         </>
