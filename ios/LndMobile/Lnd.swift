@@ -143,6 +143,14 @@ open class Lnd {
     "AutopilotModifyStatus": { bytes, cb in LndmobileAutopilotModifyStatus(bytes, cb) },
     "AutopilotQueryScores": { bytes, cb in LndmobileAutopilotQueryScores(bytes, cb) },
     "AutopilotSetScores": { bytes, cb in LndmobileAutopilotSetScores(bytes, cb) },
+
+     // watchtower client
+    "AddTower": { bytes, cb in LndmobileWatchtowerClientAddTower(bytes, cb) },
+    "RemoveTower": { bytes, cb in LndmobileWatchtowerClientRemoveTower(bytes, cb) },
+    "ListTowers": { bytes, cb in LndmobileWatchtowerClientListTowers(bytes, cb) },
+    "GetTowerInfo": { bytes, cb in LndmobileWatchtowerClientGetTowerInfo(bytes, cb) },
+    "Stats": { bytes, cb in LndmobileWatchtowerClientStats(bytes, cb) },
+    "Policy": { bytes, cb in LndmobileWatchtowerClientPolicy(bytes, cb) }
   ]
 
   static let streamMethods: [String: (Data?, (any LndmobileRecvStreamProtocol)?) -> Void] = [
@@ -186,11 +194,11 @@ open class Lnd {
     let applicationSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let lndPath = applicationSupport.appendingPathComponent(lndDir, isDirectory: true)
 
-    var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" " + args
+    var lndArgs = "--nolisten --lnddir=\"\(lndPath.path)\" --wtclient.active" + args
     if (isTorEnabled) {
       lndArgs += " --tor.active"
     }
-
+    
     let started: Callback = {(data: Data?, error: Error?) in {
       self.lndStarted = true
       lndStartedCallback(data, error)
