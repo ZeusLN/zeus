@@ -110,8 +110,19 @@ import {
     invoicesrpc,
     autopilotrpc,
     routerrpc,
-    walletrpc
+    walletrpc,
+    wtclientrpc
 } from '../proto/lightning';
+// watchtowers
+import {
+    addTower,
+    removeTower,
+    listTowers,
+    getTowerInfo,
+    getStats,
+    getPolicy,
+    PolicyType
+} from './wtclient';
 // @ts-ignore:next-line
 import type { WorkInfo } from './LndMobile.d.ts';
 import { OutPoint } from '../models/TransactionRequest';
@@ -585,6 +596,27 @@ export interface ILndMobileInjections {
             isTestnet?: boolean;
         }) => Promise<string>;
     };
+    wtclient: {
+        addTower: (
+            pubkey: string,
+            address: string
+        ) => Promise<wtclientrpc.AddTowerResponse>;
+        removeTower: (
+            pubkey: string,
+            address?: string
+        ) => Promise<wtclientrpc.RemoveTowerResponse>;
+        listTowers: (
+            includeSessions?: boolean
+        ) => Promise<wtclientrpc.ListTowersResponse>;
+        getTowerInfo: (
+            pubkey: string,
+            includeSessions?: boolean
+        ) => Promise<wtclientrpc.Tower>;
+        getStats: () => Promise<wtclientrpc.StatsResponse>;
+        getPolicy: (
+            policyType?: PolicyType
+        ) => Promise<wtclientrpc.PolicyResponse>;
+    };
 }
 
 // @ts-ignore:next-line
@@ -699,5 +731,13 @@ export default {
         createClaimTransaction,
         createReverseClaimTransaction,
         createRefundTransaction
+    },
+    wtclient: {
+        addTower,
+        removeTower,
+        listTowers,
+        getTowerInfo,
+        getStats,
+        getPolicy
     }
 } as ILndMobileInjections;
