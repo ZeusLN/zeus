@@ -40,6 +40,7 @@ import InvoicesStore from '../../stores/InvoicesStore';
 import FiatStore from '../../stores/FiatStore';
 import SettingsStore from '../../stores/SettingsStore';
 import FeeStore from '../../stores/FeeStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import ArrowDown from '../../assets/images/SVG/Arrow_down.svg';
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
@@ -60,6 +61,7 @@ interface SwapProps {
     FiatStore: FiatStore;
     SettingsStore: SettingsStore;
     FeeStore: FeeStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface SwapState {
@@ -86,7 +88,8 @@ interface SwapState {
     'InvoicesStore',
     'FiatStore',
     'SettingsStore',
-    'FeeStore'
+    'FeeStore',
+    'NodeInfoStore'
 )
 @observer
 export default class Swap extends React.PureComponent<SwapProps, SwapState> {
@@ -153,10 +156,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         let invoiceAddressValid = false;
         if (invoice && invoice.trim() !== '') {
+            const { NodeInfoStore } = this.props;
+            const { nodeInfo } = NodeInfoStore;
+            const { isTestNet } = nodeInfo;
             if (reverse) {
                 invoiceAddressValid = AddressUtils.isValidBitcoinAddress(
                     invoice,
-                    true
+                    isTestNet
                 );
             } else {
                 invoiceAddressValid =

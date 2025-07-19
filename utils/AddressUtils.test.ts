@@ -177,6 +177,12 @@ describe('AddressUtils', () => {
             ).toBeTruthy();
             expect(
                 AddressUtils.isValidBitcoinAddress(
+                    'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+                    true
+                )
+            ).toBeTruthy();
+            expect(
+                AddressUtils.isValidBitcoinAddress(
                     '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
                     false
                 )
