@@ -838,7 +838,7 @@ export default class LND {
             {}
         );
 
-    supportsWtClient = () => false;
+    supportsWtClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;
