@@ -598,7 +598,7 @@ export default class LightningNodeConnect {
             return null;
         }
     };
-
+    supportsWtClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsAddressMessageSigning = () => true;

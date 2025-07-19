@@ -753,6 +753,92 @@ export default class LND {
         }
     };
 
+    listWatchtowers = (params?: {
+        include_sessions?: boolean;
+        exclude_exhausted_sessions?: boolean;
+    }) => {
+        const queryParams = params
+            ? Object.keys(params)
+                  .filter(
+                      (key) => params[key as keyof typeof params] !== undefined
+                  )
+                  .map((key) => `${key}=${params[key as keyof typeof params]}`)
+                  .join('&')
+            : '';
+        const route = queryParams
+            ? `/v2/watchtower/client?${queryParams}`
+            : '/v2/watchtower/client';
+        return this.getRequest(route);
+    };
+
+    addWatchtower = (data: { pubkey: string; address: string }) => {
+        return this.postRequest('/v2/watchtower/client', {
+            pubkey: Base64Utils.hexToBase64(data.pubkey),
+            address: data.address
+        });
+    };
+
+    removeWatchtower = (pubkey: string) => {
+        const pubkeyBase64Url = Base64Utils.base64ToBase64Url(pubkey);
+        const route = `/v2/watchtower/client/${pubkeyBase64Url}`;
+        return this.deleteRequest(route);
+    };
+
+    getWatchtowerInfo = (
+        pubkey: string,
+        params?: {
+            include_sessions?: boolean;
+            exclude_exhausted_sessions?: boolean;
+        }
+    ) => {
+        const pubkeyBase64Url = Base64Utils.base64ToBase64Url(pubkey);
+        const queryParams = params
+            ? Object.keys(params)
+                  .filter(
+                      (key) => params[key as keyof typeof params] !== undefined
+                  )
+                  .map((key) => `${key}=${params[key as keyof typeof params]}`)
+                  .join('&')
+            : '';
+        const route = queryParams
+            ? `/v2/watchtower/client/info/${pubkeyBase64Url}?${queryParams}`
+            : `/v2/watchtower/client/info/${pubkeyBase64Url}`;
+        return this.getRequest(route);
+    };
+
+    deactivateWatchtower = (pubkey: string) => {
+        const pubkeyBase64Url = Base64Utils.base64ToBase64Url(pubkey);
+        return this.postRequest(
+            `/v2/watchtower/client/tower/deactivate/${pubkeyBase64Url}`,
+            {}
+        );
+    };
+
+    activateWatchtower = (data: { pubkey: string; address: string }) => {
+        // Convert base64 pubkey to hex for addWatchtower method
+        const pubkeyHex = Base64Utils.base64ToHex(data.pubkey);
+        return this.addWatchtower({
+            pubkey: pubkeyHex,
+            address: data.address
+        });
+    };
+
+    getWatchtowerStats = () => this.getRequest('/v2/watchtower/client/stats');
+
+    getWatchtowerPolicy = (policy_type?: number) => {
+        const params = policy_type !== undefined ? { policy_type } : {};
+        return this.getRequest('/v2/watchtower/client/policy', params);
+    };
+
+    terminateWatchtowerSession = (session_id: string) =>
+        this.postRequest(
+            `/v2/watchtower/client/sessions/terminate/${Base64Utils.hexToBase64(
+                session_id
+            )}`,
+            {}
+        );
+
+    supportsWtClient = () => false;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;

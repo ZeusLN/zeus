@@ -140,10 +140,28 @@ class BackendUtils {
         this.call('redeemWithdrawalRequest', args);
     listInvoices = (...args: any[]) => this.call('listInvoices', args);
 
+    // Watchtowers
+    listWatchtowers = (...args: any[]) => this.call('listWatchtowers', args);
+    addWatchtower = (...args: any[]) => this.call('addWatchtower', args);
+    removeWatchtower = (...args: any[]) => this.call('removeWatchtower', args);
+    getWatchtowerInfo = (...args: any[]) =>
+        this.call('getWatchtowerInfo', args);
+    deactivateWatchtower = (...args: any[]) =>
+        this.call('deactivateWatchtower', args);
+    activateWatchtower = (...args: any[]) =>
+        this.call('activateWatchtower', args);
+    getWatchtowerStats = (...args: any[]) =>
+        this.call('getWatchtowerStats', args);
+    getWatchtowerPolicy = (...args: any[]) =>
+        this.call('getWatchtowerPolicy', args);
+    terminateWatchtowerSession = (...args: any[]) =>
+        this.call('terminateWatchtowerSession', args);
+
     // lndhub
     login = (...args: any[]) => this.call('login', args);
 
     // services
+    supportsWtClient = () => this.call('supportsWtClient');
     supportsPeers = () => this.call('supportsPeers');
     supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');

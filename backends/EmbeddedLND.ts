@@ -351,7 +351,7 @@ export default class EmbeddedLND extends LND {
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
-
+    supportsWtClient = () => false;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;

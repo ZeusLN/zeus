@@ -12,6 +12,9 @@ class Base64Utils {
     base64ToHex = (input: string) =>
         Buffer.from(input, 'base64').toString('hex');
 
+    base64ToBase64Url = (input: string) => {
+        return input.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    };
     // TODO: rename to better describe the input
     stringToUint8Array = (input: string) =>
         Uint8Array.from(input, (x) => x.charCodeAt(0));
