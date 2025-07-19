@@ -102,7 +102,7 @@ export default class AddWatchtower extends React.Component<
         if (!address || address.trim() === '') {
             this.setState({
                 error: localeString(
-                    'views.Tools.watchtowers.addWatchtower.addressRequired'
+                    'views.Settings.AddEditNode.serverAddressRequired'
                 )
             });
             return;
@@ -220,7 +220,7 @@ export default class AddWatchtower extends React.Component<
                             }}
                         >
                             {localeString(
-                                'views.Tools.watchtowers.addWatchtower.address'
+                                'views.Settings.AddEditNode.serverAddress'
                             )}
                         </Text>
                         <TextInput

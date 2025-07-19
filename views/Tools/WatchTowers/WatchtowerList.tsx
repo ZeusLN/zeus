@@ -22,6 +22,8 @@ import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import Base64Utils from '../../../utils/Base64Utils';
 
+import Add from '../../../assets/images/SVG/Add.svg';
+
 interface WatchtowersProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
@@ -234,7 +236,23 @@ export default class WatchTowers extends React.Component<
         const { navigation } = this.props;
         const { loading, searchQuery, refreshing, error } = this.state;
         const filteredWatchtowers = this.getFilteredWatchtowers();
-
+        const AddButton = () => (
+            <TouchableOpacity
+                onPress={() => navigation.navigate('AddWatchtower')}
+                accessibilityLabel={localeString('general.add')}
+            >
+                <Add
+                    fill={themeColor('text')}
+                    width="30"
+                    height="30"
+                    style={{
+                        alignSelf: 'center',
+                        marginLeft: 8,
+                        marginTop: -4
+                    }}
+                />
+            </TouchableOpacity>
+        );
         return (
             <Screen>
                 <Header
@@ -252,25 +270,7 @@ export default class WatchTowers extends React.Component<
                                 <LoadingIndicator size={24} />
                             </View>
                         ) : !error ? (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate('AddWatchtower')
-                                }
-                                style={{
-                                    width: 32,
-                                    height: 32,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    marginRight: 8
-                                }}
-                            >
-                                <Icon
-                                    name="plus"
-                                    type="feather"
-                                    size={36}
-                                    color={themeColor('text')}
-                                />
-                            </TouchableOpacity>
+                            <AddButton />
                         ) : undefined
                     }
                     navigation={navigation}
