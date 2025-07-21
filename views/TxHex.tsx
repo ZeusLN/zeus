@@ -34,6 +34,10 @@ import UrlUtils from '../utils/UrlUtils';
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import TransactionsStore from '../stores/TransactionsStore';
+import {
+    getQRAnimationInterval,
+    QRAnimationSpeed
+} from '../utils/QRAnimationUtils';
 
 interface TxHexProps {
     navigation: StackNavigationProp<any, any>;
@@ -52,11 +56,13 @@ interface TxHexState {
     bcurEncoder: any;
     bcurPart: string;
     txDecoded?: any;
+    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('ChannelsStore', 'NodeInfoStore', 'TransactionsStore')
 @observer
 export default class TxHex extends React.Component<TxHexProps, TxHexState> {
+    private qrAnimationInterval?: any;
     state: TxHexState = {
         infoIndex: 0,
         selectedIndex: 0,
@@ -65,7 +71,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        txDecoded: undefined
+        txDecoded: undefined,
+        qrAnimationSpeed: 'medium'
     };
 
     UNSAFE_componentWillMount(): void {
@@ -123,9 +130,14 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             txDecoded
         });
 
-        const length = splitResult.parts.length;
+        // Clear any existing interval
+        if (this.qrAnimationInterval) {
+            clearInterval(this.qrAnimationInterval);
+        }
 
-        setInterval(() => {
+        const length = splitResult.parts.length;
+        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
+        this.qrAnimationInterval = setInterval(() => {
             this.setState({
                 frameIndex:
                     this.state.frameIndex === length - 1
@@ -133,8 +145,14 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                         : this.state.frameIndex + 1,
                 bcurPart: this.state.bcurEncoder?.nextPart() || undefined
             });
-        }, 1000);
+        }, interval);
     };
+
+    componentWillUnmount() {
+        if (this.qrAnimationInterval) {
+            clearInterval(this.qrAnimationInterval);
+        }
+    }
 
     render() {
         const { ChannelsStore, NodeInfoStore, TransactionsStore, navigation } =
@@ -379,6 +397,21 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                             copyValue={txHex}
                                             truncateLongValue
                                             expanded
+                                            qrAnimationSpeed={
+                                                this.state.qrAnimationSpeed
+                                            }
+                                            onQRAnimationSpeedChange={(
+                                                speed
+                                            ) => {
+                                                this.setState(
+                                                    {
+                                                        qrAnimationSpeed: speed
+                                                    },
+                                                    () => {
+                                                        this.generateInfo();
+                                                    }
+                                                );
+                                            }}
                                         />
                                     </View>
                                     <View style={styles.button}>
