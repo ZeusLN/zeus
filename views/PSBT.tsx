@@ -18,6 +18,10 @@ import { WarningMessage } from '../components/SuccessErrorMessage';
 
 import Base64Utils from '../utils/Base64Utils';
 import { splitQRs } from '../utils/BbqrUtils';
+import {
+    getQRAnimationInterval,
+    QRAnimationSpeed
+} from '../utils/QRAnimationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -48,11 +52,13 @@ interface PSBTState {
     bcurEncoder: any;
     bcurPart: string;
     psbtDecoded?: PSBTDecoded;
+    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('ChannelsStore', 'TransactionsStore')
 @observer
 export default class PSBT extends React.Component<PSBTProps, PSBTState> {
+    private qrAnimationInterval?: any;
     state: PSBTState = {
         infoIndex: 0,
         selectedIndex: 0,
@@ -61,7 +67,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
         bbqrParts: [],
         bcurEncoder: undefined,
         bcurPart: '',
-        psbtDecoded: undefined
+        psbtDecoded: undefined,
+        qrAnimationSpeed: 'medium'
     };
 
     UNSAFE_componentWillMount(): void {
@@ -88,6 +95,13 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                 this.generateInfo();
             }
         );
+    }
+
+    componentWillUnmount() {
+        // Clean up animation interval when component unmounts
+        if (this.qrAnimationInterval) {
+            clearInterval(this.qrAnimationInterval);
+        }
     }
 
     generateInfo = () => {
@@ -137,9 +151,15 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             psbtDecoded
         });
 
-        const length = splitResult.parts.length;
+        // Clear any existing interval
+        if (this.qrAnimationInterval) {
+            clearInterval(this.qrAnimationInterval);
+        }
 
-        setInterval(() => {
+        const length = splitResult.parts.length;
+        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
+
+        this.qrAnimationInterval = setInterval(() => {
             this.setState({
                 frameIndex:
                     this.state.frameIndex === length - 1
@@ -149,7 +169,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                     this.state.bcurEncoder?.nextPart().toUpperCase() ||
                     undefined
             });
-        }, 1000);
+        }, interval);
     };
 
     render() {
@@ -371,6 +391,21 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                             copyValue={fundedPsbt}
                                             truncateLongValue
                                             expanded
+                                            qrAnimationSpeed={
+                                                this.state.qrAnimationSpeed
+                                            }
+                                            onQRAnimationSpeedChange={(
+                                                speed
+                                            ) => {
+                                                this.setState(
+                                                    {
+                                                        qrAnimationSpeed: speed
+                                                    },
+                                                    () => {
+                                                        this.generateInfo();
+                                                    }
+                                                );
+                                            }}
                                         />
                                     </View>
                                     <View style={styles.button}>

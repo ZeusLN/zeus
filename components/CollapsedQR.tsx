@@ -13,6 +13,7 @@ import {
 
 import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
 
+import QRSpeedToggle from './QRSpeedToggle';
 import Amount from './Amount';
 import Button from './Button';
 import CopyButton from './CopyButton';
@@ -22,6 +23,7 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
+import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
 
 const defaultLogo = require('../assets/images/icon-black.png');
 const defaultLogoWhite = require('../assets/images/icon-white.png');
@@ -118,6 +120,8 @@ interface CollapsedQRProps {
     nfcSupported?: boolean;
     satAmount?: string | number;
     displayAmount?: boolean;
+    qrAnimationSpeed?: QRAnimationSpeed;
+    onQRAnimationSpeedChange?: (speed: QRAnimationSpeed) => void;
 }
 
 interface CollapsedQRState {
@@ -137,7 +141,8 @@ export default class CollapsedQR extends React.Component<
         collapsed: this.props.expanded ? false : true,
         enlargeQR: false,
         tempQRRef: null,
-        qrReady: false
+        qrReady: false,
+        qrAnimationSpeed: this.props.qrAnimationSpeed
     };
 
     toggleCollapse = () => {
@@ -167,7 +172,9 @@ export default class CollapsedQR extends React.Component<
             textBottom,
             truncateLongValue,
             logo,
-            satAmount
+            satAmount,
+            qrAnimationSpeed,
+            onQRAnimationSpeedChange
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
@@ -370,19 +377,32 @@ export default class CollapsedQR extends React.Component<
                         )}
                     </View>
                 ) : (
-                    <>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            gap: 5
+                        }}
+                    >
+                        {qrAnimationSpeed && onQRAnimationSpeedChange && (
+                            <QRSpeedToggle
+                                currentSpeed={qrAnimationSpeed}
+                                onSpeedChange={onQRAnimationSpeedChange}
+                            />
+                        )}
                         <CopyButton
                             copyValue={copyValue || value}
                             title={copyText}
                             iconOnly={iconOnly}
                         />
+
                         {supportsNFC && (
                             <NFCButton
                                 value={copyValue || value}
                                 iconOnly={iconOnly}
                             />
                         )}
-                    </>
+                    </View>
                 )}
             </React.Fragment>
         );
