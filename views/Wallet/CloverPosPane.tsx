@@ -709,6 +709,7 @@ export default class CloverPosPane extends React.PureComponent<
                 )}
 
                 {!loading &&
+                    fetchProductsError == FetchProductsError.NONE &&
                     selectedIndex === 0 &&
                     productsList &&
                     productsList.length === 0 && (
@@ -841,6 +842,7 @@ export default class CloverPosPane extends React.PureComponent<
                     )}
 
                 {!loading &&
+                    fetchProductsError == FetchProductsError.NONE &&
                     orders &&
                     orders.length > 0 &&
                     selectedIndex !== 0 && (
@@ -878,6 +880,7 @@ export default class CloverPosPane extends React.PureComponent<
                     )}
 
                 {!loading &&
+                    fetchProductsError == FetchProductsError.NONE &&
                     orders &&
                     orders.length === 0 &&
                     selectedIndex !== 0 && (

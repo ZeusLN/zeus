@@ -29,28 +29,31 @@ const getCloverProducts = async (
         throw Error('Could not get products from clover');
     }
     return new Map(
-        response.json().elements.map((item: any): [string, Product] => {
-            const product: any = {
-                id: item.id,
-                name: item.name,
-                price: item.price / 100,
-                pricedIn: PricedIn.Fiat,
-                status:
-                    item.available === true
-                        ? ProductStatus.Active
-                        : ProductStatus.Inactive
-            };
+        response
+            .json()
+            .elements.filter((item: any) => !item.hidden)
+            .map((item: any): [string, Product] => {
+                const product: any = {
+                    id: item.id,
+                    name: item.name,
+                    price: item.price / 100,
+                    pricedIn: PricedIn.Fiat,
+                    status:
+                        item.available === true
+                            ? ProductStatus.Active
+                            : ProductStatus.Inactive
+                };
 
-            if (item.taxRates) {
-                let totalTaxRate = 0;
-                item.taxRates.elements.forEach((taxRate: any) => {
-                    totalTaxRate += taxRate.rate;
-                });
-                product.taxPercentage = totalTaxRate / 100000;
-            }
+                if (item.taxRates) {
+                    let totalTaxRate = 0;
+                    item.taxRates.elements.forEach((taxRate: any) => {
+                        totalTaxRate += taxRate.rate;
+                    });
+                    product.taxPercentage = totalTaxRate / 100000;
+                }
 
-            return [product.id, product];
-        })
+                return [product.id, product];
+            })
     );
 };
 
