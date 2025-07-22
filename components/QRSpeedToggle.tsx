@@ -2,7 +2,6 @@ import * as React from 'react';
 import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { observer } from 'mobx-react';
 import { ButtonGroup } from 'react-native-elements';
-
 import { themeColor } from '../utils/ThemeUtils';
 import {
     QR_ANIMATION_SPEED_OPTIONS,
@@ -53,7 +52,7 @@ export default class QRSpeedToggle extends React.Component<
             });
         });
         return (
-            <>
+            <View style={{ position: 'relative', minHeight: 100 }}>
                 <TouchableOpacity
                     onPress={this.toggleOptions}
                     style={[
@@ -73,7 +72,7 @@ export default class QRSpeedToggle extends React.Component<
                     />
                 </TouchableOpacity>
                 {showOptions && (
-                    <View style={styles.buttonContainer}>
+                    <View style={styles.speedOptions}>
                         <ButtonGroup
                             onPress={(index: number) => {
                                 const selectedOption =
@@ -94,7 +93,6 @@ export default class QRSpeedToggle extends React.Component<
                                 backgroundColor: themeColor('secondary'),
                                 borderRadius: 12,
                                 borderColor: themeColor('secondary'),
-                                width: 'auto',
                                 minWidth: 250,
                                 alignSelf: 'center'
                             }}
@@ -104,15 +102,15 @@ export default class QRSpeedToggle extends React.Component<
                         />
                     </View>
                 )}
-            </>
+            </View>
         );
     }
 }
 
 const styles = StyleSheet.create({
-    buttonContainer: {
+    speedOptions: {
         position: 'absolute',
-        top: 50,
+        top: 45,
         left: 0,
         right: 0,
         alignItems: 'center',
