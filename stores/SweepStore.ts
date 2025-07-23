@@ -6,9 +6,7 @@ import { getPublicKey } from '@noble/secp256k1';
 import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 import wifUtils, { AddressType } from '../utils/WIFUtils';
-// import ECPairFactory from 'ecpair';
 import ecc from '../zeus_modules/noble_ecc';
-// const ECPair = ECPairFactory(ecc);
 
 export default class SweepStore {
     @observable loading: boolean = false;
@@ -58,14 +56,6 @@ export default class SweepStore {
 
         const utxos = await res.json();
         return utxos;
-    }
-
-    getOnChainBalanceFromUtxos(utxos: any[]) {
-        if (!utxos || utxos.length === 0) {
-            throw new Error(localeString('views.UTXOs.CoinControl.noUTXOs'));
-        }
-
-        return utxos.reduce((sum, utxo) => sum + utxo.value, 0);
     }
 
     async detectAddressWithUtxos(
@@ -285,7 +275,9 @@ export default class SweepStore {
             const privateKey = Buffer.from(this.privateKey, 'hex');
             const publicKey = ecc.pointFromScalar(privateKey, true);
             if (!publicKey)
-                throw new Error(localeString('views.Wif.invalidPrivateKey'));
+                throw new Error(
+                    localeString('views.Wif.addressFromPrivKeyError')
+                );
             const signer: bitcoin.Signer = {
                 publicKey: Buffer.from(publicKey),
                 sign: (hash: Buffer) => Buffer.from(ecc.sign(hash, privateKey))
@@ -311,7 +303,7 @@ export default class SweepStore {
             this.valueToSend = this.onChainBalance - this.fee;
 
             if (this.valueToSend <= 0)
-                throw new Error('Fee exceeds the available balance');
+                throw new Error(localeString('views.Wif.insufficientFunds'));
 
             this.psbt.addOutput({
                 address: this.destination,
