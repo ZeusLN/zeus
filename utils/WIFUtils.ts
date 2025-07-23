@@ -45,7 +45,15 @@ export class WIFUtils {
             };
         }
 
-        const decoded = b58.decode(wif);
+        let decoded;
+        try {
+            decoded = b58.decode(wif);
+        } catch (e) {
+            return {
+                isValid: false,
+                error: localeString('views.Wif.invalidFormat')
+            };
+        }
         if (
             decoded.length !== 33 &&
             decoded.length !== 34 &&
