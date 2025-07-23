@@ -38,7 +38,7 @@ interface SweepProps {
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     SweepStore: SweepStore;
-    route: Route<'Sweep', { p: string }>;
+    route: Route<'Sweep', { wif: string }>;
 }
 
 interface SweepState {
@@ -75,7 +75,7 @@ export default class WIFSweeper extends React.Component<
 
     initFromProps(props: SweepProps) {
         const { route } = props;
-        const scannedKey = route.params?.p;
+        const scannedKey = route.params?.wif;
 
         if (scannedKey) {
             this.setState({
@@ -85,7 +85,7 @@ export default class WIFSweeper extends React.Component<
     }
 
     componentDidUpdate(prevProps: SweepProps) {
-        if (prevProps.route.params?.p !== this.props.route.params?.p) {
+        if (prevProps.route.params?.wif !== this.props.route.params?.wif) {
             this.initFromProps(this.props);
         }
     }

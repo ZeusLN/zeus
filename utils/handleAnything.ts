@@ -118,7 +118,7 @@ const handleAnything = async (
         try {
             const { isValid, error } = wifUtils.validateWIF(data);
             if (isValid) {
-                return ['WIFSweeper', { p: data }];
+                return ['WIFSweeper', { wif: data }];
             } else {
                 const err = new Error();
                 err.message = error || localeString('views.Wif.invalidWif');
