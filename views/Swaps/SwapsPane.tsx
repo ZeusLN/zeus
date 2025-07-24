@@ -286,7 +286,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                 {!swapsLoading && (
                     <Button
                         title={localeString(
-                            'views.Swaps.SwapsPane.importExternalSwaps'
+                            'views.Swaps.SwapsPane.restoreSwaps'
                         )}
                         secondary
                         onPress={async () => {
