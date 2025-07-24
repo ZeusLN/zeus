@@ -80,11 +80,7 @@ export default class SelectCurrency extends React.Component<
         const { navigation, SettingsStore, route } = this.props;
         const { selectedCurrency, search, fiatRatesSource } = this.state;
         const currencies = this.state.currencies
-            .sort((a, b) =>
-                a.key
-                    .substring(a.key.indexOf(' ') + 1)
-                    .localeCompare(b.key.substring(b.key.indexOf(' ') + 1))
-            )
+            .sort((a, b) => a.key.localeCompare(b.key))
             .filter((c) => c.supportedSources?.includes(fiatRatesSource));
 
         const { updateSettings, getSettings }: any = SettingsStore;
