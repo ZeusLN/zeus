@@ -608,7 +608,7 @@ export default class LightningNodeConnect {
     getWatchtowerInfo = async (pubkey: string) =>
         await this.lnc.lnd.watchtowerClient
             .getTowerInfo({
-                pubkey: Base64Utils.hexToBase64(pubkey),
+                pubkey,
                 includeSessions: true
             })
             .then((data: any) => snakeize(data));
@@ -624,7 +624,7 @@ export default class LightningNodeConnect {
     removeWatchtower = async (pubkey: string, address?: string) =>
         await this.lnc.lnd.watchtowerClient
             .removeTower({
-                pubkey: Base64Utils.hexToBase64(pubkey),
+                pubkey,
                 address
             })
             .then((data: any) => snakeize(data));
@@ -632,14 +632,14 @@ export default class LightningNodeConnect {
     deactivateWatchtower = async (pubkey: string) =>
         await this.lnc.lnd.watchtowerClient
             .deactivateTower({
-                pubkey: Base64Utils.hexToBase64(pubkey)
+                pubkey
             })
             .then((data: any) => snakeize(data));
 
     terminateWatchtowerSession = async (sessionId: string) =>
         await this.lnc.lnd.watchtowerClient
             .terminateSession({
-                sessionId: Base64Utils.hexToBase64(sessionId)
+                sessionId
             })
             .then((data: any) => snakeize(data));
 
