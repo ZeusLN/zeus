@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import BigNumber from 'bignumber.js';
 
@@ -12,11 +12,14 @@ import { SATS_PER_BTC } from '../utils/UnitsUtils';
 
 import { fiatStore, settingsStore, unitsStore } from '../stores/Stores';
 import FiatStore from '../stores/FiatStore';
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { CURRENCY_KEYS } from '../stores/SettingsStore';
 import UnitsStore from '../stores/UnitsStore';
 
 import ExchangeBitcoinSVG from '../assets/images/SVG/ExchangeBitcoin.svg';
 import ExchangeFiatSVG from '../assets/images/SVG/ExchangeFiat.svg';
+import Icon from 'react-native-vector-icons/Feather';
+
+import NavigationService from '../NavigationService';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
@@ -50,7 +53,7 @@ const getSatAmount = (amount: string | number, forceUnit?: string) => {
 
     const fiatEntry =
         fiat && fiatRates
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            ? fiatRates.find((entry: any) => entry.code === fiat)
             : null;
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
@@ -94,7 +97,7 @@ const getAmount = (sats: string | number) => {
 
     const fiatEntry =
         fiat && fiatRates
-            ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+            ? fiatRates.find((entry: any) => entry.code === fiat)
             : null;
 
     const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
@@ -198,18 +201,71 @@ export default class AmountInput extends React.Component<
         const { getRate, getSymbol }: any = FiatStore;
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
+        const fiat = settings.fiat;
+        const flag: string | undefined = CURRENCY_KEYS.find(
+            (c) => c.value === fiat
+        )?.flag;
 
         return (
             <React.Fragment>
                 {title && (
-                    <Text
+                    <View
                         style={{
-                            fontFamily: 'PPNeueMontreal-Book',
-                            color: themeColor('secondaryText')
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            marginBottom: 5,
+                            height: 24
                         }}
                     >
-                        {title}
-                    </Text>
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('secondaryText'),
+                                fontSize: 14
+                            }}
+                        >
+                            {title}
+                        </Text>
+                        {fiatEnabled && effectiveUnits === 'fiat' && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    NavigationService.navigate(
+                                        'SelectCurrency'
+                                    );
+                                }}
+                                activeOpacity={0.5}
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    height: 28,
+                                    paddingHorizontal: 10,
+                                    borderRadius: 16,
+                                    backgroundColor: themeColor('secondary'),
+                                    borderWidth: 1,
+                                    borderColor: themeColor('highlight')
+                                }}
+                            >
+                                <Row style={styles.row}>
+                                    <Text
+                                        style={{
+                                            fontSize: 12,
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Medium',
+                                            marginRight: 4
+                                        }}
+                                    >
+                                        {`${flag ? `${flag} ` : ''}${fiat}`}
+                                    </Text>
+                                    <Icon
+                                        name="chevron-right"
+                                        size={12}
+                                        color={themeColor('text')}
+                                    />
+                                </Row>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 )}
                 <Row>
                     {prefix ? prefix : undefined}
@@ -305,3 +361,10 @@ export default class AmountInput extends React.Component<
 }
 
 export { getSatAmount };
+
+const styles = StyleSheet.create({
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    }
+});
