@@ -1418,4 +1418,38 @@ export default class LightningAddressStore {
             throw error;
         }
     };
+    @action
+    public updateCashuMint = async (mintUrl: string) => {
+        if (this.lightningAddressType !== 'cashu') return;
+
+        try {
+            const { verification, signature } = await this.getAuthData();
+
+            const payload = {
+                pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey,
+                message: verification,
+                signature,
+                mint_url: mintUrl
+            };
+
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${LNURL_HOST}/lnurl/updateCashuMint`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify(payload)
+            );
+
+            const data = response.json();
+            if (response.info().status !== 200) throw data.error;
+
+            console.log(
+                'Successfully updated Cashu mint URL for Lightning address'
+            );
+        } catch (error: any) {
+            console.error('Error updating Cashu mint URL:', error);
+            throw error;
+        }
+    };
 }

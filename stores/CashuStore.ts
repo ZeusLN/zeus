@@ -83,6 +83,9 @@ interface ClaimTokenResponse {
 export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
+    @observable public rotateMints: boolean = false;
+    @observable public lastMintRotation: number = 0;
+    @observable public mintRotationInterval: number = 24 * 60 * 60 * 1000; // 24 hours
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
@@ -132,6 +135,8 @@ export default class CashuStore {
 
     ndk: NDK;
 
+    private rotationCheckInterval?: ReturnType<typeof setInterval>;
+
     constructor(
         settingsStore: SettingsStore,
         invoicesStore: InvoicesStore,
@@ -142,6 +147,8 @@ export default class CashuStore {
         this.invoicesStore = invoicesStore;
         this.channelsStore = channelsStore;
         this.modalStore = modalStore;
+        this.loadRotationSettings();
+        this.startBackgroundRotationCheck();
     }
 
     @action
@@ -160,6 +167,7 @@ export default class CashuStore {
         this.clearInvoice();
         this.clearPayReq();
         this.shownThresholdModals = [];
+        this.stopBackgroundRotationCheck();
     };
 
     @action
@@ -677,6 +685,8 @@ export default class CashuStore {
                 'stores.CashuStore.initializingWallet'
             );
         });
+        await this.loadRotationSettings();
+        await this.checkAndRotateMint();
         const lndDir = this.getLndDir();
 
         const [
@@ -858,6 +868,7 @@ export default class CashuStore {
         value: string;
         lnurl?: LNURLWithdrawParams;
     }) => {
+        await this.checkAndRotateMint();
         this.invoice = undefined;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
@@ -1458,6 +1469,7 @@ export default class CashuStore {
 
     @action
     public payLnInvoiceFromEcash = async ({ amount }: { amount?: string }) => {
+        await this.checkAndRotateMint();
         this.loading = true;
 
         const mintUrl = this.selectedMintUrl;
@@ -1702,6 +1714,8 @@ export default class CashuStore {
         decoded: CashuToken,
         toSelfCustody?: boolean
     ): Promise<ClaimTokenResponse> => {
+        await this.checkAndRotateMint();
+
         this.loading = true;
 
         const mintUrl = decoded.mint;
@@ -2179,6 +2193,8 @@ export default class CashuStore {
         pubkey?: string;
         lockTime?: number;
     }): Promise<{ token: string; decoded: CashuToken } | undefined> => {
+        await this.checkAndRotateMint();
+
         runInAction(() => {
             this.mintingToken = true;
             this.mintingTokenError = false;
@@ -2363,6 +2379,9 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-seed-version`);
             await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);
             await Storage.removeItem(`${lndDir}-cashu-seed`);
+            await Storage.removeItem(`${lndDir}-cashu-rotateMints`);
+            await Storage.removeItem(`${lndDir}-cashu-lastMintRotation`);
+            await Storage.removeItem(`${lndDir}-cashu-mintRotationInterval`);
 
             if (lightningAddressStore.lightningAddressType === 'cashu') {
                 lightningAddressStore.deleteAddress();
@@ -2390,6 +2409,129 @@ export default class CashuStore {
                 localeString('stores.CashuStore.errorDeletingData') +
                     `: ${error.message}`
             );
+        }
+    };
+    @action
+    public rotateToNextMint = async () => {
+        if (!this.rotateMints || this.mintUrls.length <= 1) return;
+
+        try {
+            const currentIndex = this.mintUrls.indexOf(this.selectedMintUrl);
+            const nextIndex = (currentIndex + 1) % this.mintUrls.length;
+            const nextMintUrl = this.mintUrls[nextIndex];
+
+            console.log(
+                `Rotating from mint ${this.selectedMintUrl} to ${nextMintUrl}`
+            );
+
+            await this.setSelectedMint(nextMintUrl);
+            this.lastMintRotation = Date.now();
+            await Storage.setItem(
+                `${this.getLndDir()}-cashu-lastMintRotation`,
+                this.lastMintRotation.toString()
+            );
+
+            // Update Lightning address if it's a Cashu type
+            if (lightningAddressStore.lightningAddressType === 'cashu') {
+                try {
+                    await lightningAddressStore.updateCashuMint(nextMintUrl);
+                    console.log(
+                        'Successfully updated Lightning address for mint rotation'
+                    );
+                } catch (error) {
+                    console.error(
+                        'Failed to update Lightning address during mint rotation:',
+                        error
+                    );
+                }
+            }
+
+            console.log(
+                `Mint rotation completed successfully. New mint: ${nextMintUrl}`
+            );
+        } catch (error) {
+            console.error('Failed to rotate mint:', error);
+            throw error;
+        }
+    };
+
+    @action
+    public checkAndRotateMint = async () => {
+        if (!this.rotateMints || this.mintUrls.length <= 1) return;
+        const now = Date.now();
+        const timeSinceLastRotation = now - this.lastMintRotation;
+        const shouldRotate = timeSinceLastRotation >= this.mintRotationInterval;
+        console.log(
+            `Rotation check: ${timeSinceLastRotation}ms since last rotation, interval: ${this.mintRotationInterval}ms, should rotate: ${shouldRotate}`
+        );
+        if (shouldRotate) {
+            try {
+                await this.rotateToNextMint();
+            } catch (error) {
+                console.error('Automatic mint rotation failed:', error);
+            }
+        }
+    };
+
+    @action
+    public setRotateMints = async (value: boolean) => {
+        this.rotateMints = value;
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-rotateMints`,
+            value ? 'true' : 'false'
+        );
+    };
+
+    @action
+    public setMintRotationInterval = async (value: number) => {
+        this.mintRotationInterval = value;
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-mintRotationInterval`,
+            value
+        );
+    };
+
+    private async loadRotationSettings() {
+        const lndDir = this.getLndDir();
+        const settings = await Promise.all([
+            Storage.getItem(`${lndDir}-cashu-rotateMints`),
+            Storage.getItem(`${lndDir}-cashu-lastMintRotation`),
+            Storage.getItem(`${lndDir}-cashu-mintRotationInterval`)
+        ]);
+        const [rotateMints, lastMintRotation, mintRotationInterval] = settings;
+
+        if (rotateMints !== null) {
+            this.rotateMints = rotateMints === true || rotateMints === 'true';
+        }
+
+        if (lastMintRotation) {
+            this.lastMintRotation = parseInt(lastMintRotation);
+        } else {
+            this.lastMintRotation = 0;
+        }
+
+        if (mintRotationInterval) {
+            this.mintRotationInterval = parseInt(mintRotationInterval);
+        } else {
+            this.mintRotationInterval = 24 * 60 * 60 * 1000;
+        }
+    }
+
+    private startBackgroundRotationCheck = () => {
+        // Check for rotation every 5 minutes
+        this.rotationCheckInterval = setInterval(async () => {
+            try {
+                await this.checkAndRotateMint();
+            } catch (error) {
+                console.error('Background rotation check failed:', error);
+            }
+        }, 5 * 60 * 1000);
+    };
+
+    private stopBackgroundRotationCheck = () => {
+        if (this.rotationCheckInterval) {
+            clearInterval(this.rotationCheckInterval);
+            this.rotationCheckInterval = undefined;
         }
     };
 }
