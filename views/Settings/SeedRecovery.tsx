@@ -49,7 +49,7 @@ interface SeedRecoveryProps {
     SwapStore: SwapStore;
     route: Route<
         'SeedRecovery',
-        { network: string; restoreSwaps?: boolean; verifyRescueKey?: boolean }
+        { network: string; restoreSwaps?: boolean; restoreRescueKey?: boolean }
     >;
 }
 
@@ -72,7 +72,7 @@ interface SeedRecoveryState {
     errorCreatingWallet: boolean;
     errorMsg: string;
     restoreSwaps?: boolean;
-    verifyRescueKey?: boolean;
+    restoreRescueKey?: boolean;
 }
 
 @inject('SettingsStore', 'SwapStore')
@@ -118,8 +118,8 @@ export default class SeedRecovery extends React.PureComponent<
     async initFromProps(props: SeedRecoveryProps) {
         const network = props.route.params?.network ?? 'mainnet';
         const restoreSwaps = props.route.params?.restoreSwaps ?? false;
-        const verifyRescueKey = props.route.params?.verifyRescueKey ?? false;
-        this.setState({ network, restoreSwaps, verifyRescueKey });
+        const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
+        this.setState({ network, restoreSwaps, restoreRescueKey });
     }
 
     async UNSAFE_componentWillMount() {
@@ -201,7 +201,7 @@ export default class SeedRecovery extends React.PureComponent<
             filteredData,
             errorMsg,
             restoreSwaps,
-            verifyRescueKey
+            restoreRescueKey
         } = this.state;
 
         const filterData = (text: string) =>
@@ -231,9 +231,9 @@ export default class SeedRecovery extends React.PureComponent<
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
                                 if (
-                                    ((restoreSwaps || verifyRescueKey) &&
+                                    ((restoreSwaps || restoreRescueKey) &&
                                         selectedWordIndex < 11) ||
-                                    ((!restoreSwaps || !verifyRescueKey) &&
+                                    ((!restoreSwaps || !restoreRescueKey) &&
                                         selectedWordIndex < 23)
                                 ) {
                                     this.setState({
@@ -396,9 +396,11 @@ export default class SeedRecovery extends React.PureComponent<
                     leftComponent="Back"
                     centerComponent={{
                         text: restoreSwaps
-                            ? localeString('views.Swaps.restoreSwaps')
-                            : verifyRescueKey
-                            ? localeString('views.Swaps.rescueKey.import')
+                            ? localeString(
+                                  'views.Swaps.SwapsPane.swapsRecovery'
+                              )
+                            : restoreRescueKey
+                            ? localeString('views.Swaps.rescueKey.recovery')
                             : localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
@@ -471,7 +473,8 @@ export default class SeedRecovery extends React.PureComponent<
                                             });
                                         }
                                         if (
-                                            (restoreSwaps || verifyRescueKey) &&
+                                            (restoreSwaps ||
+                                                restoreRescueKey) &&
                                             (selectedWordIndex == null ||
                                                 selectedWordIndex >= 12)
                                         ) {
@@ -493,7 +496,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                     keyboardShouldPersistTaps="handled"
                                 >
-                                    {restoreSwaps || verifyRescueKey ? (
+                                    {restoreSwaps || restoreRescueKey ? (
                                         <>
                                             <View
                                                 style={{
@@ -596,7 +599,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     )}
                                 </ScrollView>
 
-                                {!(restoreSwaps || verifyRescueKey) && (
+                                {!(restoreSwaps || restoreRescueKey) && (
                                     <View
                                         style={{
                                             flexGrow: 1,
@@ -643,67 +646,77 @@ export default class SeedRecovery extends React.PureComponent<
                                 </View>
                             </ScrollView>
                         )}
-                        {!showSuggestions && (restoreSwaps || verifyRescueKey) && (
-                            <Button
-                                title={localeString(
-                                    'views.Swaps.rescueKey.upload'
-                                )}
-                                secondary
-                                onPress={async () => {
-                                    try {
-                                        const res =
-                                            await DocumentPicker.pickSingle({
-                                                type: [
-                                                    DocumentPicker.types
-                                                        .allFiles
-                                                ]
-                                            });
+                        {!showSuggestions &&
+                            (restoreSwaps || restoreRescueKey) && (
+                                <Button
+                                    title={localeString(
+                                        'views.Swaps.rescueKey.upload'
+                                    )}
+                                    secondary
+                                    onPress={async () => {
+                                        try {
+                                            const res =
+                                                await DocumentPicker.pickSingle(
+                                                    {
+                                                        type: [
+                                                            DocumentPicker.types
+                                                                .allFiles
+                                                        ]
+                                                    }
+                                                );
 
-                                        const content = await RNFS.readFile(
-                                            res.uri,
-                                            'utf8'
-                                        );
-                                        const importedData =
-                                            JSON.parse(content);
+                                            const content = await RNFS.readFile(
+                                                res.uri,
+                                                'utf8'
+                                            );
+                                            const importedData =
+                                                JSON.parse(content);
 
-                                        if (importedData.mnemonic) {
-                                            const words = importedData.mnemonic
-                                                .trim()
-                                                .split(/\s+/);
-                                            if (words.length === 12) {
+                                            if (importedData.mnemonic) {
+                                                const words =
+                                                    importedData.mnemonic
+                                                        .trim()
+                                                        .split(/\s+/);
+                                                if (words.length === 12) {
+                                                    this.setState({
+                                                        seedArray: words
+                                                    });
+                                                } else {
+                                                    Alert.alert(
+                                                        localeString(
+                                                            'views.Swaps.rescueKey.invalid'
+                                                        )
+                                                    );
+                                                }
+                                            } else {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'general.error'
+                                                    ),
+                                                    localeString(
+                                                        'views.Tools.nodeConfigExportImport.importError'
+                                                    )
+                                                );
+                                            }
+                                        } catch (err) {
+                                            if (DocumentPicker.isCancel(err)) {
                                                 this.setState({
-                                                    seedArray: words
+                                                    loading: false
                                                 });
                                             } else {
                                                 Alert.alert(
                                                     localeString(
-                                                        'views.Swaps.rescueKey.invalid'
+                                                        'general.error'
+                                                    ),
+                                                    localeString(
+                                                        'views.Tools.nodeConfigExportImport.importError'
                                                     )
                                                 );
                                             }
-                                        } else {
-                                            Alert.alert(
-                                                localeString('general.error'),
-                                                localeString(
-                                                    'views.Tools.nodeConfigExportImport.importError'
-                                                )
-                                            );
                                         }
-                                    } catch (err) {
-                                        if (DocumentPicker.isCancel(err)) {
-                                            this.setState({ loading: false });
-                                        } else {
-                                            Alert.alert(
-                                                localeString('general.error'),
-                                                localeString(
-                                                    'views.Tools.nodeConfigExportImport.importError'
-                                                )
-                                            );
-                                        }
-                                    }
-                                }}
-                            />
-                        )}
+                                    }}
+                                />
+                            )}
                         {!showSuggestions && (
                             <View
                                 style={{
@@ -731,7 +744,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                     );
                                                 }
                                             );
-                                        } else if (verifyRescueKey) {
+                                        } else if (restoreRescueKey) {
                                             console.log(
                                                 'Verifying rescue key...'
                                             );
@@ -760,9 +773,9 @@ export default class SeedRecovery extends React.PureComponent<
                                             ? localeString(
                                                   'views.Swaps.restoreSwaps'
                                               )
-                                            : verifyRescueKey
+                                            : restoreRescueKey
                                             ? localeString(
-                                                  'views.Swaps.rescueKey.import'
+                                                  'views.Swaps.rescueKey.restore'
                                               )
                                             : network === 'mainnet'
                                             ? localeString(
@@ -773,7 +786,7 @@ export default class SeedRecovery extends React.PureComponent<
                                               )
                                     }
                                     disabled={
-                                        restoreSwaps || verifyRescueKey
+                                        restoreSwaps || restoreRescueKey
                                             ? seedArray.length !== 12 ||
                                               seedArray.some((seed) => !seed)
                                             : seedArray.length !== 24 ||

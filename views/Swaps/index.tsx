@@ -444,7 +444,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 >
                     <View
                         style={{
-                            backgroundColor: themeColor('secondary'),
+                            backgroundColor: themeColor('background'),
                             borderRadius: 24,
                             padding: 20,
                             alignItems: 'center',
@@ -484,9 +484,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         </>
 
                         <Button
-                            title={localeString(
-                                'views.Swaps.rescueKey.generateNewKey'
-                            )}
+                            title={localeString('views.Swaps.rescueKey.create')}
                             onPress={async () => {
                                 const mnemonic = await generateRescueKey();
                                 if (!mnemonic) return;
@@ -502,18 +500,19 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                 });
                             }}
                             containerStyle={{ marginTop: 16, marginBottom: 16 }}
+                            tertiary
                         />
 
                         <Button
                             title={localeString(
-                                'views.Swaps.rescueKey.importExistingKey'
+                                'views.Swaps.rescueKey.restore'
                             )}
                             onPress={() => {
                                 navigation.navigate('SeedRecovery', {
-                                    verifyRescueKey: true
+                                    restoreRescueKey: true
                                 });
                             }}
-                            tertiary
+                            secondary
                         />
                     </View>
                 </View>
