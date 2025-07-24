@@ -10,10 +10,11 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
+import { ButtonGroup } from 'react-native-elements';
 
 import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
 
-import QRSpeedToggle from './QRSpeedToggle';
+import QRSpeedMeterButton from './QRSpeedButton';
 import Amount from './Amount';
 import Button from './Button';
 import CopyButton from './CopyButton';
@@ -23,7 +24,10 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
-import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
+import {
+    QR_ANIMATION_SPEED_OPTIONS,
+    QRAnimationSpeed
+} from '../utils/QRAnimationUtils';
 
 const defaultLogo = require('../assets/images/icon-black.png');
 const defaultLogoWhite = require('../assets/images/icon-white.png');
@@ -129,6 +133,7 @@ interface CollapsedQRState {
     enlargeQR: boolean;
     tempQRRef: React.RefObject<QRCodeElement> | null;
     qrReady: boolean;
+    showSpeedOptions: boolean;
 }
 
 export default class CollapsedQR extends React.Component<
@@ -142,7 +147,8 @@ export default class CollapsedQR extends React.Component<
         enlargeQR: false,
         tempQRRef: null,
         qrReady: false,
-        qrAnimationSpeed: this.props.qrAnimationSpeed
+        qrAnimationSpeed: this.props.qrAnimationSpeed,
+        showSpeedOptions: false
     };
 
     toggleCollapse = () => {
@@ -156,7 +162,8 @@ export default class CollapsedQR extends React.Component<
     };
 
     render() {
-        const { collapsed, enlargeQR, tempQRRef } = this.state;
+        const { collapsed, enlargeQR, tempQRRef, showSpeedOptions } =
+            this.state;
         const {
             value,
             valueStyle,
@@ -198,6 +205,10 @@ export default class CollapsedQR extends React.Component<
 
         const supportsNFC =
             Platform.OS === 'android' && this.props.nfcSupported;
+
+        const qrSpeedSelectedIndex = QR_ANIMATION_SPEED_OPTIONS.findIndex(
+            (option) => option.value === qrAnimationSpeed
+        );
 
         return (
             <React.Fragment>
@@ -385,9 +396,14 @@ export default class CollapsedQR extends React.Component<
                         }}
                     >
                         {qrAnimationSpeed && onQRAnimationSpeedChange && (
-                            <QRSpeedToggle
-                                currentSpeed={qrAnimationSpeed}
-                                onSpeedChange={onQRAnimationSpeedChange}
+                            <QRSpeedMeterButton
+                                showOptions={showSpeedOptions}
+                                onPress={() =>
+                                    this.setState({
+                                        showSpeedOptions: !showSpeedOptions
+                                    })
+                                }
+                                iconOnly={iconOnly}
                             />
                         )}
                         <CopyButton
@@ -402,6 +418,47 @@ export default class CollapsedQR extends React.Component<
                                 iconOnly={iconOnly}
                             />
                         )}
+                    </View>
+                )}
+                {showSpeedOptions && onQRAnimationSpeedChange && (
+                    <View style={styles.speedOptions}>
+                        <ButtonGroup
+                            onPress={(index: number) => {
+                                const selectedOption =
+                                    QR_ANIMATION_SPEED_OPTIONS[index];
+                                onQRAnimationSpeedChange(
+                                    selectedOption.value as QRAnimationSpeed
+                                );
+                            }}
+                            selectedIndex={qrSpeedSelectedIndex}
+                            buttons={QR_ANIMATION_SPEED_OPTIONS.map(
+                                (option, index) =>
+                                    React.createElement(option.icon, {
+                                        width: 28,
+                                        height: 28,
+                                        fill:
+                                            qrSpeedSelectedIndex === index
+                                                ? themeColor('text')
+                                                : themeColor('secondaryText')
+                                    })
+                            )}
+                            selectedButtonStyle={{
+                                backgroundColor: themeColor('highlight'),
+                                borderRadius: 12,
+                                paddingHorizontal: 12,
+                                paddingVertical: 8
+                            }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary'),
+                                minWidth: 250,
+                                alignSelf: 'center'
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                        />
                     </View>
                 )}
             </React.Fragment>
@@ -420,5 +477,9 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         padding: 0,
         margin: 10
+    },
+    speedOptions: {
+        marginTop: 10,
+        alignItems: 'center'
     }
 });
