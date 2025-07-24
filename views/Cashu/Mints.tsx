@@ -233,153 +233,166 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     />
                     <View style={{ flex: 1 }}>
                         {!!mints && mints.length > 0 ? (
-                            <FlatList
-                                data={mints}
-                                renderItem={({
-                                    item,
-                                    index
-                                }: {
-                                    item: any;
-                                    index: number;
-                                }) => {
-                                    const mintInfo = item._mintInfo || item;
-                                    const isSelectedMint =
-                                        selectedMintUrl &&
-                                        mintInfo?.mintUrl &&
-                                        selectedMintUrl === mintInfo?.mintUrl;
-                                    const errorConnecting =
-                                        item.errorConnecting;
+                            <>
+                                <FlatList
+                                    data={mints}
+                                    renderItem={({
+                                        item,
+                                        index
+                                    }: {
+                                        item: any;
+                                        index: number;
+                                    }) => {
+                                        const mintInfo = item._mintInfo || item;
+                                        const isSelectedMint =
+                                            selectedMintUrl &&
+                                            mintInfo?.mintUrl &&
+                                            selectedMintUrl ===
+                                                mintInfo?.mintUrl;
+                                        const errorConnecting =
+                                            item.errorConnecting;
 
-                                    let subTitle = isSelectedMint
-                                        ? `${localeString(
-                                              'general.selected'
-                                          )} | ${item.mintUrl}`
-                                        : item.mintUrl;
+                                        let subTitle = isSelectedMint
+                                            ? `${localeString(
+                                                  'general.selected'
+                                              )} | ${item.mintUrl}`
+                                            : item.mintUrl;
 
-                                    if (errorConnecting) {
-                                        subTitle = `${localeString(
-                                            'general.errorConnecting'
-                                        )} | ${subTitle}`;
-                                    }
-                                    return (
-                                        <React.Fragment>
-                                            <ListItem
-                                                key={`mint-${index}`}
-                                                containerStyle={{
-                                                    borderBottomWidth: 0,
-                                                    backgroundColor:
-                                                        'transparent'
-                                                }}
-                                                onPress={async () => {
-                                                    await setSelectedMint(
-                                                        mintInfo?.mintUrl
-                                                    ).then(() => {
-                                                        navigation.goBack();
-                                                    });
-                                                }}
-                                            >
-                                                {mintInfo?.icon_url && (
-                                                    <Image
-                                                        source={{
-                                                            uri: mintInfo?.icon_url
-                                                        }}
-                                                        style={{
-                                                            alignSelf: 'center',
-                                                            width: 42,
-                                                            height: 42,
-                                                            borderRadius: 68
-                                                        }}
-                                                    />
-                                                )}
-                                                <ListItem.Content>
-                                                    <View>
-                                                        <View
-                                                            style={styles.row}
-                                                        >
-                                                            <ListItem.Title
-                                                                style={{
-                                                                    ...styles.leftCell,
-                                                                    color: errorConnecting
-                                                                        ? themeColor(
-                                                                              'error'
-                                                                          )
-                                                                        : isSelectedMint
-                                                                        ? themeColor(
-                                                                              'highlight'
-                                                                          )
-                                                                        : themeColor(
-                                                                              'text'
-                                                                          ),
-                                                                    fontSize: 18
-                                                                }}
-                                                            >
-                                                                {mintInfo.name}
-                                                            </ListItem.Title>
-                                                        </View>
-                                                        <View
-                                                            style={styles.row}
-                                                        >
-                                                            <ListItem.Subtitle
-                                                                style={{
-                                                                    ...styles.leftCell,
-                                                                    color: themeColor(
-                                                                        'secondaryText'
-                                                                    ),
-                                                                    fontSize: 12,
-                                                                    fontFamily:
-                                                                        'Lato-Regular',
-                                                                    flexWrap:
-                                                                        'wrap',
-                                                                    flexShrink: 1
-                                                                }}
-                                                            >
-                                                                {subTitle}
-                                                            </ListItem.Subtitle>
-                                                        </View>
-                                                    </View>
-                                                </ListItem.Content>
-                                                <View>
-                                                    <Row>
-                                                        <View
+                                        if (errorConnecting) {
+                                            subTitle = `${localeString(
+                                                'general.errorConnecting'
+                                            )} | ${subTitle}`;
+                                        }
+                                        return (
+                                            <React.Fragment>
+                                                <ListItem
+                                                    key={`mint-${index}`}
+                                                    containerStyle={{
+                                                        borderBottomWidth: 0,
+                                                        backgroundColor:
+                                                            'transparent'
+                                                    }}
+                                                    onPress={async () => {
+                                                        await setSelectedMint(
+                                                            mintInfo?.mintUrl
+                                                        ).then(() => {
+                                                            navigation.goBack();
+                                                        });
+                                                    }}
+                                                >
+                                                    {mintInfo?.icon_url && (
+                                                        <Image
+                                                            source={{
+                                                                uri: mintInfo?.icon_url
+                                                            }}
                                                             style={{
-                                                                right: 15
+                                                                alignSelf:
+                                                                    'center',
+                                                                width: 42,
+                                                                height: 42,
+                                                                borderRadius: 68
                                                             }}
-                                                        >
-                                                            <Amount
-                                                                sats={
-                                                                    item.mintBalance
-                                                                }
-                                                                sensitive
-                                                            />
-                                                        </View>
-                                                        <Icon
-                                                            name="info"
-                                                            onPress={() => {
-                                                                navigation.navigate(
-                                                                    'Mint',
-                                                                    {
-                                                                        mint: cloneDeep(
-                                                                            mintInfo
-                                                                        )
-                                                                    }
-                                                                );
-                                                            }}
-                                                            color={themeColor(
-                                                                'text'
-                                                            )}
-                                                            underlayColor="transparent"
-                                                            size={35}
                                                         />
-                                                    </Row>
-                                                </View>
-                                            </ListItem>
-                                        </React.Fragment>
-                                    );
-                                }}
-                                keyExtractor={(_, index) => `mint-${index}`}
-                                ItemSeparatorComponent={this.renderSeparator}
-                                onEndReachedThreshold={50}
-                            />
+                                                    )}
+                                                    <ListItem.Content>
+                                                        <View>
+                                                            <View
+                                                                style={
+                                                                    styles.row
+                                                                }
+                                                            >
+                                                                <ListItem.Title
+                                                                    style={{
+                                                                        ...styles.leftCell,
+                                                                        color: errorConnecting
+                                                                            ? themeColor(
+                                                                                  'error'
+                                                                              )
+                                                                            : isSelectedMint
+                                                                            ? themeColor(
+                                                                                  'highlight'
+                                                                              )
+                                                                            : themeColor(
+                                                                                  'text'
+                                                                              ),
+                                                                        fontSize: 18
+                                                                    }}
+                                                                >
+                                                                    {
+                                                                        mintInfo.name
+                                                                    }
+                                                                </ListItem.Title>
+                                                            </View>
+                                                            <View
+                                                                style={
+                                                                    styles.row
+                                                                }
+                                                            >
+                                                                <ListItem.Subtitle
+                                                                    style={{
+                                                                        ...styles.leftCell,
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        ),
+                                                                        fontSize: 12,
+                                                                        fontFamily:
+                                                                            'Lato-Regular',
+                                                                        flexWrap:
+                                                                            'wrap',
+                                                                        flexShrink: 1
+                                                                    }}
+                                                                >
+                                                                    {subTitle}
+                                                                </ListItem.Subtitle>
+                                                            </View>
+                                                        </View>
+                                                    </ListItem.Content>
+                                                    <View>
+                                                        <Row>
+                                                            <View
+                                                                style={{
+                                                                    right: 15
+                                                                }}
+                                                            >
+                                                                <Amount
+                                                                    sats={
+                                                                        item.mintBalance
+                                                                    }
+                                                                    sensitive
+                                                                />
+                                                            </View>
+                                                            <Icon
+                                                                name="info"
+                                                                onPress={() => {
+                                                                    navigation.navigate(
+                                                                        'Mint',
+                                                                        {
+                                                                            mint: cloneDeep(
+                                                                                mintInfo
+                                                                            )
+                                                                        }
+                                                                    );
+                                                                }}
+                                                                color={themeColor(
+                                                                    'text'
+                                                                )}
+                                                                underlayColor="transparent"
+                                                                size={35}
+                                                            />
+                                                        </Row>
+                                                    </View>
+                                                </ListItem>
+                                            </React.Fragment>
+                                        );
+                                    }}
+                                    keyExtractor={(_, index) => `mint-${index}`}
+                                    ItemSeparatorComponent={
+                                        this.renderSeparator
+                                    }
+                                    onEndReachedThreshold={50}
+                                />
+                                <RotateMintsSwitch />
+                            </>
                         ) : (
                             <Button
                                 title={localeString('views.Mints.noMints')}
@@ -399,7 +412,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             />
                         )}
                     </View>
-                    <RotateMintsSwitch />
                 </View>
             </Screen>
         );
