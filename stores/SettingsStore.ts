@@ -440,492 +440,588 @@ export const localeMigrationMapping: { [oldLocale: string]: string } = {
 
 export const CURRENCY_KEYS = [
     {
-        key: '🇺🇸 US Dollar (USD)',
+        key: 'US Dollar',
         value: 'USD',
+        flag: '🇺🇸',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇯🇵 Japanese Yen (JPY)',
+        key: 'Japanese Yen',
         value: 'JPY',
+        flag: '🇯🇵',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇳 Chinese Yuan (CNY)',
+        key: 'Chinese Yuan',
         value: 'CNY',
+        flag: '🇨🇳',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇸🇬 Singapore Dollar (SGD)',
+        key: 'Singapore Dollar',
         value: 'SGD',
+        flag: '🇸🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇭🇰 Hong Kong Dollar (HKD)',
+        key: 'Hong Kong Dollar',
         value: 'HKD',
+        flag: '🇭🇰',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇦 Canadian Dollar (CAD)',
+        key: 'Canadian Dollar',
         value: 'CAD',
+        flag: '🇨🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇿 New Zealand Dollar (NZD)',
+        key: 'New Zealand Dollar',
         value: 'NZD',
+        flag: '🇳🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇦🇺 Australian Dollar (AUD)',
+        key: 'Australian Dollar',
         value: 'AUD',
+        flag: '🇦🇺',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇱 Chilean Peso (CLP)',
+        key: 'Chilean Peso',
         value: 'CLP',
+        flag: '🇨🇱',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇬🇧 Great British Pound (GBP)',
+        key: 'Great British Pound',
         value: 'GBP',
+        flag: '🇬🇧',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇩🇰 Danish Krone (DKK)',
+        key: 'Danish Krone',
         value: 'DKK',
+        flag: '🇩🇰',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇸🇪 Swedish Krona (SEK)',
+        key: 'Swedish Krona',
         value: 'SEK',
+        flag: '🇸🇪',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇮🇸 Icelandic Krona (ISK)',
+        key: 'Icelandic Krona',
         value: 'ISK',
+        flag: '🇮🇸',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇭 Swiss Franc (CHF)',
+        key: 'Swiss Franc',
         value: 'CHF',
+        flag: '🇨🇭',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇷 Brazilian Real (BRL)',
+        key: 'Brazilian Real',
         value: 'BRL',
+        flag: '🇧🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇪🇺 Eurozone Euro (EUR)',
+        key: 'Eurozone Euro',
         value: 'EUR',
+        flag: '🇪🇺',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇷🇺 Russian Ruble (RUB)',
+        key: 'Russian Ruble',
         value: 'RUB',
+        flag: '🇷🇺',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇵🇱 Polish Złoty (PLN)',
+        key: 'Polish Złoty',
         value: 'PLN',
+        flag: '🇵🇱',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇹🇭 Thai Baht (THB)',
+        key: 'Thai Baht',
         value: 'THB',
+        flag: '🇹🇭',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇰🇷 South Korean Won (KRW)',
+        key: 'South Korean Won',
         value: 'KRW',
+        flag: '🇰🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇹🇼 New Taiwan Dollar (TWD)',
+        key: 'New Taiwan Dollar',
         value: 'TWD',
+        flag: '🇹🇼',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇿 Czech Koruna (CZK)',
+        key: 'Czech Koruna',
         value: 'CZK',
+        flag: '🇨🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇭🇺 Hungarian Forint (HUF)',
+        key: 'Hungarian Forint',
         value: 'HUF',
+        flag: '🇭🇺',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇮🇳 Indian Rupee (INR)',
+        key: 'Indian Rupee',
         value: 'INR',
+        flag: '🇮🇳',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇹🇷 Turkish Lira (TRY)',
+        key: 'Turkish Lira',
         value: 'TRY',
+        flag: '🇹🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇬 Nigerian Naira (NGN)',
+        key: 'Nigerian Naira',
         value: 'NGN',
+        flag: '🇳🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇦🇷 Argentine Peso (ARS)',
+        key: 'Argentine Peso',
         value: 'ARS',
+        flag: '🇦🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇮🇱 Israeli New Shekel (ILS)',
+        key: 'Israeli New Shekel',
         value: 'ILS',
+        flag: '🇮🇱',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇱🇧 Lebanese Pound (LBP)',
+        key: 'Lebanese Pound',
         value: 'LBP',
+        flag: '🇱🇧',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇲🇾 Malaysian Ringgit (MYR)',
+        key: 'Malaysian Ringgit',
         value: 'MYR',
+        flag: '🇲🇾',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇺🇦 Ukrainian Hryvnia (UAH)',
+        key: 'Ukrainian Hryvnia',
         value: 'UAH',
+        flag: '🇺🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇯🇲 Jamaican Dollar (JMD)',
+        key: 'Jamaican Dollar',
         value: 'JMD',
+        flag: '🇯🇲',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇴 Colombian Peso (COP)',
+        key: 'Colombian Peso',
         value: 'COP',
+        flag: '🇨🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇲🇽 Mexican Peso (MXN)',
+        key: 'Mexican Peso',
         value: 'MXN',
+        flag: '🇲🇽',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇻🇪 Venezuelan Bolivar (VES)',
+        key: 'Venezuelan Bolivar',
         value: 'VES',
+        flag: '🇻🇪',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇹🇿 Tanzanian Shilling (TZS)',
+        key: 'Tanzanian Shilling',
         value: 'TZS',
+        flag: '🇹🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇶🇦 Qatari Riyal (QAR)',
+        key: 'Qatari Riyal',
         value: 'QAR',
+        flag: '🇶🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇹🇳 Tunisian Dinar (TND)',
+        key: 'Tunisian Dinar',
         value: 'TND',
+        flag: '🇹🇳',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇴 Norwegian Krone (NOK)',
+        key: 'Norwegian Krone',
         value: 'NOK',
+        flag: '🇳🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇦🇪 United Arab Emirates Dirham (AED)',
+        key: 'United Arab Emirates Dirham',
         value: 'AED',
+        flag: '🇦🇪',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇹🇹 Trinidad & Tobago Dollar (TTD)',
+        key: 'Trinidad & Tobago Dollar',
         value: 'TTD',
+        flag: '🇹🇹',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇵🇭 Philippine Peso (PHP)',
+        key: 'Philippine Peso',
         value: 'PHP',
+        flag: '🇵🇭',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇮🇩 Indonesian Rupiah (IDR)',
+        key: 'Indonesian Rupiah',
         value: 'IDR',
+        flag: '🇮🇩',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇷🇴 Romanian Leu (RON)',
+        key: 'Romanian Leu',
         value: 'RON',
+        flag: '🇷🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇩 Congolese Franc (CDF)',
+        key: 'Congolese Franc',
         value: 'CDF',
+        flag: '🇨🇩',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇲🇨🇫🇹🇩🇨🇬🇬🇶🇬🇦 Central African CFA franc (XAF)',
+        key: 'Central African CFA franc',
         value: 'XAF',
+        flag: '🇨🇲🇨🇫🇹🇩🇨🇬🇬🇶🇬🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇰🇪 Kenyan Shilling (KES)',
+        key: 'Kenyan Shilling',
         value: 'KES',
+        flag: '🇰🇪',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇺🇬 Ugandan Shilling (UGX)',
+        key: 'Ugandan Shilling',
         value: 'UGX',
+        flag: '🇺🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇿🇦 South African Rand (ZAR)',
+        key: 'South African Rand',
         value: 'ZAR',
+        flag: '🇿🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇺 Cuban Peso (CUP)',
+        key: 'Cuban Peso',
         value: 'CUP',
+        flag: '🇨🇺',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇩🇴 Dominican Peso (DOP)',
+        key: 'Dominican Peso',
         value: 'DOP',
+        flag: '🇩🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇿 Belize Dollar (BZD)',
+        key: 'Belize Dollar',
         value: 'BZD',
+        flag: '🇧🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇴 Bolivian Boliviano (BOB)',
+        key: 'Bolivian Boliviano',
         value: 'BOB',
+        flag: '🇧🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇨🇷 Costa Rican Colón (CRC)',
+        key: 'Costa Rican Colón',
         value: 'CRC',
+        flag: '🇨🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇬🇹 Guatemalan Quetzal (GTQ)',
+        key: 'Guatemalan Quetzal',
         value: 'GTQ',
+        flag: '🇬🇹',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇮 Nicaraguan Córdoba (NIO)',
+        key: 'Nicaraguan Córdoba',
         value: 'NIO',
+        flag: '🇳🇮',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇵🇾 Paraguayan Guaraní (PYG)',
+        key: 'Paraguayan Guaraní',
         value: 'PYG',
+        flag: '🇵🇾',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇺🇾 Uruguayan Peso (UYU)',
+        key: 'Uruguayan Peso',
         value: 'UYU',
+        flag: '🇺🇾',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇲🇷 Mauritanian Ouguiya (MRU)',
+        key: 'Mauritanian Ouguiya',
         value: 'MRU',
+        flag: '🇲🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇦🇱 Albanian Lek (ALL)',
+        key: 'Albanian Lek',
         value: 'ALL',
+        flag: '🇦🇱',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇱 Netherlands Antillean Guilder (ANG)',
+        key: 'Netherlands Antillean Guilder',
         value: 'ANG',
+        flag: '🇳🇱',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇦🇴 Angolan Kwanza (AOA)',
+        key: 'Angolan Kwanza',
         value: 'AOA',
+        flag: '🇦🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇩 Bangladeshi Takka (BDT)',
+        key: 'Bangladeshi Takka',
         value: 'BDT',
+        flag: '🇧🇩',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇬 Bulgarian Lev (BGN)',
+        key: 'Bulgarian Lev',
         value: 'BGN',
+        flag: '🇧🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇭 Bahraini Dinar (BHD)',
+        key: 'Bahraini Dinar',
         value: 'BHD',
+        flag: '🇧🇭',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇮 Burundian Franc (BIF)',
+        key: 'Burundian Franc',
         value: 'BIF',
+        flag: '🇧🇮',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇲 Bermudan Dollar (BMD)',
+        key: 'Bermudan Dollar',
         value: 'BMD',
+        flag: '🇧🇲',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇧🇼 Botswanan Pula (BWP)',
+        key: 'Botswanan Pula',
         value: 'BWP',
+        flag: '🇧🇼',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇩🇯 Djiboutian Franc (DJF)',
+        key: 'Djiboutian Franc',
         value: 'DJF',
+        flag: '🇩🇯',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇩🇿 Algerian Dinar (DZD)',
+        key: 'Algerian Dinar',
         value: 'DZD',
+        flag: '🇩🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇪🇬 Egyptian Pound (EGP)',
+        key: 'Egyptian Pound',
         value: 'EGP',
+        flag: '🇪🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇪🇹 Ethiopian Birr (ETB)',
+        key: 'Ethiopian Birr',
         value: 'ETB',
+        flag: '🇪🇹',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇬🇪 Georgian Lari (GEL)',
+        key: 'Georgian Lari',
         value: 'GEL',
+        flag: '🇬🇪',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇬🇭 Ghanaian Cedi (GHS)',
+        key: 'Ghanaian Cedi',
         value: 'GHS',
+        flag: '🇬🇭',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇬🇳 Guinean Franc (GNF)',
+        key: 'Guinean Franc',
         value: 'GNF',
+        flag: '🇬🇳',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇭🇳 Honduran Lempira (HNL)',
+        key: 'Honduran Lempira',
         value: 'HNL',
+        flag: '🇭🇳',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇮🇷 Iranian Rial (IRR)',
+        key: 'Iranian Rial',
         value: 'IRR',
+        flag: '🇮🇷',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇯🇴 Jordanian Dinar (JOD)',
+        key: 'Jordanian Dinar',
         value: 'JOD',
+        flag: '🇯🇴',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇰🇬 Kyrgystani Som (KGS)',
+        key: 'Kyrgystani Som',
         value: 'KGS',
+        flag: '🇰🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇰🇿 Kazakhstani Tenge (KZT)',
+        key: 'Kazakhstani Tenge',
         value: 'KZT',
+        flag: '🇰🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇱🇰 Sri Lankan Rupee (LKR)',
+        key: 'Sri Lankan Rupee',
         value: 'LKR',
+        flag: '🇱🇰',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇲🇦 Moroccan Dirham (MAD)',
+        key: 'Moroccan Dirham',
         value: 'MAD',
+        flag: '🇲🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇲🇬 Malagasy Ariar (MGA)',
+        key: 'Malagasy Ariar',
         value: 'MGA',
+        flag: '🇲🇬',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇦 Namibian Dollar (NAD)',
+        key: 'Namibian Dollar',
         value: 'NAD',
+        flag: '🇳🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇳🇵 Nepalese Rupee (NPR)',
+        key: 'Nepalese Rupee',
         value: 'NPR',
+        flag: '🇳🇵',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇵🇦 Panamanian Balboa (PAB)',
+        key: 'Panamanian Balboa',
         value: 'PAB',
+        flag: '🇵🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇵🇪 Peruvian Sol (PEN)',
+        key: 'Peruvian Sol',
         value: 'PEN',
+        flag: '🇵🇪',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇵🇰 Pakistani Rupee (PKR)',
+        key: 'Pakistani Rupee',
         value: 'PKR',
+        flag: '🇵🇰',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇷🇸 Serbian Dinar (RSD)',
+        key: 'Serbian Dinar',
         value: 'RSD',
+        flag: '🇷🇸',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇷🇼 Rwandan Franc (RWF)',
+        key: 'Rwandan Franc',
         value: 'RWF',
+        flag: '🇷🇼',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇺🇿 Uzbekistani Sum (UZS)',
+        key: 'Uzbekistani Sum',
         value: 'UZS',
+        flag: '🇺🇿',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇻🇳 Vietnamese Dong (VND)',
+        key: 'Vietnamese Dong',
         value: 'VND',
+        flag: '🇻🇳',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇿🇲 Zambian Kwacha (ZMW)',
+        key: 'Zambian Kwacha',
         value: 'ZMW',
+        flag: '🇿🇲',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇸🇦 Saudi Riyal (SAR)',
+        key: 'Saudi Riyal',
         value: 'SAR',
+        flag: '🇸🇦',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: '🇴🇲 Omani Rial (OMR)',
+        key: 'Omani Rial',
         value: 'OMR',
+        flag: '🇴🇲',
         supportedSources: ['Zeus', 'Yadio']
     },
     // {
-    //     key: '🇰🇼 Kuwaiti Dinar (KWD)',
+    //     key: 'Kuwaiti Dinar',
     //     value: 'KWD',
+    //     flag: '🇰🇼',
     //     supportedSources: ['Zeus', 'Yadio']
     // },
     {
-        key: 'Gold (XAU)',
+        key: 'Gold',
         value: 'XAU',
         supportedSources: ['Zeus', 'Yadio']
     },
     {
-        key: 'Silver (XAG)',
+        key: 'Silver',
         value: 'XAG',
         supportedSources: ['Zeus', 'Yadio']
     }
