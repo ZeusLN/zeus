@@ -432,8 +432,8 @@ export default class CurrencyConverter extends React.Component<
             const currency = CURRENCY_KEYS.find(
                 (currency) => currency.value === currencyValue
             );
-            if (currency) {
-                return currency.key.split(' ')[0];
+            if (currency?.flag) {
+                return currency.flag;
             }
             return '';
         };

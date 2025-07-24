@@ -64,9 +64,12 @@ export default class SelectCurrency extends React.Component<
     );
 
     updateSearch = (value: string) => {
-        const result = CURRENCY_KEYS.filter((item: any) =>
-            item.key.toLowerCase().includes(value.toLowerCase())
-        );
+        const result = CURRENCY_KEYS.filter((item: any) => {
+            const currencyString = `${item.flag ? item.flag : ''} ${item.key} ${
+                item.value ? `(${item.value})` : ''
+            }`;
+            return currencyString.toLowerCase().includes(value.toLowerCase());
+        });
         this.setState({
             search: value,
             currencies: result
@@ -166,7 +169,11 @@ export default class SelectCurrency extends React.Component<
                                             fontFamily: 'PPNeueMontreal-Book'
                                         }}
                                     >
-                                        {item.key}
+                                        {`${item.flag ? item.flag : ''} ${
+                                            item.key
+                                        } ${
+                                            item.value ? `(${item.value})` : ''
+                                        }`}
                                     </ListItem.Title>
                                 </ListItem.Content>
                                 {(selectedCurrency === item.value ||

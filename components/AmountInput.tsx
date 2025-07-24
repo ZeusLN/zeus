@@ -179,23 +179,6 @@ export default class AmountInput extends React.Component<
         this.setState({ satAmount });
     };
 
-    getFlagEmoji = (currencyValue: string) => {
-        if (
-            currencyValue === 'XAF' ||
-            currencyValue == 'XAU' ||
-            currencyValue == 'XAG'
-        ) {
-            return '';
-        }
-        const currency = CURRENCY_KEYS.find(
-            (currency) => currency.value === currencyValue
-        );
-        if (currency) {
-            return currency.key.split(' ')[0];
-        }
-        return '';
-    };
-
     render() {
         const { satAmount } = this.state;
         const {
@@ -219,6 +202,9 @@ export default class AmountInput extends React.Component<
         const { settings }: any = SettingsStore;
         const { fiatEnabled } = settings;
         const fiat = settings.fiat;
+        const flag: string | undefined = CURRENCY_KEYS.find(
+            (c) => c.value === fiat
+        )?.flag;
 
         return (
             <React.Fragment>
@@ -252,7 +238,7 @@ export default class AmountInput extends React.Component<
                                 style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    paddingVertical: 4,
+                                    height: 28,
                                     paddingHorizontal: 10,
                                     borderRadius: 16,
                                     backgroundColor: themeColor('secondary'),
@@ -269,17 +255,7 @@ export default class AmountInput extends React.Component<
                                             marginRight: 4
                                         }}
                                     >
-                                        {this.getFlagEmoji(fiat)}
-                                    </Text>
-                                    <Text
-                                        style={{
-                                            fontSize: 12,
-                                            color: themeColor('text'),
-                                            fontFamily: 'PPNeueMontreal-Medium',
-                                            marginRight: 4
-                                        }}
-                                    >
-                                        {fiat}
+                                        {`${flag ? `${flag} ` : ''}${fiat}`}
                                     </Text>
                                     <Icon
                                         name="chevron-right"
