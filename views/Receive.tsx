@@ -2166,131 +2166,110 @@ export default class Receive extends React.Component<
                                             )}
                                         {(showButtonGroup || showNfcButton) && (
                                             <>
-                                                <TouchableOpacity
-                                                    onPress={() => {
-                                                        this.setState({
-                                                            showAdvanced:
-                                                                !this.state
-                                                                    .showAdvanced
-                                                        });
+                                                <View
+                                                    style={{
+                                                        alignItems: 'center',
+                                                        marginTop: 30
                                                     }}
                                                 >
-                                                    <View
+                                                    <TouchableOpacity
+                                                        activeOpacity={0.5}
+                                                        onPress={() =>
+                                                            this.setState({
+                                                                showAdvanced:
+                                                                    !this.state
+                                                                        .showAdvanced
+                                                            })
+                                                        }
                                                         style={{
-                                                            marginBottom: 10,
-                                                            marginTop: 20
+                                                            height: 40,
+                                                            paddingHorizontal: 12,
+                                                            borderRadius: 12,
+                                                            justifyContent:
+                                                                'center'
                                                         }}
                                                     >
-                                                        <Row justify="space-between">
-                                                            <View
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+                                                                alignItems:
+                                                                    'center',
+                                                                justifyContent:
+                                                                    'center'
+                                                            }}
+                                                        >
+                                                            <Text
                                                                 style={{
-                                                                    width: '95%'
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Book',
+                                                                    fontSize: 16
                                                                 }}
                                                             >
-                                                                <KeyValue
-                                                                    keyValue={localeString(
-                                                                        'general.advanced'
-                                                                    )}
-                                                                />
-                                                            </View>
+                                                                {localeString(
+                                                                    'general.advanced'
+                                                                )}
+                                                            </Text>
                                                             {showAdvanced ? (
                                                                 <CaretDown
                                                                     fill={themeColor(
-                                                                        'text'
+                                                                        'secondaryText'
                                                                     )}
                                                                     width="20"
                                                                     height="20"
+                                                                    style={{
+                                                                        marginLeft: 8
+                                                                    }}
                                                                 />
                                                             ) : (
                                                                 <CaretRight
                                                                     fill={themeColor(
-                                                                        'text'
+                                                                        'secondaryText'
                                                                     )}
                                                                     width="20"
                                                                     height="20"
+                                                                    style={{
+                                                                        marginLeft: 8
+                                                                    }}
                                                                 />
                                                             )}
-                                                        </Row>
-                                                    </View>
-                                                </TouchableOpacity>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                </View>
 
-                                                {showAdvanced && (
-                                                    <View
-                                                        style={{
-                                                            marginTop: 10
-                                                        }}
-                                                    >
-                                                        {showButtonGroup && (
-                                                            <ButtonGroup
-                                                                onPress={
-                                                                    this
-                                                                        .updateIndex
+                                                {showAdvanced &&
+                                                    showNfcButton &&
+                                                    nfcSupported && (
+                                                        <View
+                                                            style={[
+                                                                styles.button
+                                                            ]}
+                                                        >
+                                                            <Button
+                                                                title={
+                                                                    posStatus ===
+                                                                    'active'
+                                                                        ? localeString(
+                                                                              'general.payNfc'
+                                                                          )
+                                                                        : localeString(
+                                                                              'general.receiveNfc'
+                                                                          )
                                                                 }
-                                                                selectedIndex={
-                                                                    selectedIndex
+                                                                icon={{
+                                                                    name: 'nfc',
+                                                                    size: 25
+                                                                }}
+                                                                onPress={() =>
+                                                                    this.enableNfc()
                                                                 }
-                                                                buttons={
-                                                                    buttons
-                                                                }
-                                                                selectedButtonStyle={{
-                                                                    backgroundColor:
-                                                                        themeColor(
-                                                                            'highlight'
-                                                                        ),
-                                                                    borderRadius: 12
-                                                                }}
-                                                                containerStyle={{
-                                                                    backgroundColor:
-                                                                        themeColor(
-                                                                            'secondary'
-                                                                        ),
-                                                                    borderRadius: 12,
-                                                                    borderWidth: 0,
-                                                                    height: 80
-                                                                }}
-                                                                innerBorderStyle={{
-                                                                    color: themeColor(
-                                                                        'secondary'
-                                                                    )
-                                                                }}
+                                                                secondary
                                                             />
-                                                        )}
-
-                                                        {showNfcButton &&
-                                                            nfcSupported && (
-                                                                <View
-                                                                    style={[
-                                                                        styles.button,
-                                                                        {
-                                                                            marginTop: 15,
-                                                                            paddingTop: 0
-                                                                        }
-                                                                    ]}
-                                                                >
-                                                                    <Button
-                                                                        title={
-                                                                            posStatus ===
-                                                                            'active'
-                                                                                ? localeString(
-                                                                                      'general.payNfc'
-                                                                                  )
-                                                                                : localeString(
-                                                                                      'general.receiveNfc'
-                                                                                  )
-                                                                        }
-                                                                        icon={{
-                                                                            name: 'nfc',
-                                                                            size: 25
-                                                                        }}
-                                                                        onPress={() =>
-                                                                            this.enableNfc()
-                                                                        }
-                                                                        secondary
-                                                                    />
-                                                                </View>
-                                                            )}
-                                                    </View>
-                                                )}
+                                                        </View>
+                                                    )}
                                             </>
                                         )}
                                     </View>
@@ -3410,7 +3389,35 @@ export default class Receive extends React.Component<
                         </ScrollView>
                     )}
                 </View>
-
+                {showAdvanced && showButtonGroup && (
+                    <View style={{ bottom: 0 }}>
+                        {!belowDustLimit &&
+                            haveUnifiedInvoice &&
+                            !lnOnly &&
+                            !watchedInvoicePaid && (
+                                <ButtonGroup
+                                    onPress={this.updateIndex}
+                                    selectedIndex={selectedIndex}
+                                    buttons={buttons}
+                                    selectedButtonStyle={{
+                                        backgroundColor:
+                                            themeColor('highlight'),
+                                        borderRadius: 12
+                                    }}
+                                    containerStyle={{
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        borderRadius: 12,
+                                        borderWidth: 0,
+                                        height: 80
+                                    }}
+                                    innerBorderStyle={{
+                                        color: themeColor('secondary')
+                                    }}
+                                />
+                            )}
+                    </View>
+                )}
                 <ModalBox
                     style={{
                         backgroundColor: themeColor('modalBackground'),
