@@ -115,6 +115,7 @@ interface CollapsedQRProps {
     copyValue?: string;
     iconContainerStyle?: any;
     showShare?: boolean;
+    showSpeed?: boolean;
     iconOnly?: boolean;
     hideText?: boolean;
     expanded?: boolean;
@@ -181,7 +182,8 @@ export default class CollapsedQR extends React.Component<
             logo,
             satAmount,
             qrAnimationSpeed,
-            onQRAnimationSpeedChange
+            onQRAnimationSpeedChange,
+            showSpeed
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
@@ -395,7 +397,7 @@ export default class CollapsedQR extends React.Component<
                             gap: 5
                         }}
                     >
-                        {qrAnimationSpeed && onQRAnimationSpeedChange && (
+                        {showSpeed && (
                             <QRSpeedMeterButton
                                 showOptions={showSpeedOptions}
                                 onPress={() =>
