@@ -203,7 +203,7 @@ export interface Settings {
     lsps1HostMainnet: string;
     lsps1HostTestnet: string;
     lsps1Token: string;
-    lsps1ShowPurchaseButton: boolean;
+    lsps1ShowPurchaseButton?: boolean; // deprecated
     // Swaps
     swaps: SwapsSettings;
     // Lightning Address
@@ -1390,7 +1390,6 @@ export default class SettingsStore {
         lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
         lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
         lsps1Token: '',
-        lsps1ShowPurchaseButton: true,
         //swaps
         swaps: {
             hostMainnet: DEFAULT_SWAP_HOST_MAINNET,

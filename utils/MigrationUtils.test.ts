@@ -114,7 +114,6 @@ describe('MigrationUtils', () => {
             '03e84a109cd70e57864274932fc87c5e6434c59ebb8e6e7d28532219ba38f7f6df',
         lsps1RestMainnet: 'https://lsps1.lnolymp.us',
         lsps1RestTestnet: 'https://testnet-lsps1.lnolymp.us',
-        lsps1ShowPurchaseButton: true,
         lsps1Token: '',
         neutrinoPeersMainnet: [
             'btcd1.lnolymp.us',
