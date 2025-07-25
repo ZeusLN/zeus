@@ -88,7 +88,7 @@ export default class NewChannelModal extends React.Component<
                                     marginRight: '2%'
                                 }}
                             >
-                                <Row>
+                                <Row style={{ flex: 1 }}>
                                     <View style={{ marginRight: 15 }}>
                                         <Olympus fill={themeColor('text')} />
                                     </View>
@@ -193,7 +193,7 @@ export default class NewChannelModal extends React.Component<
                                     marginRight: '2%'
                                 }}
                             >
-                                <Row>
+                                <Row style={{ flex: 1 }}>
                                     <View style={{ marginRight: 15 }}>
                                         <Olympus fill={themeColor('text')} />
                                     </View>
@@ -297,7 +297,7 @@ export default class NewChannelModal extends React.Component<
                                 marginRight: '2%'
                             }}
                         >
-                            <Row>
+                            <Row style={{ flex: 1 }}>
                                 <View
                                     style={{ marginLeft: 4, marginRight: 18 }}
                                 >
