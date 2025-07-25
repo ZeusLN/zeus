@@ -47,6 +47,7 @@ import {
     stopLnd,
     expressGraphSync
 } from '../../utils/LndMobileUtils';
+import OnDemandGraphSync from '../../utils/OnDemandGraphSync';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
@@ -447,14 +448,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await updateSettings({
                         initialLoad: false
                     });
+                    // Reset graph sync status for next app session
+                    await OnDemandGraphSync.resetGraphSyncStatus();
                 } else {
                     if (expressGraphSyncEnabled) {
+                        const expressGraphSyncStart = new Date().getTime();
+                        console.log(
+                            '[Performance] Express Graph Sync starting...'
+                        );
+
                         await expressGraphSync();
+
+                        const expressGraphSyncDuration =
+                            new Date().getTime() - expressGraphSyncStart;
+                        console.log(
+                            `[Performance] Express Graph Sync completed in ${expressGraphSyncDuration}ms`
+                        );
+
                         if (settings.resetExpressGraphSyncOnStartup) {
                             await updateSettings({
                                 resetExpressGraphSyncOnStartup: false
                             });
                         }
+
+                        // Mark graph sync as completed for this session
+                        await OnDemandGraphSync.markGraphSyncCompleted();
+                    } else {
+                        console.log(
+                            '[Performance] Express Graph Sync skipped (disabled) - faster startup'
+                        );
                     }
                 }
 

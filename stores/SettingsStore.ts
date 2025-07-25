@@ -175,6 +175,7 @@ export interface Settings {
     automaticDisasterRecoveryBackup: boolean;
     expressGraphSync: boolean;
     resetExpressGraphSyncOnStartup: boolean;
+    expressGraphSyncPromptSkipped?: boolean;
     bimodalPathfinding: boolean;
     dontAllowOtherPeers: boolean;
     neutrinoPeersMainnet: Array<string>;
@@ -1360,7 +1361,7 @@ export default class SettingsStore {
         fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
         // embedded node
         automaticDisasterRecoveryBackup: true,
-        expressGraphSync: true,
+        expressGraphSync: false,
         resetExpressGraphSyncOnStartup: false,
         bimodalPathfinding: true,
         dontAllowOtherPeers: false,

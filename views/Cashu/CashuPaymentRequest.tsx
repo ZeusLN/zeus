@@ -20,6 +20,7 @@ import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
+import ExpressGraphSyncModal from '../../components/ExpressGraphSyncModal';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -29,11 +30,13 @@ import TransactionsStore, {
 import UnitsStore from '../../stores/UnitsStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
+import ModalStore from '../../stores/ModalStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import RestartUtils from '../../utils/RestartUtils';
 
 import { Row } from '../../components/layout/Row';
 
@@ -56,6 +59,7 @@ interface CashuPaymentRequestProps {
     UnitsStore: UnitsStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
+    ModalStore: ModalStore;
 }
 
 interface CashuPaymentRequestState {
@@ -71,7 +75,8 @@ interface CashuPaymentRequestState {
     'TransactionsStore',
     'UnitsStore',
     'LnurlPayStore',
-    'SettingsStore'
+    'SettingsStore',
+    'ModalStore'
 )
 @observer
 export default class CashuPaymentRequest extends React.Component<
@@ -80,6 +85,8 @@ export default class CashuPaymentRequest extends React.Component<
 > {
     listener: any;
     isComponentMounted: boolean = false;
+    expressGraphSyncModalRef: React.RefObject<ExpressGraphSyncModal> =
+        React.createRef();
     state = {
         customAmount: '',
         satAmount: '',
@@ -93,6 +100,11 @@ export default class CashuPaymentRequest extends React.Component<
         const { paymentRequest, getPayReq } = CashuStore;
         const settings = await SettingsStore.getSettings();
 
+        // Set up the Express Graph Sync modal callback
+        CashuStore.setExpressGraphSyncModalCallback(() => {
+            this.expressGraphSyncModalRef.current?.show();
+        });
+
         this.setState({
             slideToPayThreshold: settings?.payments?.slideToPayThreshold
         });
@@ -105,7 +117,58 @@ export default class CashuPaymentRequest extends React.Component<
 
     componentWillUnmount(): void {
         this.isComponentMounted = false;
+        // Clean up the modal callback
+        const { CashuStore } = this.props;
+        CashuStore.setExpressGraphSyncModalCallback(null);
     }
+
+    handleExpressGraphSyncEnable = async () => {
+        const { SettingsStore, CashuStore } = this.props;
+
+        // Update Express Graph Sync setting
+        await SettingsStore.updateSettings({
+            expressGraphSync: true
+        });
+
+        // Mark that the prompt has been shown
+        await CashuStore.expressGraphSyncDetector.markPromptShown();
+
+        // Get payment data for preservation
+        const { paymentRequest } = CashuStore;
+        const pendingPayment = CashuStore.pendingPaymentForModal;
+
+        // Prepare payment data for restart
+        const paymentData = {
+            type: 'cashu' as const,
+            timestamp: Date.now(),
+            paymentRequest,
+            amount: pendingPayment?.amount
+        };
+
+        // Continue with the pending payment
+        CashuStore.executePaymentAfterModal();
+
+        // Schedule app restart with payment preservation
+        await RestartUtils.restartWithPaymentPreservation(paymentData, {
+            type: 'express-graph-sync-enabled',
+            timestamp: Date.now()
+        });
+    };
+
+    handleExpressGraphSyncSkip = async () => {
+        const { SettingsStore, CashuStore } = this.props;
+
+        // Mark that user skipped the prompt
+        await SettingsStore.updateSettings({
+            expressGraphSyncPromptSkipped: true
+        });
+
+        // Mark that the prompt has been shown
+        await CashuStore.expressGraphSyncDetector.markPromptShown();
+
+        // Continue with the pending payment
+        CashuStore.executePaymentAfterModal();
+    };
 
     sendPayment = ({
         amount // used only for no-amount invoices
@@ -581,6 +644,13 @@ export default class CashuPaymentRequest extends React.Component<
                             )}
                         </View>
                     )}
+                <ExpressGraphSyncModal
+                    ref={this.expressGraphSyncModalRef}
+                    ModalStore={this.props.ModalStore}
+                    SettingsStore={this.props.SettingsStore}
+                    onEnableAndRestart={this.handleExpressGraphSyncEnable}
+                    onSkip={this.handleExpressGraphSyncSkip}
+                />
             </Screen>
         );
     }

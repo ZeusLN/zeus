@@ -26,6 +26,7 @@ import Text from '../components/Text';
 import TextInput from '../components/TextInput';
 import { Row } from '../components/layout/Row';
 import { WarningMessage } from '../components/SuccessErrorMessage';
+import ExpressGraphSyncModal from '../components/ExpressGraphSyncModal';
 
 import BalanceStore from '../stores/BalanceStore';
 import ChannelsStore from '../stores/ChannelsStore';
@@ -36,6 +37,7 @@ import UnitsStore from '../stores/UnitsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import SettingsStore from '../stores/SettingsStore';
+import ModalStore from '../stores/ModalStore';
 
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -43,6 +45,7 @@ import BackendUtils from '../utils/BackendUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import RestartUtils from '../utils/RestartUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -68,6 +71,7 @@ interface InvoiceProps {
     NodeInfoStore: NodeInfoStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
+    ModalStore: ModalStore;
 }
 
 interface InvoiceState {
@@ -99,7 +103,8 @@ interface InvoiceState {
     'NodeInfoStore',
     'LnurlPayStore',
     'SettingsStore',
-    'SwapStore'
+    'SwapStore',
+    'ModalStore'
 )
 @observer
 export default class PaymentRequest extends React.Component<
@@ -108,6 +113,8 @@ export default class PaymentRequest extends React.Component<
 > {
     listener: any;
     isComponentMounted: boolean = false;
+    expressGraphSyncModalRef: React.RefObject<ExpressGraphSyncModal> =
+        React.createRef();
     state = {
         customAmount: '',
         satAmount: '',
@@ -130,9 +137,14 @@ export default class PaymentRequest extends React.Component<
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore } = this.props;
+        const { SettingsStore, InvoicesStore, TransactionsStore } = this.props;
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
+
+        // Set up the Express Graph Sync modal callback
+        TransactionsStore.setExpressGraphSyncModalCallback(() => {
+            this.expressGraphSyncModalRef.current?.show();
+        });
 
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
@@ -224,6 +236,9 @@ export default class PaymentRequest extends React.Component<
 
     componentWillUnmount(): void {
         this.isComponentMounted = false;
+        // Clean up the modal callback
+        const { TransactionsStore } = this.props;
+        TransactionsStore.setExpressGraphSyncModalCallback(null);
     }
 
     checkIfLndReady = async () => {
@@ -292,6 +307,54 @@ export default class PaymentRequest extends React.Component<
             );
         }
         return null;
+    };
+
+    handleExpressGraphSyncEnable = async () => {
+        const { SettingsStore, TransactionsStore, InvoicesStore } = this.props;
+
+        // Update Express Graph Sync setting
+        await SettingsStore.updateSettings({
+            expressGraphSync: true
+        });
+
+        // Mark that the prompt has been shown
+        await TransactionsStore.expressGraphSyncDetector.markPromptShown();
+
+        // Get payment data for preservation
+        const { paymentRequest } = InvoicesStore;
+        const pendingPayment = TransactionsStore.pendingPaymentForModal;
+
+        // Prepare payment data for restart
+        const paymentData = {
+            type: 'invoice' as const,
+            timestamp: Date.now(),
+            paymentRequest: paymentRequest || pendingPayment?.payment_request,
+            amount: pendingPayment?.amount
+        };
+
+        // Continue with the pending payment
+        TransactionsStore.executePaymentAfterModal();
+
+        // Schedule app restart with payment preservation
+        await RestartUtils.restartWithPaymentPreservation(paymentData, {
+            type: 'express-graph-sync-enabled',
+            timestamp: Date.now()
+        });
+    };
+
+    handleExpressGraphSyncSkip = async () => {
+        const { SettingsStore, TransactionsStore } = this.props;
+
+        // Mark that user skipped the prompt
+        await SettingsStore.updateSettings({
+            expressGraphSyncPromptSkipped: true
+        });
+
+        // Mark that the prompt has been shown
+        await TransactionsStore.expressGraphSyncDetector.markPromptShown();
+
+        // Continue with the pending payment
+        TransactionsStore.executePaymentAfterModal();
     };
 
     sendPayment = ({
@@ -1283,6 +1346,13 @@ export default class PaymentRequest extends React.Component<
                             )}
                         </View>
                     )}
+                <ExpressGraphSyncModal
+                    ref={this.expressGraphSyncModalRef}
+                    ModalStore={this.props.ModalStore}
+                    SettingsStore={this.props.SettingsStore}
+                    onEnableAndRestart={this.handleExpressGraphSyncEnable}
+                    onSkip={this.handleExpressGraphSyncSkip}
+                />
             </Screen>
         );
     }

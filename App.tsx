@@ -256,6 +256,77 @@ import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
 
+    async componentDidMount() {
+        // Check for post-restart actions
+        this.checkPostRestartActions();
+    }
+
+    private checkPostRestartActions = async () => {
+        const RestartUtils = require('./utils/RestartUtils').default;
+
+        try {
+            const {
+                hasRestartReason,
+                reason,
+                hasPendingPayment,
+                pendingPayment
+            } = await RestartUtils.checkPostRestartActions();
+
+            if (
+                hasRestartReason &&
+                reason?.type === 'express-graph-sync-enabled'
+            ) {
+                // Express Graph Sync has been enabled after restart
+                console.log('Express Graph Sync enabled after restart');
+
+                if (hasPendingPayment && pendingPayment) {
+                    // Handle pending payment recovery
+                    this.recoverPendingPayment(pendingPayment);
+                }
+            }
+        } catch (error) {
+            console.error('Error checking post-restart actions:', error);
+        }
+    };
+
+    private recoverPendingPayment = async (pendingPayment: any) => {
+        // Wait for stores to be ready
+        setTimeout(() => {
+            const { type, paymentRequest, amount, destination } =
+                pendingPayment;
+
+            switch (type) {
+                case 'invoice':
+                    if (paymentRequest) {
+                        // Navigate to payment request view
+                        invoicesStore.getPayReq(paymentRequest);
+                        NavigationService.navigate('PaymentRequest');
+                    }
+                    break;
+
+                case 'keysend':
+                    if (destination) {
+                        // Navigate to send view with destination
+                        NavigationService.navigate('Send', {
+                            destination,
+                            satAmount: amount,
+                            transactionType: 'Keysend',
+                            isValid: true
+                        });
+                    }
+                    break;
+
+                case 'cashu':
+                    if (paymentRequest) {
+                        // Set up cashu payment
+                        cashuStore.getPayReq(paymentRequest);
+                        NavigationService.navigate('CashuPaymentRequest');
+                    }
+                    break;
+            }
+        }, 2000); // Wait for app initialization
+    };
+
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
         if (dialogHasBeenClosed) {
