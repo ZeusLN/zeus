@@ -6,6 +6,7 @@ export default class ModalStore {
     @observable public showInfoModal: boolean = false;
     @observable public showAlertModal: boolean = false;
     @observable public showShareModal: boolean = false;
+    @observable public showNewChannelModal: boolean = false;
     @observable public modalUrl: string;
     @observable public clipboardValue: string;
     @observable public infoModalTitle: string | undefined;
@@ -66,6 +67,11 @@ export default class ModalStore {
     };
 
     @action
+    public toggleNewChannelModal = () => {
+        this.showNewChannelModal = !this.showNewChannelModal;
+    };
+
+    @action
     @action
     public shareQR = () => {
         if (this.onShareQR) this.onShareQR();
@@ -118,6 +124,9 @@ export default class ModalStore {
             this.onShareQR = undefined;
             this.onShareText = undefined;
             return true;
+        }
+        if (this.showNewChannelModal) {
+            this.showNewChannelModal = false;
         }
         return false;
     };
