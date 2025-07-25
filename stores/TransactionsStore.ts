@@ -20,6 +20,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
 import ChannelsStore from './ChannelsStore';
+import BalanceStore from './BalanceStore';
 
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
@@ -67,15 +68,18 @@ export default class TransactionsStore {
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
     channelsStore: ChannelsStore;
+    balanceStore: BalanceStore;
 
     constructor(
         settingsStore: SettingsStore,
         nodeInfoStore: NodeInfoStore,
-        channelsStore: ChannelsStore
+        channelsStore: ChannelsStore,
+        balanceStore: BalanceStore
     ) {
         this.settingsStore = settingsStore;
         this.nodeInfoStore = nodeInfoStore;
         this.channelsStore = channelsStore;
+        this.balanceStore = balanceStore;
     }
 
     @action
@@ -432,6 +436,7 @@ export default class TransactionsStore {
                     this.txid = data.txid;
                     this.publishSuccess = true;
                     this.loading = false;
+                    this.balanceStore.getCombinedBalance();
                 });
             })
             .catch((error: Error) => {

@@ -23,7 +23,7 @@ import { Row } from '../components/layout/Row';
 import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
-import SettingsStore from '../stores/SettingsStore';
+import BalanceStore from '../stores/BalanceStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -40,7 +40,7 @@ interface SendingLightningProps {
     TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
-    SettingsStore: SettingsStore;
+    BalanceStore: BalanceStore;
 }
 
 interface SendingLightningState {
@@ -49,7 +49,7 @@ interface SendingLightningState {
     currentPayment: any;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
+@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore', 'BalanceStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
@@ -90,12 +90,13 @@ export default class SendingLightning extends React.Component<
     }
 
     componentDidUpdate(_prevProps: SendingLightningProps) {
-        const { TransactionsStore } = this.props;
+        const { TransactionsStore, BalanceStore } = this.props;
         const wasSuccessful = this.successfullySent(TransactionsStore);
 
         if (wasSuccessful && !this.state.wasSuccessful) {
             this.fetchPayments();
             this.setState({ wasSuccessful: true }); // Update success state
+            BalanceStore.getCombinedBalance();
         } else if (!wasSuccessful && this.state.wasSuccessful) {
             this.setState({ wasSuccessful: false }); // Reset success state if needed
         }
