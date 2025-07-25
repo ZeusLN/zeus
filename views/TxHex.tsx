@@ -167,7 +167,8 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
             bbqrParts,
             txHex,
             bcurPart,
-            txDecoded
+            txDecoded,
+            qrAnimationSpeed
         } = this.state;
 
         const qrButton = () => (
@@ -394,12 +395,11 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                     ? bbqrParts[frameIndex]
                                                     : bcurPart
                                             }
+                                            showSpeed={selectedIndex !== 0}
                                             copyValue={txHex}
                                             truncateLongValue
                                             expanded
-                                            qrAnimationSpeed={
-                                                this.state.qrAnimationSpeed
-                                            }
+                                            qrAnimationSpeed={qrAnimationSpeed}
                                             onQRAnimationSpeedChange={(
                                                 speed
                                             ) => {

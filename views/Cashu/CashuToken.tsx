@@ -494,6 +494,7 @@ export default class CashuTokenView extends React.Component<
                                         !this.state.isTokenTooLarge &&
                                         selectedIndex === 0
                                     }
+                                    showSpeed={selectedIndex !== 0}
                                     truncateLongValue
                                     expanded
                                     qrAnimationSpeed={

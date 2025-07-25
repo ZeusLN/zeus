@@ -183,7 +183,8 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
             bbqrParts,
             fundedPsbt,
             bcurPart,
-            psbtDecoded
+            psbtDecoded,
+            qrAnimationSpeed
         } = this.state;
 
         const qrButton = () => (
@@ -388,12 +389,11 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                                     ? bbqrParts[frameIndex]
                                                     : bcurPart
                                             }
+                                            showSpeed={selectedIndex !== 0}
                                             copyValue={fundedPsbt}
                                             truncateLongValue
                                             expanded
-                                            qrAnimationSpeed={
-                                                this.state.qrAnimationSpeed
-                                            }
+                                            qrAnimationSpeed={qrAnimationSpeed}
                                             onQRAnimationSpeedChange={(
                                                 speed
                                             ) => {
