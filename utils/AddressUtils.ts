@@ -34,7 +34,7 @@ const bip21Uri =
 const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
 
 /* testnet */
-const btcNonBechTestnet = /^[2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+const btcNonBechTestnet = /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
 const btcBechTestnet = /^(bc1|bcrt1|BC1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 const btcBechPubkeyScriptHashTestnet =
     /^(tb1|TB1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
