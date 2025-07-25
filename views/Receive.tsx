@@ -195,8 +195,8 @@ export default class Receive extends React.Component<
             receiverName: '',
             value: '',
             satAmount: '',
-            expiry: '3600',
-            timePeriod: 'Seconds',
+            expiry: '1',
+            timePeriod: 'Hours',
             expirySeconds: '3600',
             customPreimage: '',
             ampInvoice: false,
@@ -273,11 +273,11 @@ export default class Receive extends React.Component<
             expirationIndex,
             memo: settings?.invoices?.memo || '',
             receiverName: settings?.invoices?.receiverName || '',
-            // if LSP is active, default to 3600 seconds
-            expiry: lspIsActive ? '3600' : settings?.invoices?.expiry || '3600',
+            // if LSP is active, default to 1 hour (3600 seconds)
+            expiry: lspIsActive ? '1' : settings?.invoices?.expiry || '1',
             timePeriod: lspIsActive
-                ? 'Seconds'
-                : settings?.invoices?.timePeriod || 'Seconds',
+                ? 'Hours'
+                : settings?.invoices?.timePeriod || 'Hours',
             expirySeconds: lspIsActive ? '3600' : newExpirySeconds,
             routeHints:
                 settings?.invoices?.routeHints ||
@@ -2274,11 +2274,11 @@ export default class Receive extends React.Component<
                                                                                 enableLSP ===
                                                                                     true,
                                                                             expiry: !enableLSP
-                                                                                ? '3600'
+                                                                                ? '1'
                                                                                 : expiry,
                                                                             timePeriod:
                                                                                 !enableLSP
-                                                                                    ? 'Seconds'
+                                                                                    ? 'Hours'
                                                                                     : timePeriod,
                                                                             expirySeconds:
                                                                                 !enableLSP
