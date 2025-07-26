@@ -24,6 +24,7 @@ import { Spacer } from '../../components/layout/Spacer';
 
 import CashuStore from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import FiatStore from '../../stores/FiatStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
@@ -45,6 +46,7 @@ interface KeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore?: CashuStore;
     ChannelsStore?: ChannelsStore;
+    FiatStore?: FiatStore;
     NodeInfoStore?: NodeInfoStore;
     SettingsStore?: SettingsStore;
     SyncStore?: SyncStore;
@@ -63,6 +65,7 @@ interface KeypadPaneState {
 @inject(
     'CashuStore',
     'ChannelsStore',
+    'FiatStore',
     'NodeInfoStore',
     'SettingsStore',
     'SyncStore',
@@ -116,16 +119,23 @@ export default class KeypadPane extends React.PureComponent<
 
     appendValue = (value: string) => {
         const { amount } = this.state;
-        const { units } = this.props.UnitsStore!;
+        const { FiatStore, SettingsStore, UnitsStore } = this.props;
+        const { units } = UnitsStore!;
 
-        let newAmount;
-
-        // only allow one decimal
-        if (amount.includes('.') && value === '.') return this.startShake();
+        let newAmount, decimalCount;
 
         // limit decimal places depending on units
         if (units === 'fiat') {
-            if (amount.split('.')[1] && amount.split('.')[1].length == 2)
+            const fiat = SettingsStore!.settings?.fiat || '';
+            const fiatProperties = FiatStore!.symbolLookup(fiat);
+            decimalCount =
+                fiatProperties?.decimalPlaces !== undefined
+                    ? fiatProperties.decimalPlaces
+                    : 2;
+            if (
+                amount.split('.')[1] &&
+                amount.split('.')[1].length == decimalCount
+            )
                 return this.startShake();
         }
         if (units === 'sats') {
@@ -147,6 +157,10 @@ export default class KeypadPane extends React.PureComponent<
             if (decimalPart && decimalPart.length == 8)
                 return this.startShake();
         }
+
+        // only allow one decimal, unless currency has zero decimal places
+        if (value === '.' && (amount.includes('.') || decimalCount === 0))
+            return this.startShake();
 
         const proposedNewAmountStr = `${amount}${value}`;
         const proposedNewAmount = new BigNumber(proposedNewAmountStr);

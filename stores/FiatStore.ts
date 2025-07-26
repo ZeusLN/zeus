@@ -14,6 +14,7 @@ interface CurrencyDisplayRules {
     space: boolean;
     rtl: boolean;
     separatorSwap: boolean;
+    decimalPlaces?: number;
 }
 export default class FiatStore {
     @observable public fiatRates:
@@ -103,13 +104,15 @@ export default class FiatStore {
                 symbol: 'BD',
                 space: true,
                 rtl: false,
-                separatorSwap: true
+                separatorSwap: true,
+                decimalPlaces: 3
             },
             BIF: {
                 symbol: 'FBu',
                 space: true,
                 rtl: true,
-                separatorSwap: true
+                separatorSwap: true,
+                decimalPlaces: 0
             },
             BMD: {
                 symbol: 'BD$',
@@ -154,7 +157,13 @@ export default class FiatStore {
                 rtl: false,
                 separatorSwap: false
             },
-            CLP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
+            CLP: {
+                symbol: '$',
+                space: true,
+                rtl: false,
+                separatorSwap: false,
+                decimalPlaces: 0
+            },
             CNY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
             COP: { symbol: '$', space: true, rtl: false, separatorSwap: false },
             CRC: {
@@ -179,7 +188,8 @@ export default class FiatStore {
                 symbol: 'Fdj',
                 space: true,
                 rtl: true,
-                separatorSwap: true
+                separatorSwap: true,
+                decimalPlaces: 0
             },
             DKK: {
                 symbol: 'kr.',
@@ -239,7 +249,8 @@ export default class FiatStore {
                 symbol: 'FG',
                 space: true,
                 rtl: true,
-                separatorSwap: true
+                separatorSwap: true,
+                decimalPlaces: 0
             },
             GTQ: {
                 symbol: 'Q',
@@ -279,7 +290,13 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: false
             },
-            ISK: { symbol: 'kr', space: true, rtl: true, separatorSwap: true },
+            ISK: {
+                symbol: 'kr',
+                space: true,
+                rtl: true,
+                separatorSwap: true,
+                decimalPlaces: 0
+            },
             JMD: {
                 symbol: '$',
                 space: false,
@@ -290,9 +307,16 @@ export default class FiatStore {
                 symbol: 'JD',
                 space: false,
                 rtl: false,
-                separatorSwap: false
+                separatorSwap: false,
+                decimalPlaces: 3
             },
-            JPY: { symbol: '¥', space: true, rtl: false, separatorSwap: false },
+            JPY: {
+                symbol: '¥',
+                space: true,
+                rtl: false,
+                separatorSwap: false,
+                decimalPlaces: 0
+            },
             KES: {
                 symbol: '/=',
                 space: false,
@@ -305,8 +329,14 @@ export default class FiatStore {
                 rtl: true,
                 separatorSwap: true
             },
-            KRW: { symbol: '₩', space: true, rtl: false, separatorSwap: false },
-            // KWD: { symbol: 'د.ك', space: true, rtl: true, separatorSwap: false },
+            KRW: {
+                symbol: '₩',
+                space: true,
+                rtl: false,
+                separatorSwap: false,
+                decimalPlaces: 0
+            },
+            // KWD: { symbol: 'د.ك', space: true, rtl: true, separatorSwap: false, decimalPlaces: 3 },
             KZT: {
                 symbol: '₸',
                 space: true,
@@ -381,7 +411,13 @@ export default class FiatStore {
                 separatorSwap: false
             },
             NZD: { symbol: '$', space: true, rtl: false, separatorSwap: false },
-            OMR: { symbol: '﷼', space: true, rtl: true, separatorSwap: false },
+            OMR: {
+                symbol: '﷼',
+                space: true,
+                rtl: true,
+                separatorSwap: false,
+                decimalPlaces: 3
+            },
             PAB: {
                 symbol: 'B/',
                 space: false,
@@ -406,7 +442,8 @@ export default class FiatStore {
                 symbol: '₲',
                 space: false,
                 rtl: false,
-                separatorSwap: false
+                separatorSwap: true,
+                decimalPlaces: 0
             },
             RON: {
                 symbol: 'lei',
@@ -430,7 +467,8 @@ export default class FiatStore {
                 symbol: 'FRw',
                 space: true,
                 rtl: true,
-                separatorSwap: false
+                separatorSwap: false,
+                decimalPlaces: 0
             },
             SAR: { symbol: '﷼', space: true, rtl: true, separatorSwap: false },
             SEK: {
@@ -450,7 +488,8 @@ export default class FiatStore {
                 symbol: 'د.ت',
                 space: false,
                 rtl: true,
-                separatorSwap: false
+                separatorSwap: false,
+                decimalPlaces: 3
             },
             TRY: { symbol: '₺', space: true, rtl: true, separatorSwap: false },
             TTD: {
@@ -476,7 +515,8 @@ export default class FiatStore {
                 symbol: '/=',
                 space: false,
                 rtl: true,
-                separatorSwap: false
+                separatorSwap: false,
+                decimalPlaces: 0
             },
             UZS: {
                 symbol: 'soʻm',
@@ -494,7 +534,8 @@ export default class FiatStore {
                 symbol: '₫',
                 space: true,
                 rtl: true,
-                separatorSwap: true
+                separatorSwap: true,
+                decimalPlaces: 0
             },
             QAR: {
                 symbol: 'QR',
@@ -512,7 +553,8 @@ export default class FiatStore {
                 symbol: 'F.CFA',
                 space: true,
                 rtl: false,
-                separatorSwap: false
+                separatorSwap: false,
+                decimalPlaces: 0
             },
             ZAR: {
                 symbol: 'R',
@@ -562,7 +604,8 @@ export default class FiatStore {
                 symbol: fiat,
                 space: true,
                 rtl: true,
-                separatorSwap: false
+                separatorSwap: false,
+                decimalPlaces: 2
             };
         }
     };
