@@ -162,6 +162,7 @@ interface ReceiveState {
     routeHintMode: RouteHintMode;
     selectedRouteHintChannels?: Channel[];
     hideRightHeaderComponent?: boolean;
+    showAdvanced: boolean;
 }
 
 enum RouteHintMode {
@@ -217,7 +218,8 @@ export default class Receive extends React.Component<
             lspIsActive: false,
             flowLspNotConfigured: true,
             routeHintMode: RouteHintMode.Automatic,
-            selectedRouteHintChannels: undefined
+            selectedRouteHintChannels: undefined,
+            showAdvanced: false
         };
     }
 
@@ -1227,7 +1229,8 @@ export default class Receive extends React.Component<
             hideRightHeaderComponent,
             nfcSupported,
             advancedSettingsToggle,
-            durationSettingsToggle
+            durationSettingsToggle,
+            showAdvanced
         } = this.state;
 
         const { fontScale } = Dimensions.get('window');
@@ -1594,6 +1597,18 @@ export default class Receive extends React.Component<
         const baseModalHeight = 300;
         const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
         const modalHeight = baseModalHeight + ADDRESS_TYPES.length * itemHeight;
+
+        const showButtonGroup =
+            !belowDustLimit &&
+            haveUnifiedInvoice &&
+            !lnOnly &&
+            !watchedInvoicePaid;
+
+        const showNfcButton =
+            !(
+                selectedIndex === 3 &&
+                (!lightningAddress || lightningAddressLoading)
+            ) && nfcSupported;
 
         return (
             <Screen>
@@ -2149,43 +2164,114 @@ export default class Receive extends React.Component<
                                                     }
                                                 />
                                             )}
-                                        {!(
-                                            selectedIndex === 3 &&
-                                            (!lightningAddress ||
-                                                lightningAddressLoading)
-                                        ) &&
-                                            nfcSupported && (
+                                        {(showButtonGroup || showNfcButton) && (
+                                            <>
                                                 <View
-                                                    style={[
-                                                        styles.button,
-                                                        {
-                                                            marginTop: 15,
-                                                            paddingTop: 0
-                                                        }
-                                                    ]}
+                                                    style={{
+                                                        alignItems: 'center',
+                                                        marginTop: 30
+                                                    }}
                                                 >
-                                                    <Button
-                                                        title={
-                                                            posStatus ===
-                                                            'active'
-                                                                ? localeString(
-                                                                      'general.payNfc'
-                                                                  )
-                                                                : localeString(
-                                                                      'general.receiveNfc'
-                                                                  )
-                                                        }
-                                                        icon={{
-                                                            name: 'nfc',
-                                                            size: 25
-                                                        }}
+                                                    <TouchableOpacity
+                                                        activeOpacity={0.5}
                                                         onPress={() =>
-                                                            this.enableNfc()
+                                                            this.setState({
+                                                                showAdvanced:
+                                                                    !this.state
+                                                                        .showAdvanced
+                                                            })
                                                         }
-                                                        secondary
-                                                    />
+                                                        style={{
+                                                            height: 40,
+                                                            paddingHorizontal: 12,
+                                                            borderRadius: 12,
+                                                            justifyContent:
+                                                                'center'
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{
+                                                                flexDirection:
+                                                                    'row',
+                                                                alignItems:
+                                                                    'center',
+                                                                justifyContent:
+                                                                    'center'
+                                                            }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Book',
+                                                                    fontSize: 16
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'general.advanced'
+                                                                )}
+                                                            </Text>
+                                                            {showAdvanced ? (
+                                                                <CaretDown
+                                                                    fill={themeColor(
+                                                                        'secondaryText'
+                                                                    )}
+                                                                    width="20"
+                                                                    height="20"
+                                                                    style={{
+                                                                        marginLeft: 8
+                                                                    }}
+                                                                />
+                                                            ) : (
+                                                                <CaretRight
+                                                                    fill={themeColor(
+                                                                        'secondaryText'
+                                                                    )}
+                                                                    width="20"
+                                                                    height="20"
+                                                                    style={{
+                                                                        marginLeft: 8
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </View>
+                                                    </TouchableOpacity>
                                                 </View>
-                                            )}
+
+                                                {showAdvanced &&
+                                                    showNfcButton &&
+                                                    nfcSupported && (
+                                                        <View
+                                                            style={[
+                                                                styles.button
+                                                            ]}
+                                                        >
+                                                            <Button
+                                                                title={
+                                                                    posStatus ===
+                                                                    'active'
+                                                                        ? localeString(
+                                                                              'general.payNfc'
+                                                                          )
+                                                                        : localeString(
+                                                                              'general.receiveNfc'
+                                                                          )
+                                                                }
+                                                                icon={{
+                                                                    name: 'nfc',
+                                                                    size: 25
+                                                                }}
+                                                                onPress={() =>
+                                                                    this.enableNfc()
+                                                                }
+                                                                secondary
+                                                            />
+                                                        </View>
+                                                    )}
+                                            </>
+                                        )}
                                     </View>
                                 )}
                                 {!loading &&
@@ -3303,31 +3389,35 @@ export default class Receive extends React.Component<
                         </ScrollView>
                     )}
                 </View>
-                <View style={{ bottom: 0 }}>
-                    {!belowDustLimit &&
-                        haveUnifiedInvoice &&
-                        !lnOnly &&
-                        !watchedInvoicePaid && (
-                            <ButtonGroup
-                                onPress={this.updateIndex}
-                                selectedIndex={selectedIndex}
-                                buttons={buttons}
-                                selectedButtonStyle={{
-                                    backgroundColor: themeColor('highlight'),
-                                    borderRadius: 12
-                                }}
-                                containerStyle={{
-                                    backgroundColor: themeColor('secondary'),
-                                    borderRadius: 12,
-                                    borderWidth: 0,
-                                    height: 80
-                                }}
-                                innerBorderStyle={{
-                                    color: themeColor('secondary')
-                                }}
-                            />
-                        )}
-                </View>
+                {showAdvanced && showButtonGroup && (
+                    <View style={{ bottom: 0 }}>
+                        {!belowDustLimit &&
+                            haveUnifiedInvoice &&
+                            !lnOnly &&
+                            !watchedInvoicePaid && (
+                                <ButtonGroup
+                                    onPress={this.updateIndex}
+                                    selectedIndex={selectedIndex}
+                                    buttons={buttons}
+                                    selectedButtonStyle={{
+                                        backgroundColor:
+                                            themeColor('highlight'),
+                                        borderRadius: 12
+                                    }}
+                                    containerStyle={{
+                                        backgroundColor:
+                                            themeColor('secondary'),
+                                        borderRadius: 12,
+                                        borderWidth: 0,
+                                        height: 80
+                                    }}
+                                    innerBorderStyle={{
+                                        color: themeColor('secondary')
+                                    }}
+                                />
+                            )}
+                    </View>
+                )}
                 <ModalBox
                     style={{
                         backgroundColor: themeColor('modalBackground'),
