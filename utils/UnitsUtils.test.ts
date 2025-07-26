@@ -1,14 +1,20 @@
+import { getDecimalPlaceholder } from './UnitsUtils';
+
 jest.mock('../stores/Stores', () => ({
-    SettingsStore: {
+    settingsStore: {
         settings: {
+            fiat: 'USD',
             display: {
                 removeDecimalSpaces: false
             }
         }
+    },
+    fiatStore: {
+        symbolLookup: () => ({
+            decimalPlaces: 2
+        })
     }
 }));
-
-import { getDecimalPlaceholder } from './UnitsUtils';
 
 describe('UnitsUtils', () => {
     describe('getDecimalPlaceholder', () => {
