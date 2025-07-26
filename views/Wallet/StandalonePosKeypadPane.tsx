@@ -10,9 +10,10 @@ import UnitToggle from '../../components/UnitToggle';
 import WalletHeader from '../../components/WalletHeader';
 
 import ChannelsStore from '../../stores/ChannelsStore';
-import UnitsStore from '../../stores/UnitsStore';
-import SettingsStore from '../../stores/SettingsStore';
+import FiatStore from '../../stores/FiatStore';
 import PosStore from '../../stores/PosStore';
+import SettingsStore from '../../stores/SettingsStore';
+import UnitsStore from '../../stores/UnitsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -27,9 +28,10 @@ import { PricedIn } from '../../models/Product';
 interface PosKeypadPaneProps {
     navigation: StackNavigationProp<any, any>;
     ChannelsStore?: ChannelsStore;
-    UnitsStore?: UnitsStore;
-    SettingsStore?: SettingsStore;
+    FiatStore?: FiatStore;
     PosStore?: PosStore;
+    SettingsStore?: SettingsStore;
+    UnitsStore?: UnitsStore;
 }
 
 interface PosKeypadPaneState {
@@ -38,7 +40,7 @@ interface PosKeypadPaneState {
 
 const MAX_LENGTH = 10;
 
-@inject('ChannelsStore', 'UnitsStore', 'SettingsStore', 'PosStore')
+@inject('ChannelsStore', 'FiatStore', 'PosStore', 'SettingsStore', 'UnitsStore')
 @observer
 export default class PosKeypadPane extends React.PureComponent<
     PosKeypadPaneProps,
@@ -52,16 +54,23 @@ export default class PosKeypadPane extends React.PureComponent<
 
     appendValue = (value: string) => {
         const { amount } = this.state;
-        const { units } = this.props.UnitsStore!;
+        const { FiatStore, SettingsStore, UnitsStore } = this.props;
+        const { units } = UnitsStore!;
 
-        let newAmount;
-
-        // only allow one decimal
-        if (amount.includes('.') && value === '.') return this.startShake();
+        let newAmount, decimalCount;
 
         // limit decimal places depending on units
         if (units === 'fiat') {
-            if (amount.split('.')[1] && amount.split('.')[1].length == 2)
+            const fiat = SettingsStore!.settings?.fiat || '';
+            const fiatProperties = FiatStore!.symbolLookup(fiat);
+            decimalCount =
+                fiatProperties?.decimalPlaces !== undefined
+                    ? fiatProperties.decimalPlaces
+                    : 2;
+            if (
+                amount.split('.')[1] &&
+                amount.split('.')[1].length == decimalCount
+            )
                 return this.startShake();
         }
         if (units === 'sats') {
@@ -72,6 +81,10 @@ export default class PosKeypadPane extends React.PureComponent<
             if (amount.split('.')[1] && amount.split('.')[1].length == 8)
                 return this.startShake();
         }
+
+        // only allow one decimal, unless currency has zero decimal places
+        if (value === '.' && (amount.includes('.') || decimalCount === 0))
+            return this.startShake();
 
         if (amount.length >= MAX_LENGTH) {
             newAmount = amount;
