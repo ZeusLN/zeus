@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Slider from '@react-native-community/slider';
 
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
@@ -31,6 +32,8 @@ interface PaymentsSettingsState {
     preferredMempoolRate: string;
     slideToPayThreshold: string;
     mounted?: boolean;
+    enableDonations: boolean;
+    donationPercentage: number;
 }
 
 @inject('SettingsStore')
@@ -47,7 +50,9 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
-        mounted: false
+        mounted: false,
+        enableDonations: false,
+        donationPercentage: 5
     };
 
     async UNSAFE_componentWillMount() {
@@ -65,7 +70,10 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
-            mounted: true
+            mounted: true,
+            enableDonations: settings?.payments?.enableDonations || false,
+            donationPercentage:
+                settings?.payments?.defaultDonationPercentage || 5
         });
     }
 
@@ -86,7 +94,9 @@ export default class PaymentsSettings extends React.Component<
             enableMempoolRates,
             timeoutSeconds,
             preferredMempoolRate,
-            slideToPayThreshold
+            slideToPayThreshold,
+            enableDonations,
+            donationPercentage
         } = this.state;
         const { SettingsStore } = this.props;
         const { updateSettings, settings, implementation } = SettingsStore;
@@ -340,7 +350,7 @@ export default class PaymentsSettings extends React.Component<
                     <View
                         style={{
                             flexDirection: 'row',
-                            marginTop: 20
+                            marginTop: 16
                         }}
                     >
                         <Text
@@ -372,7 +382,7 @@ export default class PaymentsSettings extends React.Component<
                             />
                         </View>
                     </View>
-                    <View style={{ marginTop: 20 }}>
+                    <View style={{ marginTop: 12 }}>
                         <DropdownSetting
                             title={localeString(
                                 'views.Settings.Payments.preferredMempoolRate'
@@ -393,6 +403,101 @@ export default class PaymentsSettings extends React.Component<
                             disabled={!enableMempoolRates}
                         />
                     </View>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            marginTop: 16,
+                            marginBottom: 16
+                        }}
+                    >
+                        <Text
+                            style={{
+                                fontFamily: 'PPNeueMontreal-Book',
+                                color: themeColor('secondaryText'),
+                                flex: 1
+                            }}
+                        >
+                            {localeString(
+                                'views.PaymentRequest.enableDonations'
+                            )}
+                        </Text>
+                        <View>
+                            <Switch
+                                value={enableDonations}
+                                onValueChange={async () => {
+                                    this.setState({
+                                        enableDonations: !enableDonations
+                                    });
+                                    await updateSettings({
+                                        payments: {
+                                            ...settings.payments,
+                                            enableDonations: !enableDonations
+                                        }
+                                    });
+                                }}
+                            />
+                        </View>
+                    </View>
+                    {enableDonations && (
+                        <>
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between'
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.defaultDonationPercentage'
+                                    )}
+                                </Text>
+                                <Text
+                                    style={{ color: themeColor('highlight') }}
+                                >
+                                    {this.state.donationPercentage.toString()}%
+                                </Text>
+                            </View>
+                            <View>
+                                <Slider
+                                    style={{
+                                        width: '100%',
+                                        height: 40,
+                                        marginTop: 10
+                                    }}
+                                    minimumValue={0}
+                                    maximumValue={100}
+                                    step={1}
+                                    value={donationPercentage}
+                                    onValueChange={(value: number) => {
+                                        this.setState({
+                                            donationPercentage: value
+                                        });
+                                    }}
+                                    onSlidingComplete={async (
+                                        value: number
+                                    ) => {
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                defaultDonationPercentage: value
+                                            }
+                                        });
+                                    }}
+                                    minimumTrackTintColor={themeColor(
+                                        'highlight'
+                                    )}
+                                    maximumTrackTintColor={themeColor(
+                                        'secondaryText'
+                                    )}
+                                />
+                            </View>
+                        </>
+                    )}
                 </View>
             </Screen>
         );
