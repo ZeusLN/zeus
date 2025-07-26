@@ -171,6 +171,7 @@ export default class CashuPayment extends React.Component<
                             sensitive
                             toggleable
                             pending={isInTransit}
+                            showExactAmount
                         />
                     </View>
 
@@ -195,6 +196,7 @@ export default class CashuPayment extends React.Component<
                                             debit
                                             sensitive
                                             toggleable
+                                            showExactAmount
                                         />
                                         {getFeePercentage && (
                                             <Text
