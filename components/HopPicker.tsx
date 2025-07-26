@@ -37,6 +37,7 @@ interface ChannelPickerProps {
     clearOnTap?: boolean;
     selectionMode?: 'single' | 'multiple';
     selectedChannels?: Channel[];
+    onChannelValidation?: (channel: Channel) => boolean; // Optional validation callback
 }
 
 interface ChannelPickerState {
@@ -120,6 +121,13 @@ export default class ChannelPicker extends React.Component<
     }
 
     toggleItem(item: Channel) {
+        if (
+            this.props.onChannelValidation &&
+            !this.props.onChannelValidation(item)
+        ) {
+            return;
+        }
+
         if (this.props.selectionMode === 'multiple') {
             const selectedChannels = this.state.selectedChannels;
             if (selectedChannels.includes(item)) {
@@ -291,7 +299,8 @@ export default class ChannelPicker extends React.Component<
                     <Text
                         style={{
                             ...styles.text,
-                            color: themeColor('text')
+                            color: themeColor('text'),
+                            marginLeft: 8
                         }}
                     >
                         {title || DEFAULT_TITLE}
@@ -318,7 +327,13 @@ export default class ChannelPicker extends React.Component<
                             </Text>
                         </TouchableOpacity>
                     ) : (
-                        <TouchableOpacity onPress={() => this.openPicker()}>
+                        <TouchableOpacity
+                            onPress={() => this.openPicker()}
+                            style={{
+                                ...styles.selectorText,
+                                backgroundColor: themeColor('secondary')
+                            }}
+                        >
                             <Text
                                 style={{
                                     ...styles.text,
@@ -401,5 +416,9 @@ const styles = StyleSheet.create({
     },
     flexButton: {
         flex: 1
+    },
+    selectorText: {
+        marginTop: 6,
+        padding: 4
     }
 });
