@@ -63,6 +63,9 @@ const {
     sendCoins
 } = lndMobile.onchain;
 
+const { addTower, removeTower, listTowers, getTowerInfo, getStats, getPolicy } =
+    lndMobile.wtclient;
+
 import {
     signMessageWithAddr as signMsgWithAddr,
     verifyMessageWithAddr as verifyMsgWithAddr
@@ -345,13 +348,38 @@ export default class EmbeddedLND extends LND {
     importAccount = async (data: any) => await importAccount(data);
     rescan = async (data: any) => await rescan(data);
 
+    addWatchtower = async (data: { pubkey: string; address: string }) =>
+        await addTower(data.pubkey, data.address);
+
+    removeWatchtower = async (pubkey: string) => await removeTower(pubkey);
+
+    listWatchtowers = async (params?: {
+        include_sessions?: boolean;
+        exclude_exhausted_sessions?: boolean;
+    }) => {
+        return await listTowers(params?.include_sessions);
+    };
+
+    getWatchtowerInfo = async (
+        pubkey: string,
+        params?: {
+            include_sessions?: boolean;
+            exclude_exhausted_sessions?: boolean;
+        }
+    ) => await getTowerInfo(pubkey, params?.include_sessions);
+
+    getWatchtowerStats = async () => await getStats();
+
+    getWatchtowerPolicy = async (policy_type?: number) =>
+        await getPolicy(policy_type);
+
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
     //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
-
+    supportsWtClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;
