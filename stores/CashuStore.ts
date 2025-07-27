@@ -83,6 +83,7 @@ interface ClaimTokenResponse {
 export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
+    @observable public selectedMintUrls: string[] = [];
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
@@ -94,6 +95,7 @@ export default class CashuStore {
     @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
+    @observable public multiMint: boolean = false;
 
     @observable public loading = false;
     @observable public initializing = false;
@@ -179,6 +181,11 @@ export default class CashuStore {
         this.quoteId = undefined;
         this.error = false;
     };
+
+    @action
+    public setMultiMint(value: boolean) {
+        this.multiMint = value;
+    }
 
     @action
     public clearPayReq = () => {
@@ -319,11 +326,45 @@ export default class CashuStore {
             mintUrl
         );
 
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            JSON.stringify([mintUrl])
+        );
+
         runInAction(() => {
             this.selectedMintUrl = mintUrl;
+            this.selectedMintUrls = [mintUrl];
         });
 
         return mintUrl;
+    };
+
+    @action
+    public toggleMintSelection = async (mintUrl: string) => {
+        if (!Array.isArray(this.selectedMintUrls)) {
+            this.selectedMintUrls = [];
+        }
+
+        let nextSelected: string[];
+        if (this.selectedMintUrls.includes(mintUrl)) {
+            nextSelected = this.selectedMintUrls.filter(
+                (url) => url !== mintUrl
+            );
+        } else {
+            nextSelected = [...this.selectedMintUrls, mintUrl];
+        }
+
+        await Storage.setItem(
+            `${this.getLndDir()}-cashu-selectedMintUrls`,
+            JSON.stringify(nextSelected)
+        );
+
+        runInAction(() => {
+            this.selectedMintUrls = nextSelected;
+            console.log('selectedMintUrls (updated):', this.selectedMintUrls);
+        });
+
+        return nextSelected;
     };
 
     @action
