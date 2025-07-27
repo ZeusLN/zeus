@@ -20,6 +20,7 @@ import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { WarningMessage } from '../../components/SuccessErrorMessage';
+import Switch from '../../components/Switch';
 
 import BalanceStore from '../../stores/BalanceStore';
 import CashuStore from '../../stores/CashuStore';
@@ -34,9 +35,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-
 import { Row } from '../../components/layout/Row';
-
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -80,11 +79,23 @@ export default class CashuPaymentRequest extends React.Component<
 > {
     listener: any;
     isComponentMounted: boolean = false;
+
     state = {
         customAmount: '',
         satAmount: '',
         zaplockerToggle: false,
         slideToPayThreshold: 10000
+    };
+
+    handleToggleMultiMint = (value: boolean) => {
+        if (
+            this.props.CashuStore &&
+            typeof this.props.CashuStore.setMultiMint === 'function'
+        ) {
+            this.props.CashuStore.setMultiMint(value);
+        } else if (this.props.CashuStore) {
+            this.props.CashuStore.multiMint = value;
+        }
     };
 
     async UNSAFE_componentWillMount() {
@@ -205,9 +216,7 @@ export default class CashuPaymentRequest extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        clearPayReq();
-                    }}
+                    onBack={() => clearPayReq()}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
@@ -259,6 +268,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
+
                                     {!BackendUtils.supportsLightningSends() && (
                                         <View
                                             style={{
@@ -273,6 +283,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
+
                                     {noBalance &&
                                         BackendUtils.supportsLightningSends() && (
                                             <View
@@ -288,6 +299,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
+
                                     {isNoAmountInvoice ? (
                                         <AmountInput
                                             amount={customAmount}
@@ -533,23 +545,74 @@ export default class CashuPaymentRequest extends React.Component<
                                 style={{
                                     alignSelf: 'center',
                                     width: '85%',
-                                    marginBottom: 30
+                                    marginBottom: 30,
+                                    marginTop: 10,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between'
                                 }}
                             >
                                 <Text
                                     style={{
                                         ...styles.label,
-                                        color: themeColor('secondaryText')
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 16
                                     }}
                                 >
                                     {localeString(
                                         'views.Cashu.CashuPaymentRequest.sendingFrom'
                                     )}
                                 </Text>
-                                <View style={{ marginTop: 10 }}>
-                                    <EcashMintPicker navigation={navigation} />
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            marginLeft: 6,
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            fontSize: 15
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.CashuPaymentRequest.multiMint'
+                                        )}
+                                    </Text>
+                                    <Switch
+                                        value={CashuStore.multiMint}
+                                        onValueChange={
+                                            this.handleToggleMultiMint
+                                        }
+                                        trackEnabledColor={themeColor(
+                                            'highlight'
+                                        )}
+                                    />
                                 </View>
                             </View>
+
+                            <View
+                                style={{
+                                    alignSelf: 'center',
+                                    width: '85%',
+                                    marginBottom: CashuStore.multiMint
+                                        ? CashuStore.selectedMintUrls.length > 2
+                                            ? 115
+                                            : CashuStore.selectedMintUrls
+                                                  .length <= 1
+                                            ? 30
+                                            : 72
+                                        : 30
+                                }}
+                            >
+                                <EcashMintPicker
+                                    showMore={true}
+                                    navigation={navigation}
+                                />
+                            </View>
+
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
