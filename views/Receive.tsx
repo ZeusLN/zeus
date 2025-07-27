@@ -273,8 +273,12 @@ export default class Receive extends React.Component<
             timePeriod: settings?.invoices?.timePeriod || 'Seconds',
             expirySeconds: newExpirySeconds,
             routeHints:
-                settings?.invoices?.routeHints ||
-                !this.props.ChannelsStore.haveAnnouncedChannels
+                (settings?.invoices?.routeHints ||
+                    !this.props.ChannelsStore.haveAnnouncedChannels) &&
+                !(
+                    settings?.invoices?.blindedPaths &&
+                    BackendUtils.supportsBolt11BlindedRoutes()
+                )
                     ? true
                     : false,
             ampInvoice:
