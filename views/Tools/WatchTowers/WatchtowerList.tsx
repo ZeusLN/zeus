@@ -372,7 +372,8 @@ const styles = StyleSheet.create({
     watchtowerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        flex: 1
+        flex: 1,
+        gap: 4
     },
     watchtowerIcon: {
         marginRight: 8

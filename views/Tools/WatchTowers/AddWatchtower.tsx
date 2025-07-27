@@ -295,7 +295,6 @@ const styles = StyleSheet.create({
     },
     input: {
         borderRadius: 8,
-        padding: 12,
         fontSize: 15,
         fontFamily: 'PPNeueMontreal-Book'
     },
