@@ -1,4 +1,4 @@
-import { settingsStore } from '../stores/Stores';
+import { settingsStore, fiatStore } from '../stores/Stores';
 
 // 100_000_000
 const SATS_PER_BTC = 100000000;
@@ -13,7 +13,13 @@ const getDecimalPlaceholder = (amount: string, units: string) => {
     } else if (units === 'BTC') {
         placeholderCount = 8 - occupiedPlaces;
     } else if (units === 'fiat') {
-        placeholderCount = 2 - occupiedPlaces;
+        const fiat = settingsStore.settings?.fiat || '';
+        const fiatProperties = fiatStore.symbolLookup(fiat);
+        const decimalCount =
+            fiatProperties?.decimalPlaces !== undefined
+                ? fiatProperties.decimalPlaces
+                : 2;
+        placeholderCount = decimalCount - occupiedPlaces;
     }
 
     return {
