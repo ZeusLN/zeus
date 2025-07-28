@@ -310,7 +310,6 @@ export default class CashuPaymentRequest extends React.Component<
                                                 sats={requestAmount}
                                                 jumboText
                                                 toggleable
-                                                exact={true}
                                             />
                                             <View style={{ top: 10 }}>
                                                 <Conversion
@@ -516,7 +515,6 @@ export default class CashuPaymentRequest extends React.Component<
                                             <Amount
                                                 sats={feeEstimate || 0}
                                                 toggleable
-                                                exact={true}
                                             />
                                         }
                                     />

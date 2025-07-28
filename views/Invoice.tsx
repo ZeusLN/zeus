@@ -148,7 +148,6 @@ export default class InvoiceView extends React.Component<
                             toggleable
                             pending={!invoice.isExpired && !invoice.isPaid}
                             credit={invoice.isPaid}
-                            exact={true}
                         />
                     </View>
 
@@ -159,12 +158,7 @@ export default class InvoiceView extends React.Component<
                                     'views.Invoice.invoiceAmount'
                                 )}
                                 value={
-                                    <Amount
-                                        sats={value}
-                                        sensitive
-                                        toggleable
-                                        exact={true}
-                                    />
+                                    <Amount sats={value} sensitive toggleable />
                                 }
                                 sensitive
                             />
