@@ -25,6 +25,7 @@ import {
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import ModalBox from '../../components/ModalBox';
 
+import { font } from '../../utils/FontUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { SATS_PER_BTC, numberWithCommas } from '../../utils/UnitsUtils';
@@ -215,7 +216,6 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const checkAndShowModal = async () => {
             if (!SwapStore.loading) {
                 const mnemonic = await Storage.getItem('rescue-key');
-                console.log('Existing mnemonic:', mnemonic);
                 if (mnemonic) {
                     this.setState({
                         showRescueKeyBtn: true,
@@ -460,12 +460,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         <>
                             <Text
                                 style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('text'),
+                                    fontFamily: font('marlideBold'),
                                     marginBottom: 12,
-                                    fontSize: 22,
-                                    textAlign: 'center',
-                                    fontWeight: 'bold'
+                                    fontSize: 32,
+                                    textAlign: 'center'
                                 }}
                             >
                                 {localeString('views.Swaps.rescueKey')}
@@ -476,7 +474,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     color: themeColor('text'),
                                     marginBottom: 12,
                                     fontSize: 18,
-                                    textAlign: 'center'
+                                    textAlign: 'left'
                                 }}
                             >
                                 {`${localeString(
