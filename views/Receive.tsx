@@ -170,6 +170,10 @@ enum RouteHintMode {
     Custom = 1
 }
 
+const LOCKED_EXPIRY = '1';
+const LOCKED_TIME_PERIOD = 'Hours';
+const LOCKED_EXPIRY_SECONDS = '3600';
+
 @inject(
     'ChannelsStore',
     'InvoicesStore',
@@ -273,12 +277,9 @@ export default class Receive extends React.Component<
             expirationIndex,
             memo: settings?.invoices?.memo || '',
             receiverName: settings?.invoices?.receiverName || '',
-            // if LSP is active, default to 1 hour (3600 seconds)
-            expiry: lspIsActive ? '1' : settings?.invoices?.expiry || '1',
-            timePeriod: lspIsActive
-                ? 'Hours'
-                : settings?.invoices?.timePeriod || 'Hours',
-            expirySeconds: lspIsActive ? '3600' : newExpirySeconds,
+            expiry: settings?.invoices?.expiry || '1',
+            timePeriod: settings?.invoices?.timePeriod || 'Hours',
+            expirySeconds: newExpirySeconds,
             routeHints:
                 settings?.invoices?.routeHints ||
                 !this.props.ChannelsStore.haveAnnouncedChannels
@@ -536,7 +537,9 @@ export default class Receive extends React.Component<
                     ? `${receiverName}:  ${memo}`
                     : memo || '',
                 value: amount || '0',
-                expiry: expirySeconds || '3600',
+                expiry: lspIsActive
+                    ? LOCKED_EXPIRY_SECONDS
+                    : expirySeconds || '3600',
                 ampInvoice: lspIsActive ? false : ampInvoice || false,
                 blindedPaths: lspIsActive ? false : blindedPaths || false,
                 routeHints: lspIsActive ? false : routeHints || false,
@@ -1189,12 +1192,16 @@ export default class Receive extends React.Component<
     private modalBoxRef = React.createRef<ModalBox>();
 
     getFormattedDuration = () => {
-        const { expiry, timePeriod } = this.state;
+        const { expiry, timePeriod, lspIsActive } = this.state;
+
+        const expiryDisplay = lspIsActive ? LOCKED_EXPIRY : expiry;
+        const periodDisplay = lspIsActive ? LOCKED_TIME_PERIOD : timePeriod;
+
         const period =
-            expiry === '1'
-                ? timePeriod.toLowerCase().replace(/s$/, '')
-                : timePeriod.toLowerCase();
-        return `${expiry} ${period}`;
+            expiryDisplay === '1'
+                ? periodDisplay.toLowerCase().replace(/s$/, '')
+                : periodDisplay.toLowerCase();
+        return `${expiryDisplay} ${period}`;
     };
 
     render() {
@@ -2268,22 +2275,11 @@ export default class Receive extends React.Component<
                                                                                 !enableLSP &&
                                                                                 BackendUtils.supportsFlowLSP() &&
                                                                                 !flowLspNotConfigured,
-                                                                            // lock toggle and reset if LSP enabled
+                                                                            // lock toggle if LSP enabled
                                                                             durationSettingsToggle:
                                                                                 durationSettingsToggle &&
                                                                                 enableLSP ===
-                                                                                    true,
-                                                                            expiry: !enableLSP
-                                                                                ? '1'
-                                                                                : expiry,
-                                                                            timePeriod:
-                                                                                !enableLSP
-                                                                                    ? 'Hours'
-                                                                                    : timePeriod,
-                                                                            expirySeconds:
-                                                                                !enableLSP
-                                                                                    ? '3600'
-                                                                                    : expirySeconds
+                                                                                    true
                                                                         }
                                                                     );
                                                                     await updateSettings(
