@@ -45,6 +45,7 @@ import {
 } from '../../utils/DonationUtils';
 
 import { Row } from '../../components/layout/Row';
+
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -853,7 +854,6 @@ export default class CashuPaymentRequest extends React.Component<
                                     alignSelf: 'center',
                                     width: '85%',
                                     marginBottom: 30,
-                                    marginTop: 10,
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
@@ -862,8 +862,7 @@ export default class CashuPaymentRequest extends React.Component<
                                 <Text
                                     style={{
                                         ...styles.label,
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 16
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
