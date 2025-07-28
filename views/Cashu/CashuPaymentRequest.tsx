@@ -35,7 +35,9 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+
 import { Row } from '../../components/layout/Row';
+
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -62,6 +64,7 @@ interface CashuPaymentRequestState {
     satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
+    multiMint: boolean;
 }
 
 @inject(
@@ -84,18 +87,28 @@ export default class CashuPaymentRequest extends React.Component<
         customAmount: '',
         satAmount: '',
         zaplockerToggle: false,
-        slideToPayThreshold: 10000
+        slideToPayThreshold: 10000,
+        multiMint: this.props.CashuStore.multiMint
     };
 
-    handleToggleMultiMint = (value: boolean) => {
-        if (
-            this.props.CashuStore &&
-            typeof this.props.CashuStore.setMultiMint === 'function'
-        ) {
-            this.props.CashuStore.setMultiMint(value);
-        } else if (this.props.CashuStore) {
-            this.props.CashuStore.multiMint = value;
+    componentDidMount() {
+        const { CashuStore } = this.props;
+        this.setState({ multiMint: CashuStore.multiMint });
+    }
+
+    handleToggleMultiMint = async (value: boolean) => {
+        const { CashuStore } = this.props;
+
+        if (CashuStore) {
+            CashuStore.setMultiMint(value);
         }
+
+        this.setState({ multiMint: value }, async () => {
+            const { paymentRequest, getPayReq } = CashuStore;
+            if (paymentRequest) {
+                await getPayReq(paymentRequest);
+            }
+        });
     };
 
     async UNSAFE_componentWillMount() {
@@ -546,7 +559,6 @@ export default class CashuPaymentRequest extends React.Component<
                                     alignSelf: 'center',
                                     width: '85%',
                                     marginBottom: 30,
-                                    marginTop: 10,
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
@@ -555,8 +567,7 @@ export default class CashuPaymentRequest extends React.Component<
                                 <Text
                                     style={{
                                         ...styles.label,
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 16
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
