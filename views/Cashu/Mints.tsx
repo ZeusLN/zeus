@@ -159,6 +159,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                       item.mintUrl
                                   }`
                                 : item.mintUrl;
+
                             if (errorConnecting) {
                                 subTitle = `${localeString(
                                     'general.errorConnecting'
@@ -368,10 +369,5 @@ const styles = StyleSheet.create({
         flexGrow: 0,
         flexShrink: 1,
         textAlign: 'right'
-    },
-    confirmButtonContainer: {
-        paddingHorizontal: 16,
-        paddingBottom: 24,
-        backgroundColor: 'transparent'
     }
 });
