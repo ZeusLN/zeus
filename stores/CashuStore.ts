@@ -120,6 +120,10 @@ export default class CashuStore {
     @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
     @observable public proofsToUse?: Proof[];
+    @observable public meltQuotes?: {
+        mintUrl: string;
+        meltQuote: MeltQuoteResponse;
+    }[];
     @observable public meltQuote?: MeltQuoteResponse;
     @observable public noteKey?: string;
     @observable public paymentStartTime?: number;
@@ -195,7 +199,7 @@ export default class CashuStore {
         this.getPayReqError = undefined;
         this.feeEstimate = undefined;
         this.proofsToUse = undefined;
-        this.meltQuote = undefined;
+        this.meltQuotes = [];
         this.noteKey = undefined;
         this.error = false;
         this.paymentError = false;
@@ -1393,6 +1397,7 @@ export default class CashuStore {
         this.payReq = undefined;
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
+        let isMultiMint = this.multiMint;
 
         try {
             const data = await new Promise((resolve) => {
@@ -1417,30 +1422,54 @@ export default class CashuStore {
                 resolve(decoded);
             });
 
-            if (!this.cashuWallets[this.selectedMintUrl].wallet) {
-                await this.initializeWallet(this.selectedMintUrl, true);
-            }
-            const cashuWallet = this.cashuWallets[this.selectedMintUrl];
+            const mintsToUse = isMultiMint
+                ? this.selectedMintUrls
+                : [this.selectedMintUrl];
 
-            const meltQuote = await cashuWallet.wallet!!.createMeltQuote(
-                bolt11Invoice
-            );
-            const { proofsToUse }: { proofsToUse: Proof[] } =
-                this.getProofsToUse(
-                    cashuWallet.proofs,
-                    meltQuote.amount + meltQuote.fee_reserve,
-                    'desc'
-                );
+            let allProofsToUse: Proof[] = [];
+            let allMeltQuotes: {
+                mintUrl: string;
+                meltQuote: MeltQuoteResponse;
+            }[] = [];
+            let totalFeeEstimate = 0;
+            let aggregateError: any;
+
+            for (const mintUrl of mintsToUse) {
+                try {
+                    if (!this.cashuWallets[mintUrl].wallet) {
+                        await this.initializeWallet(mintUrl, true);
+                    }
+                    const cashuWallet = this.cashuWallets[mintUrl];
+                    const meltQuote =
+                        await cashuWallet.wallet!!.createMeltQuote(
+                            bolt11Invoice
+                        );
+
+                    const { proofsToUse }: { proofsToUse: Proof[] } =
+                        this.getProofsToUse(
+                            cashuWallet.proofs,
+                            meltQuote.amount + meltQuote.fee_reserve,
+                            'desc'
+                        );
+
+                    allProofsToUse = allProofsToUse.concat(proofsToUse);
+                    allMeltQuotes.push({ mintUrl, meltQuote });
+                    totalFeeEstimate += meltQuote.fee_reserve || 0;
+                } catch (err) {
+                    if (!aggregateError) aggregateError = [];
+                    aggregateError.push({ mintUrl, err });
+                }
+            }
 
             runInAction(() => {
                 this.payReq = new Invoice(data);
-                this.getPayReqError = undefined;
+                this.getPayReqError = aggregateError;
                 this.loading = false;
             });
 
-            this.proofsToUse = proofsToUse;
-            this.meltQuote = meltQuote;
-            this.feeEstimate = this.meltQuote.fee_reserve || 0;
+            this.proofsToUse = allProofsToUse;
+            this.meltQuotes = allMeltQuotes;
+            this.feeEstimate = totalFeeEstimate;
 
             return;
         } catch (e: any) {
@@ -1610,7 +1639,8 @@ export default class CashuStore {
                 await this.addMintProofs(mintUrl, proofsToKeep);
 
             let meltResponse = await wallet!!.meltProofs(
-                this.meltQuote!!,
+                // @ts-ignore
+                this.meltQuotes[0]?.meltQuote,
                 proofsToSend,
                 {
                     counter: newCounterValue + 1
@@ -1675,7 +1705,8 @@ export default class CashuStore {
         } catch (err: any) {
             console.log('paying ln invoice from ecash error', err);
             const mintQuote = await wallet!!.checkMeltQuote(
-                this.meltQuote!!.quote
+                // @ts-ignore
+                this.meltQuotes[0]?.meltQuote?.quote
             );
             if (mintQuote.state == MeltQuoteState.PAID) {
                 this.paymentError = true;
