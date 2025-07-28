@@ -393,6 +393,7 @@ export default class PSBT extends React.Component<PSBTProps, PSBTState> {
                                             copyValue={fundedPsbt}
                                             truncateLongValue
                                             expanded
+                                            iconOnly={selectedIndex !== 0}
                                             qrAnimationSpeed={qrAnimationSpeed}
                                             onQRAnimationSpeedChange={(
                                                 speed
