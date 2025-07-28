@@ -133,12 +133,15 @@ export default class UnitsStore {
                 }
 
                 const rate = (fiatEntry && fiatEntry.rate) || 0;
-                const { symbol, space, rtl, separatorSwap } =
+                const { symbol, space, rtl, separatorSwap, decimalPlaces } =
                     this.fiatStore.getSymbol();
+
+                const decimals =
+                    decimalPlaces !== undefined ? decimalPlaces : 2;
 
                 const amount = (
                     FeeUtils.toFixed(absValueSats / SATS_PER_BTC) * rate
-                ).toFixed(2);
+                ).toFixed(decimals);
 
                 return {
                     amount: noCommas
