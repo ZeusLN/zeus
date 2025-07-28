@@ -38,13 +38,17 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+<<<<<<< HEAD
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     calculateDonationAmount,
     findDonationPercentageIndex
 } from '../../utils/DonationUtils';
+=======
+>>>>>>> 7e9c578f (feat: support multi-mint sends in getPayReq with unified logic)
 
 import { Row } from '../../components/layout/Row';
+
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -71,10 +75,14 @@ interface CashuPaymentRequestState {
     satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
+<<<<<<< HEAD
     donationsToggle: boolean;
     donationPercentage: any;
     donationAmount: any;
     selectedIndex: number | null;
+=======
+    multiMint: boolean;
+>>>>>>> 7e9c578f (feat: support multi-mint sends in getPayReq with unified logic)
 }
 
 @inject(
@@ -843,7 +851,6 @@ export default class CashuPaymentRequest extends React.Component<
                                     alignSelf: 'center',
                                     width: '85%',
                                     marginBottom: 30,
-                                    marginTop: 10,
                                     flexDirection: 'row',
                                     alignItems: 'center',
                                     justifyContent: 'space-between'
@@ -852,8 +859,7 @@ export default class CashuPaymentRequest extends React.Component<
                                 <Text
                                     style={{
                                         ...styles.label,
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 16
+                                        color: themeColor('secondaryText')
                                     }}
                                 >
                                     {localeString(
