@@ -2,8 +2,7 @@ import * as React from 'react';
 import { Platform, TouchableOpacity, ViewStyle } from 'react-native';
 import { observer } from 'mobx-react';
 import { themeColor } from '../utils/ThemeUtils';
-
-import SpeedMeter from '../assets/images/SVG/SpeedMeter.svg';
+import SpeedometerIcon from '../assets/images/SVG/Speedometer.svg';
 import Button from './Button';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -20,6 +19,7 @@ interface QRSpeedMeterButtonProps {
 @observer
 export default class QRSpeedMeterButton extends React.Component<QRSpeedMeterButtonProps> {
     render() {
+        const buttonTitle = localeString('components.QRSpeedMeterButton.speed');
         const {
             showOptions,
             onPress,
@@ -36,7 +36,7 @@ export default class QRSpeedMeterButton extends React.Component<QRSpeedMeterButt
                     style={[
                         {
                             padding: 5,
-                            borderRadius: 8,
+                            borderRadius: 6,
                             backgroundColor: showOptions
                                 ? themeColor('secondary')
                                 : 'transparent'
@@ -44,15 +44,14 @@ export default class QRSpeedMeterButton extends React.Component<QRSpeedMeterButt
                         iconContainerStyle
                     ]}
                 >
-                    <SpeedMeter
-                        width={27}
-                        height={27}
+                    <SpeedometerIcon
+                        width={30}
+                        height={30}
                         fill={themeColor('secondaryText')}
                     />
                 </TouchableOpacity>
             );
         }
-        const buttonTitle = localeString('components.QRSpeedMeterButton.speed');
         return (
             <Button
                 title={buttonTitle}

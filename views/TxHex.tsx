@@ -399,6 +399,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                             copyValue={txHex}
                                             truncateLongValue
                                             expanded
+                                            iconOnly={selectedIndex !== 0}
                                             qrAnimationSpeed={qrAnimationSpeed}
                                             onQRAnimationSpeedChange={(
                                                 speed

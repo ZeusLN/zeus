@@ -31,7 +31,6 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Base64Utils from '../../utils/Base64Utils';
 import { splitQRs } from '../../utils/BbqrUtils';
-
 import {
     getQRAnimationInterval,
     QRAnimationSpeed
@@ -494,7 +493,11 @@ export default class CashuTokenView extends React.Component<
                                         !this.state.isTokenTooLarge &&
                                         selectedIndex === 0
                                     }
-                                    showSpeed={selectedIndex !== 0}
+                                    showSpeed={
+                                        this.state.isTokenTooLarge ||
+                                        (!this.state.isTokenTooLarge &&
+                                            selectedIndex > 0)
+                                    }
                                     truncateLongValue
                                     expanded
                                     qrAnimationSpeed={

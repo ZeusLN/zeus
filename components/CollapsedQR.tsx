@@ -24,10 +24,11 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
-import {
-    QR_ANIMATION_SPEED_OPTIONS,
-    QRAnimationSpeed
-} from '../utils/QRAnimationUtils';
+import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
+
+import Turtle from '../assets/images/SVG/Turtle.svg';
+import Rabbit from '../assets/images/SVG/Rabbit.svg';
+import Gazelle from '../assets/images/SVG/Gazelle.svg';
 
 const defaultLogo = require('../assets/images/icon-black.png');
 const defaultLogoWhite = require('../assets/images/icon-white.png');
@@ -188,6 +189,20 @@ export default class CollapsedQR extends React.Component<
 
         const { width, height } = Dimensions.get('window');
 
+        const QR_ANIMATION_SPEED_OPTIONS = [
+            {
+                value: 'slow',
+                icon: Turtle
+            },
+            {
+                value: 'medium',
+                icon: Rabbit
+            },
+            {
+                value: 'fast',
+                icon: Gazelle
+            }
+        ];
         // Creates a temporary QR code for sharing and waits for component to be ready
         // Returns a promise that resolves when QR is fully rendered and ready to be captured
         const handleShare = () =>
@@ -394,7 +409,7 @@ export default class CollapsedQR extends React.Component<
                         style={{
                             flexDirection: 'row',
                             justifyContent: 'center',
-                            gap: 5
+                            gap: 8
                         }}
                     >
                         {showSpeed && (
@@ -422,7 +437,7 @@ export default class CollapsedQR extends React.Component<
                         )}
                     </View>
                 )}
-                {showSpeedOptions && onQRAnimationSpeedChange && (
+                {showSpeedOptions && onQRAnimationSpeedChange && showSpeed && (
                     <View style={styles.speedOptions}>
                         <ButtonGroup
                             onPress={(index: number) => {
@@ -436,26 +451,39 @@ export default class CollapsedQR extends React.Component<
                             buttons={QR_ANIMATION_SPEED_OPTIONS.map(
                                 (option, index) =>
                                     React.createElement(option.icon, {
-                                        width: 28,
-                                        height: 28,
+                                        width: 36,
+                                        height: 36,
                                         fill:
                                             qrSpeedSelectedIndex === index
-                                                ? themeColor('text')
+                                                ? themeColor('secondary')
                                                 : themeColor('secondaryText')
                                     })
                             )}
                             selectedButtonStyle={{
                                 backgroundColor: themeColor('highlight'),
                                 borderRadius: 12,
-                                paddingHorizontal: 12,
-                                paddingVertical: 8
+                                ...(Platform.OS === 'ios' && {
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                })
+                            }}
+                            buttonStyle={{
+                                ...(Platform.OS === 'ios' && {
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    paddingVertical: 8,
+                                    paddingHorizontal: 4
+                                })
                             }}
                             containerStyle={{
                                 backgroundColor: themeColor('secondary'),
                                 borderRadius: 12,
                                 borderColor: themeColor('secondary'),
-                                minWidth: 250,
-                                alignSelf: 'center'
+                                minWidth: 240,
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'ios' && {
+                                    height: 48
+                                })
                             }}
                             innerBorderStyle={{
                                 color: themeColor('secondary')
@@ -481,7 +509,6 @@ const styles = StyleSheet.create({
         margin: 10
     },
     speedOptions: {
-        marginTop: 10,
-        alignItems: 'center'
+        marginTop: 10
     }
 });
