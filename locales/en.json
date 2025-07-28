@@ -1676,7 +1676,6 @@
     "views.Swaps.rescueKey.ios": "Keys can be found in the Files app under the ZEUS folder",
     "views.Swaps.rescueKey.upload": "Upload rescue key",
     "views.Swaps.rescueKey.invalid": "Invalid rescue key",
-    "views.Swaps.restoreSwaps": "Restore swaps",
     "views.SwapDetails.title": "Swap Details",
     "views.SwapDetails.acceptZeroConf": "Accept Zero Conf",
     "views.SwapDetails.expectedAmount": "Expected amount",

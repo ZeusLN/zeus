@@ -674,7 +674,6 @@ export default class SwapStore {
         console.log('GENERATING RESCUE FILE...');
         const mnemonic = bip39.generateMnemonic();
         await Storage.setItem('rescue-key', mnemonic);
-        console.log('Generated rescue key:', mnemonic);
 
         return mnemonic;
     };
@@ -683,21 +682,19 @@ export default class SwapStore {
     public getLastUsedKey = async (): Promise<number> => {
         const storedKey = await Storage.getItem('lastUsedKey');
         const index = storedKey ? parseInt(storedKey, 10) : 0;
-        console.log('Loaded lastUsedKey from storage:', index);
+
         return index;
     };
 
     @action
     public setLastUsedKey = async (val: number): Promise<void> => {
         await Storage.setItem('lastUsedKey', val.toString());
-        console.log('Saved lastUsedKey to storage:', val);
     };
 
     @action
     public generateNewKey = async () => {
         const index = await this.getLastUsedKey();
         await this.setLastUsedKey(index + 1);
-        console.log('Generating new key at index:', index);
         const keys = await this.deriveKey(index);
         return { index, keys };
     };
@@ -729,7 +726,6 @@ export default class SwapStore {
             );
 
             const importedSwaps = JSON.parse(response.data || '[]');
-            console.log('Rescued swaps:', importedSwaps);
 
             if (importedSwaps.length > 0) {
                 const storedSwaps = await Storage.getItem('swaps');

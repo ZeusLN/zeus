@@ -771,7 +771,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     title={
                                         restoreSwaps
                                             ? localeString(
-                                                  'views.Swaps.restoreSwaps'
+                                                  'views.Swaps.SwapsPane.restoreSwaps'
                                               )
                                             : restoreRescueKey
                                             ? localeString(
