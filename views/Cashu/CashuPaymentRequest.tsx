@@ -38,14 +38,11 @@ import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-<<<<<<< HEAD
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     calculateDonationAmount,
     findDonationPercentageIndex
 } from '../../utils/DonationUtils';
-=======
->>>>>>> 7e9c578f (feat: support multi-mint sends in getPayReq with unified logic)
 
 import { Row } from '../../components/layout/Row';
 
@@ -75,14 +72,10 @@ interface CashuPaymentRequestState {
     satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
-<<<<<<< HEAD
     donationsToggle: boolean;
     donationPercentage: any;
     donationAmount: any;
     selectedIndex: number | null;
-=======
-    multiMint: boolean;
->>>>>>> 7e9c578f (feat: support multi-mint sends in getPayReq with unified logic)
 }
 
 @inject(
