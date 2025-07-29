@@ -813,16 +813,6 @@ export default class LND {
             {}
         );
     };
-
-    activateWatchtower = (data: { pubkey: string; address: string }) => {
-        // Convert base64 pubkey to hex for addWatchtower method
-        const pubkeyHex = Base64Utils.base64ToHex(data.pubkey);
-        return this.addWatchtower({
-            pubkey: pubkeyHex,
-            address: data.address
-        });
-    };
-
     getWatchtowerStats = () => this.getRequest('/v2/watchtower/client/stats');
 
     getWatchtowerPolicy = (policy_type?: number) => {
@@ -838,7 +828,7 @@ export default class LND {
             {}
         );
 
-    supportsWtClient = () => true;
+    supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsLnurlAuth = () => true;

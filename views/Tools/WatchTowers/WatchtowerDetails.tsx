@@ -14,20 +14,14 @@ import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 import Base64Utils from '../../../utils/Base64Utils';
+import { Watchtower } from './WatchtowerList';
 
 interface WatchTowerDetailsProps {
     navigation: StackNavigationProp<any, any>;
     route: RouteProp<
         {
             WatchTowerDetails: {
-                watchtower: {
-                    pubkey: string;
-                    addresses: string[];
-                    active_session_candidate: boolean;
-                    num_sessions: number;
-                    sessions: any[];
-                    session_info: any[];
-                };
+                watchtower: Watchtower;
             };
         },
         'WatchTowerDetails'
@@ -36,7 +30,7 @@ interface WatchTowerDetailsProps {
 
 interface WatchTowerDetailsState {
     loading: boolean;
-    error: string;
+    error: string | null;
     watchtowerInfo: any | null;
     confirmDelete: boolean;
     confirmDeactivate: boolean;
@@ -51,7 +45,7 @@ export default class WatchTowerDetails extends React.Component<
 > {
     state = {
         loading: false,
-        error: '',
+        error: null,
         watchtowerInfo: null,
         confirmDelete: false,
         confirmDeactivate: false,
@@ -65,7 +59,7 @@ export default class WatchTowerDetails extends React.Component<
     loadWatchtowerInfo = async () => {
         const { route } = this.props;
         const { watchtower } = route.params;
-        this.setState({ loading: true, error: '' });
+        this.setState({ loading: true, error: null });
         try {
             const info = await BackendUtils.getWatchtowerInfo(
                 watchtower.pubkey
@@ -92,7 +86,7 @@ export default class WatchTowerDetails extends React.Component<
             this.setState({ confirmDeactivate: true });
             return;
         }
-        this.setState({ loading: true, error: '', confirmDeactivate: false });
+        this.setState({ loading: true, error: null, confirmDeactivate: false });
 
         try {
             await BackendUtils.deactivateWatchtower(watchtower.pubkey);
@@ -114,10 +108,10 @@ export default class WatchTowerDetails extends React.Component<
             this.setState({ confirmActivate: true });
             return;
         }
-        this.setState({ loading: true, error: '', confirmActivate: false });
+        this.setState({ loading: true, error: null, confirmActivate: false });
 
         try {
-            await BackendUtils.activateWatchtower({
+            await BackendUtils.addWatchtower({
                 pubkey: watchtower.pubkey,
                 address: watchtower.addresses[0]
             });
@@ -138,7 +132,7 @@ export default class WatchTowerDetails extends React.Component<
             this.setState({ confirmDelete: true });
             return;
         }
-        this.setState({ loading: true, error: '', confirmDelete: false });
+        this.setState({ loading: true, error: null, confirmDelete: false });
         try {
             await BackendUtils.removeWatchtower(watchtower.pubkey);
             navigation.goBack();

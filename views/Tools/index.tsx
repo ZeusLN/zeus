@@ -119,7 +119,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                             </TouchableOpacity>
                         </View>
                     )}
-                    {selectedNode && BackendUtils.supportsWtClient() && (
+                    {selectedNode && BackendUtils.supportsWatchtowerClient() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),

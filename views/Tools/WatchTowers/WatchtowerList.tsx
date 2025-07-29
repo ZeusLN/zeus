@@ -36,7 +36,7 @@ interface WatchtowerSessionInfo {
     policy_type: string;
 }
 
-interface Watchtower {
+export interface Watchtower {
     pubkey: string;
     addresses: string[];
     active_session_candidate: boolean;

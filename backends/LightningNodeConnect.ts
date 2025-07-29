@@ -655,7 +655,7 @@ export default class LightningNodeConnect {
             })
             .then((data: any) => snakeize(data));
 
-    supportsWtClient = () => true;
+    supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => this.permSignMessage;
     supportsAddressMessageSigning = () => true;

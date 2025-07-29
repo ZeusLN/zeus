@@ -148,8 +148,6 @@ class BackendUtils {
         this.call('getWatchtowerInfo', args);
     deactivateWatchtower = (...args: any[]) =>
         this.call('deactivateWatchtower', args);
-    activateWatchtower = (...args: any[]) =>
-        this.call('activateWatchtower', args);
     getWatchtowerStats = (...args: any[]) =>
         this.call('getWatchtowerStats', args);
     getWatchtowerPolicy = (...args: any[]) =>
@@ -161,7 +159,7 @@ class BackendUtils {
     login = (...args: any[]) => this.call('login', args);
 
     // services
-    supportsWtClient = () => this.call('supportsWtClient');
+    supportsWatchtowerClient = () => this.call('supportsWatchtowerClient');
     supportsPeers = () => this.call('supportsPeers');
     supportsFlowLSP = () => this.call('supportsFlowLSP');
     supportsLSPScustomMessage = () => this.call('supportsLSPScustomMessage');
