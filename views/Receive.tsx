@@ -88,6 +88,7 @@ import {
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
+import LockIcon from '../assets/images/SVG/Lock.svg';
 import UnifiedSvg from '../assets/images/SVG/DynamicSVG/UnifiedSvg';
 import LightningSvg from '../assets/images/SVG/DynamicSVG/LightningSvg';
 import OnChainSvg from '../assets/images/SVG/DynamicSVG/OnChainSvg';
@@ -170,6 +171,10 @@ enum RouteHintMode {
     Custom = 1
 }
 
+const LOCKED_EXPIRY = '1';
+const LOCKED_TIME_PERIOD = 'Hours';
+const LOCKED_EXPIRY_SECONDS = '3600';
+
 @inject(
     'ChannelsStore',
     'InvoicesStore',
@@ -195,8 +200,8 @@ export default class Receive extends React.Component<
             receiverName: '',
             value: '',
             satAmount: '',
-            expiry: '3600',
-            timePeriod: 'Seconds',
+            expiry: '1',
+            timePeriod: 'Hours',
             expirySeconds: '3600',
             customPreimage: '',
             ampInvoice: false,
@@ -264,13 +269,18 @@ export default class Receive extends React.Component<
             expirationIndex = 4;
         }
 
+        const lspIsActive =
+            settings?.enableLSP &&
+            BackendUtils.supportsFlowLSP() &&
+            !flowLspNotConfigured;
+
         this.setState({
             addressType: settings?.invoices?.addressType || '0',
             expirationIndex,
             memo: settings?.invoices?.memo || '',
             receiverName: settings?.invoices?.receiverName || '',
-            expiry: settings?.invoices?.expiry || '3600',
-            timePeriod: settings?.invoices?.timePeriod || 'Seconds',
+            expiry: settings?.invoices?.expiry || '1',
+            timePeriod: settings?.invoices?.timePeriod || 'Hours',
             expirySeconds: newExpirySeconds,
             routeHints:
                 (settings?.invoices?.routeHints ||
@@ -290,10 +300,7 @@ export default class Receive extends React.Component<
                     BackendUtils.supportsBolt11BlindedRoutes()) ||
                 false,
             enableLSP: settings?.enableLSP,
-            lspIsActive:
-                settings?.enableLSP &&
-                BackendUtils.supportsFlowLSP() &&
-                !flowLspNotConfigured,
+            lspIsActive,
             flowLspNotConfigured
         });
 
@@ -536,7 +543,9 @@ export default class Receive extends React.Component<
                     ? `${receiverName}:  ${memo}`
                     : memo || '',
                 value: amount || '0',
-                expiry: expirySeconds || '3600',
+                expiry: lspIsActive
+                    ? LOCKED_EXPIRY_SECONDS
+                    : expirySeconds || '3600',
                 ampInvoice: lspIsActive ? false : ampInvoice || false,
                 blindedPaths: lspIsActive ? false : blindedPaths || false,
                 routeHints: lspIsActive ? false : routeHints || false,
@@ -1189,12 +1198,16 @@ export default class Receive extends React.Component<
     private modalBoxRef = React.createRef<ModalBox>();
 
     getFormattedDuration = () => {
-        const { expiry, timePeriod } = this.state;
+        const { expiry, timePeriod, lspIsActive } = this.state;
+
+        const expiryDisplay = lspIsActive ? LOCKED_EXPIRY : expiry;
+        const periodDisplay = lspIsActive ? LOCKED_TIME_PERIOD : timePeriod;
+
         const period =
-            expiry === '1'
-                ? timePeriod.toLowerCase().replace(/s$/, '')
-                : timePeriod.toLowerCase();
-        return `${expiry} ${period}`;
+            expiryDisplay === '1'
+                ? periodDisplay.toLowerCase().replace(/s$/, '')
+                : periodDisplay.toLowerCase();
+        return `${expiryDisplay} ${period}`;
     };
 
     render() {
@@ -2351,7 +2364,12 @@ export default class Receive extends React.Component<
                                                                             lspIsActive:
                                                                                 !enableLSP &&
                                                                                 BackendUtils.supportsFlowLSP() &&
-                                                                                !flowLspNotConfigured
+                                                                                !flowLspNotConfigured,
+                                                                            // lock toggle if LSP enabled
+                                                                            durationSettingsToggle:
+                                                                                durationSettingsToggle &&
+                                                                                enableLSP ===
+                                                                                    true
                                                                         }
                                                                     );
                                                                     await updateSettings(
@@ -2521,6 +2539,8 @@ export default class Receive extends React.Component<
                                                     <>
                                                         <TouchableOpacity
                                                             onPress={() => {
+                                                                if (lspIsActive)
+                                                                    return;
                                                                 this.setState({
                                                                     durationSettingsToggle:
                                                                         !durationSettingsToggle
@@ -2580,7 +2600,16 @@ export default class Receive extends React.Component<
                                                                             )}
                                                                         </Row>
                                                                     </View>
-                                                                    {durationSettingsToggle ? (
+
+                                                                    {lspIsActive ? (
+                                                                        <LockIcon
+                                                                            fill={themeColor(
+                                                                                'secondaryText'
+                                                                            )}
+                                                                            width="20"
+                                                                            height="20"
+                                                                        />
+                                                                    ) : durationSettingsToggle ? (
                                                                         <CaretDown
                                                                             fill={themeColor(
                                                                                 'text'
