@@ -20,6 +20,11 @@ import SettingsStore, {
 
 import Storage from '../storage';
 
+export const SWAPS_KEY = 'swaps';
+export const REVERSE_SWAPS_KEY = 'reverse-swaps';
+export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
+export const SWAPS_LAST_USED_KEY = 'swaps-lastUsedKey';
+
 export default class SwapStore {
     @observable public subInfo = {};
     @observable public reverseInfo = {};
@@ -184,7 +189,7 @@ export default class SwapStore {
                     timeoutBlockHeight: data.timeoutBlockHeight,
                     timeoutEta: data.timeoutEta
                 };
-                const storedSwaps = await Storage.getItem('swaps');
+                const storedSwaps = await Storage.getItem(SWAPS_KEY);
                 const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
                 const updatedSwaps = swaps.map((swap: any) =>
                     swap.id === id
@@ -196,7 +201,7 @@ export default class SwapStore {
                         : swap
                 );
 
-                await Storage.setItem('swaps', JSON.stringify(updatedSwaps));
+                await Storage.setItem(SWAPS_KEY, JSON.stringify(updatedSwaps));
                 return lockupTransaction;
             } else {
                 console.log('getLockupTransaction - not found', data);
@@ -217,15 +222,11 @@ export default class SwapStore {
         try {
             console.log('Creating submarine swap using rescue key...');
 
-            const { keys, index } = await this.generateNewKey();
+            const { keys } = await this.generateNewKey();
             const refundPrivateKey = Buffer.from(keys.privateKey!).toString(
                 'hex'
             );
             const refundPublicKey = Buffer.from(keys.publicKey).toString('hex');
-
-            console.log('refundPrivateKey:', refundPrivateKey);
-            console.log('refundPublicKey:', refundPublicKey);
-            console.log('index used:', index);
 
             const response = await ReactNativeBlobUtil.fetch(
                 'POST',
@@ -304,7 +305,7 @@ export default class SwapStore {
     ) => {
         try {
             // Retrieve existing swaps
-            const storedSwaps = await Storage.getItem('swaps');
+            const storedSwaps = await Storage.getItem(SWAPS_KEY);
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             // Adding the new properties to the swap
@@ -322,7 +323,7 @@ export default class SwapStore {
             swaps.unshift(enrichedSwap);
 
             // Save the updated swaps array back to Encrypted Storage
-            await Storage.setItem('swaps', JSON.stringify(swaps));
+            await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
             console.log('Swap saved successfully to Encrypted Storage.');
         } catch (error: any) {
             console.error('Error saving swap to storage:', error);
@@ -436,7 +437,7 @@ export default class SwapStore {
     ) => {
         try {
             // Retrieve existing swaps
-            const storedSwaps = await Storage.getItem('reverse-swaps');
+            const storedSwaps = await Storage.getItem(REVERSE_SWAPS_KEY);
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
             // Adding the new properties to the swap
@@ -455,7 +456,7 @@ export default class SwapStore {
             swaps.unshift(enrichedSwap);
 
             // Save the updated swaps array back to Encrypted Storage
-            await Storage.setItem('reverse-swaps', JSON.stringify(swaps));
+            await Storage.setItem(REVERSE_SWAPS_KEY, JSON.stringify(swaps));
             console.log(
                 'Reverse swap saved successfully to Encrypted Storage.'
             );
@@ -473,8 +474,8 @@ export default class SwapStore {
         console.log('Fetching and updating swaps...');
         this.swapsLoading = true;
         try {
-            const storedSubmarineSwaps = await Storage.getItem('swaps');
-            const storedReverseSwaps = await Storage.getItem('reverse-swaps');
+            const storedSubmarineSwaps = await Storage.getItem(SWAPS_KEY);
+            const storedReverseSwaps = await Storage.getItem(REVERSE_SWAPS_KEY);
 
             const submarineSwaps = storedSubmarineSwaps
                 ? JSON.parse(storedSubmarineSwaps)
@@ -533,11 +534,11 @@ export default class SwapStore {
             );
 
             await Storage.setItem(
-                'swaps',
+                SWAPS_KEY,
                 JSON.stringify(updatedSubmarineSwaps)
             );
             await Storage.setItem(
-                'reverse-swaps',
+                REVERSE_SWAPS_KEY,
                 JSON.stringify(updatedReverseSwaps)
             );
 
@@ -572,7 +573,7 @@ export default class SwapStore {
     ) => {
         try {
             let storedSwaps: any;
-            const key = isSubmarineSwap ? 'swaps' : 'reverse-swaps';
+            const key = isSubmarineSwap ? SWAPS_KEY : REVERSE_SWAPS_KEY;
             storedSwaps = await Storage.getItem(key);
             const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
@@ -603,7 +604,7 @@ export default class SwapStore {
     public updateSwapOnRefund = async (swapId: string, txid: string) => {
         try {
             // Retrieve the swaps from encrypted storage
-            const storedSwaps = await Storage.getItem('swaps');
+            const storedSwaps = await Storage.getItem(SWAPS_KEY);
             if (!storedSwaps) {
                 throw new Error('No swaps found in storage');
             }
@@ -624,7 +625,7 @@ export default class SwapStore {
             swaps[swapIndex].txid = txid;
 
             // Save the updated swaps back to encrypted storage
-            await Storage.setItem('swaps', JSON.stringify(swaps));
+            await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
 
             console.log('Swap updated in storage:', swaps[swapIndex]);
         } catch (error) {
@@ -650,7 +651,7 @@ export default class SwapStore {
 
     @action
     public deriveKey = async (index: number) => {
-        const mnemonic = await Storage.getItem('rescue-key');
+        const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
         if (!mnemonic) {
             throw new Error('Rescue mnemonic not found in storage.');
         }
@@ -673,14 +674,14 @@ export default class SwapStore {
     public generateRescueKey = async () => {
         console.log('GENERATING RESCUE FILE...');
         const mnemonic = bip39.generateMnemonic();
-        await Storage.setItem('rescue-key', mnemonic);
+        await Storage.setItem(SWAPS_RESCUE_KEY, mnemonic);
 
         return mnemonic;
     };
 
     @action
     public getLastUsedKey = async (): Promise<number> => {
-        const storedKey = await Storage.getItem('lastUsedKey');
+        const storedKey = await Storage.getItem(SWAPS_LAST_USED_KEY);
         const index = storedKey ? parseInt(storedKey, 10) : 0;
 
         return index;
@@ -688,7 +689,7 @@ export default class SwapStore {
 
     @action
     public setLastUsedKey = async (val: number): Promise<void> => {
-        await Storage.setItem('lastUsedKey', val.toString());
+        await Storage.setItem(SWAPS_LAST_USED_KEY, val.toString());
     };
 
     @action
@@ -728,7 +729,7 @@ export default class SwapStore {
             const importedSwaps = JSON.parse(response.data || '[]');
 
             if (importedSwaps.length > 0) {
-                const storedSwaps = await Storage.getItem('swaps');
+                const storedSwaps = await Storage.getItem(SWAPS_KEY);
                 const existingSwaps = storedSwaps
                     ? JSON.parse(storedSwaps)
                     : [];
@@ -748,7 +749,7 @@ export default class SwapStore {
 
                 const updatedSwaps = [...existingSwaps, ...rescuedSwaps];
 
-                await Storage.setItem('swaps', JSON.stringify(updatedSwaps));
+                await Storage.setItem(SWAPS_KEY, JSON.stringify(updatedSwaps));
                 console.log('Rescued swaps saved to storage');
             } else {
                 console.log('No swaps found for rescue');

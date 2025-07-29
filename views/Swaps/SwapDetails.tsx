@@ -732,21 +732,20 @@ export default class SwapDetails extends React.Component<
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
-        const isSubmarineSwap = !!swapData.bip21;
-        const isReverseSwap = !!swapData.lockupAddress;
+        const isSubmarineSwap = !!swapData.bip21 || swapData?.imported;
+        const isReverseSwap = !!swapData.lockupAddress && !swapData.imported;
 
-        const progressUpdate =
-            isSubmarineSwap || swapData?.imported
-                ? updates === 'invoice.set'
-                    ? localeString('views.SwapDetails.waitingForOnchainTx')
-                    : updates === 'transaction.mempool'
-                    ? localeString('views.SwapDetails.waitingForConf')
-                    : ''
-                : updates === 'swap.created'
-                ? localeString('views.SwapDetails.waitingForInvoicePayment')
+        const progressUpdate = isSubmarineSwap
+            ? updates === 'invoice.set'
+                ? localeString('views.SwapDetails.waitingForOnchainTx')
                 : updates === 'transaction.mempool'
                 ? localeString('views.SwapDetails.waitingForConf')
-                : '';
+                : ''
+            : updates === 'swap.created'
+            ? localeString('views.SwapDetails.waitingForInvoicePayment')
+            : updates === 'transaction.mempool'
+            ? localeString('views.SwapDetails.waitingForConf')
+            : '';
 
         const QRButton = () => {
             if (!swapData?.bip21 && !swapData.invoice && !swapData.imported) {
@@ -757,10 +756,9 @@ export default class SwapDetails extends React.Component<
                 <TouchableOpacity
                     onPress={() =>
                         navigation.navigate('QR', {
-                            value:
-                                isSubmarineSwap || swapData?.imported
-                                    ? swapData?.bip21 || swapData?.lockupAddress
-                                    : swapData?.invoice
+                            value: isSubmarineSwap
+                                ? swapData?.bip21 || swapData?.lockupAddress
+                                : swapData?.invoice
                         })
                     }
                 >
@@ -778,8 +776,7 @@ export default class SwapDetails extends React.Component<
             swapData.lockupTransaction &&
             (updates === 'invoice.failedToPay' ||
                 updates === 'transaction.lockupFailed' ||
-                ((isSubmarineSwap || swapData?.imported) &&
-                    updates === 'swap.expired') ||
+                (isSubmarineSwap && updates === 'swap.expired') ||
                 (failure && error));
 
         return (
@@ -894,7 +891,7 @@ export default class SwapDetails extends React.Component<
                         value={swapData.id}
                     />
 
-                    {isSubmarineSwap && (
+                    {isSubmarineSwap && !swapData?.imported && (
                         <>
                             <KeyValue
                                 keyValue={localeString(
@@ -930,7 +927,7 @@ export default class SwapDetails extends React.Component<
                             )}
                         </>
                     )}
-                    {isReverseSwap && !swapData?.imported && (
+                    {isReverseSwap && (
                         <>
                             <KeyValue
                                 keyValue={localeString('views.Invoice.title')}
@@ -970,7 +967,7 @@ export default class SwapDetails extends React.Component<
                             swapData.timeoutBlockHeight
                         )} ${this.timelockIndicator()}`}
                     />
-                    {(isSubmarineSwap || swapData?.imported) && (
+                    {isSubmarineSwap && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.SwapDetails.claimPublicKey'
@@ -1009,7 +1006,7 @@ export default class SwapDetails extends React.Component<
                         }}
                         onPress={() =>
                             handleAnything(
-                                isSubmarineSwap || swapData?.imported
+                                isSubmarineSwap
                                     ? swapData?.bip21 || swapData?.lockupAddress
                                     : swapData?.invoice
                             ).then(([route, props]) => {
