@@ -20,10 +20,12 @@ import SettingsStore, {
 
 import Storage from '../storage';
 
+import Swap from '../models/Swap';
+
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
-export const SWAPS_LAST_USED_KEY = 'swaps-lastUsedKey';
+export const SWAPS_LAST_USED_KEY = 'swaps-last-used-key';
 
 export default class SwapStore {
     @observable public subInfo = {};
@@ -555,7 +557,7 @@ export default class SwapStore {
                     new Date(a.createdAt).getTime()
             );
 
-            this.swaps = swaps;
+            this.swaps = swaps.map((swap) => new Swap(swap));
             this.swapsLoading = false;
         } catch (error) {
             console.error('Failed to fetch and update swaps:', error);
