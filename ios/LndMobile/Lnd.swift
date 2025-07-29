@@ -143,14 +143,15 @@ open class Lnd {
     "AutopilotModifyStatus": { bytes, cb in LndmobileAutopilotModifyStatus(bytes, cb) },
     "AutopilotQueryScores": { bytes, cb in LndmobileAutopilotQueryScores(bytes, cb) },
     "AutopilotSetScores": { bytes, cb in LndmobileAutopilotSetScores(bytes, cb) },
-
      // watchtower client
-    "AddTower": { bytes, cb in LndmobileWatchtowerClientAddTower(bytes, cb) },
-    "RemoveTower": { bytes, cb in LndmobileWatchtowerClientRemoveTower(bytes, cb) },
-    "ListTowers": { bytes, cb in LndmobileWatchtowerClientListTowers(bytes, cb) },
-    "GetTowerInfo": { bytes, cb in LndmobileWatchtowerClientGetTowerInfo(bytes, cb) },
-    "Stats": { bytes, cb in LndmobileWatchtowerClientStats(bytes, cb) },
-    "Policy": { bytes, cb in LndmobileWatchtowerClientPolicy(bytes, cb) }
+    "WatchtowerClientAddTower": { bytes, cb in LndmobileWatchtowerClientAddTower(bytes, cb) },
+    "WatchtowerClientRemoveTower": { bytes, cb in LndmobileWatchtowerClientRemoveTower(bytes, cb) },
+    "WatchtowerClientDeactivateTower": { bytes, cb in LndmobileWatchtowerClientDeactivateTower(bytes, cb) },
+    "WatchtowerClientListTowers": { bytes, cb in LndmobileWatchtowerClientListTowers(bytes, cb) },
+    "WatchtowerClientGetTowerInfo": { bytes, cb in LndmobileWatchtowerClientGetTowerInfo(bytes, cb) },
+    "WatchtowerClientStats": { bytes, cb in LndmobileWatchtowerClientStats(bytes, cb) },
+    "WatchtowerClientPolicy": { bytes, cb in LndmobileWatchtowerClientPolicy(bytes, cb) },
+    "WatchtowerClientTerminateSession": { bytes, cb in LndmobileWatchtowerClientTerminateSession(bytes, cb) }
   ]
 
   static let streamMethods: [String: (Data?, (any LndmobileRecvStreamProtocol)?) -> Void] = [

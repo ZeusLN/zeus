@@ -63,8 +63,16 @@ const {
     sendCoins
 } = lndMobile.onchain;
 
-const { addTower, removeTower, listTowers, getTowerInfo, getStats, getPolicy } =
-    lndMobile.wtclient;
+const {
+    WatchtowerClientAddTower,
+    WatchtowerClientRemoveTower,
+    WatchtowerClientListTowers,
+    WatchtowerClientGetTowerInfo,
+    WatchtowerClientGetStats,
+    WatchtowerClientGetPolicy,
+    WatchtowerClientDeactivateTower,
+    WatchtowerClientTerminateSession
+} = lndMobile.wtclient;
 
 import {
     signMessageWithAddr as signMsgWithAddr,
@@ -348,16 +356,18 @@ export default class EmbeddedLND extends LND {
     importAccount = async (data: any) => await importAccount(data);
     rescan = async (data: any) => await rescan(data);
 
+    // Watchtower
     addWatchtower = async (data: { pubkey: string; address: string }) =>
-        await addTower(data.pubkey, data.address);
+        await WatchtowerClientAddTower(data.pubkey, data.address);
 
-    removeWatchtower = async (pubkey: string) => await removeTower(pubkey);
+    removeWatchtower = async (pubkey: string) =>
+        await WatchtowerClientRemoveTower(pubkey);
 
     listWatchtowers = async (params?: {
         include_sessions?: boolean;
         exclude_exhausted_sessions?: boolean;
     }) => {
-        return await listTowers(params?.include_sessions);
+        return await WatchtowerClientListTowers(params?.include_sessions);
     };
 
     getWatchtowerInfo = async (
@@ -366,12 +376,18 @@ export default class EmbeddedLND extends LND {
             include_sessions?: boolean;
             exclude_exhausted_sessions?: boolean;
         }
-    ) => await getTowerInfo(pubkey, params?.include_sessions);
+    ) => await WatchtowerClientGetTowerInfo(pubkey, params?.include_sessions);
 
-    getWatchtowerStats = async () => await getStats();
+    getWatchtowerStats = async () => await WatchtowerClientGetStats();
 
     getWatchtowerPolicy = async (policy_type?: number) =>
-        await getPolicy(policy_type);
+        await WatchtowerClientGetPolicy(policy_type);
+
+    deactivateWatchtower = async (pubkey: string) =>
+        await WatchtowerClientDeactivateTower(pubkey);
+
+    terminateWatchtowerSession = async (sessionId: string) =>
+        await WatchtowerClientTerminateSession(sessionId);
 
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
@@ -379,7 +395,7 @@ export default class EmbeddedLND extends LND {
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
-    supportsWtClient = () => true;
+    supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;

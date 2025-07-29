@@ -2,19 +2,11 @@ import { sendCommand } from './utils';
 import { wtclientrpc } from './../proto/lightning';
 
 /**
- * The type of policy to retrieve.
- */
-export enum PolicyType {
-    LEGACY = 0,
-    ANCHOR = 1
-}
-
-/**
  * Adds a new watchtower reachable at the given address.
  * If the watchtower already exists, any new addresses will be considered for session negotiations and backups.
  * @throws
  */
-export const addTower = async (
+export const WatchtowerClientAddTower = async (
     pubkey: string,
     address: string
 ): Promise<wtclientrpc.AddTowerResponse> => {
@@ -25,7 +17,7 @@ export const addTower = async (
     >({
         request: wtclientrpc.AddTowerRequest,
         response: wtclientrpc.AddTowerResponse,
-        method: 'AddTower',
+        method: 'WatchtowerClientAddTower',
         options: {
             pubkey: new Uint8Array(Buffer.from(pubkey, 'hex')),
             address
@@ -39,7 +31,7 @@ export const addTower = async (
  * If an address is provided, only that address is removed from the watchtower.
  * @throws
  */
-export const removeTower = async (
+export const WatchtowerClientRemoveTower = async (
     pubkey: string,
     address?: string
 ): Promise<wtclientrpc.RemoveTowerResponse> => {
@@ -50,7 +42,7 @@ export const removeTower = async (
     >({
         request: wtclientrpc.RemoveTowerRequest,
         response: wtclientrpc.RemoveTowerResponse,
-        method: 'RemoveTower',
+        method: 'WatchtowerClientRemoveTower',
         options: {
             pubkey: new Uint8Array(Buffer.from(pubkey, 'hex')),
             address
@@ -63,7 +55,7 @@ export const removeTower = async (
  * Lists all registered watchtowers.
  * @throws
  */
-export const listTowers = async (
+export const WatchtowerClientListTowers = async (
     includeSessions: boolean = false
 ): Promise<wtclientrpc.ListTowersResponse> => {
     const response = await sendCommand<
@@ -73,7 +65,7 @@ export const listTowers = async (
     >({
         request: wtclientrpc.ListTowersRequest,
         response: wtclientrpc.ListTowersResponse,
-        method: 'ListTowers',
+        method: 'WatchtowerClientListTowers',
         options: {
             include_sessions: includeSessions
         }
@@ -85,7 +77,7 @@ export const listTowers = async (
  * Retrieves information for a specific watchtower.
  * @throws
  */
-export const getTowerInfo = async (
+export const WatchtowerClientGetTowerInfo = async (
     pubkey: string,
     includeSessions: boolean = false
 ): Promise<wtclientrpc.Tower> => {
@@ -96,7 +88,7 @@ export const getTowerInfo = async (
     >({
         request: wtclientrpc.GetTowerInfoRequest,
         response: wtclientrpc.Tower,
-        method: 'GetTowerInfo',
+        method: 'WatchtowerClientGetTowerInfo',
         options: {
             pubkey: new Uint8Array(Buffer.from(pubkey, 'hex')),
             include_sessions: includeSessions
@@ -109,26 +101,27 @@ export const getTowerInfo = async (
  * Gets watchtower client statistics since startup.
  * @throws
  */
-export const getStats = async (): Promise<wtclientrpc.StatsResponse> => {
-    const response = await sendCommand<
-        wtclientrpc.IStatsRequest,
-        wtclientrpc.StatsRequest,
-        wtclientrpc.StatsResponse
-    >({
-        request: wtclientrpc.StatsRequest,
-        response: wtclientrpc.StatsResponse,
-        method: 'Stats',
-        options: {}
-    });
-    return response;
-};
+export const WatchtowerClientGetStats =
+    async (): Promise<wtclientrpc.StatsResponse> => {
+        const response = await sendCommand<
+            wtclientrpc.IStatsRequest,
+            wtclientrpc.StatsRequest,
+            wtclientrpc.StatsResponse
+        >({
+            request: wtclientrpc.StatsRequest,
+            response: wtclientrpc.StatsResponse,
+            method: 'WatchtowerClientStats',
+            options: {}
+        });
+        return response;
+    };
 
 /**
  * Retrieves the active watchtower client policy configuration.
  * @throws
  */
-export const getPolicy = async (
-    policyType: PolicyType = PolicyType.LEGACY
+export const WatchtowerClientGetPolicy = async (
+    policyType: wtclientrpc.PolicyType = wtclientrpc.PolicyType.LEGACY
 ): Promise<wtclientrpc.PolicyResponse> => {
     const response = await sendCommand<
         wtclientrpc.IPolicyRequest,
@@ -137,9 +130,54 @@ export const getPolicy = async (
     >({
         request: wtclientrpc.PolicyRequest,
         response: wtclientrpc.PolicyResponse,
-        method: 'Policy',
+        method: 'WatchtowerClientPolicy',
         options: {
             policy_type: policyType
+        }
+    });
+    return response;
+};
+
+/**
+ * Deactivates a watchtower so that it is not considered for session negotiation.
+ * Its sessions will also not be used while the tower is inactive.
+ * @throws
+ */
+export const WatchtowerClientDeactivateTower = async (
+    pubkey: string
+): Promise<wtclientrpc.DeactivateTowerResponse> => {
+    const response = await sendCommand<
+        wtclientrpc.IDeactivateTowerRequest,
+        wtclientrpc.DeactivateTowerRequest,
+        wtclientrpc.DeactivateTowerResponse
+    >({
+        request: wtclientrpc.DeactivateTowerRequest,
+        response: wtclientrpc.DeactivateTowerResponse,
+        method: 'WatchtowerClientDeactivateTower',
+        options: {
+            pubkey: new Uint8Array(Buffer.from(pubkey, 'hex'))
+        }
+    });
+    return response;
+};
+
+/**
+ * Terminates a watchtower session and marks it as terminal so that it is not used for backups anymore.
+ * @throws
+ */
+export const WatchtowerClientTerminateSession = async (
+    sessionId: string
+): Promise<wtclientrpc.TerminateSessionResponse> => {
+    const response = await sendCommand<
+        wtclientrpc.ITerminateSessionRequest,
+        wtclientrpc.TerminateSessionRequest,
+        wtclientrpc.TerminateSessionResponse
+    >({
+        request: wtclientrpc.TerminateSessionRequest,
+        response: wtclientrpc.TerminateSessionResponse,
+        method: 'WatchtowerClientTerminateSession',
+        options: {
+            session_id: new Uint8Array(Buffer.from(sessionId, 'hex'))
         }
     });
     return response;

@@ -403,6 +403,7 @@ public class LndMobileScheduledSyncWorker extends ListenableWorker {
     }
     // Enable watchtower client
     params += " --wtclient.active";
+    
     bundle.putString("args", params);
     message.setData(bundle);
     messengerService.send(message);
