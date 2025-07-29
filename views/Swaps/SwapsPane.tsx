@@ -18,6 +18,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import SwapStore from '../../stores/SwapStore';
 import SettingsStore from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
+import Swap from '../../models/Swap';
 
 interface SwapsPaneProps {
     navigation: StackNavigationProp<any, any>;
@@ -37,7 +38,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
         });
     }
 
-    handleSwapPress = (swap: any) => {
+    handleSwapPress = (swap: Swap) => {
         const { navigation } = this.props;
         const { keys, invoice } = swap;
         navigation.navigate('SwapDetails', {
@@ -57,13 +58,8 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
         />
     );
 
-    renderSwap = ({ item }: { item: any }) => {
+    renderSwap = ({ item }: { item: Swap }) => {
         const { SwapStore } = this.props;
-
-        const createdAt =
-            typeof item.createdAt === 'number'
-                ? item.createdAt * 1000
-                : item.createdAt;
 
         return (
             <TouchableOpacity
@@ -210,7 +206,9 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 fontSize: 16
                             }}
                         >
-                            {moment(createdAt).format('MMM Do YYYY, h:mm:ss a')}
+                            {moment(item.createdAtFormatted).format(
+                                'MMM Do YYYY, h:mm:ss a'
+                            )}
                         </Text>
                     </View>
                 )}
