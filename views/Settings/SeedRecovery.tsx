@@ -39,7 +39,7 @@ import {
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 
 import SettingsStore from '../../stores/SettingsStore';
-import SwapStore from '../../stores/SwapStore';
+import SwapStore, { SWAPS_RESCUE_KEY } from '../../stores/SwapStore';
 
 import Storage from '../../storage';
 
@@ -754,7 +754,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                 .trim();
 
                                             await Storage.setItem(
-                                                'rescue-key',
+                                                SWAPS_RESCUE_KEY,
                                                 mnemonic
                                             );
 

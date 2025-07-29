@@ -39,7 +39,7 @@ import {
     calculateLimit
 } from '../../utils/SwapUtils';
 
-import SwapStore from '../../stores/SwapStore';
+import SwapStore, { SWAPS_RESCUE_KEY } from '../../stores/SwapStore';
 import UnitsStore from '../../stores/UnitsStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import FiatStore from '../../stores/FiatStore';
@@ -215,7 +215,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const checkAndShowModal = async () => {
             if (!SwapStore.loading) {
-                const mnemonic = await Storage.getItem('rescue-key');
+                const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
                 if (mnemonic) {
                     this.setState({
                         showRescueKeyBtn: true,
@@ -241,7 +241,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const unsubFocus = this.props.navigation.addListener(
             'focus',
             async () => {
-                const mnemonic = await Storage.getItem('rescue-key');
+                const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
                 if (mnemonic) {
                     this.setState({
                         isModalVisible: false,
