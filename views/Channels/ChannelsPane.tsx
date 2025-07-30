@@ -695,19 +695,7 @@ export default class ChannelsPane extends React.PureComponent<
                                     }}
                                     onRefresh={() => ChannelsStore?.getPeers()}
                                     refreshing={ChannelsStore?.loading}
-                                    data={
-                                        BackendUtils.isLNDBased()
-                                            ? ChannelsStore?.filteredPeers
-                                            : ChannelsStore?.filteredPeers?.filter(
-                                                  (peer) => {
-                                                      return (
-                                                          peer.connected &&
-                                                          peer.connected ===
-                                                              true
-                                                      );
-                                                  }
-                                              )
-                                    }
+                                    data={ChannelsStore?.filteredPeers}
                                     ListFooterComponent={
                                         <View style={{ height: 20 }} />
                                     }
@@ -717,6 +705,13 @@ export default class ChannelsPane extends React.PureComponent<
                                         return (
                                             <TouchableOpacity
                                                 onPress={() => {
+                                                    // CLN shows peers that are not connected, handle appropriately
+                                                    if (
+                                                        !BackendUtils.isLNDBased() &&
+                                                        peer.connected === false
+                                                    )
+                                                        return;
+
                                                     this.openDisconnectModal(
                                                         peer
                                                     );
@@ -922,7 +917,8 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 }`}
                                                             </Text>
                                                         )}
-                                                        {peer.connected && (
+                                                        {peer.connected !==
+                                                            undefined && (
                                                             <Text
                                                                 style={[
                                                                     styles.peerStatsText,
@@ -968,19 +964,25 @@ export default class ChannelsPane extends React.PureComponent<
                                                     </View>
                                                 </View>
 
-                                                <View
-                                                    style={
-                                                        styles.peerIconContainer
-                                                    }
-                                                >
-                                                    <Icon
-                                                        name="minus-circle"
-                                                        size={20}
-                                                        color={themeColor(
-                                                            'error'
-                                                        )}
-                                                    />
-                                                </View>
+                                                {/* CLN shows peers that are not connected, handle appropriately */}
+                                                {!(
+                                                    !BackendUtils.isLNDBased() &&
+                                                    !peer.connected
+                                                ) && (
+                                                    <View
+                                                        style={
+                                                            styles.peerIconContainer
+                                                        }
+                                                    >
+                                                        <Icon
+                                                            name="minus-circle"
+                                                            size={20}
+                                                            color={themeColor(
+                                                                'error'
+                                                            )}
+                                                        />
+                                                    </View>
+                                                )}
                                             </TouchableOpacity>
                                         );
                                     }}
