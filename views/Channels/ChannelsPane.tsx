@@ -417,7 +417,8 @@ export default class ChannelsPane extends React.PureComponent<
             showChannelsSearch,
             showPeersSearch,
             setChannelsType,
-            channelsType
+            channelsType,
+            nodes
         } = ChannelsStore!;
 
         const Theme = {
@@ -749,10 +750,15 @@ export default class ChannelsPane extends React.PureComponent<
                                                         ]}
                                                         numberOfLines={3}
                                                     >
-                                                        {peer.pubkey}
+                                                        {nodes[peer.pubkey]
+                                                            ?.alias ||
+                                                            peer.alias ||
+                                                            peer.pubkey}
                                                     </Text>
 
-                                                    {peer.alias && (
+                                                    {(nodes[peer.pubkey]
+                                                        ?.alias ||
+                                                        peer.alias) && (
                                                         <Text
                                                             style={[
                                                                 styles.text,
@@ -765,7 +771,7 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 }
                                                             ]}
                                                         >
-                                                            {peer.alias}
+                                                            {peer.pubkey}
                                                         </Text>
                                                     )}
 
