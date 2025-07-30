@@ -227,7 +227,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 fontSize: 16
                             }}
                         >
-                            Imported
+                            {localeString('views.Swaps.SwapsPane.imported')}
                         </Text>
                         <Text
                             style={{

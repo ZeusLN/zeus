@@ -42,11 +42,11 @@ export default class Swap extends BaseModel {
     }
 
     @computed get isSubmarineSwap(): boolean {
-        return this.type === 'Submarine' && this.bip21 !== undefined;
+        return this.type === 'Submarine';
     }
 
-    @computed get isImportedSubmarineSwap(): boolean {
-        return this.type === 'Submarine' && this.lockupAddress !== undefined;
+    @computed get isNewSubmarineSwap(): boolean {
+        return this.isSubmarineSwap && this.bip21 !== undefined;
     }
 
     @computed get isReverseSwap(): boolean {
@@ -66,10 +66,10 @@ export default class Swap extends BaseModel {
     }
 
     @computed get qrCodeValue(): string | undefined {
-        if (this.isSubmarineSwap) {
+        if (this.isNewSubmarineSwap) {
             return this.bip21;
         }
-        if (this.isImportedSubmarineSwap) {
+        if (this.isSubmarineSwap && !!this.lockupAddress) {
             return this.lockupAddress;
         }
         if (this.isReverseSwap) {
