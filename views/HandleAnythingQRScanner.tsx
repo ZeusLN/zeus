@@ -16,11 +16,9 @@ import Base64Utils from '../utils/Base64Utils';
 import { joinQRs } from '../utils/BbqrUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { Route } from '@react-navigation/native';
 
 interface HandleAnythingQRProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'HandleAnythingQRScanner', { wif?: boolean }>;
 }
 
 interface HandleAnythingQRState {
@@ -48,8 +46,7 @@ export default class HandleAnythingQRScanner extends React.Component<
     }
 
     handleAnythingScanned = async (data: string) => {
-        const { navigation, route } = this.props;
-        const isWif = route.params?.wif;
+        const { navigation } = this.props;
 
         let handleData;
 
@@ -179,7 +176,7 @@ export default class HandleAnythingQRScanner extends React.Component<
             loading: true
         });
 
-        handleAnything(handleData, undefined, false, isWif)
+        handleAnything(handleData)
             .then((response) => {
                 this.setState({
                     loading: false
