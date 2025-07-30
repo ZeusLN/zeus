@@ -43,6 +43,8 @@ export default class SwapStore {
     constructor(nodeInfoStore: NodeInfoStore, settingsStore: SettingsStore) {
         this.nodeInfoStore = nodeInfoStore;
         this.settingsStore = settingsStore;
+        initEccLib(ecc);
+        this.ECPair = ECPairFactory(ecc);
 
         reaction(
             () => this.getHost,
@@ -737,17 +739,48 @@ export default class SwapStore {
                     : [];
                 const existingSwapIds = existingSwaps.map((s: any) => s.id);
 
-                const rescuedSwaps = importedSwaps
-                    .filter((swap: any) => !existingSwapIds.includes(swap.id))
-                    .map((swap: any) => ({
-                        ...swap,
-                        imported: true,
-                        implementation,
-                        nodePubkey,
-                        endpoint: this.getHost,
-                        serviceProvider: this.getServiceProvider,
-                        type: 'Submarine'
-                    }));
+                const rescuedSwaps = await Promise.all(
+                    importedSwaps
+                        .filter(
+                            (swap: any) => !existingSwapIds.includes(swap.id)
+                        )
+                        .map(async (swap: any) => {
+                            const hdKey = this.mnemonicToHDKey(mnemonic);
+                            const childKey = hdKey.derive(
+                                this.getPath(swap.keyIndex)
+                            );
+
+                            if (!childKey.privateKey) {
+                                throw new Error(
+                                    `No private key at index ${swap.keyIndex}`
+                                );
+                            }
+
+                            const ecPair = this.ECPair.fromPrivateKey(
+                                Buffer.from(childKey.privateKey)
+                            );
+
+                            const refundPrivateKey = Buffer.from(
+                                ecPair.privateKey!
+                            ).toString('hex');
+                            const refundPublicKey = Buffer.from(
+                                ecPair.publicKey
+                            ).toString('hex');
+
+                            return {
+                                ...swap,
+                                imported: true,
+                                implementation,
+                                nodePubkey,
+                                endpoint: this.getHost,
+                                serviceProvider: this.getServiceProvider,
+                                type: 'Submarine',
+                                keys: ecPair,
+                                refundPrivateKey,
+                                refundPublicKey
+                            };
+                        })
+                );
 
                 const updatedSwaps = [...existingSwaps, ...rescuedSwaps];
 
