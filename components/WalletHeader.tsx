@@ -693,7 +693,8 @@ export default class WalletHeader extends React.Component<
                                 {
                                     key: 'peers',
                                     label: `${localeString('general.peers')} (${
-                                        ChannelsStore?.peers?.length || 0
+                                        ChannelsStore?.filteredPeers?.length ||
+                                        0
                                     })`
                                 }
                             ]}
