@@ -68,6 +68,14 @@ export default class WIFSweeper extends React.Component<
     };
 
     componentDidMount() {
+        this.props.SweepStore.destination = '';
+
+        this.setState({
+            error: '',
+            isValid: false,
+            onChainAddressloading: false
+        });
+
         this.props.InvoicesStore.reset();
         this.props.SweepStore.resetSweepError();
         this.initFromProps(this.props);
@@ -240,7 +248,9 @@ export default class WIFSweeper extends React.Component<
                                         }
                                         if (!SweepStore.onChainBalance) {
                                             throw new Error(
-                                                'The unspent outputs from this private key contain insufficient funds to spend(0 sats).'
+                                                localeString(
+                                                    'views.Wif.noUtxos'
+                                                )
                                             );
                                         }
                                         await InvoicesStore.createUnifiedInvoice(
@@ -325,7 +335,9 @@ export default class WIFSweeper extends React.Component<
                             disabled={
                                 !privateKey ||
                                 loading ||
-                                !SweepStore.destination
+                                !SweepStore.destination ||
+                                sweepError ||
+                                (!!error && error.length > 0)
                             }
                             containerStyle={{ paddingBottom: 30 }}
                         />

@@ -844,6 +844,7 @@
     "views.Wif.destinationOnChainAddress": "Destination on-chain address",
     "views.Wif.createTransaction": "Create Transaction",
     "views.Wif.invalidBase58Chars": "Invalid base58 characters",
+    "views.Wif.noUtxos": "The unspent outputs from this private key contain insufficient funds to spend(0 sats).",
     "views.Settings.title": "Settings",
     "views.Settings.enabled": "Enabled",
     "views.Settings.disabled": "Disabled",
