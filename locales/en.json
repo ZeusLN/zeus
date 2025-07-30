@@ -1659,6 +1659,7 @@
     "views.Swaps.SwapsPane.failedToLoad": "Failed to load swaps",
     "views.Swaps.SwapsPane.restoreSwaps": "Restore swaps",
     "views.Swaps.SwapsPane.swapsRecovery": "Swaps recovery",
+    "views.Swaps.SwapsPane.imported": "Imported",
     "views.Swaps.Settings.enablePro": "Enable Boltz Pro",
     "views.Swaps.rescueKey": "Rescue key",
     "views.Swaps.rescueKey.create": "Create rescue key",
