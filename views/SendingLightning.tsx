@@ -20,10 +20,10 @@ import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
 
-import TransactionsStore from '../stores/TransactionsStore';
 import LnurlPayStore from '../stores/LnurlPayStore';
 import PaymentsStore from '../stores/PaymentsStore';
 import SettingsStore from '../stores/SettingsStore';
+import TransactionsStore from '../stores/TransactionsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -37,10 +37,10 @@ import CopyBox from '../components/CopyBox';
 
 interface SendingLightningProps {
     navigation: StackNavigationProp<any, any>;
-    TransactionsStore: TransactionsStore;
     LnurlPayStore: LnurlPayStore;
     PaymentsStore: PaymentsStore;
     SettingsStore: SettingsStore;
+    TransactionsStore: TransactionsStore;
 }
 
 interface SendingLightningState {
@@ -49,7 +49,7 @@ interface SendingLightningState {
     currentPayment: any;
 }
 
-@inject('TransactionsStore', 'LnurlPayStore', 'PaymentsStore')
+@inject('LnurlPayStore', 'PaymentsStore', 'SettingsStore', 'TransactionsStore')
 @observer
 export default class SendingLightning extends React.Component<
     SendingLightningProps,
@@ -153,7 +153,8 @@ export default class SendingLightning extends React.Component<
     }
 
     render() {
-        const { TransactionsStore, LnurlPayStore, navigation } = this.props;
+        const { TransactionsStore, SettingsStore, LnurlPayStore, navigation } =
+            this.props;
         const {
             loading,
             error,
@@ -164,6 +165,7 @@ export default class SendingLightning extends React.Component<
             isIncomplete,
             noteKey
         } = TransactionsStore;
+        const { implementation } = SettingsStore;
         const { storedNotes, currentPayment } = this.state;
 
         const enhancedPath = currentPayment?.enhancedPath;
@@ -476,25 +478,49 @@ export default class SendingLightning extends React.Component<
                                 </Text>
                             )}
                             {(!!payment_error || !!error) && (
-                                <Button
-                                    title={localeString(
-                                        'views.SendingLightning.tryAgain'
+                                <>
+                                    <Button
+                                        title={localeString(
+                                            'views.SendingLightning.tryAgain'
+                                        )}
+                                        icon={{
+                                            name: 'return-up-back',
+                                            type: 'ionicon',
+                                            size: 25
+                                        }}
+                                        onPress={() => navigation.goBack()}
+                                        buttonStyle={{
+                                            backgroundColor: 'white',
+                                            height: 40
+                                        }}
+                                        containerStyle={{
+                                            width: '100%',
+                                            margin: 3
+                                        }}
+                                    />
+                                    {implementation === 'embedded-lnd' && (
+                                        <Button
+                                            title={localeString(
+                                                'views.Settings.EmbeddedNode.Troubleshooting.title'
+                                            )}
+                                            icon={{
+                                                name: 'help-buoy-outline',
+                                                type: 'ionicon',
+                                                size: 25
+                                            }}
+                                            onPress={() => {
+                                                navigation.navigate(
+                                                    'EmbeddedNodeTroubleshooting'
+                                                );
+                                            }}
+                                            containerStyle={{
+                                                width: '100%',
+                                                margin: 3
+                                            }}
+                                            secondary
+                                        />
                                     )}
-                                    icon={{
-                                        name: 'return-up-back',
-                                        type: 'ionicon',
-                                        size: 25
-                                    }}
-                                    onPress={() => navigation.goBack()}
-                                    buttonStyle={{
-                                        backgroundColor: 'white',
-                                        height: 40
-                                    }}
-                                    containerStyle={{
-                                        width: '100%',
-                                        margin: 10
-                                    }}
-                                />
+                                </>
                             )}
 
                             {(!!error ||
@@ -534,7 +560,8 @@ export default class SendingLightning extends React.Component<
                                         }}
                                         containerStyle={{
                                             maxWidth: isSwap ? '45%' : '100%',
-                                            paddingRight: isSwap ? 5 : 0
+                                            paddingRight: isSwap ? 5 : 0,
+                                            margin: 3
                                         }}
                                     />
                                     {isSwap && (
