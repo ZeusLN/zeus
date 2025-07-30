@@ -617,8 +617,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         }}
                         underlayColor="transparent"
                         fill={themeColor('text')}
-                        width={32}
-                        height={32}
+                        width={36}
+                        height={36}
                     />
                 </TouchableOpacity>
             );
