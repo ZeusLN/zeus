@@ -32,10 +32,49 @@ export default class Swap extends BaseModel {
     serverPublicKey?: string;
     symbol?: string;
     tree?: any;
+    lockupTransaction?: any;
+    txid?: string;
 
     @computed get createdAtFormatted(): number | string {
         return typeof this.createdAt === 'number'
             ? this.createdAt * 1000
             : this.createdAt;
+    }
+
+    @computed get isSubmarineSwap(): boolean {
+        return this.type === 'Submarine' && this.bip21 !== undefined;
+    }
+
+    @computed get isImportedSubmarineSwap(): boolean {
+        return this.type === 'Submarine' && this.lockupAddress !== undefined;
+    }
+
+    @computed get isReverseSwap(): boolean {
+        return this.type === 'Reverse' && this.lockupAddress !== undefined;
+    }
+
+    @computed get servicePubKey(): string | undefined {
+        return this.claimPublicKey || this.serverPublicKey;
+    }
+
+    @computed get swapTreeDetails(): any {
+        return this.swapTree || this.tree;
+    }
+
+    @computed get effectiveLockupAddress(): string | undefined {
+        return this.address || this.lockupAddress;
+    }
+
+    @computed get qrCodeValue(): string | undefined {
+        if (this.isSubmarineSwap) {
+            return this.bip21;
+        }
+        if (this.isImportedSubmarineSwap) {
+            return this.lockupAddress;
+        }
+        if (this.isReverseSwap) {
+            return this.invoice;
+        }
+        return undefined;
     }
 }
