@@ -803,19 +803,17 @@ export default class ChannelsPane extends React.PureComponent<
                                                                 {`${localeString(
                                                                     'views.ChannelsPane.pingTime'
                                                                 )}: ${
-                                                                    BackendUtils.isLNDBased()
+                                                                    peer.ping_time >=
+                                                                    0
                                                                         ? (
                                                                               peer.ping_time /
                                                                               1000
                                                                           ).toFixed(
-                                                                              peer.ping_time /
-                                                                                  1000 <
-                                                                                  0.01
-                                                                                  ? 3
-                                                                                  : 2
-                                                                          )
-                                                                        : peer.ping_time
-                                                                } ms`}
+                                                                              2
+                                                                          ) +
+                                                                          ' ms'
+                                                                        : 'N/A'
+                                                                }`}
                                                             </Text>
                                                         )}
                                                         {peer.sats_sent && (
