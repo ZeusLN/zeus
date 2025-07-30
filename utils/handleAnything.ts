@@ -96,8 +96,7 @@ const nostrProfileLookup = async (data: string) => {
 const handleAnything = async (
     data: string,
     setAmount?: string,
-    isClipboardValue?: boolean,
-    wif?: boolean
+    isClipboardValue?: boolean
 ): Promise<any> => {
     data = data.trim();
     const { nodeInfo } = nodeInfoStore;
@@ -112,22 +111,6 @@ const handleAnything = async (
     const ecash =
         BackendUtils.supportsCashuWallet() &&
         settingsStore?.settings?.ecash?.enableCashu;
-
-    // Check if the value is a valid WIF
-    if (wif) {
-        try {
-            const { isValid, error } = wifUtils.validateWIF(data);
-            if (isValid) {
-                return ['WIFSweeper', { wif: data }];
-            } else {
-                const err = new Error();
-                err.message = error || localeString('views.Wif.invalidWif');
-                throw err;
-            }
-        } catch (err: any) {
-            throw err;
-        }
-    }
 
     let lnurl;
     // if the value is from clipboard and looks like a url we don't want to decode it
@@ -840,8 +823,22 @@ const handleAnything = async (
             }
         ];
     } else {
-        if (isClipboardValue) return false;
-        throw new Error(localeString('utils.handleAnything.notValid'));
+        try {
+            const { isValid, error } = wifUtils.validateWIF(value);
+            if (isValid) {
+                return [
+                    'WIFSweeper',
+                    {
+                        wif: value
+                    }
+                ];
+            } else {
+                throw new Error(error || localeString('views.Wif.invalidWif'));
+            }
+        } catch (err) {
+            if (isClipboardValue) return false;
+            throw new Error(localeString('utils.handleAnything.notValid'));
+        }
     }
 };
 
