@@ -218,10 +218,14 @@ export default class ChannelsStore {
     @action
     public setSearch = (query: string) => {
         this.search = query;
-        this.filterChannels();
-        this.filterPendingChannels();
-        this.filterClosedChannels();
-        this.filterPeers();
+
+        if (this.channelsView === ChannelsView.Channels) {
+            this.filterChannels();
+            this.filterPendingChannels();
+            this.filterClosedChannels();
+        } else {
+            this.filterPeers();
+        }
     };
 
     @action
