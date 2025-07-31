@@ -307,7 +307,10 @@ export default class ChannelsStore {
         this.filteredPeers = this.peers.filter(
             (peer: Peer) =>
                 peer.alias?.toLocaleLowerCase().includes(query) ||
-                peer.pubkey?.toLocaleLowerCase().includes(query)
+                peer.pubkey?.toLocaleLowerCase().includes(query) ||
+                this.nodes[peer.pubkey]?.alias
+                    .toLocaleLowerCase()
+                    .includes(query)
         );
     };
 
