@@ -7,10 +7,13 @@ import {
     TouchableOpacity,
     View,
     TextInput as TextInputRN,
-    Keyboard
+    Keyboard,
+    Alert
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { inject, observer } from 'mobx-react';
+import RNFS from 'react-native-fs';
+import DocumentPicker from 'react-native-document-picker';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { v4 as uuidv4 } from 'uuid';
@@ -21,6 +24,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
+import LoadingIndicator from '../../components/LoadingIndicator';
 
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -35,12 +39,18 @@ import {
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 
 import SettingsStore from '../../stores/SettingsStore';
-import LoadingIndicator from '../../components/LoadingIndicator';
+import SwapStore, { SWAPS_RESCUE_KEY } from '../../stores/SwapStore';
+
+import Storage from '../../storage';
 
 interface SeedRecoveryProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
-    route: Route<'SeedRecovery', { network: string }>;
+    SwapStore: SwapStore;
+    route: Route<
+        'SeedRecovery',
+        { network: string; restoreSwaps?: boolean; restoreRescueKey?: boolean }
+    >;
 }
 
 interface SeedRecoveryState {
@@ -61,9 +71,11 @@ interface SeedRecoveryState {
     channelBackupsBase64: string;
     errorCreatingWallet: boolean;
     errorMsg: string;
+    restoreSwaps?: boolean;
+    restoreRescueKey?: boolean;
 }
 
-@inject('SettingsStore')
+@inject('SettingsStore', 'SwapStore')
 @observer
 export default class SeedRecovery extends React.PureComponent<
     SeedRecoveryProps,
@@ -105,7 +117,9 @@ export default class SeedRecovery extends React.PureComponent<
 
     async initFromProps(props: SeedRecoveryProps) {
         const network = props.route.params?.network ?? 'mainnet';
-        this.setState({ network });
+        const restoreSwaps = props.route.params?.restoreSwaps ?? false;
+        const restoreRescueKey = props.route.params?.restoreRescueKey ?? false;
+        this.setState({ network, restoreSwaps, restoreRescueKey });
     }
 
     async UNSAFE_componentWillMount() {
@@ -174,7 +188,7 @@ export default class SeedRecovery extends React.PureComponent<
     };
 
     render() {
-        const { navigation } = this.props;
+        const { navigation, SwapStore } = this.props;
         const {
             loading,
             network,
@@ -185,7 +199,9 @@ export default class SeedRecovery extends React.PureComponent<
             channelBackupsBase64,
             showSuggestions,
             filteredData,
-            errorMsg
+            errorMsg,
+            restoreSwaps,
+            restoreRescueKey
         } = this.state;
 
         const filterData = (text: string) =>
@@ -214,7 +230,12 @@ export default class SeedRecovery extends React.PureComponent<
                             } else if (selectedWordIndex != null) {
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
-                                if (selectedWordIndex < 23) {
+                                if (
+                                    ((restoreSwaps || restoreRescueKey) &&
+                                        selectedWordIndex < 11) ||
+                                    ((!restoreSwaps || !restoreRescueKey) &&
+                                        selectedWordIndex < 23)
+                                ) {
                                     this.setState({
                                         selectedWordIndex:
                                             selectedWordIndex + 1,
@@ -222,7 +243,9 @@ export default class SeedRecovery extends React.PureComponent<
                                             seedArray[selectedWordIndex + 1]
                                     });
                                 } else {
-                                    this.setState({ selectedText: text || '' });
+                                    this.setState({
+                                        selectedText: text || ''
+                                    });
                                 }
                             }
                         } else {
@@ -372,7 +395,13 @@ export default class SeedRecovery extends React.PureComponent<
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Settings.SeedRecovery.title'),
+                        text: restoreSwaps
+                            ? localeString(
+                                  'views.Swaps.SwapsPane.swapsRecovery'
+                              )
+                            : restoreRescueKey
+                            ? localeString('views.Swaps.rescueKey.recovery')
+                            : localeString('views.Settings.SeedRecovery.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -442,6 +471,14 @@ export default class SeedRecovery extends React.PureComponent<
                                             this.setState({
                                                 channelBackupsBase64: text
                                             });
+                                        }
+                                        if (
+                                            (restoreSwaps ||
+                                                restoreRescueKey) &&
+                                            (selectedWordIndex == null ||
+                                                selectedWordIndex >= 12)
+                                        ) {
+                                            return;
                                         } else if (selectedWordIndex != null) {
                                             seedArray[selectedWordIndex] = text;
                                             this.setState({ seedArray });
@@ -459,61 +496,124 @@ export default class SeedRecovery extends React.PureComponent<
                                     }}
                                     keyboardShouldPersistTaps="handled"
                                 >
-                                    <View
-                                        style={{
-                                            ...styles.column,
-                                            alignSelf: !selectedInputType
-                                                ? 'center'
-                                                : undefined
-                                        }}
-                                    >
-                                        {[
-                                            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-                                        ].map((index: number) => {
-                                            return (
-                                                <RecoveryLabel
-                                                    type="mnemonicWord"
-                                                    index={index}
-                                                    text={seedArray[index]}
-                                                />
-                                            );
-                                        })}
-                                    </View>
-                                    <View
-                                        style={{
-                                            ...styles.column,
-                                            alignSelf: !selectedInputType
-                                                ? 'center'
-                                                : undefined
-                                        }}
-                                    >
-                                        {[
-                                            12, 13, 14, 15, 16, 17, 18, 19, 20,
-                                            21, 22, 23
-                                        ].map((index: number) => {
-                                            return (
-                                                <RecoveryLabel
-                                                    type="mnemonicWord"
-                                                    index={index}
-                                                    text={seedArray[index]}
-                                                />
-                                            );
-                                        })}
-                                    </View>
+                                    {restoreSwaps || restoreRescueKey ? (
+                                        <>
+                                            <View
+                                                style={{
+                                                    ...styles.column,
+                                                    alignSelf:
+                                                        !selectedInputType
+                                                            ? 'center'
+                                                            : undefined
+                                                }}
+                                            >
+                                                {[0, 1, 2, 3, 4, 5].map((i) => (
+                                                    <RecoveryLabel
+                                                        key={i}
+                                                        type="mnemonicWord"
+                                                        index={i}
+                                                        text={
+                                                            this.state
+                                                                .seedArray[i]
+                                                        }
+                                                    />
+                                                ))}
+                                            </View>
+                                            <View
+                                                style={{
+                                                    ...styles.column,
+                                                    alignSelf:
+                                                        !selectedInputType
+                                                            ? 'center'
+                                                            : undefined
+                                                }}
+                                            >
+                                                {[6, 7, 8, 9, 10, 11].map(
+                                                    (i) => (
+                                                        <RecoveryLabel
+                                                            key={i}
+                                                            type="mnemonicWord"
+                                                            index={i}
+                                                            text={
+                                                                this.state
+                                                                    .seedArray[
+                                                                    i
+                                                                ]
+                                                            }
+                                                        />
+                                                    )
+                                                )}
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <View
+                                                style={{
+                                                    ...styles.column,
+                                                    alignSelf:
+                                                        !selectedInputType
+                                                            ? 'center'
+                                                            : undefined
+                                                }}
+                                            >
+                                                {[
+                                                    0, 1, 2, 3, 4, 5, 6, 7, 8,
+                                                    9, 10, 11
+                                                ].map((index: number) => {
+                                                    return (
+                                                        <RecoveryLabel
+                                                            type="mnemonicWord"
+                                                            index={index}
+                                                            text={
+                                                                seedArray[index]
+                                                            }
+                                                        />
+                                                    );
+                                                })}
+                                            </View>
+                                            <View
+                                                style={{
+                                                    ...styles.column,
+                                                    alignSelf:
+                                                        !selectedInputType
+                                                            ? 'center'
+                                                            : undefined
+                                                }}
+                                            >
+                                                {[
+                                                    12, 13, 14, 15, 16, 17, 18,
+                                                    19, 20, 21, 22, 23
+                                                ].map((index: number) => {
+                                                    return (
+                                                        <RecoveryLabel
+                                                            type="mnemonicWord"
+                                                            index={index}
+                                                            text={
+                                                                seedArray[index]
+                                                            }
+                                                        />
+                                                    );
+                                                })}
+                                            </View>
+                                        </>
+                                    )}
                                 </ScrollView>
-                                <View
-                                    style={{
-                                        flexGrow: 1,
-                                        flexDirection: 'row'
-                                    }}
-                                >
-                                    <View style={styles.scb}>
-                                        <RecoveryLabel
-                                            type="scb"
-                                            text={channelBackupsBase64}
-                                        />
+
+                                {!(restoreSwaps || restoreRescueKey) && (
+                                    <View
+                                        style={{
+                                            flexGrow: 1,
+                                            flexDirection: 'row'
+                                        }}
+                                    >
+                                        <View style={styles.scb}>
+                                            <RecoveryLabel
+                                                type="scb"
+                                                text={channelBackupsBase64}
+                                            />
+                                        </View>
                                     </View>
-                                </View>
+                                )}
                             </>
                         )}
                         {showSuggestions && (
@@ -546,6 +646,77 @@ export default class SeedRecovery extends React.PureComponent<
                                 </View>
                             </ScrollView>
                         )}
+                        {!showSuggestions &&
+                            (restoreSwaps || restoreRescueKey) && (
+                                <Button
+                                    title={localeString(
+                                        'views.Swaps.rescueKey.upload'
+                                    )}
+                                    secondary
+                                    onPress={async () => {
+                                        try {
+                                            const res =
+                                                await DocumentPicker.pickSingle(
+                                                    {
+                                                        type: [
+                                                            DocumentPicker.types
+                                                                .allFiles
+                                                        ]
+                                                    }
+                                                );
+
+                                            const content = await RNFS.readFile(
+                                                res.uri,
+                                                'utf8'
+                                            );
+                                            const importedData =
+                                                JSON.parse(content);
+
+                                            if (importedData.mnemonic) {
+                                                const words =
+                                                    importedData.mnemonic
+                                                        .trim()
+                                                        .split(/\s+/);
+                                                if (words.length === 12) {
+                                                    this.setState({
+                                                        seedArray: words
+                                                    });
+                                                } else {
+                                                    Alert.alert(
+                                                        localeString(
+                                                            'views.Swaps.rescueKey.invalid'
+                                                        )
+                                                    );
+                                                }
+                                            } else {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'general.error'
+                                                    ),
+                                                    localeString(
+                                                        'views.Tools.nodeConfigExportImport.importError'
+                                                    )
+                                                );
+                                            }
+                                        } catch (err) {
+                                            if (DocumentPicker.isCancel(err)) {
+                                                this.setState({
+                                                    loading: false
+                                                });
+                                            } else {
+                                                Alert.alert(
+                                                    localeString(
+                                                        'general.error'
+                                                    ),
+                                                    localeString(
+                                                        'views.Tools.nodeConfigExportImport.importError'
+                                                    )
+                                                );
+                                            }
+                                        }
+                                    }}
+                                />
+                            )}
                         {!showSuggestions && (
                             <View
                                 style={{
@@ -557,9 +728,56 @@ export default class SeedRecovery extends React.PureComponent<
                                 }}
                             >
                                 <Button
-                                    onPress={() => restore()}
+                                    onPress={async () => {
+                                        if (restoreSwaps) {
+                                            this.setState(
+                                                { loading: true },
+                                                async () => {
+                                                    await SwapStore.getRescuableSwaps(
+                                                        { seedArray }
+                                                    );
+                                                    this.setState({
+                                                        loading: false
+                                                    });
+                                                    navigation.navigate(
+                                                        'SwapsPane'
+                                                    );
+                                                }
+                                            );
+                                        } else if (restoreRescueKey) {
+                                            console.log(
+                                                'Verifying rescue key...'
+                                            );
+
+                                            const mnemonic = seedArray
+                                                .join(' ')
+                                                .trim();
+
+                                            await Storage.setItem(
+                                                SWAPS_RESCUE_KEY,
+                                                mnemonic
+                                            );
+
+                                            console.log(
+                                                'Rescue key verified and saved!',
+                                                mnemonic
+                                            );
+
+                                            navigation.goBack();
+                                        } else {
+                                            restore();
+                                        }
+                                    }}
                                     title={
-                                        network === 'mainnet'
+                                        restoreSwaps
+                                            ? localeString(
+                                                  'views.Swaps.SwapsPane.restoreSwaps'
+                                              )
+                                            : restoreRescueKey
+                                            ? localeString(
+                                                  'views.Swaps.rescueKey.restore'
+                                              )
+                                            : network === 'mainnet'
                                             ? localeString(
                                                   'views.Settings.NodeConfiguration.restoreMainnetWallet'
                                               )
@@ -568,8 +786,11 @@ export default class SeedRecovery extends React.PureComponent<
                                               )
                                     }
                                     disabled={
-                                        seedArray.length !== 24 ||
-                                        seedArray.some((seed) => !seed)
+                                        restoreSwaps || restoreRescueKey
+                                            ? seedArray.length !== 12 ||
+                                              seedArray.some((seed) => !seed)
+                                            : seedArray.length !== 24 ||
+                                              seedArray.some((seed) => !seed)
                                     }
                                 />
                             </View>

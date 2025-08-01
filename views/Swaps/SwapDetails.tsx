@@ -36,6 +36,8 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
+import Swap from '../../models/Swap';
+
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
@@ -45,7 +47,7 @@ interface SwapDetailsProps {
     route: Route<
         'SwapDetails',
         {
-            swapData: any;
+            swapData: Swap;
             keys: any;
             endpoint: string;
             serviceProvider: string;
@@ -64,7 +66,7 @@ interface SwapDetailsState {
     loading: boolean;
     socketConnected: boolean;
     swapTreeToggle: boolean;
-    swapData: any;
+    swapData: Swap;
 }
 
 @inject('NodeInfoStore', 'SwapStore')
@@ -82,7 +84,7 @@ export default class SwapDetails extends React.Component<
             loading: false,
             socketConnected: true,
             swapTreeToggle: false,
-            swapData: props.route.params.swapData
+            swapData: new Swap(props.route.params.swapData)
         };
     }
 
@@ -97,9 +99,7 @@ export default class SwapDetails extends React.Component<
             return;
         }
 
-        const isSubmarineSwap = Boolean(swapData.bip21);
-
-        if (isSubmarineSwap) {
+        if (swapData.isSubmarineSwap) {
             const finalStatus = ['transaction.refunded', 'transaction.claimed'];
 
             const failedStatus = [
@@ -120,7 +120,7 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
-            this.getSwapUpdates(swapData, isSubmarineSwap);
+            this.getSwapUpdates(swapData, swapData.isSubmarineSwap);
         } else {
             const failedStatus = [
                 'invoice.expired',
@@ -135,7 +135,7 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
-            this.getReverseSwapUpdates(swapData, isSubmarineSwap);
+            this.getReverseSwapUpdates(swapData, swapData.isSubmarineSwap);
         }
     }
 
@@ -359,10 +359,10 @@ export default class SwapDetails extends React.Component<
                             createdResponse.id
                         );
                         this.setState((prevState) => ({
-                            swapData: {
+                            swapData: new Swap({
                                 ...prevState.swapData,
                                 lockupTransaction: lockupTx
-                            }
+                            })
                         }));
                     }
 
@@ -508,8 +508,8 @@ export default class SwapDetails extends React.Component<
                             createdResponse,
                             keys,
                             endpoint,
-                            swapData.lockupAddress,
-                            swapData.destinationAddress,
+                            swapData.lockupAddress!,
+                            swapData.destinationAddress!,
                             swapData.preimage,
                             data.transaction.hex,
                             fee
@@ -732,10 +732,7 @@ export default class SwapDetails extends React.Component<
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
-        const isSubmarineSwap = !!swapData.bip21;
-        const isReverseSwap = !!swapData.lockupAddress;
-
-        const progressUpdate = isSubmarineSwap
+        const progressUpdate = swapData.isSubmarineSwap
             ? updates === 'invoice.set'
                 ? localeString('views.SwapDetails.waitingForOnchainTx')
                 : updates === 'transaction.mempool'
@@ -748,7 +745,7 @@ export default class SwapDetails extends React.Component<
             : '';
 
         const QRButton = () => {
-            if (!swapData?.bip21 && !swapData.invoice) {
+            if (!swapData.qrCodeValue) {
                 return null;
             }
 
@@ -756,9 +753,7 @@ export default class SwapDetails extends React.Component<
                 <TouchableOpacity
                     onPress={() =>
                         navigation.navigate('QR', {
-                            value: isSubmarineSwap
-                                ? swapData?.bip21
-                                : swapData?.invoice
+                            value: swapData.qrCodeValue
                         })
                     }
                 >
@@ -776,7 +771,7 @@ export default class SwapDetails extends React.Component<
             swapData.lockupTransaction &&
             (updates === 'invoice.failedToPay' ||
                 updates === 'transaction.lockupFailed' ||
-                (isSubmarineSwap && updates === 'swap.expired') ||
+                (swapData.isSubmarineSwap && updates === 'swap.expired') ||
                 (failure && error));
 
         return (
@@ -891,7 +886,7 @@ export default class SwapDetails extends React.Component<
                         value={swapData.id}
                     />
 
-                    {isSubmarineSwap && (
+                    {swapData.isNewSubmarineSwap && (
                         <>
                             <KeyValue
                                 keyValue={localeString(
@@ -905,39 +900,32 @@ export default class SwapDetails extends React.Component<
                                     />
                                 }
                             />
-                            <KeyValue
-                                keyValue={localeString('general.address')}
-                                value={swapData.address}
-                            />
-                            {swapData?.txid && (
-                                <KeyValue
-                                    keyValue={localeString(
-                                        'views.SendingOnChain.txid'
-                                    )}
-                                    value={swapData.txid}
-                                    mempoolLink={() =>
-                                        UrlUtils.goToBlockExplorerTXID(
-                                            swapData?.txid,
-                                            this.props.NodeInfoStore!.nodeInfo
-                                                .isTestNet
-                                        )
-                                    }
-                                    sensitive
-                                />
-                            )}
                         </>
                     )}
-                    {isReverseSwap && (
+                    {swapData.isSubmarineSwap && (
+                        <KeyValue
+                            keyValue={localeString('general.address')}
+                            value={swapData.effectiveLockupAddress}
+                        />
+                    )}
+                    {swapData?.txid && (
+                        <KeyValue
+                            keyValue={localeString('views.SendingOnChain.txid')}
+                            value={swapData.txid}
+                            mempoolLink={() =>
+                                UrlUtils.goToBlockExplorerTXID(
+                                    swapData?.txid!,
+                                    this.props.NodeInfoStore!.nodeInfo.isTestNet
+                                )
+                            }
+                            sensitive
+                        />
+                    )}
+                    {swapData.isReverseSwap && (
                         <>
                             <KeyValue
                                 keyValue={localeString('views.Invoice.title')}
                                 value={swapData.invoice}
-                            />
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.SwapDetails.lockupAddress'
-                                )}
-                                value={swapData.lockupAddress}
                             />
                             <KeyValue
                                 keyValue={localeString(
@@ -953,6 +941,15 @@ export default class SwapDetails extends React.Component<
                             />
                         </>
                     )}
+                    {swapData.isReverseSwap && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.SwapDetails.lockupAddress'
+                            )}
+                            value={swapData.lockupAddress}
+                        />
+                    )}
+
                     <KeyValue
                         keyValue={localeString(
                             'views.SwapDetails.timeoutBlockHeight'
@@ -964,15 +961,15 @@ export default class SwapDetails extends React.Component<
                             swapData.timeoutBlockHeight
                         )} ${this.timelockIndicator()}`}
                     />
-                    {isSubmarineSwap && (
+                    {swapData.isSubmarineSwap && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.SwapDetails.claimPublicKey'
                             )}
-                            value={swapData.claimPublicKey}
+                            value={swapData?.servicePubKey}
                         />
                     )}
-                    {isReverseSwap && (
+                    {swapData.isReverseSwap && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.SwapDetails.refundPublicKey'
@@ -980,9 +977,17 @@ export default class SwapDetails extends React.Component<
                             value={swapData.refundPublicKey}
                         />
                     )}
+                    {swapData.isSubmarineSwap && swapData?.preimageHash && (
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.SwapDetails.preimageHash'
+                            )}
+                            value={swapData?.preimageHash}
+                        />
+                    )}
 
                     {/* Render Swap Tree */}
-                    {this.renderSwapTree(swapData.swapTree)}
+                    {this.renderSwapTree(swapData?.swapTree || swapData?.tree)}
                 </ScrollView>
                 {(updates === 'invoice.set' || updates === 'swap.created') && (
                     <Button
@@ -990,15 +995,15 @@ export default class SwapDetails extends React.Component<
                         containerStyle={{
                             paddingVertical: 10
                         }}
-                        onPress={() =>
-                            handleAnything(
-                                isSubmarineSwap
-                                    ? swapData?.bip21
-                                    : swapData?.invoice
-                            ).then(([route, props]) => {
-                                navigation.navigate(route, props);
-                            })
-                        }
+                        onPress={() => {
+                            if (swapData.qrCodeValue) {
+                                handleAnything(swapData.qrCodeValue).then(
+                                    ([route, props]) => {
+                                        navigation.navigate(route, props);
+                                    }
+                                );
+                            }
+                        }}
                         secondary
                     />
                 )}
@@ -1009,10 +1014,10 @@ export default class SwapDetails extends React.Component<
                         onPress={() => {
                             const { endpoint } = this.props.route.params;
                             navigation.navigate('RefundSwap', {
-                                swapData: {
+                                swapData: new Swap({
                                     ...swapData,
                                     endpoint
-                                }
+                                })
                             });
                         }}
                         secondary

@@ -30,6 +30,8 @@ import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 
+import Swap from '../../models/Swap';
+
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 
@@ -38,7 +40,7 @@ interface RefundSwapProps {
     route: Route<
         'RefundSwap',
         {
-            swapData: any;
+            swapData: Swap;
         }
     >;
     SwapStore?: SwapStore;
@@ -50,7 +52,7 @@ interface RefundSwapState {
     destinationAddress: string;
     fee: string;
     error: string;
-    swapData: any;
+    swapData: Swap;
     loading: boolean;
     refundStatus: string;
     uncooperative: boolean;
@@ -77,7 +79,7 @@ export default class RefundSwap extends React.Component<
     };
 
     createRefundTransaction = async (
-        swapData: any,
+        swapData: Swap,
         fee: any,
         destinationAddress: string
     ): Promise<void> => {
@@ -88,15 +90,15 @@ export default class RefundSwap extends React.Component<
             const txid = await createRefundTransaction({
                 endpoint: swapData.endpoint.replace('/v2', ''),
                 swapId: swapData.id,
-                claimLeaf: swapData.swapTree.claimLeaf.output,
-                refundLeaf: swapData.swapTree.refundLeaf.output,
+                claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
+                refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
                 transactionHex: swapData.lockupTransaction?.hex,
-                privateKey: swapData.refundPrivateKey,
-                servicePubKey: swapData.claimPublicKey,
+                privateKey: swapData.refundPrivateKey!,
+                servicePubKey: swapData.servicePubKey!,
                 feeRate: Number(fee),
                 timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
                 destinationAddress,
-                lockupAddress: swapData.address,
+                lockupAddress: swapData.effectiveLockupAddress!,
                 cooperative: !uncooperative,
                 isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
@@ -137,15 +139,15 @@ export default class RefundSwap extends React.Component<
         const rawDetails = {
             endpoint: swapData.endpoint.replace('/v2', ''),
             swapId: swapData.id,
-            claimLeaf: swapData.swapTree.claimLeaf.output,
-            refundLeaf: swapData.swapTree.refundLeaf.output,
+            claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
+            refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
             transactionHex: swapData.lockupTransaction?.hex,
             privateKey: swapData.refundPrivateKey,
-            servicePubKey: swapData.claimPublicKey,
+            servicePubKey: swapData.servicePubKey,
             feeRate: Number(fee),
             timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
             destinationAddress,
-            lockupAddress: swapData.address,
+            lockupAddress: swapData.effectiveLockupAddress,
             cooperative: !uncooperative,
             isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
         };

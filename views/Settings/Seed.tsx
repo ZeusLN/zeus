@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import {
+    Alert,
     Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import RNFS from 'react-native-fs';
+import { Icon } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Route } from '@react-navigation/native';
 
 import { Row } from '../../components/layout/Row';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -32,6 +37,12 @@ import QR from '../../assets/images/SVG/QR.svg';
 interface SeedProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    route: Route<
+        'Seed',
+        {
+            seedPhrase?: string[];
+        }
+    >;
 }
 
 interface SeedState {
@@ -101,13 +112,15 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     }
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation, SettingsStore, route } = this.props;
         const { understood, showModal } = this.state;
-        const { seedPhrase }: any = SettingsStore;
+        const seedPhrase = route.params?.seedPhrase ?? SettingsStore.seedPhrase;
+        const isRefundRescueKey = !!route.params?.seedPhrase;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
                 onPress={() => this.setState({ showModal: true })}
+                style={{ marginLeft: 10 }}
             >
                 <Skull fill={themeColor('text')} />
             </TouchableOpacity>
@@ -116,18 +129,65 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         const QRExport = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('SeedQRExport')}
-                style={{ marginLeft: 20 }}
+                style={{ marginLeft: isRefundRescueKey ? 20 : 14 }}
             >
                 <QR fill={themeColor('text')} />
             </TouchableOpacity>
         );
+
+        const DownloadRescueKey = ({
+            seedPhrase
+        }: {
+            seedPhrase: string[];
+        }) => {
+            const handleDownload = async () => {
+                try {
+                    const mnemonic = seedPhrase.join(' ');
+                    const jsonData = JSON.stringify({ mnemonic }, null, 2);
+
+                    const path =
+                        Platform.OS === 'android'
+                            ? `${RNFS.DownloadDirectoryPath}/rescue_key.json`
+                            : `${RNFS.DocumentDirectoryPath}/rescue_key.json`;
+
+                    await RNFS.writeFile(path, jsonData, 'utf8');
+
+                    Alert.alert(
+                        localeString('general.success'),
+                        `${localeString('views.Swaps.rescueKey.download')}\n\n${
+                            Platform.OS === 'android'
+                                ? localeString('views.Swaps.rescueKey.android')
+                                : localeString('views.Swaps.rescueKey.ios')
+                        }`
+                    );
+
+                    console.log('File written to:', path);
+                } catch (error) {
+                    console.error('Download failed:', error);
+                }
+            };
+
+            return (
+                <TouchableOpacity onPress={handleDownload}>
+                    <Icon
+                        name="download"
+                        type="feather"
+                        color={themeColor('text')}
+                        underlayColor="transparent"
+                        size={26}
+                    />
+                </TouchableOpacity>
+            );
+        };
 
         return (
             <Screen>
                 <Header
                     leftComponent="Back"
                     centerComponent={{
-                        text: localeString('views.Settings.Seed.title'),
+                        text: isRefundRescueKey
+                            ? localeString('views.Swaps.rescueKey')
+                            : localeString('views.Settings.Seed.title'),
                         style: {
                             color: themeColor('text'),
                             fontFamily: 'PPNeueMontreal-Book'
@@ -136,8 +196,15 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                     rightComponent={
                         understood && seedPhrase ? (
                             <Row>
+                                {isRefundRescueKey ? (
+                                    <DownloadRescueKey
+                                        seedPhrase={seedPhrase}
+                                    />
+                                ) : (
+                                    <></>
+                                )}
                                 <DangerouslyCopySeed />
-                                <QRExport />
+                                {isRefundRescueKey ? <></> : <QRExport />}
                             </Row>
                         ) : undefined
                     }
@@ -168,9 +235,13 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                             margin: 10
                                         }}
                                     >
-                                        {localeString(
-                                            'views.Settings.Seed.dangerousText1'
-                                        )}
+                                        {isRefundRescueKey
+                                            ? localeString(
+                                                  'views.Swaps.rescueKey.dangerousText'
+                                              )
+                                            : localeString(
+                                                  'views.Settings.Seed.dangerousText1'
+                                              )}
                                     </Text>
                                     <Text
                                         style={{
@@ -230,7 +301,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 fontSize: 20
                             }}
                         >
-                            {localeString('views.Settings.Seed.text1')}
+                            {localeString(
+                                isRefundRescueKey
+                                    ? 'views.Swaps.rescueKey.text1'
+                                    : 'views.Settings.Seed.text1'
+                            )}
                         </Text>
                         <Text
                             style={{
@@ -241,7 +316,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 fontSize: 20
                             }}
                         >
-                            {localeString('views.Settings.Seed.text2')}
+                            {localeString(
+                                isRefundRescueKey
+                                    ? 'views.Swaps.rescueKey.text2'
+                                    : 'views.Settings.Seed.text2'
+                            )}
                         </Text>
                         <Text
                             style={{
@@ -296,30 +375,39 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             <View style={styles.column}>
                                 {seedPhrase &&
                                     seedPhrase
-                                        .slice(0, 12)
-                                        .map((word: string, index: number) => {
-                                            return (
-                                                <MnemonicWord
-                                                    index={index}
-                                                    word={word}
-                                                    key={`mnemonic-${index}`}
-                                                />
-                                            );
-                                        })}
+                                        .slice(
+                                            0,
+                                            Math.ceil(seedPhrase.length / 2)
+                                        )
+                                        .map((word: string, index: number) => (
+                                            <MnemonicWord
+                                                index={index}
+                                                word={word}
+                                                key={`mnemonic-${index}`}
+                                            />
+                                        ))}
                             </View>
                             <View style={styles.column}>
                                 {seedPhrase &&
                                     seedPhrase
-                                        .slice(12, 24)
-                                        .map((word: string, index: number) => {
-                                            return (
-                                                <MnemonicWord
-                                                    index={index + 12}
-                                                    word={word}
-                                                    key={`mnemonic-${index}`}
-                                                />
-                                            );
-                                        })}
+                                        .slice(Math.ceil(seedPhrase.length / 2))
+                                        .map((word: string, index: number) => (
+                                            <MnemonicWord
+                                                index={
+                                                    index +
+                                                    Math.ceil(
+                                                        seedPhrase.length / 2
+                                                    )
+                                                }
+                                                word={word}
+                                                key={`mnemonic-${
+                                                    index +
+                                                    Math.ceil(
+                                                        seedPhrase.length / 2
+                                                    )
+                                                }`}
+                                            />
+                                        ))}
                             </View>
                         </ScrollView>
                         <View
@@ -333,15 +421,24 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                         >
                             <Button
                                 onPress={async () => {
-                                    await Storage.setItem(
-                                        IS_BACKED_UP_KEY,
-                                        true
-                                    );
-                                    navigation.popTo('Wallet');
+                                    if (isRefundRescueKey) navigation.goBack();
+                                    else {
+                                        await Storage.setItem(
+                                            IS_BACKED_UP_KEY,
+                                            true
+                                        );
+                                        navigation.popTo('Wallet');
+                                    }
                                 }}
-                                title={localeString(
-                                    'views.Settings.Seed.backupComplete'
-                                )}
+                                title={
+                                    isRefundRescueKey
+                                        ? localeString(
+                                              'views.Swaps.rescueKey.backupComplete'
+                                          )
+                                        : localeString(
+                                              'views.Settings.Seed.backupComplete'
+                                          )
+                                }
                             />
                         </View>
                     </View>
