@@ -375,25 +375,36 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             <View style={styles.column}>
                                 {seedPhrase &&
                                     seedPhrase
-                                        .filter((_, index) => index % 2 === 0)
+                                        .slice(
+                                            0,
+                                            Math.ceil(seedPhrase.length / 2)
+                                        )
                                         .map((word: string, index: number) => (
                                             <MnemonicWord
-                                                index={index * 2}
+                                                index={index}
                                                 word={word}
-                                                key={`mnemonic-${index * 2}`}
+                                                key={`mnemonic-${index}`}
                                             />
                                         ))}
                             </View>
                             <View style={styles.column}>
                                 {seedPhrase &&
                                     seedPhrase
-                                        .filter((_, index) => index % 2 !== 0)
+                                        .slice(Math.ceil(seedPhrase.length / 2))
                                         .map((word: string, index: number) => (
                                             <MnemonicWord
-                                                index={index * 2 + 1}
+                                                index={
+                                                    index +
+                                                    Math.ceil(
+                                                        seedPhrase.length / 2
+                                                    )
+                                                }
                                                 word={word}
                                                 key={`mnemonic-${
-                                                    index * 2 + 1
+                                                    index +
+                                                    Math.ceil(
+                                                        seedPhrase.length / 2
+                                                    )
                                                 }`}
                                             />
                                         ))}
