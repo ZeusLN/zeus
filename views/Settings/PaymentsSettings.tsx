@@ -473,14 +473,18 @@ export default class PaymentsSettings extends React.Component<
                                     maximumValue={100}
                                     step={1}
                                     value={donationPercentage}
-                                    onValueChange={async (text: any) => {
+                                    onValueChange={(value: number) => {
                                         this.setState({
-                                            donationPercentage: text
+                                            donationPercentage: value
                                         });
+                                    }}
+                                    onSlidingComplete={async (
+                                        value: number
+                                    ) => {
                                         await updateSettings({
                                             payments: {
                                                 ...settings.payments,
-                                                defaultDonationPercentage: text
+                                                defaultDonationPercentage: value
                                             }
                                         });
                                     }}
