@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View, StyleSheet, ScrollView } from 'react-native';
-import { inject, observer } from 'mobx-react';
+import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 
@@ -9,6 +9,7 @@ import Header from '../../../components/Header';
 import KeyValue from '../../../components/KeyValue';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
+import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
@@ -31,13 +32,12 @@ interface WatchTowerDetailsProps {
 interface WatchTowerDetailsState {
     loading: boolean;
     error: string | null;
-    watchtowerInfo: any | null;
+    watchtowerInfo: Watchtower | null;
     confirmDelete: boolean;
     confirmDeactivate: boolean;
     confirmActivate: boolean;
 }
 
-@inject()
 @observer
 export default class WatchTowerDetails extends React.Component<
     WatchTowerDetailsProps,
@@ -69,7 +69,6 @@ export default class WatchTowerDetails extends React.Component<
                 loading: false
             });
         } catch (error: any) {
-            console.error('error', error);
             this.setState({
                 watchtowerInfo: watchtower,
                 loading: false,
@@ -92,7 +91,6 @@ export default class WatchTowerDetails extends React.Component<
             await BackendUtils.deactivateWatchtower(watchtower.pubkey);
             navigation.goBack();
         } catch (error: any) {
-            console.error('Error deactivating watchtower:', error);
             this.setState({
                 loading: false,
                 error: error.message || 'Failed to deactivate watchtower'
@@ -109,15 +107,13 @@ export default class WatchTowerDetails extends React.Component<
             return;
         }
         this.setState({ loading: true, error: null, confirmActivate: false });
-
         try {
             await BackendUtils.addWatchtower({
-                pubkey: watchtower.pubkey,
+                pubkey: Base64Utils.base64ToHex(watchtower.pubkey),
                 address: watchtower.addresses[0]
             });
             navigation.goBack();
         } catch (error: any) {
-            console.error('Error activating watchtower:', error);
             this.setState({
                 loading: false,
                 error: error.message || 'Failed to activate watchtower'
@@ -137,7 +133,6 @@ export default class WatchTowerDetails extends React.Component<
             await BackendUtils.removeWatchtower(watchtower.pubkey);
             navigation.goBack();
         } catch (error: any) {
-            console.log('error', error);
             this.setState({
                 loading: false,
                 error: error.message || 'Failed to delete watchtower'
@@ -147,7 +142,7 @@ export default class WatchTowerDetails extends React.Component<
 
     render() {
         const { navigation, route } = this.props;
-        const { loading, watchtowerInfo } = this.state;
+        const { loading, watchtowerInfo, error } = this.state;
         const { watchtower } = route.params;
         const displayData = watchtowerInfo || watchtower;
         const isActive = displayData.active_session_candidate;
@@ -170,6 +165,7 @@ export default class WatchTowerDetails extends React.Component<
                 />
 
                 <View style={styles.mainContainer}>
+                    {error && <ErrorMessage message={error} />}
                     <ScrollView
                         style={styles.scrollContainer}
                         contentContainerStyle={styles.scrollContent}
@@ -240,6 +236,7 @@ export default class WatchTowerDetails extends React.Component<
 
                         {/* Session Info - Only show if there are sessions */}
                         {displayData.session_info &&
+                            Array.isArray(displayData.session_info) &&
                             displayData.session_info.length > 0 &&
                             displayData.num_sessions > 0 && (
                                 <View style={styles.sessionSection}>
@@ -361,32 +358,6 @@ const styles = StyleSheet.create({
         paddingLeft: 20,
         paddingRight: 20,
         paddingBottom: 20
-    },
-    container: {
-        flex: 1,
-        paddingLeft: 20,
-        paddingRight: 20
-    },
-    statusContainer: {
-        alignItems: 'center',
-        marginBottom: 24,
-        padding: 16,
-        borderRadius: 8
-    },
-    statusContent: {
-        flexDirection: 'row',
-        alignItems: 'center'
-    },
-    statusIndicator: {
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        marginRight: 10
-    },
-    statusText: {
-        fontSize: 16,
-        fontWeight: '600',
-        fontFamily: 'PPNeueMontreal-Book'
     },
     infoSection: {
         marginBottom: 24

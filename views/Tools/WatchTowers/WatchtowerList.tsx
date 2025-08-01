@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
     RefreshControl
 } from 'react-native';
-import { inject, observer } from 'mobx-react';
+import { observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { SearchBar, Icon, Divider } from 'react-native-elements';
 
@@ -15,7 +15,6 @@ import Header from '../../../components/Header';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 
-import SettingsStore from '../../../stores/SettingsStore';
 import BackendUtils from '../../../utils/BackendUtils';
 
 import { localeString } from '../../../utils/LocaleUtils';
@@ -26,14 +25,6 @@ import Add from '../../../assets/images/SVG/Add.svg';
 
 interface WatchtowersProps {
     navigation: StackNavigationProp<any, any>;
-    SettingsStore: SettingsStore;
-}
-
-interface WatchtowerSessionInfo {
-    active_session_candidate: boolean;
-    num_sessions: number;
-    sessions: any[];
-    policy_type: string;
 }
 
 export interface Watchtower {
@@ -41,8 +32,7 @@ export interface Watchtower {
     addresses: string[];
     active_session_candidate: boolean;
     num_sessions: number;
-    sessions: any[];
-    session_info: WatchtowerSessionInfo[];
+    session_info?: any[];
 }
 
 interface WatchtowerListResponse {
@@ -57,7 +47,6 @@ interface WatchtowersState {
     error: string;
 }
 
-@inject('SettingsStore')
 @observer
 export default class WatchTowers extends React.Component<
     WatchtowersProps,
@@ -148,11 +137,17 @@ export default class WatchTowers extends React.Component<
         <>
             <TouchableOpacity
                 style={styles.watchtowerItem}
-                onPress={() =>
+                onPress={() => {
+                    const serializaeWatchtower = {
+                        pubkey: item.pubkey,
+                        addresses: item.addresses,
+                        active_session_candidate: item.active_session_candidate,
+                        num_sessions: item.num_sessions
+                    };
                     this.props.navigation.navigate('WatchTowerDetails', {
-                        watchtower: item
-                    })
-                }
+                        watchtower: serializaeWatchtower
+                    });
+                }}
                 disabled={this.state.loading}
             >
                 <View style={styles.watchtowerContainer}>
@@ -389,22 +384,6 @@ const styles = StyleSheet.create({
     },
     watchtowerAddress: {
         fontSize: 14
-    },
-    watchtowerSessions: {
-        fontSize: 12,
-        marginTop: 4
-    },
-    watchtowerControls: {
-        flexDirection: 'row',
-        alignItems: 'center'
-    },
-    deleteButton: {
-        marginLeft: 15,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        justifyContent: 'center',
-        alignItems: 'center'
     },
     divider: {
         marginHorizontal: 16
