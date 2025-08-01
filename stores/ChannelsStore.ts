@@ -218,7 +218,15 @@ export default class ChannelsStore {
     @action
     public setSearch = (query: string) => {
         this.search = query;
+        this.filterChannels();
+        this.filterPendingChannels();
+        this.filterClosedChannels();
+        this.filterPeers();
+    };
 
+    @action
+    public setSort = (value: any) => {
+        this.sort = value;
         if (this.channelsView === ChannelsView.Channels) {
             this.filterChannels();
             this.filterPendingChannels();
@@ -229,14 +237,6 @@ export default class ChannelsStore {
     };
 
     @action
-    public setSort = (value: any) => {
-        this.sort = value;
-        this.filterChannels();
-        this.filterPendingChannels();
-        this.filterClosedChannels();
-    };
-
-    @action
     public setFilterOptions = (options: string[]) => {
         this.filterOptions = options;
         this.filterChannels();
@@ -244,78 +244,101 @@ export default class ChannelsStore {
         this.filterClosedChannels();
     };
 
-    private filter = (channels: Array<Channel>) => {
-        const query = this.search;
-        const filtered = channels
-            ?.filter(
-                (channel: Channel) =>
-                    channel.alias
-                        ?.toLocaleLowerCase()
-                        .includes(query.toLocaleLowerCase()) ||
-                    channel.remotePubkey
-                        ?.toLocaleLowerCase()
-                        .includes(query.toLocaleLowerCase()) ||
-                    channel.channelId
-                        ?.toString()
-                        ?.toLocaleLowerCase()
-                        .includes(query.toLocaleLowerCase())
-            )
-            ?.filter(
-                (channel: Channel) =>
-                    (!this.filterOptions?.includes('unannounced') &&
-                        !this.filterOptions?.includes('announced')) ||
-                    this.filterOptions?.includes(
-                        channel.private ? 'unannounced' : 'announced'
-                    )
-            )
-            .filter(
-                (channel: Channel) =>
-                    (!this.filterOptions?.includes('online') &&
-                        !this.filterOptions?.includes('offline')) ||
-                    this.filterOptions?.includes(
-                        channel.active ? 'online' : 'offline'
-                    )
+    private filter = (
+        items: Array<Channel | Peer>,
+        type: 'channel' | 'peer'
+    ) => {
+        const query = this.search.toLocaleLowerCase();
+
+        let filtered = items;
+
+        if (type === 'channel') {
+            filtered = (items as Channel[])
+                .filter(
+                    (channel) =>
+                        channel.alias?.toLowerCase().includes(query) ||
+                        channel.remotePubkey?.toLowerCase().includes(query) ||
+                        channel.channelId
+                            ?.toString()
+                            ?.toLowerCase()
+                            .includes(query)
+                )
+                .filter(
+                    (channel) =>
+                        (!this.filterOptions?.includes('unannounced') &&
+                            !this.filterOptions?.includes('announced')) ||
+                        this.filterOptions?.includes(
+                            channel.private ? 'unannounced' : 'announced'
+                        )
+                )
+                .filter(
+                    (channel) =>
+                        (!this.filterOptions?.includes('online') &&
+                            !this.filterOptions?.includes('offline')) ||
+                        this.filterOptions?.includes(
+                            channel.active ? 'online' : 'offline'
+                        )
+                );
+        }
+
+        if (type === 'peer') {
+            filtered = (items as Peer[]).filter(
+                (peer) =>
+                    peer.alias?.toLowerCase().includes(query) ||
+                    peer.pubkey?.toLowerCase().includes(query) ||
+                    this.nodes[peer.pubkey]?.alias
+                        ?.toLowerCase()
+                        .includes(query)
             );
-        const sorted = filtered?.sort((a: any, b: any) => {
-            if (this.sort.type === 'numeric') {
-                return Number(a[this.sort.param]) < Number(b[this.sort.param])
-                    ? 1
-                    : -1;
+        }
+
+        const sorted = filtered.sort((a: any, b: any) => {
+            const param = this.sort?.param;
+            const dir = this.sort?.dir;
+            const type = this.sort?.type;
+
+            if (!param || !dir || !type) return 0;
+
+            const aVal = a[param] ?? '';
+            const bVal = b[param] ?? '';
+
+            if (type === 'numeric') {
+                return dir === 'DESC'
+                    ? Number(bVal) - Number(aVal)
+                    : Number(aVal) - Number(bVal);
             } else {
-                return a[this.sort.param].toLowerCase() <
-                    b[this.sort.param].toLowerCase()
-                    ? 1
-                    : -1;
+                return dir === 'DESC'
+                    ? bVal.toLowerCase().localeCompare(aVal.toLowerCase())
+                    : aVal.toLowerCase().localeCompare(bVal.toLowerCase());
             }
         });
 
-        return this.sort.dir === 'DESC' ? sorted : sorted?.reverse();
+        return sorted;
     };
 
     private filterChannels = () => {
-        this.filteredChannels = this.filter(this.enrichedChannels);
+        this.filteredChannels = this.filter(
+            this.enrichedChannels,
+            'channel'
+        ) as Channel[];
     };
 
     private filterPendingChannels = () => {
         this.filteredPendingChannels = this.filter(
-            this.enrichedPendingChannels
-        );
+            this.enrichedPendingChannels,
+            'channel'
+        ) as Channel[];
     };
 
     private filterClosedChannels = () => {
-        this.filteredClosedChannels = this.filter(this.enrichedClosedChannels);
+        this.filteredClosedChannels = this.filter(
+            this.enrichedClosedChannels,
+            'channel'
+        ) as Channel[];
     };
 
     private filterPeers = () => {
-        const query = this.search.toLocaleLowerCase();
-        this.filteredPeers = this.peers.filter(
-            (peer: Peer) =>
-                peer.alias?.toLocaleLowerCase().includes(query) ||
-                peer.pubkey?.toLocaleLowerCase().includes(query) ||
-                this.nodes[peer.pubkey]?.alias
-                    .toLocaleLowerCase()
-                    .includes(query)
-        );
+        this.filteredPeers = this.filter(this.peers, 'peer') as Peer[];
     };
 
     public getNodeInfo = (pubkey: string) => {
