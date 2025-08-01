@@ -101,7 +101,7 @@ android {
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 107
-        versionName "0.11.3-alpha2"
+        versionName "0.11.3-beta1"
         multiDexEnabled true
     }
     signingConfigs {
