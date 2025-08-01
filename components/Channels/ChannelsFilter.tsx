@@ -15,8 +15,38 @@ import ChannelsStore, {
     ChannelsView
 } from '../../stores/ChannelsStore';
 
-const getChannelsSortKeys = (closed?: boolean) => {
+const getChannelsSortKeys = (closed?: boolean, view?: ChannelsView) => {
     const sortKeys: any = [];
+
+    if (view === ChannelsView.Peers) {
+        sortKeys.push(
+            {
+                key: `${localeString('views.NodeInfo.alias')} (${localeString(
+                    'views.Channel.SortButton.ascending'
+                )})`,
+                value: { param: 'alias', dir: 'ASC', type: 'alphanumeric' }
+            },
+            {
+                key: `${localeString('views.NodeInfo.alias')} (${localeString(
+                    'views.Channel.SortButton.descending'
+                )})`,
+                value: { param: 'alias', dir: 'DESC', type: 'alphanumeric' }
+            },
+            {
+                key: `${localeString('views.NodeInfo.pubkey')} (${localeString(
+                    'views.Channel.SortButton.ascending'
+                )})`,
+                value: { param: 'pubkey', dir: 'ASC', type: 'alphanumeric' }
+            },
+            {
+                key: `${localeString('views.NodeInfo.pubkey')} (${localeString(
+                    'views.Channel.SortButton.descending'
+                )})`,
+                value: { param: 'pubkey', dir: 'DESC', type: 'alphanumeric' }
+            }
+        );
+        return sortKeys;
+    }
 
     if (closed) {
         sortKeys.push(
@@ -115,7 +145,7 @@ interface ChannelsFilterProps {
 class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
     render() {
         const { ChannelsStore } = this.props;
-        const { search, setSort, channelsType } = ChannelsStore!;
+        const { search, setSort, channelsType, channelsView } = ChannelsStore!;
         const windowWidth = Dimensions.get('window').width;
 
         return (
@@ -162,13 +192,21 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
                         clearIcon={{ name: 'close', type: 'font-awesome' }}
                         showCancel={true}
                     />
-                    {ChannelsStore?.channelsView === ChannelsView.Channels && (
+                    {channelsView === ChannelsView.Channels && (
                         <SortButton
-                            onValueChange={(value: any) => {
-                                setSort(value);
-                            }}
+                            onValueChange={setSort}
                             values={getChannelsSortKeys(
-                                channelsType === ChannelsType.Closed
+                                channelsType === ChannelsType.Closed,
+                                ChannelsView.Channels
+                            )}
+                        />
+                    )}
+                    {channelsView === ChannelsView.Peers && (
+                        <SortButton
+                            onValueChange={setSort}
+                            values={getChannelsSortKeys(
+                                false,
+                                ChannelsView.Peers
                             )}
                         />
                     )}
