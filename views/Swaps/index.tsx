@@ -1155,13 +1155,100 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                         >
                                             <TouchableOpacity
                                                 onPress={() => {
+                                                    const {
+                                                        inputSats,
+                                                        outputSats
+                                                    } = this.state;
+                                                    const nextUnit =
+                                                        UnitsStore.getNextUnit();
+
+                                                    let newInputFiat = '';
+                                                    let newOutputFiat = '';
+
+                                                    const inputSatsBN =
+                                                        new BigNumber(
+                                                            inputSats || 0
+                                                        );
+                                                    const outputSatsBN =
+                                                        new BigNumber(
+                                                            outputSats || 0
+                                                        );
+
+                                                    if (
+                                                        inputSatsBN.isGreaterThan(
+                                                            0
+                                                        )
+                                                    ) {
+                                                        if (
+                                                            nextUnit ===
+                                                                'fiat' &&
+                                                            rate > 0
+                                                        ) {
+                                                            newInputFiat =
+                                                                numberWithCommas(
+                                                                    inputSatsBN
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .times(
+                                                                            rate
+                                                                        )
+                                                                        .toFixed(
+                                                                            2
+                                                                        )
+                                                                );
+                                                        } else if (
+                                                            nextUnit === 'BTC'
+                                                        ) {
+                                                            newInputFiat =
+                                                                inputSatsBN
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        }
+                                                    }
+
+                                                    if (
+                                                        outputSatsBN.isGreaterThan(
+                                                            0
+                                                        )
+                                                    ) {
+                                                        if (
+                                                            nextUnit ===
+                                                                'fiat' &&
+                                                            rate > 0
+                                                        ) {
+                                                            newOutputFiat =
+                                                                numberWithCommas(
+                                                                    outputSatsBN
+                                                                        .div(
+                                                                            SATS_PER_BTC
+                                                                        )
+                                                                        .times(
+                                                                            rate
+                                                                        )
+                                                                        .toFixed(
+                                                                            2
+                                                                        )
+                                                                );
+                                                        } else if (
+                                                            nextUnit === 'BTC'
+                                                        ) {
+                                                            newOutputFiat =
+                                                                outputSatsBN
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        }
+                                                    }
+
                                                     UnitsStore.changeUnits();
                                                     this.setState({
-                                                        inputSats: 0,
-                                                        outputSats: 0,
-                                                        serviceFeeSats: 0,
-                                                        inputFiat: '',
-                                                        outputFiat: ''
+                                                        inputFiat: newInputFiat,
+                                                        outputFiat:
+                                                            newOutputFiat
                                                     });
                                                 }}
                                                 style={{
@@ -1236,18 +1323,36 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     });
 
                                                     const satAmount = min;
+                                                    let inputFiat = '';
 
-                                                    const inputFiat =
+                                                    if (
                                                         new BigNumber(
                                                             min
                                                         ).isGreaterThan(0)
-                                                            ? new BigNumber(min)
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            inputFiat =
+                                                                new BigNumber(
+                                                                    min
+                                                                )
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            inputFiat =
+                                                                new BigNumber(
+                                                                    min
+                                                                )
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        }
+                                                    }
 
                                                     // remove commas
                                                     const sanitizedSatAmount =
@@ -1284,17 +1389,31 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             reverse
                                                         );
 
-                                                    const outputFiat =
+                                                    let outputFiat = '';
+                                                    if (
                                                         outputSats.isGreaterThan(
                                                             0
                                                         )
-                                                            ? outputSats
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        }
+                                                    }
 
                                                     this.setState({
                                                         serviceFeeSats:
@@ -1335,18 +1454,36 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     });
 
                                                     const satAmount = max;
+                                                    let inputFiat = '';
 
-                                                    const inputFiat =
+                                                    if (
                                                         new BigNumber(
                                                             max
                                                         ).isGreaterThan(0)
-                                                            ? new BigNumber(max)
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            inputFiat =
+                                                                new BigNumber(
+                                                                    max
+                                                                )
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            inputFiat =
+                                                                new BigNumber(
+                                                                    max
+                                                                )
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        }
+                                                    }
 
                                                     // remove commas
                                                     const sanitizedSatAmount =
@@ -1383,17 +1520,31 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             reverse
                                                         );
 
-                                                    const outputFiat =
+                                                    let outputFiat = '';
+                                                    if (
                                                         outputSats.isGreaterThan(
                                                             0
                                                         )
-                                                            ? outputSats
-                                                                  .div(
-                                                                      SATS_PER_BTC
-                                                                  )
-                                                                  .times(rate)
-                                                                  .toFixed(2)
-                                                            : '';
+                                                    ) {
+                                                        if (units === 'fiat') {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .times(rate)
+                                                                    .toFixed(2);
+                                                        } else if (
+                                                            units === 'BTC'
+                                                        ) {
+                                                            outputFiat =
+                                                                outputSats
+                                                                    .div(
+                                                                        SATS_PER_BTC
+                                                                    )
+                                                                    .toFixed(8);
+                                                        }
+                                                    }
                                                     this.setState({
                                                         serviceFeeSats:
                                                             calculateServiceFeeOnSend(
