@@ -404,26 +404,33 @@ export default class Sweepremoteclosed extends React.Component<
                                         });
                                         try {
                                             const response =
-                                                await sweepRemoteClosed(
-                                                    seedType ===
+                                                await sweepRemoteClosed({
+                                                    seed:
+                                                        seedType ===
                                                         'externalWalletSeed'
-                                                        ? externalSeed
-                                                        : SettingsStore?.seedPhrase.join(
-                                                              ' '
-                                                          ),
-                                                    apiUrl === 'custom'
-                                                        ? customApiUrl
-                                                        : apiUrl,
+                                                            ? externalSeed
+                                                            : SettingsStore?.seedPhrase.join(
+                                                                  ' '
+                                                              ),
+                                                    apiUrl:
+                                                        apiUrl === 'custom'
+                                                            ? customApiUrl
+                                                            : apiUrl,
                                                     sweepAddr,
-                                                    Number(
+                                                    recoveryWindow: Number(
                                                         recoveryWindow || 200
                                                     ),
-                                                    Number(feeRate || 2),
-                                                    Number(sleepSeconds || 0),
-                                                    false, // publish
-                                                    NodeInfoStore?.nodeInfo
-                                                        ?.isTestNet // isTestNet
-                                                );
+                                                    feeRate: Number(
+                                                        feeRate || 2
+                                                    ),
+                                                    sleepSeconds: Number(
+                                                        sleepSeconds || 0
+                                                    ),
+                                                    publish: false, // publish
+                                                    isTestNet:
+                                                        NodeInfoStore?.nodeInfo
+                                                            ?.isTestNet // isTestNet
+                                                });
                                             navigation.navigate('TxHex', {
                                                 txHex: response,
                                                 hideWarning: true

@@ -497,16 +497,25 @@ export interface ILndMobileInjections {
         checkScheduledSyncWorkStatus: () => Promise<WorkInfo>;
     };
     chantools: {
-        sweepRemoteClosed: (
-            seed: string,
-            apiUrl: string,
-            sweepAddr: string,
-            recoveryWindow: number,
-            feeRate: number,
-            sleepSeconds: number,
-            publish: boolean,
-            isTestNet: boolean
-        ) => Promise<string>;
+        sweepRemoteClosed: ({
+            seed,
+            apiUrl,
+            sweepAddr,
+            recoveryWindow,
+            feeRate,
+            sleepSeconds,
+            publish,
+            isTestNet
+        }: {
+            seed: string;
+            apiUrl: string;
+            sweepAddr: string;
+            recoveryWindow: number;
+            feeRate: number;
+            sleepSeconds: number;
+            publish: boolean;
+            isTestNet: boolean;
+        }) => Promise<string>;
     };
     swaps: {
         createClaimTransaction: ({
