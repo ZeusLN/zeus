@@ -247,6 +247,9 @@ import ImportAccount from './views/Tools/Accounts/ImportAccount';
 import ImportingAccount from './views/Tools/Accounts/ImportingAccount';
 import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
+import WatchTowers from './views/Tools/WatchTowers/WatchtowerList';
+import AddWatchtower from './views/Tools/WatchTowers/AddWatchtower';
+import WatchTowerDetails from './views/Tools/WatchTowers/WatchtowerDetails';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
@@ -1023,6 +1026,22 @@ export default class App extends React.PureComponent {
                                                         name="DeveloperTools" // @ts-ignore:next-line
                                                         component={
                                                             DeveloperTools
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WatchTowers" // @ts-ignore:next-line
+                                                        component={WatchTowers}
+                                                    />
+                                                    <Stack.Screen
+                                                        name="WatchTowerDetails" // @ts-ignore:next-line
+                                                        component={
+                                                            WatchTowerDetails
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AddWatchtower" // @ts-ignore:next-line
+                                                        component={
+                                                            AddWatchtower
                                                         }
                                                     />
                                                     <Stack.Screen

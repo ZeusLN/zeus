@@ -10,6 +10,12 @@ interface ValidationOptions {
     allowPort?: boolean;
 }
 
+interface WatchtowerValidationResult {
+    isValid: boolean;
+    pubkey?: string;
+    address?: string;
+}
+
 // Convert protocol (if present) to lowercase while preserving the rest of the URL
 // This handles case-insensitive protocol matching (HTTPS:// -> https://)
 const preprocessInput = (input: string): string => {
@@ -79,12 +85,43 @@ const hasValidPairingPhraseCharsAndWordcount = (phrase: string): boolean => {
     return normalizedPhrase.split(' ').length === 10;
 };
 
+// Watchtower validation functions
+const validateWatchtowerData = (text: string): WatchtowerValidationResult => {
+    const watchtowerRegex = /^([a-fA-F0-9]{66})@([a-zA-Z0-9.-]+):(\d+)$/;
+    const match = text.match(watchtowerRegex);
+    if (match) {
+        const [, pubkey, host, port] = match;
+        if (!pubkey || !host || !port) {
+            return { isValid: false };
+        }
+        return {
+            isValid: true,
+            pubkey,
+            address: `${host}:${port}`
+        };
+    }
+    return { isValid: false };
+};
+
+const validateWatchtowerPubkey = (pubkey: string): boolean => {
+    const pubkeyRegex = /^[a-fA-F0-9]{66}$/;
+    return pubkey === '' || pubkeyRegex.test(pubkey);
+};
+
+const validateWatchtowerAddress = (address: string): boolean => {
+    const addressRegex = /^[a-zA-Z0-9.-]+:\d+$/;
+    return address === '' || addressRegex.test(address);
+};
+
 const ValidationUtils = {
     isValidServerAddress,
     isValidPort,
     hasValidRuneChars,
     hasValidMacaroonChars,
-    hasValidPairingPhraseCharsAndWordcount
+    hasValidPairingPhraseCharsAndWordcount,
+    validateWatchtowerData,
+    validateWatchtowerPubkey,
+    validateWatchtowerAddress
 };
 
 export default ValidationUtils;

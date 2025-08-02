@@ -384,6 +384,9 @@ class LndMobile extends ReactContextBaseJavaModule {
       // listening at all
       params += " --nolisten";
     }
+    // Enable watchtower client
+    params += " --wtclient.active";
+    
     bundle.putString(
       "args",
       params + " " + args
