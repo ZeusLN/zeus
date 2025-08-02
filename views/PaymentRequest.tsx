@@ -8,7 +8,9 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import Slider from '@react-native-community/slider';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { ButtonGroup } from 'react-native-elements';
 
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
@@ -43,6 +45,11 @@ import BackendUtils from '../utils/BackendUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
+import {
+    calculateDonationAmount,
+    findDonationPercentageIndex
+} from '../utils/DonationUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -88,6 +95,10 @@ interface InvoiceState {
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
     validAmountToSwap: boolean;
+    donationsToggle: boolean;
+    donationPercentage: any;
+    donationAmount: any;
+    selectedIndex: number | null;
 }
 
 @inject(
@@ -125,7 +136,11 @@ export default class PaymentRequest extends React.Component<
         zaplockerToggle: false,
         lightningReadyToSend: false,
         slideToPayThreshold: 10000,
-        validAmountToSwap: false
+        validAmountToSwap: false,
+        donationsToggle: false,
+        donationPercentage: 0,
+        donationAmount: 0,
+        selectedIndex: null
     };
 
     async UNSAFE_componentWillMount() {
@@ -133,6 +148,8 @@ export default class PaymentRequest extends React.Component<
         const { SettingsStore, InvoicesStore } = this.props;
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
+
+        const { defaultDonationPercentage } = settings.payments;
 
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
@@ -145,6 +162,16 @@ export default class PaymentRequest extends React.Component<
         }
 
         const validAmountToSwap = this.isAmountValidToSwap();
+        const donationPercentageOptions = [5, 10, 20];
+
+        const donationAmount = calculateDonationAmount(
+            requestAmount ?? 0,
+            Number(defaultDonationPercentage) || 0
+        );
+        const index = findDonationPercentageIndex(
+            Number(defaultDonationPercentage) || 0,
+            donationPercentageOptions
+        );
 
         this.setState({
             feeOption,
@@ -152,7 +179,11 @@ export default class PaymentRequest extends React.Component<
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
             slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            validAmountToSwap
+            validAmountToSwap,
+            donationPercentage:
+                settings?.payments?.defaultDonationPercentage || 0,
+            donationAmount,
+            selectedIndex: index
         });
 
         if (implementation === 'embedded-lnd') {
@@ -308,6 +339,13 @@ export default class PaymentRequest extends React.Component<
     }: SendPaymentReq) => {
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
             this.props;
+
+        TransactionsStore.donationIsPaid = false;
+
+        const { settings } = SettingsStore;
+
+        const enableDonations = settings?.payments?.enableDonations;
+        const { donationAmount } = this.state;
         let feeLimitSat = fee_limit_sat;
 
         if (!fee_limit_sat) {
@@ -336,7 +374,13 @@ export default class PaymentRequest extends React.Component<
             this.subscribePayment(streamingCall);
         }
 
-        navigation.navigate('SendingLightning');
+        navigation.navigate('SendingLightning', {
+            enableDonations,
+            ...(enableDonations &&
+                donationAmount > 0 && {
+                    donationAmount: donationAmount.toString()
+                })
+        });
     };
 
     triggerPayment = () => {
@@ -417,7 +461,10 @@ export default class PaymentRequest extends React.Component<
             settingsToggle,
             timeoutSeconds,
             lightningReadyToSend,
-            slideToPayThreshold
+            slideToPayThreshold,
+            donationsToggle,
+            donationAmount,
+            donationPercentage
         } = this.state;
         const {
             pay_req,
@@ -455,6 +502,59 @@ export default class PaymentRequest extends React.Component<
         const getMemo = pay_req && pay_req.getMemo;
         const getNameDescReceiver = pay_req && pay_req.getNameDescReceiver;
 
+        const donationPercentageOptions = [5, 10, 20];
+
+        const handleButtonPress = (index: number) => {
+            const percentage = donationPercentageOptions[index];
+            const donationAmount = calculateDonationAmount(
+                requestAmount ?? 0,
+                percentage
+            );
+            this.setState({
+                donationPercentage: percentage,
+                donationAmount,
+                selectedIndex: index
+            });
+        };
+
+        const handleSliderChange = (value: number) => {
+            const donationAmount = calculateDonationAmount(
+                requestAmount ?? 0,
+                value
+            );
+            const index = findDonationPercentageIndex(
+                value,
+                donationPercentageOptions
+            );
+
+            this.setState({
+                donationPercentage: value,
+                donationAmount,
+                selectedIndex: index
+            });
+        };
+
+        const renderButton = (label: string, index: number) => () =>
+            (
+                <Text
+                    style={{
+                        fontFamily: 'PPNeueMontreal-Book',
+                        color:
+                            this.state.selectedIndex === index
+                                ? themeColor('background')
+                                : themeColor('text')
+                    }}
+                >
+                    {label}
+                </Text>
+            );
+
+        const buttons: any = donationPercentageOptions.map(
+            (percent, index) => ({
+                element: renderButton(`${percent}%`, index)
+            })
+        );
+
         let lockAtomicMultiPathPayment = false;
         if (
             pay_req &&
@@ -473,7 +573,9 @@ export default class PaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { enableTor, implementation } = SettingsStore;
+        const { enableTor, implementation, settings } = SettingsStore;
+
+        const enableDonations = settings?.payments?.enableDonations;
 
         const isLnd: boolean = BackendUtils.isLNDBased();
         const isCLightning: boolean = implementation === 'cln-rest';
@@ -1216,6 +1318,198 @@ export default class PaymentRequest extends React.Component<
                                                 />
                                             </>
                                         )}
+                                    </>
+                                )}
+                                {enableDonations && (
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            this.setState({
+                                                donationsToggle:
+                                                    !donationsToggle
+                                            });
+                                        }}
+                                    >
+                                        <View
+                                            style={{
+                                                marginTop: 10,
+                                                marginBottom: 10,
+                                                paddingHorizontal:
+                                                    donationAmount == 0
+                                                        ? 0
+                                                        : !donationsToggle
+                                                        ? 30
+                                                        : 0
+                                            }}
+                                        >
+                                            <Row justify="space-around">
+                                                <View style={{ width: '95%' }}>
+                                                    <KeyValue
+                                                        keyValue={localeString(
+                                                            'views.PaymentRequest.donateToZEUS'
+                                                        )}
+                                                    />
+                                                </View>
+                                                {donationsToggle ? (
+                                                    <CaretDown
+                                                        fill={themeColor(
+                                                            'text'
+                                                        )}
+                                                        width="20"
+                                                        height="20"
+                                                    />
+                                                ) : (
+                                                    <View
+                                                        style={{
+                                                            flexDirection:
+                                                                'row',
+                                                            justifyContent:
+                                                                'center'
+                                                        }}
+                                                    >
+                                                        {donationAmount > 0 && (
+                                                            <Row
+                                                                style={{
+                                                                    marginRight: 6
+                                                                }}
+                                                            >
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'highlight'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {`${numberWithCommas(
+                                                                        donationAmount
+                                                                    )} ${localeString(
+                                                                        'general.sats'
+                                                                    )}`}
+                                                                </Text>
+                                                                <Text
+                                                                    style={{
+                                                                        color: themeColor(
+                                                                            'secondaryText'
+                                                                        )
+                                                                    }}
+                                                                >
+                                                                    {` (${donationPercentage}%)`}
+                                                                </Text>
+                                                            </Row>
+                                                        )}
+                                                        <CaretRight
+                                                            fill={themeColor(
+                                                                'text'
+                                                            )}
+                                                            width="20"
+                                                            height="20"
+                                                        />
+                                                    </View>
+                                                )}
+                                            </Row>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                {donationsToggle && enableDonations && (
+                                    <>
+                                        <Row justify="center">
+                                            <Text
+                                                style={{
+                                                    ...styles.label,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.PaymentRequest.supportZeus'
+                                                )}
+                                            </Text>
+                                        </Row>
+                                        <ButtonGroup
+                                            selectedIndex={
+                                                this.state.selectedIndex
+                                            }
+                                            onPress={handleButtonPress}
+                                            buttons={buttons}
+                                            selectedButtonStyle={{
+                                                backgroundColor:
+                                                    themeColor('highlight'),
+                                                borderRadius: 12
+                                            }}
+                                            containerStyle={{
+                                                marginTop: 20,
+                                                backgroundColor:
+                                                    themeColor('secondary'),
+                                                borderRadius: 12,
+                                                borderColor:
+                                                    themeColor('secondary')
+                                            }}
+                                            innerBorderStyle={{
+                                                color: themeColor('secondary')
+                                            }}
+                                        />
+
+                                        <Slider
+                                            style={{
+                                                width: '100%',
+                                                height: 40
+                                            }}
+                                            minimumValue={0}
+                                            maximumValue={100}
+                                            step={1}
+                                            value={donationPercentage}
+                                            onValueChange={handleSliderChange}
+                                            minimumTrackTintColor={themeColor(
+                                                'highlight'
+                                            )}
+                                            maximumTrackTintColor={themeColor(
+                                                'secondaryText'
+                                            )}
+                                        />
+                                        <Row justify="flex-end">
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {`${donationPercentage}% `}
+                                            </Text>
+                                        </Row>
+                                        <Row justify="flex-end">
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'highlight'
+                                                    )
+                                                }}
+                                            >
+                                                {numberWithCommas(
+                                                    donationAmount
+                                                ) +
+                                                    ` ${localeString(
+                                                        'general.sats'
+                                                    )}`}
+                                            </Text>
+                                        </Row>
+                                        <Row justify="center">
+                                            <Text
+                                                style={{
+                                                    ...styles.labelSecondary,
+                                                    color: themeColor('text')
+                                                }}
+                                            >
+                                                {`${numberWithCommas(
+                                                    requestAmount || 0
+                                                )} + ${numberWithCommas(
+                                                    donationAmount
+                                                )} = ${numberWithCommas(
+                                                    (requestAmount || 0) +
+                                                        donationAmount
+                                                )} ${localeString(
+                                                    'general.sats'
+                                                )}`}
+                                            </Text>
+                                        </Row>
                                     </>
                                 )}
                             </View>
