@@ -342,7 +342,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         }}
                     >
                         <ButtonComponent
-                            title={localeString('general.confirm') || 'Confirm'}
+                            title={localeString('general.confirm')}
                             onPress={() => navigation.goBack()}
                             containerStyle={{ marginTop: 15 }}
                             noUppercase
