@@ -259,11 +259,11 @@ export default class SeedRecovery extends React.PureComponent<
                             } else if (selectedWordIndex != null) {
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
+                                const isRestoreMode =
+                                    restoreSwaps || restoreRescueKey;
                                 if (
-                                    ((restoreSwaps || restoreRescueKey) &&
-                                        selectedWordIndex < 11) ||
-                                    ((!restoreSwaps || !restoreRescueKey) &&
-                                        selectedWordIndex < 23)
+                                    (isRestoreMode && selectedWordIndex < 11) ||
+                                    (!isRestoreMode && selectedWordIndex < 23)
                                 ) {
                                     this.setState({
                                         selectedWordIndex:
