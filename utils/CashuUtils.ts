@@ -1,5 +1,37 @@
 import { getDecodedToken, Token } from '@cashu/cashu-ts';
 
+export enum MintPaymentStatus {
+    IDLE = 'idle',
+    REQUESTING = 'requesting',
+    PAYING = 'paying',
+    SUCCESS = 'success',
+    FAILED = 'failed'
+}
+
+export interface MintProgressInfo {
+    mintUrl: string;
+    mintName?: string;
+    balance: number;
+    selected: boolean;
+    status: MintPaymentStatus;
+    allocatedAmount?: number;
+    error?: string;
+}
+
+export enum MultinutPaymentStep {
+    SELECT = 'select',
+    PROCESSING = 'processing',
+    COMPLETE = 'complete',
+    FAILED = 'failed'
+}
+
+export type MultimintProgressCallback = (progress: {
+    step: MultinutPaymentStep;
+    mints: MintProgressInfo[];
+    totalSelectedBalance: number;
+    isProcessing: boolean;
+}) => void;
+
 export const cashuTokenPrefixes = [
     'https://wallet.nutstash.app/#',
     'https://wallet.cashu.me/?token=',
