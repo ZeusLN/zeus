@@ -5,11 +5,13 @@ import ecc from '@bitcoinerlab/secp256k1';
 import { randomBytes } from 'crypto';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
+import { validateMnemonic } from '@scure/bip39';
 
 const bip39 = require('bip39');
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -714,6 +716,13 @@ export default class SwapStore {
         host: string;
     }) => {
         const mnemonic = seedArray.join(' ');
+
+        if (!validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
+            return {
+                success: false,
+                error: localeString('views.Swaps.rescueKey.invalid')
+            };
+        }
 
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;

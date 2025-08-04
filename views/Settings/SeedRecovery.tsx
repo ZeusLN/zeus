@@ -275,6 +275,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     this.setState({
                                         selectedText: text || ''
                                     });
+                                    Keyboard.dismiss();
                                 }
                             }
                         } else {
@@ -742,6 +743,13 @@ export default class SeedRecovery extends React.PureComponent<
                                         )}
                                         secondary
                                         onPress={async () => {
+                                            this.setState({
+                                                errorMsg: '',
+                                                seedArray: [],
+                                                selectedText: '',
+                                                selectedInputType: null,
+                                                selectedWordIndex: null
+                                            });
                                             try {
                                                 const res =
                                                     await DocumentPicker.pickSingle(
@@ -827,6 +835,9 @@ export default class SeedRecovery extends React.PureComponent<
                                             this.setState(
                                                 { loading: true },
                                                 async () => {
+                                                    this.setState({
+                                                        errorMsg: ''
+                                                    });
                                                     const result =
                                                         await SwapStore.getRescuableSwaps(
                                                             {
