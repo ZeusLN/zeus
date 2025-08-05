@@ -25,6 +25,7 @@ import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import DropdownSetting from '../../components/DropdownSetting';
 
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -38,7 +39,13 @@ import {
 
 import { BIP39_WORD_LIST } from '../../utils/Bip39Utils';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, {
+    DEFAULT_SWAP_HOST_MAINNET,
+    DEFAULT_SWAP_HOST_TESTNET,
+    SWAP_HOST_KEYS_MAINNET,
+    SWAP_HOST_KEYS_TESTNET
+} from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore, { SWAPS_RESCUE_KEY } from '../../stores/SwapStore';
 
 import Storage from '../../storage';
@@ -46,6 +53,7 @@ import Storage from '../../storage';
 interface SeedRecoveryProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
     SwapStore: SwapStore;
     route: Route<
         'SeedRecovery',
@@ -73,9 +81,11 @@ interface SeedRecoveryState {
     errorMsg: string;
     restoreSwaps?: boolean;
     restoreRescueKey?: boolean;
+    rescueHost: string;
+    customRescueHost: string;
 }
 
-@inject('SettingsStore', 'SwapStore')
+@inject('NodeInfoStore', 'SettingsStore', 'SwapStore')
 @observer
 export default class SeedRecovery extends React.PureComponent<
     SeedRecoveryProps,
@@ -84,6 +94,9 @@ export default class SeedRecovery extends React.PureComponent<
     textInput: React.RefObject<TextInputRN>;
     constructor(props: SeedRecoveryProps) {
         super(props);
+
+        const isTestnet = props.NodeInfoStore?.nodeInfo?.isTestNet;
+        const { settings } = props.SettingsStore;
 
         this.textInput = React.createRef<TextInputRN>();
         this.state = {
@@ -103,7 +116,11 @@ export default class SeedRecovery extends React.PureComponent<
             recoveryCipherSeed: '',
             channelBackupsBase64: '',
             errorCreatingWallet: false,
-            errorMsg: ''
+            errorMsg: '',
+            rescueHost: isTestnet
+                ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+                : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
+            customRescueHost: settings.swaps?.customHost || ''
         };
     }
 
@@ -123,8 +140,16 @@ export default class SeedRecovery extends React.PureComponent<
     }
 
     async UNSAFE_componentWillMount() {
-        const { SettingsStore } = this.props;
+        const { SettingsStore, NodeInfoStore } = this.props;
         const { settings } = SettingsStore;
+        const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
+
+        this.setState({
+            rescueHost: isTestnet
+                ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+                : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET,
+            customRescueHost: settings.swaps?.customHost || ''
+        });
 
         if (settings.privacy && settings.privacy.clipboard) {
             const clipboard = await Clipboard.getString();
@@ -188,7 +213,7 @@ export default class SeedRecovery extends React.PureComponent<
     };
 
     render() {
-        const { navigation, SwapStore } = this.props;
+        const { navigation, NodeInfoStore, SwapStore } = this.props;
         const {
             loading,
             network,
@@ -201,8 +226,12 @@ export default class SeedRecovery extends React.PureComponent<
             filteredData,
             errorMsg,
             restoreSwaps,
-            restoreRescueKey
+            restoreRescueKey,
+            rescueHost,
+            customRescueHost
         } = this.state;
+
+        const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
 
         const filterData = (text: string) =>
             BIP39_WORD_LIST.filter((val: string) =>
@@ -230,11 +259,11 @@ export default class SeedRecovery extends React.PureComponent<
                             } else if (selectedWordIndex != null) {
                                 seedArray[selectedWordIndex] = text || '';
                                 this.setState({ seedArray } as any);
+                                const isRestoreMode =
+                                    restoreSwaps || restoreRescueKey;
                                 if (
-                                    ((restoreSwaps || restoreRescueKey) &&
-                                        selectedWordIndex < 11) ||
-                                    ((!restoreSwaps || !restoreRescueKey) &&
-                                        selectedWordIndex < 23)
+                                    (isRestoreMode && selectedWordIndex < 11) ||
+                                    (!isRestoreMode && selectedWordIndex < 23)
                                 ) {
                                     this.setState({
                                         selectedWordIndex:
@@ -246,6 +275,7 @@ export default class SeedRecovery extends React.PureComponent<
                                     this.setState({
                                         selectedText: text || ''
                                     });
+                                    Keyboard.dismiss();
                                 }
                             }
                         } else {
@@ -646,77 +676,149 @@ export default class SeedRecovery extends React.PureComponent<
                                 </View>
                             </ScrollView>
                         )}
-                        {!showSuggestions &&
-                            (restoreSwaps || restoreRescueKey) && (
-                                <Button
-                                    title={localeString(
-                                        'views.Swaps.rescueKey.upload'
-                                    )}
-                                    secondary
-                                    onPress={async () => {
-                                        try {
-                                            const res =
-                                                await DocumentPicker.pickSingle(
-                                                    {
-                                                        type: [
-                                                            DocumentPicker.types
-                                                                .allFiles
-                                                        ]
+                        {!showSuggestions && (
+                            <>
+                                {restoreSwaps && (
+                                    <View style={{ paddingHorizontal: 20 }}>
+                                        <DropdownSetting
+                                            title={localeString(
+                                                'general.serviceProvider'
+                                            )}
+                                            selectedValue={rescueHost}
+                                            onValueChange={async (
+                                                value: string
+                                            ) => {
+                                                this.setState({
+                                                    rescueHost: value,
+                                                    errorMsg: ''
+                                                });
+                                            }}
+                                            values={
+                                                isTestnet
+                                                    ? SWAP_HOST_KEYS_TESTNET
+                                                    : SWAP_HOST_KEYS_MAINNET
+                                            }
+                                        />
+                                        {rescueHost === 'Custom' && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        ),
+                                                        fontFamily:
+                                                            'PPNeueMontreal-Book'
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.host'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    value={customRescueHost}
+                                                    placeholder={
+                                                        isTestnet
+                                                            ? DEFAULT_SWAP_HOST_TESTNET
+                                                            : DEFAULT_SWAP_HOST_MAINNET
                                                     }
-                                                );
+                                                    onChangeText={async (
+                                                        text: string
+                                                    ) => {
+                                                        this.setState({
+                                                            customRescueHost:
+                                                                text
+                                                        });
+                                                    }}
+                                                    autoCapitalize="none"
+                                                    error={!customRescueHost}
+                                                />
+                                            </>
+                                        )}
+                                    </View>
+                                )}
+                                {(restoreSwaps || restoreRescueKey) && (
+                                    <Button
+                                        title={localeString(
+                                            'views.Swaps.rescueKey.upload'
+                                        )}
+                                        secondary
+                                        onPress={async () => {
+                                            this.setState({
+                                                errorMsg: '',
+                                                seedArray: [],
+                                                selectedText: '',
+                                                selectedInputType: null,
+                                                selectedWordIndex: null
+                                            });
+                                            try {
+                                                const res =
+                                                    await DocumentPicker.pickSingle(
+                                                        {
+                                                            type: [
+                                                                DocumentPicker
+                                                                    .types
+                                                                    .allFiles
+                                                            ]
+                                                        }
+                                                    );
 
-                                            const content = await RNFS.readFile(
-                                                res.uri,
-                                                'utf8'
-                                            );
-                                            const importedData =
-                                                JSON.parse(content);
+                                                const content =
+                                                    await RNFS.readFile(
+                                                        res.uri,
+                                                        'utf8'
+                                                    );
+                                                const importedData =
+                                                    JSON.parse(content);
 
-                                            if (importedData.mnemonic) {
-                                                const words =
-                                                    importedData.mnemonic
-                                                        .trim()
-                                                        .split(/\s+/);
-                                                if (words.length === 12) {
+                                                if (importedData.mnemonic) {
+                                                    const words =
+                                                        importedData.mnemonic
+                                                            .trim()
+                                                            .split(/\s+/);
+                                                    if (words.length === 12) {
+                                                        this.setState({
+                                                            seedArray: words
+                                                        });
+                                                    } else {
+                                                        Alert.alert(
+                                                            localeString(
+                                                                'views.Swaps.rescueKey.invalid'
+                                                            )
+                                                        );
+                                                    }
+                                                } else {
+                                                    Alert.alert(
+                                                        localeString(
+                                                            'general.error'
+                                                        ),
+                                                        localeString(
+                                                            'views.Tools.nodeConfigExportImport.importError'
+                                                        )
+                                                    );
+                                                }
+                                            } catch (err) {
+                                                if (
+                                                    DocumentPicker.isCancel(err)
+                                                ) {
                                                     this.setState({
-                                                        seedArray: words
+                                                        loading: false
                                                     });
                                                 } else {
                                                     Alert.alert(
                                                         localeString(
-                                                            'views.Swaps.rescueKey.invalid'
+                                                            'general.error'
+                                                        ),
+                                                        localeString(
+                                                            'views.Tools.nodeConfigExportImport.importError'
                                                         )
                                                     );
                                                 }
-                                            } else {
-                                                Alert.alert(
-                                                    localeString(
-                                                        'general.error'
-                                                    ),
-                                                    localeString(
-                                                        'views.Tools.nodeConfigExportImport.importError'
-                                                    )
-                                                );
                                             }
-                                        } catch (err) {
-                                            if (DocumentPicker.isCancel(err)) {
-                                                this.setState({
-                                                    loading: false
-                                                });
-                                            } else {
-                                                Alert.alert(
-                                                    localeString(
-                                                        'general.error'
-                                                    ),
-                                                    localeString(
-                                                        'views.Tools.nodeConfigExportImport.importError'
-                                                    )
-                                                );
-                                            }
-                                        }
-                                    }}
-                                />
-                            )}
+                                        }}
+                                    />
+                                )}
+                            </>
+                        )}
                         {!showSuggestions && (
                             <View
                                 style={{
@@ -733,15 +835,34 @@ export default class SeedRecovery extends React.PureComponent<
                                             this.setState(
                                                 { loading: true },
                                                 async () => {
-                                                    await SwapStore.getRescuableSwaps(
-                                                        { seedArray }
-                                                    );
+                                                    this.setState({
+                                                        errorMsg: ''
+                                                    });
+                                                    const result =
+                                                        await SwapStore.getRescuableSwaps(
+                                                            {
+                                                                seedArray,
+                                                                host:
+                                                                    rescueHost ===
+                                                                    'Custom'
+                                                                        ? customRescueHost
+                                                                        : rescueHost
+                                                            }
+                                                        );
                                                     this.setState({
                                                         loading: false
                                                     });
-                                                    navigation.navigate(
-                                                        'SwapsPane'
-                                                    );
+                                                    if (result?.success) {
+                                                        navigation.navigate(
+                                                            'SwapsPane'
+                                                        );
+                                                    } else {
+                                                        this.setState({
+                                                            errorMsg:
+                                                                result?.error ||
+                                                                ''
+                                                        });
+                                                    }
                                                 }
                                             );
                                         } else if (restoreRescueKey) {
@@ -787,7 +908,9 @@ export default class SeedRecovery extends React.PureComponent<
                                     }
                                     disabled={
                                         restoreSwaps || restoreRescueKey
-                                            ? seedArray.length !== 12 ||
+                                            ? (rescueHost === 'Custom' &&
+                                                  !customRescueHost) ||
+                                              seedArray.length !== 12 ||
                                               seedArray.some((seed) => !seed)
                                             : seedArray.length !== 24 ||
                                               seedArray.some((seed) => !seed)
