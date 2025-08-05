@@ -1082,8 +1082,10 @@ export default class OpenChannel extends React.Component<
                                     );
                                 }}
                                 disabled={
-                                    !connectPeerOnly &&
-                                    (sat_per_vbyte === '0' || !sat_per_vbyte)
+                                    loading ||
+                                    (!connectPeerOnly &&
+                                        (sat_per_vbyte === '0' ||
+                                            !sat_per_vbyte))
                                 }
                             />
                         </View>
