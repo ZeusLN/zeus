@@ -1677,6 +1677,8 @@
     "views.Swaps.rescueKey.ios": "Keys can be found in the Files app under the ZEUS folder",
     "views.Swaps.rescueKey.upload": "Upload rescue key",
     "views.Swaps.rescueKey.invalid": "Invalid rescue key",
+    "views.Swaps.rescueKey.noSwapsFound": "No swaps found for this rescue key",
+    "views.Swaps.rescueKey.incorrectHost": "Could not connect to the specified host. Please check the host and try again",
     "views.SwapDetails.title": "Detalii schimb",
     "views.SwapDetails.acceptZeroConf": "Acceptă Zero Conf",
     "views.SwapDetails.expectedAmount": "Suma așteptată",
