@@ -27,8 +27,6 @@ import NWCConnection from '../../../models/NWCConnection';
 import Add from '../../../assets/images/SVG/Add.svg';
 
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
-import Clock from '../../../assets/images/SVG/Clock.svg';
-import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
 
 interface NostrWalletConnectProps {
     navigation: StackNavigationProp<any, any>;
@@ -106,28 +104,6 @@ export default class NostrWalletConnect extends React.Component<
         return connections.filter((connection) =>
             connection.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    };
-
-    getConnectionStatus = (connection: NWCConnection) => {
-        if (connection.isExpired) {
-            return {
-                status: 'expired',
-                color: themeColor('error'),
-                icon: Clock
-            };
-        }
-        if (connection.hasRecentActivity) {
-            return {
-                status: 'active',
-                color: themeColor('success'),
-                icon: Checkmark
-            };
-        }
-        return {
-            status: 'idle',
-            color: themeColor('secondaryText'),
-            icon: Clock
-        };
     };
 
     formatDate = (date: Date) => {
@@ -487,24 +463,10 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 12
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
     connectionsLoadingContainer: {
         paddingVertical: 40,
         justifyContent: 'center',
         alignItems: 'center'
-    },
-    searchContainerStyle: {
-        backgroundColor: 'transparent',
-        borderTopWidth: 0,
-        borderBottomWidth: 0,
-        width: '100%'
-    },
-    searchInputContainer: {
-        borderRadius: 8
     },
     searchInput: {
         fontFamily: 'PPNeueMontreal-Book',
@@ -536,10 +498,6 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontFamily: 'PPNeueMontreal-Book',
         fontWeight: '600'
-    },
-    connectionSubtitle: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
     },
     budgetSection: {
         marginTop: 12
@@ -586,40 +544,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontFamily: 'PPNeueMontreal-Book'
     },
-    detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 4
-    },
-    detailLabel: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    detailValue: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    permissionsLabel: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book',
-        marginBottom: 8
-    },
-    permissionsList: {
-        flexDirection: 'row',
-        flexWrap: 'wrap'
-    },
-    permissionTag: {
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        marginRight: 6,
-        marginBottom: 4
-    },
-    permissionText: {
-        fontSize: 10,
-        fontFamily: 'PPNeueMontreal-Book',
-        textTransform: 'capitalize'
-    },
     emptyState: {
         justifyContent: 'center',
         alignItems: 'center',
@@ -647,52 +571,6 @@ const styles = StyleSheet.create({
     },
     emptySearchText: {
         fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    qrModal: {
-        width: '100%',
-        borderRadius: 16,
-        padding: 0,
-        margin: 0
-    },
-    modalContent: {
-        padding: 24
-    },
-    modalHeader: {
-        alignItems: 'center',
-        marginBottom: 16
-    },
-    modalSubtitle: {
-        fontSize: 14,
-        fontFamily: 'PPNeueMontreal-Book',
-        marginTop: 4
-    },
-    urlContainer: {
-        borderRadius: 8,
-        padding: 12,
-        marginBottom: 16
-    },
-    urlText: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book',
-        textAlign: 'center',
-        lineHeight: 16
-    },
-    qrContainer: {
-        alignItems: 'center',
-        marginBottom: 24
-    },
-    modalButtons: {
-        flexDirection: 'row',
-        justifyContent: 'center'
-    },
-    closeButton: {
-        borderRadius: 8,
-        paddingHorizontal: 24,
-        paddingVertical: 8
-    },
-    closeButtonText: {
-        color: themeColor('text'),
         fontFamily: 'PPNeueMontreal-Book'
     }
 });
