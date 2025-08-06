@@ -1677,6 +1677,8 @@
     "views.Swaps.rescueKey.ios": "Klíče najdete v aplikaci Soubory ve složce ZEUS",
     "views.Swaps.rescueKey.upload": "Nahrát záchranný klíč",
     "views.Swaps.rescueKey.invalid": "Neplatný záchranný klíč",
+    "views.Swaps.rescueKey.noSwapsFound": "No swaps found for this rescue key",
+    "views.Swaps.rescueKey.incorrectHost": "Could not connect to the specified host. Please check the host and try again",
     "views.SwapDetails.title": "Podrobnosti swapu",
     "views.SwapDetails.acceptZeroConf": "Přijmout Zero Conf",
     "views.SwapDetails.expectedAmount": "Očekávaná částka",
