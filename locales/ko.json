@@ -1677,6 +1677,8 @@
     "views.Swaps.rescueKey.ios": "키는 ZEUS 폴더의 파일 앱에서 찾을 수 있습니다.",
     "views.Swaps.rescueKey.upload": "복구 키 업로드",
     "views.Swaps.rescueKey.invalid": "잘못된 복구 키입니다",
+    "views.Swaps.rescueKey.noSwapsFound": "이 복구 키와 관련된 스왑을 찾을 수 없습니다.",
+    "views.Swaps.rescueKey.incorrectHost": "지정된 호스트에 연결할 수 없습니다. 호스트를 확인하고 다시 시도해주세요.",
     "views.SwapDetails.title": "스왑 상세 정보",
     "views.SwapDetails.acceptZeroConf": "미확정(0-conf) 허용",
     "views.SwapDetails.expectedAmount": "예상 수량",

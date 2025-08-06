@@ -1677,6 +1677,8 @@
     "views.Swaps.rescueKey.ios": "金鑰檔可以在「檔案」應用程式裡的「ZEUS」檔案夾中找到。",
     "views.Swaps.rescueKey.upload": "上傳救援金鑰",
     "views.Swaps.rescueKey.invalid": "不符合救援金鑰格式",
+    "views.Swaps.rescueKey.noSwapsFound": "No swaps found for this rescue key",
+    "views.Swaps.rescueKey.incorrectHost": "Could not connect to the specified host. Please check the host and try again",
     "views.SwapDetails.title": "換匯交易明細",
     "views.SwapDetails.acceptZeroConf": "接受零確認",
     "views.SwapDetails.expectedAmount": "預期金額",
