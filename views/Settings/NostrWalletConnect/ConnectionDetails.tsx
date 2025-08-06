@@ -457,11 +457,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center'
     },
-    errorContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
     headerActionButton: {
         padding: 8
     },
@@ -472,10 +467,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 4,
         marginBottom: 12
-    },
-    permissionsSubtitle: {
-        marginTop: 8,
-        marginBottom: 2
     },
     permissionsList: {
         flex: 1,
@@ -501,10 +492,5 @@ const styles = StyleSheet.create({
     bottomContainer: {
         paddingHorizontal: 20,
         paddingVertical: 15
-    },
-    deleteButtonText: {
-        fontFamily: 'PPNeueMontreal-Book',
-        fontSize: 16,
-        fontWeight: '600'
     }
 });
