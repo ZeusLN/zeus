@@ -26,6 +26,7 @@ import TransactionsStore from './TransactionsStore';
 import UnitsStore from './UnitsStore';
 import UTXOsStore from './UTXOsStore';
 import SweepStore from './SweepStore';
+import NostrWalletConnectStore from './NostrWalletConnectStore';
 
 export const settingsStore = new SettingsStore();
 export const modalStore = new ModalStore();
@@ -87,3 +88,6 @@ export const posStore = new PosStore(settingsStore, fiatStore);
 export const inventoryStore = new InventoryStore();
 export const swapStore = new SwapStore(nodeInfoStore, settingsStore);
 export const sweepStore = new SweepStore(nodeInfoStore);
+export const nostrWalletConnectStore = new NostrWalletConnectStore(
+    settingsStore
+);
