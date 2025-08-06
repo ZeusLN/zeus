@@ -474,41 +474,43 @@ export default class Settings extends React.Component<SettingsProps, {}> {
                         </TouchableOpacity>
                     </View>
 
-                    {false && (
-                        <View
-                            style={{
-                                backgroundColor: themeColor('secondary'),
-                                width: '90%',
-                                borderRadius: 10,
-                                alignSelf: 'center',
-                                marginVertical: 5
-                            }}
+                    <View
+                        style={{
+                            backgroundColor: themeColor('secondary'),
+                            width: '90%',
+                            borderRadius: 10,
+                            alignSelf: 'center',
+                            marginVertical: 5
+                        }}
+                    >
+                        <TouchableOpacity
+                            style={styles.columnField}
+                            onPress={() =>
+                                navigation.navigate('NostrWalletConnect')
+                            }
                         >
-                            <TouchableOpacity
-                                style={styles.columnField}
-                                onPress={() => navigation.navigate('Nostr')}
+                            <View style={styles.icon}>
+                                <NostrichIcon
+                                    fill={themeColor('text')}
+                                    width={23}
+                                    height={23}
+                                />
+                            </View>
+                            <Text
+                                style={{
+                                    ...styles.columnText,
+                                    color: themeColor('text')
+                                }}
                             >
-                                <View style={styles.icon}>
-                                    <NostrichIcon
-                                        fill={themeColor('text')}
-                                        width={23}
-                                        height={23}
-                                    />
-                                </View>
-                                <Text
-                                    style={{
-                                        ...styles.columnText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    Nostr
-                                </Text>
-                                <View style={styles.ForwardArrow}>
-                                    <ForwardIcon stroke={forwardArrowColor} />
-                                </View>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.title'
+                                )}
+                            </Text>
+                            <View style={styles.ForwardArrow}>
+                                <ForwardIcon stroke={forwardArrowColor} />
+                            </View>
+                        </TouchableOpacity>
+                    </View>
 
                     {selectedNode && (
                         <View
