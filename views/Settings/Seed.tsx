@@ -22,8 +22,14 @@ import Button from '../../components/Button';
 import CopyButton from '../../components/CopyButton';
 import Screen from '../../components/Screen';
 import Header from '../../components/Header';
+import ModalBox from '../../components/ModalBox';
 
 import SettingsStore from '../../stores/SettingsStore';
+import {
+    SWAPS_KEY,
+    SWAPS_LAST_USED_KEY,
+    SWAPS_RESCUE_KEY
+} from '../../stores/SwapStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -48,6 +54,7 @@ interface SeedProps {
 interface SeedState {
     understood: boolean;
     showModal: boolean;
+    isDeleteModalVisible: boolean;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -103,13 +110,74 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     state = {
         understood: false,
-        showModal: false
+        showModal: false,
+        isDeleteModalVisible: false
     };
 
     UNSAFE_componentWillMount() {
         // make sure we have latest settings and the seed phrase is accessible
         this.props.SettingsStore.getSettings();
     }
+
+    renderDeleteModal = () => {
+        const { navigation } = this.props;
+        return (
+            <ModalBox
+                isOpen={this.state.isDeleteModalVisible}
+                onClosed={() => this.setState({ isDeleteModalVisible: false })}
+                style={{
+                    backgroundColor: themeColor('background'),
+                    borderRadius: 20,
+                    width: '100%',
+                    maxWidth: 400,
+                    maxHeight: 270
+                }}
+                position="center"
+                backdropOpacity={0.5}
+            >
+                <View
+                    style={{
+                        padding: 20,
+                        alignItems: 'center'
+                    }}
+                >
+                    <Text
+                        style={{
+                            color: themeColor('text'),
+                            fontFamily: 'PPNeueMontreal-Book',
+                            fontSize: 18,
+                            textAlign: 'center',
+                            marginBottom: 20
+                        }}
+                    >
+                        {localeString(
+                            'views.Swaps.rescueKey.deleteConfirmation'
+                        )}
+                    </Text>
+
+                    <Button
+                        title={localeString('general.confirm')}
+                        onPress={async () => {
+                            await Storage.removeItem(SWAPS_RESCUE_KEY);
+                            await Storage.removeItem(SWAPS_KEY);
+                            await Storage.removeItem(SWAPS_LAST_USED_KEY);
+                            this.setState({ isDeleteModalVisible: false });
+                            navigation.popTo('Swaps');
+                        }}
+                        containerStyle={{ marginBottom: 10 }}
+                        warning
+                    />
+                    <Button
+                        title={localeString('general.cancel')}
+                        onPress={() =>
+                            this.setState({ isDeleteModalVisible: false })
+                        }
+                        secondary
+                    />
+                </View>
+            </ModalBox>
+        );
+    };
 
     render() {
         const { navigation, SettingsStore, route } = this.props;
@@ -182,6 +250,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
 
         return (
             <Screen>
+                {this.renderDeleteModal()}
                 <Header
                     leftComponent="Back"
                     centerComponent={{
@@ -439,7 +508,21 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                               'views.Settings.Seed.backupComplete'
                                           )
                                 }
+                                containerStyle={{ marginBottom: 10 }}
                             />
+                            {isRefundRescueKey && (
+                                <Button
+                                    onPress={() =>
+                                        this.setState({
+                                            isDeleteModalVisible: true
+                                        })
+                                    }
+                                    title={localeString(
+                                        'views.Swaps.rescueKey.delete'
+                                    )}
+                                    warning
+                                />
+                            )}
                         </View>
                     </View>
                 )}

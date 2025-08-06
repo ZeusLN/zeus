@@ -248,6 +248,11 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                         showRescueKeyBtn: true,
                         seedPhrase: mnemonic.split(' ')
                     });
+                } else {
+                    this.setState({
+                        isModalVisible: true,
+                        showRescueKeyBtn: false
+                    });
                 }
             }
         );
