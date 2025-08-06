@@ -39,7 +39,8 @@ import {
     transactionsStore,
     unitsStore,
     utxosStore,
-    sweepStore
+    sweepStore,
+    nostrWalletConnectStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -114,6 +115,10 @@ import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetWalletPicture from './views/Settings/SetWalletPicture';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
+import NostrWalletConnect from './views/Settings/NostrWalletConnect/ConnectionsList';
+import AddNWCConnection from './views/Settings/NostrWalletConnect/AddOrEditConnection';
+import ConnectionDetails from './views/Settings/NostrWalletConnect/ConnectionDetails';
+import ConnectionQR from './views/Settings/NostrWalletConnect/ConnectionQR';
 
 // Lightning address
 import LightningAddress from './views/LightningAddress';
@@ -347,6 +352,7 @@ export default class App extends React.PureComponent {
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
                 SweepStore={sweepStore}
+                NostrWalletConnectStore={nostrWalletConnectStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -741,6 +747,28 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             InvoicesSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NostrWalletConnect" // @ts-ignore:next-line
+                                                        component={
+                                                            NostrWalletConnect
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AddNWCConnection" // @ts-ignore:next-line
+                                                        component={
+                                                            AddNWCConnection
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ConnectionDetails" // @ts-ignore:next-line
+                                                        component={
+                                                            ConnectionDetails
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ConnectionQR" // @ts-ignore:next-line
+                                                        component={ConnectionQR}
                                                     />
                                                     <Stack.Screen
                                                         name="Seed" // @ts-ignore:next-line
