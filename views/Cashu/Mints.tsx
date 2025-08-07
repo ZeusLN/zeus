@@ -50,6 +50,11 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         navigation.addListener('focus', this.handleFocus);
     }
 
+    componentWillUnmount(): void {
+        const { CashuStore } = this.props;
+        CashuStore.setFromCashuSend(false);
+    }
+
     handleFocus = () => {
         const { CashuStore, SettingsStore } = this.props;
         const { cashuWallets, mintUrls, selectedMintUrls } = CashuStore;
@@ -96,6 +101,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             toggleMintSelection
         } = CashuStore;
 
+        const multiMint =
+            CashuStore.fromCashuSend &&
+            SettingsStore.settings.ecash.enableMultiMint;
         const AddMintButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('AddMint')}
@@ -109,8 +117,6 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                 />
             </TouchableOpacity>
         );
-
-        const multiMint = SettingsStore.settings.ecash.enableMultiMint;
 
         return (
             <Screen>
