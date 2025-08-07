@@ -22,6 +22,7 @@ interface EcashMintPickerProps {
     hideAmount?: boolean;
     disabled?: boolean;
     showMore?: boolean;
+    setFromCashuSend?: (value: boolean) => void;
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -30,6 +31,20 @@ export default class EcashMintPicker extends React.Component<
     EcashMintPickerProps,
     {}
 > {
+    componentDidMount(): void {
+        const { setFromCashuSend } = this.props;
+        if (setFromCashuSend) {
+            setFromCashuSend(true);
+        }
+    }
+
+    componentWillUnmount(): void {
+        const { setFromCashuSend } = this.props;
+        if (setFromCashuSend) {
+            setFromCashuSend(false);
+        }
+    }
+
     render() {
         const {
             CashuStore,
