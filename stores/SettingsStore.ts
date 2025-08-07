@@ -274,28 +274,33 @@ export const SWAP_HOST_KEYS_MAINNET = [
     {
         key: 'ZEUS',
         value: 'https://swaps.zeuslsp.com/api/v2',
-        pro: false
+        pro: false,
+        supportsRescue: true
     },
     {
         key: 'Boltz',
         value: 'https://api.boltz.exchange/v2',
-        pro: true
+        pro: true,
+        supportsRescue: true
     },
     {
         key: 'SwapMarket',
         value: 'https://api.middleway.space/v2',
-        pro: false
+        pro: false,
+        supportsRescue: true
     },
     {
         key: 'Eldamar Swaps',
         value: 'https://boltz-api.eldamar.icu/v2',
-        pro: false
+        pro: false,
+        supportsRescue: false
     },
     {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom',
-        pro: true
+        pro: true,
+        supportsRescue: true
     }
 ];
 
@@ -303,18 +308,21 @@ export const SWAP_HOST_KEYS_TESTNET = [
     {
         key: 'ZEUS',
         value: 'https://testnet-swaps.zeuslsp.com/api/v2',
-        pro: false
+        pro: false,
+        supportsRescue: true
     },
     {
         key: 'Boltz',
         value: 'https://api.testnet.boltz.exchange/v2',
-        pro: false
+        pro: false,
+        supportsRescue: true
     },
     {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
         value: 'Custom',
-        pro: true
+        pro: true,
+        supportsRescue: true
     }
 ];
 
