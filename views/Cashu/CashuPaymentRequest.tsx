@@ -182,10 +182,10 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { LnurlPayStore, CashuStore, navigation } = this.props;
+        const { LnurlPayStore, navigation, SettingsStore } = this.props;
         const { satAmount } = this.state;
 
-        if (CashuStore.multiMint) {
+        if (SettingsStore.settings.ecash.enableMultiMint) {
             navigation.navigate('MultimintPayment');
             return;
         }
@@ -887,9 +887,9 @@ export default class CashuPaymentRequest extends React.Component<
                                         )}
                                     </Text>
                                     <Switch
-                                        value={CashuStore.multiMint}
-                                        onValueChange={
-                                            this.handleToggleMultiMint
+                                        value={
+                                            SettingsStore.settings.ecash
+                                                .enableMultiMint
                                         }
                                         trackEnabledColor={themeColor(
                                             'highlight'
@@ -902,7 +902,8 @@ export default class CashuPaymentRequest extends React.Component<
                                 style={{
                                     alignSelf: 'center',
                                     width: '85%',
-                                    marginBottom: CashuStore.multiMint
+                                    marginBottom: SettingsStore.settings.ecash
+                                        .enableMultiMint
                                         ? CashuStore.selectedMintUrls.length > 2
                                             ? 115
                                             : CashuStore.selectedMintUrls

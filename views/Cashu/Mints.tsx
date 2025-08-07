@@ -22,12 +22,14 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CashuStore from '../../stores/CashuStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 
 interface MintsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    SettingsStore: SettingsStore;
     route: Route<'Mints'>;
 }
 
@@ -35,7 +37,7 @@ interface MintsState {
     mints: any;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class Mints extends React.Component<MintsProps, MintsState> {
     state = {
@@ -57,9 +59,8 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     }
 
     handleFocus = () => {
-        const { CashuStore } = this.props;
-        const { cashuWallets, mintUrls, multiMint, selectedMintUrls } =
-            CashuStore;
+        const { CashuStore, SettingsStore } = this.props;
+        const { cashuWallets, mintUrls, selectedMintUrls } = CashuStore;
         let mints: any = [];
 
         mintUrls.forEach((mintUrl) => {
@@ -73,7 +74,10 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             });
         });
 
-        if (multiMint && (!selectedMintUrls || selectedMintUrls.length === 0)) {
+        if (
+            SettingsStore.settings.ecash.enableMultiMint &&
+            (!selectedMintUrls || selectedMintUrls.length === 0)
+        ) {
             CashuStore.selectedMintUrls = [...mintUrls];
         }
 
@@ -90,14 +94,13 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     );
 
     render() {
-        const { navigation, CashuStore } = this.props;
+        const { navigation, CashuStore, SettingsStore } = this.props;
         const { mints } = this.state;
         const {
             selectedMintUrl,
             selectedMintUrls = [],
             clearInvoice,
             setSelectedMint,
-            multiMint,
             toggleMintSelection
         } = CashuStore;
 
@@ -114,6 +117,8 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                 />
             </TouchableOpacity>
         );
+
+        const multiMint = SettingsStore.settings.ecash.enableMultiMint;
 
         return (
             <Screen>
