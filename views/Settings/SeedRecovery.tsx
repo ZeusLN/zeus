@@ -693,11 +693,13 @@ export default class SeedRecovery extends React.PureComponent<
                                                     errorMsg: ''
                                                 });
                                             }}
-                                            values={
-                                                isTestnet
-                                                    ? SWAP_HOST_KEYS_TESTNET
-                                                    : SWAP_HOST_KEYS_MAINNET
-                                            }
+                                            values={(isTestnet
+                                                ? SWAP_HOST_KEYS_TESTNET
+                                                : SWAP_HOST_KEYS_MAINNET
+                                            ).filter(
+                                                (provider) =>
+                                                    provider.supportsRescue
+                                            )}
                                         />
                                         {rescueHost === 'Custom' && (
                                             <>
