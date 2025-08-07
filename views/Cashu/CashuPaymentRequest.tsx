@@ -922,6 +922,9 @@ export default class CashuPaymentRequest extends React.Component<
                                 <EcashMintPicker
                                     showMore={true}
                                     navigation={navigation}
+                                    setFromCashuSend={(value: boolean) => {
+                                        CashuStore.setFromCashuSend(value);
+                                    }}
                                 />
                             </View>
 
