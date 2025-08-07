@@ -100,7 +100,6 @@ export default class CashuStore {
     @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
-    @observable public multiMint: boolean = false;
 
     @observable public loading = false;
     @observable public initializing = false;
@@ -190,11 +189,6 @@ export default class CashuStore {
         this.quoteId = undefined;
         this.error = false;
     };
-
-    @action
-    public setMultiMint(value: boolean) {
-        this.multiMint = value;
-    }
 
     @action
     public clearPayReq = () => {
@@ -1499,7 +1493,7 @@ export default class CashuStore {
         this.payReq = undefined;
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
-        let isMultiMint = this.multiMint;
+        let isMultiMint = this.settingsStore.settings.ecash.enableMultiMint;
 
         try {
             if (!this.isProperlyConfigured()) {
@@ -1668,6 +1662,9 @@ export default class CashuStore {
 
         const totalProofsValue = CashuUtils.sumProofsValue(this.proofsToUse);
 
+        const multimintEnabled =
+            this.settingsStore.settings.ecash.enableMultiMint;
+
         console.log('ecash quote fee reserve:', this.feeEstimate);
         console.log('Proofs before send', this.proofsToUse);
         console.log(totalProofsValue, amountToPay);
@@ -1689,7 +1686,7 @@ export default class CashuStore {
                 return;
             }
 
-            const isMultiMint = this.multiMint && this.meltQuotes.length > 1;
+            const isMultiMint = multimintEnabled && this.meltQuotes.length > 1;
 
             if (!isMultiMint) {
                 return await this.payLnInvoiceSingleMint({
@@ -1706,7 +1703,7 @@ export default class CashuStore {
             });
         } catch (err: any) {
             console.log('paying ln invoice from ecash error', err);
-            if (!this.multiMint || this.meltQuotes.length === 1) {
+            if (!multimintEnabled || this.meltQuotes.length === 1) {
                 const mintUrl = this.selectedMintUrl;
                 const wallet = this.cashuWallets[mintUrl].wallet;
                 if (wallet) {

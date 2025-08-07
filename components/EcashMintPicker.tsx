@@ -7,6 +7,7 @@ import Amount from './Amount';
 import { Row } from './layout/Row';
 
 import CashuStore from '../stores/CashuStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -16,28 +17,36 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 interface EcashMintPickerProps {
     title?: string;
     CashuStore?: CashuStore;
+    SettingsStore?: SettingsStore;
     navigation: StackNavigationProp<any, any>;
     hideAmount?: boolean;
     disabled?: boolean;
     showMore?: boolean;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class EcashMintPicker extends React.Component<
     EcashMintPickerProps,
     {}
 > {
     render() {
-        const { CashuStore, hideAmount, disabled, navigation, showMore } =
-            this.props;
+        const {
+            CashuStore,
+            hideAmount,
+            disabled,
+            navigation,
+            showMore,
+            SettingsStore
+        } = this.props;
         const {
             cashuWallets,
             mintUrls,
             selectedMintUrl,
-            multiMint,
             selectedMintUrls = []
         } = CashuStore!!;
+
+        const multiMint = SettingsStore?.settings.ecash.enableMultiMint;
 
         let mints: any = {};
         mintUrls.forEach((mintUrl) => {
