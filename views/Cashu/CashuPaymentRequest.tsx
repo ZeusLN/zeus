@@ -72,10 +72,13 @@ interface CashuPaymentRequestState {
     satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
+<<<<<<< HEAD
     donationsToggle: boolean;
     donationPercentage: any;
     donationAmount: any;
     selectedIndex: number | null;
+=======
+>>>>>>> c0f9d735 (feat: global enable multimint state)
 }
 
 @inject(
@@ -98,6 +101,7 @@ export default class CashuPaymentRequest extends React.Component<
         customAmount: '',
         satAmount: '',
         zaplockerToggle: false,
+<<<<<<< HEAD
         slideToPayThreshold: 10000,
         donationsToggle: false,
         donationPercentage: 0,
@@ -134,6 +138,32 @@ export default class CashuPaymentRequest extends React.Component<
             }
         );
     }
+=======
+        slideToPayThreshold: 10000
+    };
+
+    handleToggleMultiMint = async (value: boolean) => {
+        const { CashuStore, SettingsStore } = this.props;
+
+        try {
+            if (SettingsStore) {
+                await SettingsStore.updateSettings({
+                    ecash: {
+                        ...SettingsStore.settings.ecash,
+                        enableMultiMint: value
+                    }
+                });
+
+                const { paymentRequest, getPayReq } = CashuStore;
+                if (paymentRequest) {
+                    await getPayReq(paymentRequest);
+                }
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+>>>>>>> c0f9d735 (feat: global enable multimint state)
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
@@ -178,10 +208,10 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { LnurlPayStore, CashuStore, navigation } = this.props;
+        const { LnurlPayStore, navigation, SettingsStore } = this.props;
         const { satAmount } = this.state;
 
-        if (CashuStore.multiMint) {
+        if (SettingsStore.settings.ecash.enableMultiMint) {
             navigation.navigate('MultimintPayment');
             return;
         }
@@ -883,7 +913,10 @@ export default class CashuPaymentRequest extends React.Component<
                                         )}
                                     </Text>
                                     <Switch
-                                        value={CashuStore.multiMint}
+                                        value={
+                                            SettingsStore.settings.ecash
+                                                .enableMultiMint
+                                        }
                                         onValueChange={
                                             this.handleToggleMultiMint
                                         }
@@ -898,7 +931,8 @@ export default class CashuPaymentRequest extends React.Component<
                                 style={{
                                     alignSelf: 'center',
                                     width: '85%',
-                                    marginBottom: CashuStore.multiMint
+                                    marginBottom: SettingsStore.settings.ecash
+                                        .enableMultiMint
                                         ? CashuStore.selectedMintUrls.length > 2
                                             ? 115
                                             : CashuStore.selectedMintUrls
