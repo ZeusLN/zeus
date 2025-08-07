@@ -100,6 +100,7 @@ export default class CashuStore {
     @observable public seed?: Uint8Array;
     @observable public invoice?: string;
     @observable public quoteId?: string;
+    @observable public fromCashuSend = false;
 
     @observable public loading = false;
     @observable public initializing = false;
@@ -155,6 +156,11 @@ export default class CashuStore {
         this.channelsStore = channelsStore;
         this.modalStore = modalStore;
     }
+
+    @action
+    public setFromCashuSend = (value: boolean) => {
+        this.fromCashuSend = value;
+    };
 
     @action
     public reset = () => {
