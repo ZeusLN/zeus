@@ -107,10 +107,10 @@ import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetWalletPicture from './views/Settings/SetWalletPicture';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
-import NostrWalletConnect from './views/Settings/NostrWalletConnect/ConnectionsList';
-import AddNWCConnection from './views/Settings/NostrWalletConnect/AddOrEditConnection';
-import ConnectionDetails from './views/Settings/NostrWalletConnect/ConnectionDetails';
-import ConnectionQR from './views/Settings/NostrWalletConnect/ConnectionQR';
+import NWCConnectionsList from './views/Settings/NostrWalletConnect/NWCConnectionsList';
+import AddOrEditNWCConnection from './views/Settings/NostrWalletConnect/AddOrEditNWCConnection';
+import NWCConnectionDetails from './views/Settings/NostrWalletConnect/NWCConnectionDetails';
+import NWCConnectionQR from './views/Settings/NostrWalletConnect/NWCConnectionQR';
 
 // Lightning address
 import LightningAddress from './views/LightningAddress';
@@ -707,24 +707,26 @@ export default class App extends React.PureComponent {
                                                     <Stack.Screen
                                                         name="NostrWalletConnect" // @ts-ignore:next-line
                                                         component={
-                                                            NostrWalletConnect
+                                                            NWCConnectionsList
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="AddNWCConnection" // @ts-ignore:next-line
+                                                        name="AddOrEditNWCConnection" // @ts-ignore:next-line
                                                         component={
-                                                            AddNWCConnection
+                                                            AddOrEditNWCConnection
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ConnectionDetails" // @ts-ignore:next-line
+                                                        name="NWCConnectionDetails" // @ts-ignore:next-line
                                                         component={
-                                                            ConnectionDetails
+                                                            NWCConnectionDetails
                                                         }
                                                     />
                                                     <Stack.Screen
-                                                        name="ConnectionQR" // @ts-ignore:next-line
-                                                        component={ConnectionQR}
+                                                        name="NWCConnectionQR" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionQR
+                                                        }
                                                     />
                                                     <Stack.Screen
                                                         name="Seed" // @ts-ignore:next-line

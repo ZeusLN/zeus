@@ -307,10 +307,11 @@ export default class NostrWalletConnectStore {
                     'pay_invoice',
                     'make_invoice',
                     'list_transactions',
-                    'pay_keysend'
+                    'pay_keysend',
+                    'send_payment'
                 ],
                 createdAt: new Date(),
-                budgetAmount: params.budgetAmount,
+                maxAmountSats: params.budgetAmount,
                 budgetRenewal: params.budgetRenewal || 'never',
                 expiresAt: params.expiresAt
             };

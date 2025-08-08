@@ -26,14 +26,14 @@ import NWCConnection from '../../../models/NWCConnection';
 import EditIcon from '../../../assets/images/SVG/Edit.svg';
 import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
 
-interface ConnectionDetailsProps {
+interface NWCConnectionDetailsProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'ConnectionDetails', { connectionId: string }>;
+    route: Route<'NWCConnectionDetails', { connectionId: string }>;
     SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
-interface ConnectionDetailsState {
+interface NWCConnectionDetailsState {
     loading: boolean;
     confirmDelete: boolean;
     error: string | null;
@@ -41,12 +41,12 @@ interface ConnectionDetailsState {
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
 @observer
-export default class ConnectionDetails extends React.Component<
-    ConnectionDetailsProps,
-    ConnectionDetailsState
+export default class NWCConnectionDetails extends React.Component<
+    NWCConnectionDetailsProps,
+    NWCConnectionDetailsState
 > {
     private unsubscribeFocus?: () => void;
-    constructor(props: ConnectionDetailsProps) {
+    constructor(props: NWCConnectionDetailsProps) {
         super(props);
         this.state = {
             loading: false,
@@ -134,7 +134,7 @@ export default class ConnectionDetails extends React.Component<
         return descriptions[permission] || permission.replace(/_/g, ' ');
     };
     editConnection = (connection: NWCConnection) => {
-        this.props.navigation.navigate('AddNWCConnection', {
+        this.props.navigation.navigate('AddOrEditNWCConnection', {
             connectionId: connection.id,
             isEdit: true
         });
@@ -420,7 +420,7 @@ export default class ConnectionDetails extends React.Component<
                                               'views.Settings.AddEditNode.tapToConfirm'
                                           )
                                         : localeString(
-                                              'views.Settings.AddContact.deleteContact'
+                                              'views.Settings.NostrWalletConnect.deleteConnection'
                                           )
                                 }
                                 onPress={() =>
