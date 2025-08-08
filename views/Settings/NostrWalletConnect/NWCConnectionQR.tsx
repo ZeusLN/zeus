@@ -14,23 +14,23 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 
-interface ConnectionQRProps {
+interface NWCConnectionQRProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'ConnectionQR', { connectionId: string; nostrUrl: string }>;
+    route: Route<'NWCConnectionQR', { connectionId: string; nostrUrl: string }>;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
-interface ConnectionQRState {
+interface NWCConnectionQRState {
     isConnected: boolean;
 }
 
 @inject('NostrWalletConnectStore')
 @observer
-export default class ConnectionQR extends React.Component<
-    ConnectionQRProps,
-    ConnectionQRState
+export default class NWCConnectionQR extends React.Component<
+    NWCConnectionQRProps,
+    NWCConnectionQRState
 > {
-    constructor(props: ConnectionQRProps) {
+    constructor(props: NWCConnectionQRProps) {
         super(props);
         this.state = {
             isConnected: false
@@ -43,7 +43,7 @@ export default class ConnectionQR extends React.Component<
         console.log('Started waiting for connection:', connectionId);
     }
 
-    componentDidUpdate(prevProps: ConnectionQRProps) {
+    componentDidUpdate(prevProps: NWCConnectionQRProps) {
         const { NostrWalletConnectStore, navigation } = this.props;
         if (
             prevProps.NostrWalletConnectStore.waitingForConnection &&
@@ -121,12 +121,7 @@ export default class ConnectionQR extends React.Component<
                         </View>
 
                         {NostrWalletConnectStore.waitingForConnection && (
-                            <View
-                                style={[
-                                    styles.loadingContainer,
-                                    { borderColor: themeColor('border') }
-                                ]}
-                            >
+                            <View style={[styles.loadingContainer]}>
                                 <LoadingIndicator />
                                 <Text
                                     style={[
@@ -166,15 +161,21 @@ export default class ConnectionQR extends React.Component<
 
                         <View style={styles.buttonContainer}>
                             <Button
-                                title={localeString(
-                                    'views.Settings.NostrWalletConnect.close'
-                                )}
+                                title={localeString('general.close')}
                                 onPress={() => {
                                     NostrWalletConnectStore.stopWaitingForConnection();
                                     navigation.goBack();
                                 }}
-                                buttonStyle={styles.closeButton}
-                                titleStyle={styles.closeButtonText}
+                                buttonStyle={[
+                                    styles.closeButton,
+                                    {
+                                        backgroundColor: themeColor('secondary')
+                                    }
+                                ]}
+                                titleStyle={{
+                                    ...styles.closeButtonText,
+                                    color: themeColor('secondary')
+                                }}
                             />
                         </View>
                     </View>
@@ -216,11 +217,10 @@ const styles = StyleSheet.create({
     loadingContainer: {
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 40,
-        paddingVertical: 20,
+        marginBottom: 20,
+        paddingVertical: 5,
         borderRadius: 12,
-        paddingHorizontal: 24,
-        borderWidth: 1
+        paddingHorizontal: 10
     },
     loadingText: {
         fontSize: 16,
