@@ -20,17 +20,17 @@ import { localeString } from '../../../utils/LocaleUtils';
 
 import NWCConnection from '../../../models/NWCConnection';
 
-interface AddNWCConnectionProps {
+interface AddOrEditNWCConnectionProps {
     navigation: StackNavigationProp<any, any>;
     route: Route<
-        'AddNWCConnection',
+        'AddOrEditNWCConnection',
         { connectionId?: string; isEdit?: boolean }
     >;
     SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
-interface AddNWCConnectionState {
+interface AddOrEditNWCConnectionState {
     connectionName: string;
     selectedPermissions: string[];
     maxAmountSats: string;
@@ -176,11 +176,11 @@ const permissionTypes = [
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
 @observer
-export default class AddNWCConnection extends React.Component<
-    AddNWCConnectionProps,
-    AddNWCConnectionState
+export default class AddOrEditNWCConnection extends React.Component<
+    AddOrEditNWCConnectionProps,
+    AddOrEditNWCConnectionState
 > {
-    constructor(props: AddNWCConnectionProps) {
+    constructor(props: AddOrEditNWCConnectionProps) {
         super(props);
         this.state = {
             connectionName: '',
@@ -402,7 +402,7 @@ export default class AddNWCConnection extends React.Component<
                     });
                     return;
                 }
-                params.maxAmountSats = budget;
+                params.budgetAmount = budget;
             }
 
             if (expiryDays) {
@@ -437,7 +437,7 @@ export default class AddNWCConnection extends React.Component<
                 if (nostrUrl) {
                     const createdConnection =
                         NostrWalletConnectStore.connections[0];
-                    this.props.navigation.navigate('ConnectionQR', {
+                    this.props.navigation.navigate('NWCConnectionQR', {
                         connectionId: createdConnection.id,
                         nostrUrl
                     });
@@ -913,11 +913,11 @@ export default class AddNWCConnection extends React.Component<
                                 color:
                                     route.params?.isEdit &&
                                     !this.state.hasChanges
-                                        ? themeColor('secondaryText')
+                                        ? themeColor('secondary')
                                         : themeColor('background'),
                                 fontFamily: 'PPNeueMontreal-Book',
                                 fontSize: 16,
-                                fontWeight: '600'
+                                fontWeight: '500'
                             }}
                             disabled={
                                 storeLoading ||
