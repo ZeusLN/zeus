@@ -804,7 +804,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             }}
                         >
                             {loading && (
-                                <View>
+                                <View style={{ marginRight: 15 }}>
                                     <LoadingIndicator size={30} />
                                 </View>
                             )}
@@ -813,8 +813,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 validAmountToSwap && (
                                     <View
                                         style={{
-                                            marginLeft: 10,
-                                            marginRight: 13
+                                            marginRight: 15
                                         }}
                                     >
                                         <TouchableOpacity
