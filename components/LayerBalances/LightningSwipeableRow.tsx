@@ -14,14 +14,18 @@ import { inject, observer } from 'mobx-react';
 
 import { RectButton } from 'react-native-gesture-handler';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
-import BackendUtils from './../../utils/BackendUtils';
-import { localeString } from './../../utils/LocaleUtils';
-import { themeColor } from './../../utils/ThemeUtils';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
+import BackendUtils from '../../utils/BackendUtils';
+import { localeString } from '../../utils/LocaleUtils';
+import { themeColor } from '../../utils/ThemeUtils';
+import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 
 import {
     modalStore,
     invoicesStore,
-    nodeInfoStore
+    nodeInfoStore,
+    settingsStore
 } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
@@ -32,6 +36,7 @@ import Send from './../../assets/images/SVG/Send.svg';
 interface LightningSwipeableRowProps {
     navigation: StackNavigationProp<any, any>;
     lightning?: string;
+    lightningAddress?: string;
     offer?: string;
     locked?: boolean;
     children: React.ReactNode;
@@ -208,8 +213,8 @@ export default class LightningSwipeableRow extends Component<
         }
     };
 
-    private fetchLnInvoice = () => {
-        const { lightning, offer } = this.props;
+    private fetchLnInvoice = async () => {
+        const { lightning, lightningAddress, offer } = this.props;
         if (offer) {
             this.props.navigation.navigate('Send', {
                 destination: offer,
@@ -217,6 +222,50 @@ export default class LightningSwipeableRow extends Component<
                 transactionType: 'BOLT 12',
                 isValid: true
             });
+        } else if (lightningAddress) {
+            let url;
+            const [username, bolt11Domain] = lightningAddress.split('@');
+            if (bolt11Domain.includes('.onion')) {
+                url = `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+            } else {
+                url = `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+            }
+            const error = localeString(
+                'utils.handleAnything.lightningAddressError'
+            );
+
+            // handle Tor LN addresses
+            if (settingsStore.enableTor && bolt11Domain.includes('.onion')) {
+                await doTorRequest(url, RequestMethod.GET)
+                    .then((response: any) => {
+                        if (!response.callback) {
+                            throw new Error(error);
+                        }
+                        this.props.navigation.navigate('LnurlPay', {
+                            lnurlParams: response
+                        });
+                    })
+                    .catch((error: any) => {
+                        throw new Error(error);
+                    });
+            } else {
+                return ReactNativeBlobUtil.fetch('get', url).then(
+                    (response: any) => {
+                        const status = response.info().status;
+                        if (status == 200) {
+                            const data = response.json();
+                            if (!data.callback) {
+                                throw new Error(error);
+                            }
+                            this.props.navigation.navigate('LnurlPay', {
+                                lnurlParams: data
+                            });
+                        } else {
+                            throw new Error(error);
+                        }
+                    }
+                );
+            }
         } else if (lightning?.toLowerCase().startsWith('lnurl')) {
             return getlnurlParams(lightning)
                 .then((params: any) => {
@@ -267,8 +316,15 @@ export default class LightningSwipeableRow extends Component<
     };
 
     render() {
-        const { children, lightning, offer, locked, disabled, SyncStore } =
-            this.props;
+        const {
+            children,
+            lightning,
+            lightningAddress,
+            offer,
+            locked,
+            disabled,
+            SyncStore
+        } = this.props;
         const { isSyncing } = SyncStore!;
         if (isSyncing) {
             return (
@@ -283,7 +339,7 @@ export default class LightningSwipeableRow extends Component<
                 </TouchableOpacity>
             );
         }
-        if (locked && (lightning || offer)) {
+        if (locked && (lightning || lightningAddress || offer)) {
             return (
                 <TouchableOpacity
                     onPress={() => (disabled ? null : this.fetchLnInvoice())}
