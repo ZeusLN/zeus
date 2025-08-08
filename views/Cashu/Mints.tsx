@@ -15,18 +15,21 @@ import cloneDeep from 'lodash/cloneDeep';
 import Amount from '../../components/Amount';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
+import ButtonComponent from '../../components/Button';
 import { Row } from '../../components/layout/Row';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import CashuStore from '../../stores/CashuStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import Add from '../../assets/images/SVG/Add.svg';
 
 interface MintsProps {
     navigation: StackNavigationProp<any, any>;
     CashuStore: CashuStore;
+    SettingsStore: SettingsStore;
     route: Route<'Mints'>;
 }
 
@@ -34,7 +37,7 @@ interface MintsState {
     mints: any;
 }
 
-@inject('CashuStore')
+@inject('CashuStore', 'SettingsStore')
 @observer
 export default class Mints extends React.Component<MintsProps, MintsState> {
     state = {
@@ -47,10 +50,16 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         navigation.addListener('focus', this.handleFocus);
     }
 
-    handleFocus = () => {
+    componentWillUnmount(): void {
         const { CashuStore } = this.props;
-        const { cashuWallets, mintUrls } = CashuStore;
+        CashuStore.setFromCashuSend(false);
+    }
+
+    handleFocus = () => {
+        const { CashuStore, SettingsStore } = this.props;
+        const { cashuWallets, mintUrls, selectedMintUrls } = CashuStore;
         let mints: any = [];
+
         mintUrls.forEach((mintUrl) => {
             const wallet = cashuWallets[mintUrl];
             const mintInfo = wallet.mintInfo;
@@ -62,9 +71,14 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
             });
         });
 
-        this.setState({
-            mints
-        });
+        if (
+            SettingsStore.settings.ecash.enableMultiMint &&
+            (!selectedMintUrls || selectedMintUrls.length === 0)
+        ) {
+            CashuStore.selectedMintUrls = [...mintUrls];
+        }
+
+        this.setState({ mints });
     };
 
     renderSeparator = () => (
@@ -77,10 +91,19 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     );
 
     render() {
-        const { navigation, CashuStore } = this.props;
+        const { navigation, CashuStore, SettingsStore } = this.props;
         const { mints } = this.state;
-        const { selectedMintUrl, clearInvoice, setSelectedMint } = CashuStore;
+        const {
+            selectedMintUrl,
+            selectedMintUrls = [],
+            clearInvoice,
+            setSelectedMint,
+            toggleMintSelection
+        } = CashuStore;
 
+        const multiMint =
+            CashuStore.fromCashuSend &&
+            SettingsStore.settings.ecash.enableMultiMint;
         const AddMintButton = () => (
             <TouchableOpacity
                 onPress={() => navigation.navigate('AddMint')}
@@ -117,6 +140,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                         clearInvoice();
                     }}
                 />
+
                 {!!mints && mints.length > 0 ? (
                     <FlatList
                         data={mints}
@@ -128,12 +152,11 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             index: number;
                         }) => {
                             const mintInfo = item._mintInfo || item;
-                            const isSelectedMint =
-                                selectedMintUrl &&
-                                mintInfo?.mintUrl &&
-                                selectedMintUrl === mintInfo?.mintUrl;
-                            const errorConnecting = item.errorConnecting;
+                            const isSelectedMint = multiMint
+                                ? selectedMintUrls.includes(mintInfo?.mintUrl)
+                                : selectedMintUrl === mintInfo?.mintUrl;
 
+                            const errorConnecting = item.errorConnecting;
                             let subTitle = isSelectedMint
                                 ? `${localeString('general.selected')} | ${
                                       item.mintUrl
@@ -145,6 +168,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                     'general.errorConnecting'
                                 )} | ${subTitle}`;
                             }
+
                             return (
                                 <React.Fragment>
                                     <ListItem
@@ -154,13 +178,50 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                             backgroundColor: 'transparent'
                                         }}
                                         onPress={async () => {
-                                            await setSelectedMint(
-                                                mintInfo?.mintUrl
-                                            ).then(() => {
+                                            if (multiMint) {
+                                                const isCurrentlySelected =
+                                                    selectedMintUrls.includes(
+                                                        mintInfo?.mintUrl
+                                                    );
+                                                if (
+                                                    isCurrentlySelected &&
+                                                    selectedMintUrls.length ===
+                                                        1
+                                                ) {
+                                                    return;
+                                                }
+                                                await toggleMintSelection(
+                                                    mintInfo?.mintUrl
+                                                );
+                                            } else {
+                                                await setSelectedMint(
+                                                    mintInfo?.mintUrl
+                                                );
                                                 navigation.goBack();
-                                            });
+                                            }
                                         }}
                                     >
+                                        {multiMint && (
+                                            <Icon
+                                                name={
+                                                    isSelectedMint
+                                                        ? 'check-box'
+                                                        : 'check-box-outline-blank'
+                                                }
+                                                color={
+                                                    isSelectedMint
+                                                        ? themeColor(
+                                                              'highlight'
+                                                          )
+                                                        : themeColor(
+                                                              'secondaryText'
+                                                          )
+                                                }
+                                                size={24}
+                                                style={{ marginRight: 10 }}
+                                            />
+                                        )}
+
                                         {mintInfo?.icon_url && (
                                             <Image
                                                 source={{
@@ -174,6 +235,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 }}
                                             />
                                         )}
+
                                         <ListItem.Content>
                                             <View>
                                                 <View style={styles.row}>
@@ -216,6 +278,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                                 </View>
                                             </View>
                                         </ListItem.Content>
+
                                         <View>
                                             <Row>
                                                 <View style={{ right: 15 }}>
@@ -267,6 +330,27 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             fontFamily: 'PPNeueMontreal-Book'
                         }}
                     />
+                )}
+
+                {multiMint && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            right: 0,
+                            bottom: 15,
+                            paddingHorizontal: 16,
+                            backgroundColor: 'transparent',
+                            zIndex: 20
+                        }}
+                    >
+                        <ButtonComponent
+                            title={localeString('general.confirm')}
+                            onPress={() => navigation.goBack()}
+                            containerStyle={{ marginTop: 15 }}
+                            noUppercase
+                        />
+                    </View>
                 )}
             </Screen>
         );
