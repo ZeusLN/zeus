@@ -28,13 +28,13 @@ import Add from '../../../assets/images/SVG/Add.svg';
 
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
 
-interface NostrWalletConnectProps {
+interface NWCConnectionsListProps {
     navigation: StackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
-interface NostrWalletConnectState {
+interface NWCConnectionsListState {
     searchQuery: string;
     connectionsLoading: boolean;
     error: string;
@@ -42,11 +42,11 @@ interface NostrWalletConnectState {
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
 @observer
-export default class NostrWalletConnect extends React.Component<
-    NostrWalletConnectProps,
-    NostrWalletConnectState
+export default class NWCConnectionsList extends React.Component<
+    NWCConnectionsListProps,
+    NWCConnectionsListState
 > {
-    constructor(props: NostrWalletConnectProps) {
+    constructor(props: NWCConnectionsListProps) {
         super(props);
         this.state = {
             searchQuery: '',
@@ -88,7 +88,7 @@ export default class NostrWalletConnect extends React.Component<
     };
 
     navigateToConnectionDetails = (connection: NWCConnection) => {
-        this.props.navigation.navigate('ConnectionDetails', {
+        this.props.navigation.navigate('NWCConnectionDetails', {
             connectionId: connection.id
         });
     };
@@ -311,7 +311,9 @@ export default class NostrWalletConnect extends React.Component<
                         ) : (
                             <TouchableOpacity
                                 onPress={() =>
-                                    navigation.navigate('AddNWCConnection')
+                                    navigation.navigate(
+                                        'AddOrEditNWCConnection'
+                                    )
                                 }
                                 accessibilityLabel={localeString(
                                     'views.Settings.NostrWalletConnect.addConnection'
