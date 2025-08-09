@@ -74,6 +74,11 @@ describe('AddressUtils', () => {
             ).toEqual(true);
             expect(
                 AddressUtils.isValidBIP21Uri(
+                    'bitcoin:?lightning=lnbcrt421fs1mmv3982skms'
+                )
+            ).toEqual(true);
+            expect(
+                AddressUtils.isValidBIP21Uri(
                     'shitcoin:?LNO=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
                 )
             ).toEqual(false);
@@ -162,6 +167,16 @@ describe('AddressUtils', () => {
             ).toEqual({
                 value: '',
                 offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
+
+            // lightning invoices
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?lightning=lnbcrt421fs1mmv3982skms'
+                )
+            ).toEqual({
+                value: '',
+                lightning: 'lnbcrt421fs1mmv3982skms'
             });
         });
     });

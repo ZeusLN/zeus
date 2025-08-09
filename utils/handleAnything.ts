@@ -231,12 +231,12 @@ const handleAnything = async (
             return [
                 'ChoosePaymentMethod',
                 {
-                    lightning: value,
+                    lightning: value || lightning,
                     locked: true
                 }
             ];
         } else {
-            await invoicesStore.getPayReq(value);
+            await invoicesStore.getPayReq(value || lightning);
             return ['PaymentRequest', {}];
         }
     } else if (
