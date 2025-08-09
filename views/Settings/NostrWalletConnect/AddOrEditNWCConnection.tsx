@@ -17,7 +17,6 @@ import SettingsStore from '../../../stores/SettingsStore';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
-
 import NWCConnection from '../../../models/NWCConnection';
 
 interface AddOrEditNWCConnectionProps {
@@ -40,7 +39,12 @@ interface AddOrEditNWCConnectionState {
     error: string;
     originalConnection: NWCConnection | null;
     hasChanges: boolean;
-    selectedPermissionType: 'full_access' | 'read_only' | 'isolated' | 'custom';
+    selectedPermissionType:
+        | 'full_access'
+        | 'read_only'
+        | 'isolated'
+        | 'custom'
+        | null;
     isIsolated: boolean;
 }
 
@@ -184,7 +188,15 @@ export default class AddOrEditNWCConnection extends React.Component<
         super(props);
         this.state = {
             connectionName: '',
-            selectedPermissions: ['get_info', 'get_balance', 'pay_invoice'], // default permissions
+            selectedPermissions: [
+                'get_info',
+                'get_balance',
+                'pay_invoice',
+                'make_invoice',
+                'lookup_invoice',
+                'list_transactions',
+                'pay_keysend'
+            ], // default to full access permissions
             maxAmountSats: '',
             selectedBudgetRenewalIndex: 0,
             expiryDays: '',
@@ -223,6 +235,46 @@ export default class AddOrEditNWCConnection extends React.Component<
                 expiryDays = diffDays > 0 ? diffDays.toString() : '';
             }
 
+            let permissionType:
+                | 'full_access'
+                | 'read_only'
+                | 'isolated'
+                | 'custom' = 'custom';
+            const fullAccessPermissions = [
+                'get_info',
+                'get_balance',
+                'pay_invoice',
+                'make_invoice',
+                'lookup_invoice',
+                'list_transactions',
+                'pay_keysend'
+            ];
+            const readOnlyPermissions = [
+                'get_info',
+                'get_balance',
+                'make_invoice',
+                'lookup_invoice',
+                'list_transactions'
+            ];
+
+            const connectionPermissions = connection.permissions.sort();
+            const fullAccessSorted = fullAccessPermissions.sort();
+            const readOnlySorted = readOnlyPermissions.sort();
+
+            if (
+                JSON.stringify(connectionPermissions) ===
+                JSON.stringify(fullAccessSorted)
+            ) {
+                permissionType = 'full_access';
+            } else if (
+                JSON.stringify(connectionPermissions) ===
+                JSON.stringify(readOnlySorted)
+            ) {
+                permissionType = connection.isolated ? 'isolated' : 'read_only';
+            } else {
+                permissionType = 'custom';
+            }
+
             this.setState({
                 connectionName: connection.name,
                 selectedPermissions: connection.permissions,
@@ -232,7 +284,9 @@ export default class AddOrEditNWCConnection extends React.Component<
                 expiryDays,
                 description: connection.description || '',
                 originalConnection: connection,
-                hasChanges: false
+                hasChanges: false,
+                selectedPermissionType: permissionType,
+                isIsolated: connection.isolated || false
             });
         }
     };
@@ -290,9 +344,26 @@ export default class AddOrEditNWCConnection extends React.Component<
         });
     };
 
+    isFormValid = () => {
+        const { connectionName, selectedPermissions } = this.state;
+        return (
+            connectionName.trim().length > 0 && selectedPermissions.length > 0
+        );
+    };
+
     selectPermissionType = (
         permissionType: 'full_access' | 'read_only' | 'isolated' | 'custom'
     ) => {
+        // If the same permission type is selected, toggle it off
+        if (this.state.selectedPermissionType === permissionType) {
+            this.updateStateWithChangeTracking({
+                selectedPermissionType: null,
+                selectedPermissions: [],
+                isIsolated: false
+            });
+            return;
+        }
+
         let newPermissions: string[] = [];
         let isIsolated = false;
 
@@ -391,8 +462,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                 permissions: selectedPermissions,
                 budgetRenewal
             };
-
-            if (maxAmountSats) {
+            if (maxAmountSats.trim()) {
                 const budget = parseInt(maxAmountSats, 10);
                 if (isNaN(budget) || budget <= 0) {
                     this.setState({
@@ -402,9 +472,14 @@ export default class AddOrEditNWCConnection extends React.Component<
                     });
                     return;
                 }
-                params.budgetAmount = budget;
+                if (isEdit && connectionId) {
+                    params.maxAmountSats = budget;
+                } else {
+                    params.budgetAmount = budget;
+                }
+            } else if (isEdit && connectionId) {
+                params.maxAmountSats = undefined;
             }
-
             if (expiryDays) {
                 const days = parseInt(expiryDays, 10);
                 if (isNaN(days) || days <= 0) {
@@ -904,16 +979,18 @@ export default class AddOrEditNWCConnection extends React.Component<
                             buttonStyle={{
                                 ...styles.createButton,
                                 backgroundColor:
-                                    route.params?.isEdit &&
-                                    !this.state.hasChanges
+                                    !this.isFormValid() ||
+                                    (route.params?.isEdit &&
+                                        !this.state.hasChanges)
                                         ? themeColor('secondary')
                                         : themeColor('highlight')
                             }}
                             titleStyle={{
                                 color:
-                                    route.params?.isEdit &&
-                                    !this.state.hasChanges
-                                        ? themeColor('secondary')
+                                    !this.isFormValid() ||
+                                    (route.params?.isEdit &&
+                                        !this.state.hasChanges)
+                                        ? themeColor('secondaryText')
                                         : themeColor('background'),
                                 fontFamily: 'PPNeueMontreal-Book',
                                 fontSize: 16,
@@ -921,6 +998,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                             }}
                             disabled={
                                 storeLoading ||
+                                !this.isFormValid() ||
                                 (route.params?.isEdit && !this.state.hasChanges)
                             }
                         />
