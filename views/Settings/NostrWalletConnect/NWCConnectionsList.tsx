@@ -58,7 +58,6 @@ export default class NWCConnectionsList extends React.Component<
     async componentDidMount() {
         this.props.navigation.addListener('focus', this.handleFocus);
         await this.loadSettings();
-        await this.props.NostrWalletConnectStore.initializeService();
     }
 
     componentWillUnmount() {
@@ -84,7 +83,6 @@ export default class NWCConnectionsList extends React.Component<
 
     handleFocus = async () => {
         await this.loadSettings();
-        await this.props.NostrWalletConnectStore.initializeService();
     };
 
     navigateToConnectionDetails = (connection: NWCConnection) => {
@@ -107,22 +105,25 @@ export default class NWCConnectionsList extends React.Component<
     };
 
     formatDate = (date: Date) => {
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - date.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const dateOptions: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        };
+        const timeOptions: Intl.DateTimeFormatOptions = {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        };
 
-        if (diffDays === 0) {
-            return 'Today';
-        } else if (diffDays === 1) {
-            return 'Yesterday';
-        } else if (diffDays < 7) {
-            return `${diffDays} days ago`;
-        } else {
-            return date.toLocaleDateString();
-        }
+        const dateStr = date.toLocaleDateString('en-US', dateOptions);
+        const timeStr = date.toLocaleTimeString('en-US', timeOptions);
+
+        return `${dateStr} at ${timeStr}`;
     };
 
     renderConnection = ({ item: connection }: { item: NWCConnection }) => {
+        console.log(connection.budgetUsagePercentage);
         return (
             <View>
                 <TouchableOpacity
@@ -184,21 +185,31 @@ export default class NWCConnectionsList extends React.Component<
                                     { color: themeColor('text') }
                                 ]}
                             >
-                                {connection.maxAmountSats.toLocaleString()} sats
+                                {`${connection.remainingBudget.toLocaleString()} sats`}
                             </Text>
-                            <View
-                                style={[
-                                    styles.budgetBar,
-                                    { backgroundColor: themeColor('border') }
-                                ]}
-                            >
+                            <View style={styles.budgetBarContainer}>
                                 <View
                                     style={[
-                                        styles.budgetBarFill,
+                                        styles.budgetBarBackground,
                                         {
-                                            width: '100%',
                                             backgroundColor:
                                                 themeColor('highlight')
+                                        }
+                                    ]}
+                                />
+                                <View
+                                    style={[
+                                        styles.budgetBarProgress,
+                                        {
+                                            width: `${Math.min(
+                                                100,
+                                                connection.budgetUsagePercentage
+                                            )}%`,
+                                            backgroundColor:
+                                                connection.budgetUsagePercentage >
+                                                80
+                                                    ? themeColor('delete')
+                                                    : themeColor('success')
                                         }
                                     ]}
                                 />
@@ -226,10 +237,9 @@ export default class NWCConnectionsList extends React.Component<
                                         { color: themeColor('secondaryText') }
                                     ]}
                                 >
-                                    {connection.maxAmountSats.toLocaleString()}{' '}
-                                    sats
+                                    {`${connection.totalSpendSats.toLocaleString()} / ${connection.maxAmountSats.toLocaleString()} sats`}
                                     {connection.budgetRenewal !== 'never'
-                                        ? ` / ${connection.budgetRenewal}`
+                                        ? ` (${connection.budgetRenewal})`
                                         : ''}
                                 </Text>
                             </View>
@@ -502,7 +512,7 @@ const styles = StyleSheet.create({
         fontWeight: '600'
     },
     budgetSection: {
-        marginTop: 12
+        marginTop: 5
     },
     budgetLabel: {
         fontSize: 14,
@@ -515,13 +525,36 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         marginBottom: 8
     },
+    budgetBarContainer: {
+        position: 'relative',
+        marginBottom: 8,
+        height: 8
+    },
     budgetBar: {
         height: 8,
         borderRadius: 4,
-        marginBottom: 8
+        width: '100%'
+    },
+    budgetBarBackground: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        height: 8,
+        borderRadius: 4,
+        width: '100%'
+    },
+    budgetBarProgress: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        height: 8,
+        borderRadius: 4
     },
     budgetBarFill: {
-        height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        height: 8,
         borderRadius: 4
     },
     budgetDetails: {
