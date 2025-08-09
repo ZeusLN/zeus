@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Route } from '@react-navigation/native';
@@ -40,19 +40,18 @@ export default class NWCConnectionQR extends React.Component<
         const { NostrWalletConnectStore, route } = this.props;
         const { connectionId } = route.params;
         NostrWalletConnectStore.startWaitingForConnection(connectionId);
-        console.log('Started waiting for connection:', connectionId);
     }
 
-    componentDidUpdate(prevProps: NWCConnectionQRProps) {
+    componentDidUpdate() {
         const { NostrWalletConnectStore, navigation } = this.props;
         if (
-            prevProps.NostrWalletConnectStore.waitingForConnection &&
-            !NostrWalletConnectStore.waitingForConnection
+            NostrWalletConnectStore.connectionJustSucceeded &&
+            !this.state.isConnected
         ) {
             this.setState({ isConnected: true });
             setTimeout(() => {
-                navigation.navigate('ConnectionsList');
-            }, 1500);
+                navigation.navigate('NostrWalletConnect');
+            }, 2000);
         }
     }
 
@@ -63,9 +62,7 @@ export default class NWCConnectionQR extends React.Component<
 
     render() {
         const { navigation, NostrWalletConnectStore, route } = this.props;
-        const { connectionId, nostrUrl } = route.params;
-        const connection = NostrWalletConnectStore.getConnection(connectionId);
-
+        const { nostrUrl } = route.params;
         return (
             <Screen>
                 <Header
@@ -81,105 +78,72 @@ export default class NWCConnectionQR extends React.Component<
                     }}
                     navigation={navigation}
                 />
+                <ScrollView
+                    style={{
+                        paddingHorizontal: 15
+                    }}
+                >
+                    <CollapsedQR
+                        value={nostrUrl}
+                        showShare={true}
+                        copyText={localeString(
+                            'views.Settings.NostrWalletConnect.copyUrl'
+                        )}
+                        hideText={true}
+                        expanded
+                        iconOnly={true}
+                    />
 
-                <View style={[styles.container]}>
-                    <View style={styles.content}>
-                        <View style={styles.header}>
+                    {NostrWalletConnectStore.waitingForConnection && (
+                        <View style={[styles.loadingContainer]}>
+                            <LoadingIndicator />
                             <Text
                                 style={[
-                                    styles.title,
-                                    { color: themeColor('text') }
+                                    styles.loadingText,
+                                    { color: themeColor('secondaryText') }
                                 ]}
                             >
                                 {localeString(
-                                    'views.Settings.NostrWalletConnect.connectionSecretCreated'
+                                    'views.Settings.NostrWalletConnect.waitingForAppToConnect'
                                 )}
                             </Text>
-                            {connection && (
-                                <Text
-                                    style={[
-                                        styles.subtitle,
-                                        { color: themeColor('secondaryText') }
-                                    ]}
-                                >
-                                    {connection.name}
-                                </Text>
-                            )}
                         </View>
+                    )}
 
-                        <View style={styles.qrContainer}>
-                            <CollapsedQR
-                                value={nostrUrl}
-                                showShare={true}
-                                copyText={localeString(
-                                    'views.Settings.NostrWalletConnect.copyUrl'
-                                )}
-                                expanded={true}
-                                iconOnly={true}
-                                hideText={true}
-                            />
-                        </View>
-
-                        {NostrWalletConnectStore.waitingForConnection && (
-                            <View style={[styles.loadingContainer]}>
-                                <LoadingIndicator />
-                                <Text
-                                    style={[
-                                        styles.loadingText,
-                                        { color: themeColor('secondaryText') }
-                                    ]}
-                                >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.waitingForAppToConnect'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
-
-                        {this.state.isConnected && (
-                            <View
+                    {this.state.isConnected && (
+                        <View style={[styles.connectedContainer]}>
+                            <Text
                                 style={[
-                                    styles.connectedContainer,
-                                    {
-                                        backgroundColor: themeColor('success'),
-                                        borderColor: themeColor('success')
-                                    }
+                                    styles.connectedText,
+                                    { color: themeColor('success') }
                                 ]}
                             >
-                                <Text
-                                    style={[
-                                        styles.connectedText,
-                                        { color: themeColor('text') }
-                                    ]}
-                                >
-                                    {localeString(
-                                        'views.Settings.NostrWalletConnect.connectedSuccessfully'
-                                    )}
-                                </Text>
-                            </View>
-                        )}
-
-                        <View style={styles.buttonContainer}>
-                            <Button
-                                title={localeString('general.close')}
-                                onPress={() => {
-                                    NostrWalletConnectStore.stopWaitingForConnection();
-                                    navigation.goBack();
-                                }}
-                                buttonStyle={[
-                                    styles.closeButton,
-                                    {
-                                        backgroundColor: themeColor('secondary')
-                                    }
-                                ]}
-                                titleStyle={{
-                                    ...styles.closeButtonText,
-                                    color: themeColor('secondary')
-                                }}
-                            />
+                                {localeString(
+                                    'views.Settings.NostrWalletConnect.connectedSuccessfully'
+                                )}
+                            </Text>
                         </View>
+                    )}
+                    <View style={styles.buttonContainer}>
+                        <Button
+                            title={localeString('general.close')}
+                            onPress={() => {
+                                NostrWalletConnectStore.stopWaitingForConnection();
+                                navigation.navigate('NostrWalletConnect');
+                            }}
+                            buttonStyle={[
+                                styles.closeButton,
+                                {
+                                    backgroundColor: themeColor('secondary')
+                                }
+                            ]}
+                            titleStyle={{
+                                ...styles.closeButtonText,
+                                color: themeColor('secondary')
+                            }}
+                        />
                     </View>
-                </View>
+                </ScrollView>
             </Screen>
         );
     }
@@ -248,12 +212,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 40,
         paddingVertical: 20,
-        borderRadius: 12,
-        paddingHorizontal: 24,
-        borderWidth: 1
+        paddingHorizontal: 24
     },
     connectedText: {
-        fontSize: 18,
+        fontSize: 16,
         fontFamily: 'PPNeueMontreal-Book',
         textAlign: 'center',
         fontWeight: '600'

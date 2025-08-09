@@ -92,21 +92,20 @@ export default class NWCConnectionDetails extends React.Component<
     };
 
     formatDate = (date: Date) => {
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - date.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const dateOptions: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        };
+        const timeOptions: Intl.DateTimeFormatOptions = {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        };
+        const dateStr = date.toLocaleDateString('en-US', dateOptions);
+        const timeStr = date.toLocaleTimeString('en-US', timeOptions);
 
-        if (diffDays === 0) {
-            return localeString('views.Settings.NostrWalletConnect.today');
-        } else if (diffDays === 1) {
-            return localeString('views.Settings.NostrWalletConnect.yesterday');
-        } else if (diffDays < 7) {
-            return `${diffDays} ${localeString(
-                'views.Settings.NostrWalletConnect.daysAgo'
-            )}`;
-        } else {
-            return date.toLocaleDateString();
-        }
+        return `${dateStr} at ${timeStr}`;
     };
 
     getAllPermissions = () => {
@@ -295,12 +294,34 @@ export default class NWCConnectionDetails extends React.Component<
                                             localeString(
                                                 'views.Settings.NostrWalletConnect.unlimited'
                                             )
-                                        } sats${
+                                        } ${localeString('general.sats')}${
                                             connection.budgetRenewal !== 'never'
                                                 ? ` (${connection.budgetRenewal})`
                                                 : ''
                                         }`}
                                     />
+
+                                    {connection.maxAmountSats && (
+                                        <>
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Settings.NostrWalletConnect.totalSpent'
+                                                )}
+                                                value={`${connection.totalSpendSats.toLocaleString()} ${localeString(
+                                                    'general.sats'
+                                                )}`}
+                                            />
+
+                                            <KeyValue
+                                                keyValue={localeString(
+                                                    'views.Settings.NostrWalletConnect.remainingBudget'
+                                                )}
+                                                value={`${connection.remainingBudget.toLocaleString()} ${localeString(
+                                                    'general.sats'
+                                                )}`}
+                                            />
+                                        </>
+                                    )}
 
                                     {connection.expiresAt && (
                                         <KeyValue
