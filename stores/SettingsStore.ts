@@ -293,7 +293,7 @@ export const SWAP_HOST_KEYS_MAINNET = [
         key: 'Eldamar Swaps',
         value: 'https://boltz-api.eldamar.icu/v2',
         pro: false,
-        supportsRescue: false
+        supportsRescue: true
     },
     {
         key: 'Custom',
