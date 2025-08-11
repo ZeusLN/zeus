@@ -72,13 +72,10 @@ interface CashuPaymentRequestState {
     satAmount: string | number;
     zaplockerToggle: boolean;
     slideToPayThreshold: number;
-<<<<<<< HEAD
     donationsToggle: boolean;
     donationPercentage: any;
     donationAmount: any;
     selectedIndex: number | null;
-=======
->>>>>>> c0f9d735 (feat: global enable multimint state)
 }
 
 @inject(
@@ -101,7 +98,6 @@ export default class CashuPaymentRequest extends React.Component<
         customAmount: '',
         satAmount: '',
         zaplockerToggle: false,
-<<<<<<< HEAD
         slideToPayThreshold: 10000,
         donationsToggle: false,
         donationPercentage: 0,
@@ -138,32 +134,6 @@ export default class CashuPaymentRequest extends React.Component<
             }
         );
     }
-=======
-        slideToPayThreshold: 10000
-    };
-
-    handleToggleMultiMint = async (value: boolean) => {
-        const { CashuStore, SettingsStore } = this.props;
-
-        try {
-            if (SettingsStore) {
-                await SettingsStore.updateSettings({
-                    ecash: {
-                        ...SettingsStore.settings.ecash,
-                        enableMultiMint: value
-                    }
-                });
-
-                const { paymentRequest, getPayReq } = CashuStore;
-                if (paymentRequest) {
-                    await getPayReq(paymentRequest);
-                }
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
->>>>>>> c0f9d735 (feat: global enable multimint state)
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
@@ -945,9 +915,6 @@ export default class CashuPaymentRequest extends React.Component<
                                 <EcashMintPicker
                                     showMore={true}
                                     navigation={navigation}
-                                    setFromCashuSend={(value: boolean) => {
-                                        CashuStore.setFromCashuSend(value);
-                                    }}
                                 />
                             </View>
 
