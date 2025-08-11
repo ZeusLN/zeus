@@ -69,7 +69,8 @@ export default class MultimintPayment extends React.Component<
             .map((mint) => ({
                 ...mint,
                 status: MintPaymentStatus.IDLE,
-                allocatedAmount: 0
+                allocatedAmount: 0,
+                error: undefined
             }));
 
         const totalBalance = selectedMints.reduce(
@@ -82,7 +83,8 @@ export default class MultimintPayment extends React.Component<
             totalSelectedBalance: totalBalance,
             paymentRequest,
             isProcessing: false,
-            step: MultinutPaymentStep.PROCESSING
+            step: MultinutPaymentStep.PROCESSING,
+            error: undefined
         };
     }
 
@@ -90,7 +92,11 @@ export default class MultimintPayment extends React.Component<
         this.executePayment();
     }
 
-    onProgressUpdate = (progressInfo: any) => {
+    onProgressUpdate = (progressInfo: {
+        mints: MintInfo[];
+        isProcessing: boolean;
+        step: MultinutPaymentStep;
+    }) => {
         this.setState({
             mints: progressInfo.mints || this.state.mints,
             isProcessing: progressInfo.isProcessing ?? this.state.isProcessing,
@@ -101,7 +107,8 @@ export default class MultimintPayment extends React.Component<
     executePayment = async () => {
         const { CashuStore } = this.props;
         const amount =
-            CashuStore?.payReq?.getRequestAmount!! + CashuStore?.feeEstimate!!;
+            (CashuStore?.payReq?.getRequestAmount ?? 0) +
+            (CashuStore?.feeEstimate ?? 0);
 
         if (!CashuStore) {
             this.setState({
@@ -116,7 +123,12 @@ export default class MultimintPayment extends React.Component<
             this.setState({
                 isProcessing: true,
                 step: MultinutPaymentStep.PROCESSING,
-                error: undefined
+                error: undefined,
+                mints: this.state.mints.map((m) => ({
+                    ...m,
+                    status: MintPaymentStatus.IDLE,
+                    error: undefined
+                }))
             });
 
             await CashuStore.payLnInvoiceFromEcash({
@@ -169,7 +181,8 @@ export default class MultimintPayment extends React.Component<
                     backgroundColor: 'transparent'
                 }}
             >
-                {(item.status === 'paying' || item.status === 'requesting') && (
+                {(item.status === MintPaymentStatus.PAYING ||
+                    item.status === MintPaymentStatus.REQUESTING) && (
                     <ActivityIndicator
                         size="small"
                         color={themeColor('highlight')}
@@ -177,7 +190,7 @@ export default class MultimintPayment extends React.Component<
                     />
                 )}
 
-                {item.status === 'success' && (
+                {item.status === MintPaymentStatus.SUCCESS && (
                     <Icon
                         name="check-circle"
                         color={themeColor('success')}
@@ -230,8 +243,9 @@ export default class MultimintPayment extends React.Component<
     render() {
         const { navigation, CashuStore } = this.props;
         const amount = CashuStore?.feeEstimate
-            ? CashuStore?.payReq?.getRequestAmount!! + CashuStore?.feeEstimate
-            : CashuStore?.payReq?.getRequestAmount!!;
+            ? (CashuStore?.payReq?.getRequestAmount ?? 0) +
+              CashuStore?.feeEstimate
+            : CashuStore?.payReq?.getRequestAmount ?? 0;
         const { mints, totalSelectedBalance, step, error } = this.state;
 
         return (
