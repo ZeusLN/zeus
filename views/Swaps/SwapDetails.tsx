@@ -886,7 +886,7 @@ export default class SwapDetails extends React.Component<
                         value={swapData.id}
                     />
 
-                    {swapData.isNewSubmarineSwap && (
+                    {swapData.isSubmarineSwap && swapData?.expectedAmount && (
                         <>
                             <KeyValue
                                 keyValue={localeString(
@@ -923,17 +923,21 @@ export default class SwapDetails extends React.Component<
                     )}
                     {swapData.isReverseSwap && (
                         <>
-                            <KeyValue
-                                keyValue={localeString('views.Invoice.title')}
-                                value={swapData.invoice}
-                            />
+                            {swapData?.invoice && (
+                                <KeyValue
+                                    keyValue={localeString(
+                                        'views.Invoice.title'
+                                    )}
+                                    value={swapData.invoice}
+                                />
+                            )}
                             <KeyValue
                                 keyValue={localeString(
                                     'views.SwapDetails.onchainAmount'
                                 )}
                                 value={
                                     <Amount
-                                        sats={swapData?.onchainAmount}
+                                        sats={swapData?.getAmount}
                                         sensitive
                                         toggleable
                                     />
@@ -969,15 +973,15 @@ export default class SwapDetails extends React.Component<
                             value={swapData?.servicePubKey}
                         />
                     )}
-                    {swapData.isReverseSwap && (
+                    {swapData.isReverseSwap && swapData.refundPubKey && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.SwapDetails.refundPublicKey'
                             )}
-                            value={swapData.refundPublicKey}
+                            value={swapData.refundPubKey}
                         />
                     )}
-                    {swapData.isSubmarineSwap && swapData?.preimageHash && (
+                    {swapData.isReverseSwap && swapData?.preimageHash && (
                         <KeyValue
                             keyValue={localeString(
                                 'views.SwapDetails.preimageHash'
