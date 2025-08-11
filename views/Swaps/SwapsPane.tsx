@@ -147,7 +147,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         {item.id}
                     </Text>
                 </View>
-                {item.expectedAmount && (
+                {(item.expectedAmount || item.isReverseSwap) && (
                     <View
                         style={{
                             flexDirection: 'row',
@@ -162,7 +162,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 fontSize: 16
                             }}
                         >
-                            {item?.type === 'Submarine'
+                            {item?.isSubmarineSwap
                                 ? `${localeString(
                                       'views.SwapDetails.expectedAmount'
                                   )}`
@@ -172,9 +172,11 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         </Text>
                         <Amount
                             sats={
-                                item?.type === 'Submarine'
+                                item?.isSubmarineSwap
                                     ? item.expectedAmount
-                                    : item.onchainAmount
+                                    : item.isReverseSwap
+                                    ? item.getAmount
+                                    : undefined
                             }
                             sensitive
                             toggleable

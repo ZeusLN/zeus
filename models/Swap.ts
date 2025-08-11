@@ -13,6 +13,7 @@ export default class Swap extends BaseModel {
     lockupAddress?: string;
     nodePubkey: string;
     onchainAmount?: number;
+    amount?: number;
     preimage?: { data: number[]; type: string };
     refundPublicKey?: string;
     serviceProvider: string;
@@ -45,12 +46,16 @@ export default class Swap extends BaseModel {
         return this.type === 'Submarine';
     }
 
-    @computed get isNewSubmarineSwap(): boolean {
-        return this.isSubmarineSwap && this.bip21 !== undefined;
+    @computed get isReverseSwap(): boolean {
+        return this.type === 'Reverse';
     }
 
-    @computed get isReverseSwap(): boolean {
-        return this.type === 'Reverse' && this.lockupAddress !== undefined;
+    @computed get refundPubKey(): string | undefined {
+        return this.refundPublicKey || this.serverPublicKey;
+    }
+
+    @computed get getAmount(): number | undefined {
+        return this.onchainAmount || this.amount;
     }
 
     @computed get servicePubKey(): string | undefined {
@@ -66,11 +71,8 @@ export default class Swap extends BaseModel {
     }
 
     @computed get qrCodeValue(): string | undefined {
-        if (this.isNewSubmarineSwap) {
-            return this.bip21;
-        }
-        if (this.isSubmarineSwap && !!this.lockupAddress) {
-            return this.lockupAddress;
+        if (this.isSubmarineSwap) {
+            return this.bip21 || this.lockupAddress;
         }
         if (this.isReverseSwap) {
             return this.invoice;

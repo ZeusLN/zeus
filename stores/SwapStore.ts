@@ -2,7 +2,6 @@ import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
-import { randomBytes } from 'crypto';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
 import { validateMnemonic } from '@scure/bip39';
@@ -353,10 +352,10 @@ export default class SwapStore {
         const nodePubkey = nodeInfo.nodeId;
         try {
             initEccLib(ecc);
-            console.log('Creating reverse swap...');
+            console.log('Creating reverse swap using rescue key...');
+            const { keys, index } = await this.generateNewKey();
 
-            const preimage = randomBytes(32);
-            const keys: any = ECPairFactory(ecc).makeRandom();
+            const preimage = await this.derivePreimageFromRescueKey(index);
 
             // Creating a reverse swap
             const data = JSON.stringify({
@@ -678,6 +677,23 @@ export default class SwapStore {
     };
 
     @action
+    public derivePreimageFromRescueKey = async (index: number) => {
+        const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+        if (!mnemonic) {
+            throw new Error('Rescue mnemonic not found in storage.');
+        }
+
+        const hdKey = this.mnemonicToHDKey(mnemonic);
+        const childKey = hdKey.derive(this.getPath(index));
+
+        if (!childKey.privateKey) {
+            throw new Error(`No private key at index ${index}`);
+        }
+
+        return crypto.sha256(Buffer.from(childKey.privateKey));
+    };
+
+    @action
     public generateRescueKey = async () => {
         console.log('GENERATING RESCUE FILE...');
         const mnemonic = bip39.generateMnemonic();
@@ -734,7 +750,7 @@ export default class SwapStore {
             try {
                 const response = await ReactNativeBlobUtil.fetch(
                     'POST',
-                    `${host}/swap/rescue`,
+                    `${host}/swap/restore`,
                     {
                         'Content-Type': 'application/json'
                     },
@@ -759,14 +775,32 @@ export default class SwapStore {
                                     !existingSwapIds.includes(swap.id)
                             )
                             .map(async (swap: any) => {
+                                const isReverseSwap = swap.type === 'reverse';
+                                const details = isReverseSwap
+                                    ? swap.claimDetails
+                                    : swap.refundDetails;
+
+                                const swapDetails: any = {};
+
+                                for (const key in swap) {
+                                    if (
+                                        key !== 'claimDetails' &&
+                                        key !== 'refundDetails'
+                                    ) {
+                                        swapDetails[key] = swap[key];
+                                    }
+                                }
+
+                                const { keyIndex } = details;
+
                                 const hdKey = this.mnemonicToHDKey(mnemonic);
                                 const childKey = hdKey.derive(
-                                    this.getPath(swap.keyIndex)
+                                    this.getPath(keyIndex)
                                 );
 
                                 if (!childKey.privateKey) {
                                     throw new Error(
-                                        `No private key at index ${swap.keyIndex}`
+                                        `No private key at index ${keyIndex}`
                                     );
                                 }
 
@@ -781,18 +815,30 @@ export default class SwapStore {
                                     ecPair.publicKey
                                 ).toString('hex');
 
-                                return {
-                                    ...swap,
+                                const rescuedSwapBase = {
+                                    ...swapDetails,
+                                    ...details,
                                     imported: true,
                                     implementation,
                                     nodePubkey,
                                     endpoint: host,
                                     serviceProvider: this.getServiceProvider,
-                                    type: 'Submarine',
-                                    keys: ecPair,
-                                    refundPrivateKey,
-                                    refundPublicKey
+                                    keys: ecPair
                                 };
+
+                                if (isReverseSwap) {
+                                    return {
+                                        ...rescuedSwapBase,
+                                        type: 'Reverse'
+                                    };
+                                } else {
+                                    return {
+                                        ...rescuedSwapBase,
+                                        type: 'Submarine',
+                                        refundPrivateKey,
+                                        refundPublicKey
+                                    };
+                                }
                             })
                     );
 
