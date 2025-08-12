@@ -12,14 +12,13 @@ import { getParams as getlnurlParams } from 'js-lnurl';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { inject, observer } from 'mobx-react';
 
-import { RectButton } from 'react-native-gesture-handler';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { RectButton, Swipeable } from 'react-native-gesture-handler';
 
-import BackendUtils from '../../utils/BackendUtils';
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
+import BackendUtils from './../../utils/BackendUtils';
+import { localeString } from './../../utils/LocaleUtils';
+import { themeColor } from './../../utils/ThemeUtils';
 
 import {
     modalStore,
