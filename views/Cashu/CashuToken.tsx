@@ -31,6 +31,10 @@ import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import Base64Utils from '../../utils/Base64Utils';
 import { splitQRs } from '../../utils/BbqrUtils';
+import {
+    getQRAnimationInterval,
+    QRAnimationSpeed
+} from '../../utils/QRAnimationUtils';
 
 interface CashuTokenProps {
     navigation: StackNavigationProp<any, any>;
@@ -50,6 +54,7 @@ interface CashuTokenState {
     cashuFrameIndex: number;
     cashuBcurPart: string;
     isTokenTooLarge: boolean;
+    qrAnimationSpeed: QRAnimationSpeed;
 }
 
 @inject('CashuStore', 'ChannelsStore')
@@ -58,6 +63,7 @@ export default class CashuTokenView extends React.Component<
     CashuTokenProps,
     CashuTokenState
 > {
+    private qrAnimationInterval?: any;
     state = {
         updatedToken: undefined,
         success: false,
@@ -68,7 +74,8 @@ export default class CashuTokenView extends React.Component<
         cashuBcurEncoder: undefined,
         cashuFrameIndex: 0,
         cashuBcurPart: '',
-        isTokenTooLarge: false
+        isTokenTooLarge: false,
+        qrAnimationSpeed: 'medium' as QRAnimationSpeed
     };
 
     async componentDidMount() {
@@ -97,7 +104,6 @@ export default class CashuTokenView extends React.Component<
             if (!cashuWallets[mint].wallet) {
                 await initializeWallet(mint, true);
             }
-
             // Set up a periodic check every 5 seconds
             const checkInterval = setInterval(async () => {
                 const isSpent = await checkTokenSpent(decoded);
@@ -118,6 +124,11 @@ export default class CashuTokenView extends React.Component<
             }, 5000);
         }
     }
+    componentWillUnmount() {
+        if (this.qrAnimationInterval) {
+            clearInterval(this.qrAnimationInterval);
+        }
+    }
 
     generateCashuInfo = (token: string) => {
         const MAX_TOKEN_LENGTH = 1000;
@@ -131,13 +142,10 @@ export default class CashuTokenView extends React.Component<
             minVersion: 5,
             maxVersion: 40
         });
-
         const messageBuffer = Buffer.from(token, 'utf-8');
         const ur = UR.fromBuffer(messageBuffer);
         const encoder = new UREncoder(ur, 200, 0);
-
         const length = splitResult.parts.length;
-
         this.setState({
             cashuBcurEncoder: encoder,
             cashuBBQrParts: splitResult.parts,
@@ -145,8 +153,12 @@ export default class CashuTokenView extends React.Component<
             cashuBcurPart: encoder.nextPart(),
             isTokenTooLarge: token.length > MAX_TOKEN_LENGTH
         });
-
-        setInterval(() => {
+        // Clear any existing interval
+        if (this.qrAnimationInterval) {
+            clearInterval(this.qrAnimationInterval);
+        }
+        const interval = getQRAnimationInterval(this.state.qrAnimationSpeed);
+        this.qrAnimationInterval = setInterval(() => {
             this.setState((prevState: any) => ({
                 cashuFrameIndex:
                     prevState.cashuFrameIndex === length - 1
@@ -154,7 +166,7 @@ export default class CashuTokenView extends React.Component<
                         : prevState.cashuFrameIndex + 1,
                 cashuBcurPart: encoder.nextPart()
             }));
-        }, 1000);
+        }, interval);
     };
 
     render() {
@@ -481,8 +493,26 @@ export default class CashuTokenView extends React.Component<
                                         !this.state.isTokenTooLarge &&
                                         selectedIndex === 0
                                     }
+                                    showSpeed={
+                                        this.state.isTokenTooLarge ||
+                                        (!this.state.isTokenTooLarge &&
+                                            selectedIndex > 0)
+                                    }
                                     truncateLongValue
                                     expanded
+                                    qrAnimationSpeed={
+                                        this.state.qrAnimationSpeed
+                                    }
+                                    onQRAnimationSpeedChange={(speed) => {
+                                        this.setState(
+                                            {
+                                                qrAnimationSpeed: speed
+                                            },
+                                            () => {
+                                                this.generateCashuInfo(token);
+                                            }
+                                        );
+                                    }}
                                 />
                             </View>
                         </>
