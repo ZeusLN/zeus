@@ -10,9 +10,11 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback
 } from 'react-native';
+import { ButtonGroup } from 'react-native-elements';
 
 import QRCode, { QRCodeProps } from 'react-native-qrcode-svg';
 
+import QRSpeedMeterButton from './QRSpeedButton';
 import Amount from './Amount';
 import Button from './Button';
 import CopyButton from './CopyButton';
@@ -22,6 +24,11 @@ import { localeString } from './../utils/LocaleUtils';
 import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
+import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
+
+import Turtle from '../assets/images/SVG/Turtle.svg';
+import Rabbit from '../assets/images/SVG/Rabbit.svg';
+import Gazelle from '../assets/images/SVG/Gazelle.svg';
 
 const defaultLogo = require('../assets/images/icon-black.png');
 const defaultLogoWhite = require('../assets/images/icon-white.png');
@@ -109,6 +116,7 @@ interface CollapsedQRProps {
     copyValue?: string;
     iconContainerStyle?: any;
     showShare?: boolean;
+    showSpeed?: boolean;
     iconOnly?: boolean;
     hideText?: boolean;
     expanded?: boolean;
@@ -118,6 +126,8 @@ interface CollapsedQRProps {
     nfcSupported?: boolean;
     satAmount?: string | number;
     displayAmount?: boolean;
+    qrAnimationSpeed?: QRAnimationSpeed;
+    onQRAnimationSpeedChange?: (speed: QRAnimationSpeed) => void;
 }
 
 interface CollapsedQRState {
@@ -125,6 +135,7 @@ interface CollapsedQRState {
     enlargeQR: boolean;
     tempQRRef: React.RefObject<QRCodeElement> | null;
     qrReady: boolean;
+    showSpeedOptions: boolean;
 }
 
 export default class CollapsedQR extends React.Component<
@@ -137,7 +148,9 @@ export default class CollapsedQR extends React.Component<
         collapsed: this.props.expanded ? false : true,
         enlargeQR: false,
         tempQRRef: null,
-        qrReady: false
+        qrReady: false,
+        qrAnimationSpeed: this.props.qrAnimationSpeed,
+        showSpeedOptions: false
     };
 
     toggleCollapse = () => {
@@ -151,7 +164,8 @@ export default class CollapsedQR extends React.Component<
     };
 
     render() {
-        const { collapsed, enlargeQR, tempQRRef } = this.state;
+        const { collapsed, enlargeQR, tempQRRef, showSpeedOptions } =
+            this.state;
         const {
             value,
             valueStyle,
@@ -167,11 +181,28 @@ export default class CollapsedQR extends React.Component<
             textBottom,
             truncateLongValue,
             logo,
-            satAmount
+            satAmount,
+            qrAnimationSpeed,
+            onQRAnimationSpeedChange,
+            showSpeed
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
 
+        const QR_ANIMATION_SPEED_OPTIONS = [
+            {
+                value: 'slow',
+                icon: Turtle
+            },
+            {
+                value: 'medium',
+                icon: Rabbit
+            },
+            {
+                value: 'fast',
+                icon: Gazelle
+            }
+        ];
         // Creates a temporary QR code for sharing and waits for component to be ready
         // Returns a promise that resolves when QR is fully rendered and ready to be captured
         const handleShare = () =>
@@ -191,6 +222,10 @@ export default class CollapsedQR extends React.Component<
 
         const supportsNFC =
             Platform.OS === 'android' && this.props.nfcSupported;
+
+        const qrSpeedSelectedIndex = QR_ANIMATION_SPEED_OPTIONS.findIndex(
+            (option) => option.value === qrAnimationSpeed
+        );
 
         return (
             <React.Fragment>
@@ -370,19 +405,91 @@ export default class CollapsedQR extends React.Component<
                         )}
                     </View>
                 ) : (
-                    <>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            gap: 8
+                        }}
+                    >
+                        {showSpeed && (
+                            <QRSpeedMeterButton
+                                showOptions={showSpeedOptions}
+                                onPress={() =>
+                                    this.setState({
+                                        showSpeedOptions: !showSpeedOptions
+                                    })
+                                }
+                                iconOnly={iconOnly}
+                            />
+                        )}
                         <CopyButton
                             copyValue={copyValue || value}
                             title={copyText}
                             iconOnly={iconOnly}
                         />
+
                         {supportsNFC && (
                             <NFCButton
                                 value={copyValue || value}
                                 iconOnly={iconOnly}
                             />
                         )}
-                    </>
+                    </View>
+                )}
+                {showSpeedOptions && onQRAnimationSpeedChange && showSpeed && (
+                    <View style={styles.speedOptions}>
+                        <ButtonGroup
+                            onPress={(index: number) => {
+                                const selectedOption =
+                                    QR_ANIMATION_SPEED_OPTIONS[index];
+                                onQRAnimationSpeedChange(
+                                    selectedOption.value as QRAnimationSpeed
+                                );
+                            }}
+                            selectedIndex={qrSpeedSelectedIndex}
+                            buttons={QR_ANIMATION_SPEED_OPTIONS.map(
+                                (option, index) =>
+                                    React.createElement(option.icon, {
+                                        width: 36,
+                                        height: 36,
+                                        fill:
+                                            qrSpeedSelectedIndex === index
+                                                ? themeColor('secondary')
+                                                : themeColor('secondaryText')
+                                    })
+                            )}
+                            selectedButtonStyle={{
+                                backgroundColor: themeColor('highlight'),
+                                borderRadius: 12,
+                                ...(Platform.OS === 'ios' && {
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                })
+                            }}
+                            buttonStyle={{
+                                ...(Platform.OS === 'ios' && {
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    paddingVertical: 8,
+                                    paddingHorizontal: 4
+                                })
+                            }}
+                            containerStyle={{
+                                backgroundColor: themeColor('secondary'),
+                                borderRadius: 12,
+                                borderColor: themeColor('secondary'),
+                                minWidth: 240,
+                                alignSelf: 'center',
+                                ...(Platform.OS === 'ios' && {
+                                    height: 48
+                                })
+                            }}
+                            innerBorderStyle={{
+                                color: themeColor('secondary')
+                            }}
+                        />
+                    </View>
                 )}
             </React.Fragment>
         );
@@ -400,5 +507,8 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         padding: 0,
         margin: 10
+    },
+    speedOptions: {
+        marginTop: 10
     }
 });
