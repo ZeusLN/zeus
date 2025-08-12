@@ -44,8 +44,7 @@ interface AmountDisplayProps {
     fiatRatesLoading?: boolean;
     accessible?: boolean;
     accessibilityLabel?: string;
-    exact?: boolean;
-    showRoundingIndicator?: boolean;
+    roundAmount?: boolean;
 }
 
 interface SymbolProps {
@@ -68,8 +67,7 @@ function AmountDisplay({
     fiatRatesLoading = false,
     accessible,
     accessibilityLabel,
-    exact = false,
-    showRoundingIndicator = false
+    roundAmount = false
 }: AmountDisplayProps) {
     if (unit === 'fiat' && !symbol) {
         console.error('Must include a symbol when rendering fiat');
@@ -188,7 +186,7 @@ function AmountDisplay({
     const renderCurrencyAmount = () => {
         const commonContent = (
             <>
-                {unit !== 'BTC' && !exact && (
+                {unit !== 'BTC' && roundAmount && (
                     <ApproximateSymbol accessible={accessible} />
                 )}
                 {amount !== 'N/A' && unit === 'fiat' && (
@@ -256,21 +254,18 @@ function AmountDisplay({
             const hideMsats =
                 !settingsStore?.settings?.display?.showMillisatoshiAmounts;
 
-            if (exact) {
+            if (!roundAmount) {
                 // For exact amounts, never round
                 return renderSatsAmount(amount.toString(), false);
             } else {
                 const [, decimalPart] = amount.toString().split('.');
                 const hasDecimals = decimalPart && Number(decimalPart) > 0;
 
-                const shouldRound =
-                    hasDecimals && (hideMsats || showRoundingIndicator);
+                const shouldRound = hasDecimals && (hideMsats || roundAmount);
                 const displayAmount = shouldRound
                     ? Math.round(Number(amount)).toString()
                     : amount.toString();
-                const shouldShowRounding = Boolean(
-                    shouldRound && showRoundingIndicator
-                );
+                const shouldShowRounding = Boolean(shouldRound && roundAmount);
 
                 return renderSatsAmount(displayAmount, shouldShowRounding);
             }
@@ -310,8 +305,7 @@ interface AmountProps {
     accessible?: boolean;
     accessibilityLabel?: string;
     negative?: boolean;
-    exact?: boolean;
-    showRoundingIndicator?: boolean;
+    roundAmount?: boolean;
 }
 
 @inject('FiatStore', 'UnitsStore', 'SettingsStore')
@@ -335,8 +329,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
             accessible,
             accessibilityLabel,
             negative = false,
-            exact = false,
-            showRoundingIndicator = false
+            roundAmount = false
         } = this.props;
         const FiatStore = this.props.FiatStore!;
         const UnitsStore = this.props.UnitsStore!;
@@ -389,8 +382,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                             fiatRatesLoading={FiatStore.loading}
                             accessible={accessible}
                             accessibilityLabel={accessibilityLabel}
-                            exact={exact}
-                            showRoundingIndicator={showRoundingIndicator}
+                            roundAmount={roundAmount}
                         />
                     </TouchableOpacity>
                 );
@@ -409,8 +401,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                     fiatRatesLoading={FiatStore.loading}
                     accessible={accessible}
                     accessibilityLabel={accessibilityLabel}
-                    exact={exact}
-                    showRoundingIndicator={showRoundingIndicator}
+                    roundAmount={roundAmount}
                 />
             );
         }
@@ -464,8 +455,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                         fiatRatesLoading={FiatStore.loading}
                         accessible={accessible}
                         accessibilityLabel={accessibilityLabel}
-                        exact={exact}
-                        showRoundingIndicator={showRoundingIndicator}
+                        roundAmount={roundAmount}
                     />
                 </TouchableOpacity>
             );
@@ -484,8 +474,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 fiatRatesLoading={FiatStore.loading}
                 accessible={accessible}
                 accessibilityLabel={accessibilityLabel}
-                exact={exact}
-                showRoundingIndicator={showRoundingIndicator}
+                roundAmount={roundAmount}
             />
         );
     }
