@@ -301,7 +301,6 @@ const ActivityListItem = React.memo(
                                 sats={item.getAmount}
                                 sensitive
                                 color={getRightTitleTheme(item)}
-                                showRoundingIndicator={true}
                             />
                             {!!item.getFee && item.getFee != 0 && (
                                 <>
@@ -318,7 +317,7 @@ const ActivityListItem = React.memo(
                                         sensitive
                                         color={getRightTitleTheme(item)}
                                         fee
-                                        showRoundingIndicator={true}
+                                        roundAmount
                                     />
                                 </>
                             )}
