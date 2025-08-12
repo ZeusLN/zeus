@@ -36,7 +36,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
-import Swap from '../../models/Swap';
+import Swap, { SwapState, SwapType } from '../../models/Swap';
 
 import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
@@ -100,12 +100,15 @@ export default class SwapDetails extends React.Component<
         }
 
         if (swapData.isSubmarineSwap) {
-            const finalStatus = ['transaction.refunded', 'transaction.claimed'];
+            const finalStatus = [
+                SwapState.TransactionRefunded,
+                SwapState.TransactionClaimed
+            ];
 
             const failedStatus = [
-                'invoice.failedToPay',
-                'transaction.lockupFailed',
-                'swap.expired'
+                SwapState.InvoiceFailedToPay,
+                SwapState.TransactionLockupFailed,
+                SwapState.SwapExpired
             ];
 
             if (
@@ -123,9 +126,9 @@ export default class SwapDetails extends React.Component<
             this.getSwapUpdates(swapData, swapData.isSubmarineSwap);
         } else {
             const failedStatus = [
-                'invoice.expired',
-                'transaction.refunded',
-                'swap.expired'
+                SwapState.InvoiceExpired,
+                SwapState.TransactionRefunded,
+                SwapState.SwapExpired
             ];
             if (failedStatus.includes(swapData?.status)) {
                 this.setState({
@@ -306,10 +309,10 @@ export default class SwapDetails extends React.Component<
             );
 
             switch (data.status) {
-                case 'invoice.set':
+                case SwapState.InvoiceSet:
                     console.log('Waiting for onchain transaction...');
                     break;
-                case 'transaction.claim.pending':
+                case SwapState.TransactionClaimPending:
                     if (submitted) {
                         console.log(
                             'Cooperative claim transaction already created and submitted successfully. Skipping.'
@@ -348,9 +351,9 @@ export default class SwapDetails extends React.Component<
                     }
                     break;
 
-                case 'invoice.failedToPay':
-                case 'transaction.lockupFailed':
-                case 'swap.expired':
+                case SwapState.InvoiceFailedToPay:
+                case SwapState.TransactionLockupFailed:
+                case SwapState.SwapExpired:
                     if (
                         isSubmarineSwap &&
                         !this.state.swapData?.lockupTransaction?.hex
@@ -375,7 +378,7 @@ export default class SwapDetails extends React.Component<
                     }
                     break;
 
-                case 'transaction.claimed':
+                case SwapState.TransactionClaimed:
                     webSocket.close();
                     data?.failureReason &&
                         this.setState({
@@ -492,11 +495,11 @@ export default class SwapDetails extends React.Component<
             );
 
             switch (data.status) {
-                case 'swap.created':
+                case SwapState.Created:
                     console.log('Waiting for invoice to be paid');
                     break;
 
-                case 'transaction.mempool':
+                case SwapState.TransactionMempool:
                     if (submitted) {
                         console.log(
                             'Claim transaction already created and submitted successfully. Skipping.'
@@ -517,9 +520,9 @@ export default class SwapDetails extends React.Component<
                     }
                     break;
 
-                case 'invoice.expired':
-                case 'transaction.failed':
-                case 'swap.expired':
+                case SwapState.InvoiceExpired:
+                case SwapState.TransactionFailed:
+                case SwapState.SwapExpired:
                     webSocket.close();
                     data?.failureReason &&
                         this.setState({
@@ -528,7 +531,7 @@ export default class SwapDetails extends React.Component<
                         });
                     break;
 
-                case 'invoice.settled':
+                case SwapState.InvoiceSettled:
                     console.log('Swap successful');
                     webSocket.close();
                     this.setState({
@@ -733,14 +736,14 @@ export default class SwapDetails extends React.Component<
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
         const progressUpdate = swapData.isSubmarineSwap
-            ? updates === 'invoice.set'
+            ? updates === SwapState.InvoiceSet
                 ? localeString('views.SwapDetails.waitingForOnchainTx')
-                : updates === 'transaction.mempool'
+                : updates === SwapState.TransactionMempool
                 ? localeString('views.SwapDetails.waitingForConf')
                 : ''
-            : updates === 'swap.created'
+            : updates === SwapState.Created
             ? localeString('views.SwapDetails.waitingForInvoicePayment')
-            : updates === 'transaction.mempool'
+            : updates === SwapState.TransactionMempool
             ? localeString('views.SwapDetails.waitingForConf')
             : '';
 
@@ -769,9 +772,10 @@ export default class SwapDetails extends React.Component<
 
         const showRefundButton =
             swapData.lockupTransaction &&
-            (updates === 'invoice.failedToPay' ||
-                updates === 'transaction.lockupFailed' ||
-                (swapData.isSubmarineSwap && updates === 'swap.expired') ||
+            (updates === SwapState.InvoiceFailedToPay ||
+                updates === SwapState.TransactionLockupFailed ||
+                (swapData.isSubmarineSwap &&
+                    updates === SwapState.SwapExpired) ||
                 (failure && error));
 
         return (
@@ -791,9 +795,9 @@ export default class SwapDetails extends React.Component<
                                 <LoadingIndicator size={35} />
                             )}
                             {!this.state.loading &&
-                                (updates === 'invoice.set' ||
-                                    (swapData.type === 'Reverse' &&
-                                        updates === 'swap.created')) && (
+                                (updates === SwapState.InvoiceSet ||
+                                    (swapData.type === SwapType.Reverse &&
+                                        updates === SwapState.Created)) && (
                                     <QRButton />
                                 )}
                         </Row>
@@ -818,7 +822,7 @@ export default class SwapDetails extends React.Component<
                                 fontSize: 22
                             }}
                         >
-                            {swapData.type === 'Submarine'
+                            {swapData.type === SwapType.Submarine
                                 ? 'on-chain to Lightning'
                                 : 'Lightning to on-chain'}
                         </Text>
@@ -860,7 +864,7 @@ export default class SwapDetails extends React.Component<
                         <KeyValue
                             keyValue={localeString('views.Channel.status')}
                             value={SwapStore?.formatStatus(updates)}
-                            color={SwapStore?.statusColor(updates)}
+                            color={SwapStore?.statusColor(updates as SwapState)}
                         />
                     )}
 
@@ -870,7 +874,7 @@ export default class SwapDetails extends React.Component<
                                 'views.SwapSettings.failureReason'
                             )}
                             value={SwapStore?.formatStatus(failure)}
-                            color={SwapStore?.statusColor(failure)}
+                            color={SwapStore?.statusColor(failure as SwapState)}
                         />
                     )}
 
@@ -993,7 +997,8 @@ export default class SwapDetails extends React.Component<
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData?.swapTree || swapData?.tree)}
                 </ScrollView>
-                {(updates === 'invoice.set' || updates === 'swap.created') && (
+                {(updates === SwapState.InvoiceSet ||
+                    updates === SwapState.Created) && (
                     <Button
                         title={localeString('views.PaymentRequest.payInvoice')}
                         containerStyle={{

@@ -1,10 +1,30 @@
 import { computed } from 'mobx';
 import BaseModel from './BaseModel';
 
+export enum SwapState {
+    Created = 'swap.created',
+    InvoiceSet = 'invoice.set',
+    TransactionClaimPending = 'transaction.claim.pending',
+    TransactionMempool = 'transaction.mempool',
+    TransactionFailed = 'transaction.failed',
+    TransactionClaimed = 'transaction.claimed',
+    InvoiceSettled = 'invoice.settled',
+    TransactionRefunded = 'transaction.refunded',
+    InvoiceFailedToPay = 'invoice.failedToPay',
+    SwapExpired = 'swap.expired',
+    InvoiceExpired = 'invoice.expired',
+    TransactionLockupFailed = 'transaction.lockupFailed'
+}
+
+export enum SwapType {
+    Submarine = 'Submarine',
+    Reverse = 'Reverse'
+}
+
 export default class Swap extends BaseModel {
     id: string;
-    type: 'Submarine' | 'Reverse';
-    status: string;
+    type: SwapType;
+    status: SwapState;
     createdAt: number | string;
     endpoint: string;
     implementation: string;
@@ -43,11 +63,11 @@ export default class Swap extends BaseModel {
     }
 
     @computed get isSubmarineSwap(): boolean {
-        return this.type === 'Submarine';
+        return this.type === SwapType.Submarine;
     }
 
     @computed get isReverseSwap(): boolean {
-        return this.type === 'Reverse';
+        return this.type === SwapType.Reverse;
     }
 
     @computed get refundPubKey(): string | undefined {
