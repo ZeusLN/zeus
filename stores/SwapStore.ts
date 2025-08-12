@@ -22,7 +22,7 @@ import SettingsStore, {
 
 import Storage from '../storage';
 
-import Swap from '../models/Swap';
+import Swap, { SwapState, SwapType } from '../models/Swap';
 
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
@@ -110,18 +110,18 @@ export default class SwapStore {
     }
 
     @action
-    public statusColor = (status: string) => {
+    public statusColor = (status: SwapState | string) => {
         let stateColor;
         switch (status) {
-            case 'transaction.claimed':
-            case 'invoice.settled':
-            case 'transaction.refunded':
+            case SwapState.TransactionClaimed:
+            case SwapState.InvoiceSettled:
+            case SwapState.TransactionRefunded:
                 stateColor = 'green';
                 break;
-            case 'invoice.failedToPay':
-            case 'swap.expired':
-            case 'invoice.expired':
-            case 'transaction.lockupFailed':
+            case SwapState.InvoiceFailedToPay:
+            case SwapState.SwapExpired:
+            case SwapState.InvoiceExpired:
+            case SwapState.TransactionLockupFailed:
             case 'invoice could not be paid':
             case 'invoice expired':
                 stateColor = themeColor('error');
@@ -267,7 +267,7 @@ export default class SwapStore {
             responseData.createdAt = createdAt;
 
             // Add the swap type
-            responseData.type = 'Submarine';
+            responseData.type = SwapType.Submarine;
             responseData.refundPrivateKey = refundPrivateKey;
             responseData.refundPublicKey = refundPublicKey;
 
@@ -396,7 +396,7 @@ export default class SwapStore {
             responseData.createdAt = createdAt;
 
             // Add the swap type
-            responseData.type = 'Reverse';
+            responseData.type = SwapType.Reverse;
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
 
@@ -496,19 +496,20 @@ export default class SwapStore {
                 if (!swap?.id) continue;
 
                 const skipStatusesForSubmarineSwap = [
-                    'invoice.failedToPay',
-                    'transaction.refunded',
-                    'transaction.claimed',
-                    'swap.expired',
-                    'transaction.refunded'
+                    SwapState.InvoiceFailedToPay,
+                    SwapState.TransactionRefunded,
+                    SwapState.TransactionClaimed,
+                    SwapState.SwapExpired
                 ];
 
-                const skipStatusesForReverseSwap = ['transaction.refunded'];
+                const skipStatusesForReverseSwap = [
+                    SwapState.TransactionRefunded
+                ];
 
                 const shouldSkip =
-                    (swap.type === 'Submarine' &&
+                    (swap.type === SwapType.Submarine &&
                         skipStatusesForSubmarineSwap.includes(swap.status)) ||
-                    (swap.type === 'Reverse' &&
+                    (swap.type === SwapType.Reverse &&
                         skipStatusesForReverseSwap.includes(swap.status));
 
                 if (shouldSkip) continue;
@@ -533,10 +534,10 @@ export default class SwapStore {
             }
 
             const updatedSubmarineSwaps = allSwaps.filter(
-                (s) => s.type === 'Submarine'
+                (s) => s.type === SwapType.Submarine
             );
             const updatedReverseSwaps = allSwaps.filter(
-                (s) => s.type === 'Reverse'
+                (s) => s.type === SwapType.Reverse
             );
 
             await Storage.setItem(
@@ -573,7 +574,7 @@ export default class SwapStore {
     @action
     updateSwapStatus = async (
         swapId: string,
-        status: string,
+        status: SwapState,
         isSubmarineSwap: boolean,
         failureReason?: string
     ) => {
@@ -627,7 +628,7 @@ export default class SwapStore {
             }
 
             // Update the swap
-            swaps[swapIndex].status = 'transaction.refunded';
+            swaps[swapIndex].status = SwapState.TransactionRefunded;
             swaps[swapIndex].txid = txid;
 
             // Save the updated swaps back to encrypted storage
@@ -829,12 +830,12 @@ export default class SwapStore {
                                 if (isReverseSwap) {
                                     return {
                                         ...rescuedSwapBase,
-                                        type: 'Reverse'
+                                        type: SwapType.Reverse
                                     };
                                 } else {
                                     return {
                                         ...rescuedSwapBase,
-                                        type: 'Submarine',
+                                        type: SwapType.Submarine,
                                         refundPrivateKey,
                                         refundPublicKey
                                     };
