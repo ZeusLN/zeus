@@ -29,7 +29,7 @@ import CashuToken from '../models/CashuToken';
 
 import Storage from '../storage';
 
-import { activityStore, lightningAddressStore } from './Stores';
+import { activityStore, lightningAddressStore, settingsStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
 import ChannelsStore from './ChannelsStore';
 import SettingsStore, { DEFAULT_NOSTR_RELAYS } from './SettingsStore';
@@ -88,7 +88,8 @@ interface ClaimTokenResponse {
 export default class CashuStore {
     @observable public mintUrls: Array<string>;
     @observable public selectedMintUrl: string;
-    @observable public selectedMintUrls: string[] = [];
+    @observable public selectedMintUrls: string[] =
+        settingsStore.settings.lightningAddress.mintUrls;
     @observable public cashuWallets: { [key: string]: Wallet };
     @observable public totalBalanceSats: number;
     @observable public invoices?: Array<CashuInvoice>;
@@ -299,31 +300,29 @@ export default class CashuStore {
     };
 
     @action
-    public toggleMintSelection = async (mintUrl: string) => {
-        if (!Array.isArray(this.selectedMintUrls)) {
-            this.selectedMintUrls = [];
+    public toggleMintSelection = async (mintUrl: string): Promise<void> => {
+        const currentSelection = Array.isArray(this.selectedMintUrls)
+            ? [...this.selectedMintUrls]
+            : [];
+        const isSelected = currentSelection.includes(mintUrl);
+        if (isSelected && currentSelection.length === 1) {
+            return;
         }
 
-        let nextSelected: string[];
-        if (this.selectedMintUrls.includes(mintUrl)) {
-            nextSelected = this.selectedMintUrls.filter(
-                (url) => url !== mintUrl
-            );
-        } else {
-            nextSelected = [...this.selectedMintUrls, mintUrl];
-        }
-
-        await Storage.setItem(
-            `${this.getLndDir()}-cashu-selectedMintUrls`,
-            JSON.stringify(nextSelected)
-        );
-
+        const nextSelected = isSelected
+            ? currentSelection.filter((url) => url !== mintUrl)
+            : [...currentSelection, mintUrl];
         runInAction(() => {
             this.selectedMintUrls = nextSelected;
-            console.log('selectedMintUrls (updated):', this.selectedMintUrls);
         });
 
-        return nextSelected;
+        if (this.settingsStore?.settings.ecash.enableMultiMint) {
+            await this.settingsStore.updateSettings({
+                lightningAddress: {
+                    mintUrls: nextSelected
+                }
+            });
+        }
     };
 
     @action
@@ -1505,14 +1504,11 @@ export default class CashuStore {
                 resolve(decoded);
             });
 
-            this.selectedMintUrls = [
-                'https://mint.minibits.cash/Bitcoin',
-                'https://cashu.boats'
-            ];
-
             const mintsToUse = isMultiMint
                 ? this.selectedMintUrls
                 : [this.selectedMintUrl];
+
+            console.log(mintsToUse);
 
             let allProofsToUse: Proof[] = [];
             let allMeltQuotes: {
@@ -1535,13 +1531,17 @@ export default class CashuStore {
                 const allProofsAvailable: Proof[] = [];
 
                 for (const mintUrl of mintsToUse) {
+                    console.log(mintUrl);
                     if (!this.cashuWallets[mintUrl].wallet) {
                         await this.initializeWallet(mintUrl, true);
                     }
                     const cashuWallet = this.cashuWallets[mintUrl];
+                    console.log(cashuWallet.proofs);
 
                     allProofsAvailable.push(...cashuWallet.proofs);
                 }
+
+                console.log(allProofsAvailable);
 
                 await this.prepareMultiMintMeltQuotes({
                     invoice: bolt11Invoice,
@@ -1825,7 +1825,7 @@ export default class CashuStore {
                 console.log(
                     `payLnInvoiceFromEcash: Attempt ${
                         attempt + 1
-                    } successful with counter ${attemptCounter}`
+                    }/${maxAttempts} with counter ${attemptCounter}`
                 );
                 break;
             } catch (e: any) {
@@ -2203,6 +2203,7 @@ export default class CashuStore {
         const { mint } = decoded;
 
         if (this.cashuWallets[mint].errorConnecting) return;
+
         if (!this.cashuWallets[mint].wallet) {
             await this.initializeWallet(mint, true);
         }
