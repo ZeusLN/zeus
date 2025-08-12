@@ -389,7 +389,12 @@ const handleAnything = async (
 
         const name = `${localPart}.user._bitcoin-payment.${domain}`;
         let url = `${dnsUrl}?name=${name}&type=TXT`;
-        let bolt12: string;
+        let bolt12: string | undefined;
+        let b12Value: string | undefined,
+            b12SatAmount: string | undefined,
+            b12Lightning: string | undefined,
+            b12Offer: string | undefined;
+
         try {
             const res = await fetch(url, {
                 headers: {
@@ -397,42 +402,21 @@ const handleAnything = async (
                 }
             });
             const json = await res.json();
-            if (!json.Answer && !json.Answer[0]) throw 'Bad';
-            bolt12 = json.Answer[0].data;
-            bolt12 = bolt12.replace(/("|\\|\s+)/g, '');
-            bolt12 = bolt12.replace(/bitcoin:b12=/, '');
+            if (json.Answer && json.Answer[0]) {
+                bolt12 = json.Answer[0].data;
+                bolt12 = bolt12!.replace(/("|\\|\s+)/g, '');
+                bolt12 = bolt12!.replace(/bitcoin:b12=/, '');
 
-            const { value, satAmount, lightning, offer }: any =
-                AddressUtils.processBIP21Uri(bolt12);
-
-            const hasMultiple: boolean =
-                (value && lightning) ||
-                (value && offer) ||
-                (lightning && offer);
-
-            if (hasMultiple) {
-                return [
-                    'ChoosePaymentMethod',
-                    {
-                        value,
-                        satAmount,
-                        lightning,
-                        offer,
-                        locked: true
-                    }
-                ];
-            }
-
-            if (offer && nodeInfoStore.supportsOffers) {
-                return [
-                    'Send',
-                    {
-                        destination: offer,
-                        bolt12,
-                        transactionType: 'BOLT 12',
-                        isValid: true
-                    }
-                ];
+                const {
+                    value: _v,
+                    satAmount: _s,
+                    lightning: _l,
+                    offer: _o
+                }: any = AddressUtils.processBIP21Uri(bolt12);
+                b12Value = _v;
+                b12SatAmount = _s;
+                b12Lightning = _l;
+                b12Offer = _o;
             }
         } catch (e: any) {}
 
@@ -449,11 +433,26 @@ const handleAnything = async (
 
         // handle Tor LN addresses
         if (settingsStore.enableTor && bolt11Domain.includes('.onion')) {
-            await doTorRequest(url, RequestMethod.GET)
+            return doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     if (!response.callback) {
                         throw new Error(error);
                     }
+
+                    if (b12Offer) {
+                        return [
+                            'ChoosePaymentMethod',
+                            {
+                                value: b12Value,
+                                satAmount: b12SatAmount,
+                                lightning: b12Lightning,
+                                offer: b12Offer,
+                                lightningAddress: value,
+                                locked: true
+                            }
+                        ];
+                    }
+
                     return [
                         'LnurlPay',
                         {
@@ -463,22 +462,62 @@ const handleAnything = async (
                         }
                     ];
                 })
-                .catch((error: any) => {
-                    throw new Error(error);
+                .catch((e: any) => {
+                    const hasMultipleB12 = b12Value || b12Lightning;
+
+                    if (b12Offer) {
+                        if (hasMultipleB12) {
+                            return [
+                                'ChoosePaymentMethod',
+                                {
+                                    value: b12Value,
+                                    satAmount: b12SatAmount,
+                                    lightning: b12Lightning,
+                                    offer: b12Offer,
+                                    locked: true
+                                }
+                            ];
+                        }
+                        return [
+                            'Send',
+                            {
+                                destination: b12Offer,
+                                bolt12,
+                                transactionType: 'BOLT 12',
+                                isValid: true
+                            }
+                        ];
+                    }
+                    throw e; // re-throw original error from doTorRequest
                 });
         } else {
             return ReactNativeBlobUtil.fetch('get', url)
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
-                        const data = response.json();
-                        if (!data.callback) {
+                        const lnurlpData = response.json();
+                        if (!lnurlpData.callback) {
                             throw new Error(error);
                         }
+
+                        if (b12Offer) {
+                            return [
+                                'ChoosePaymentMethod',
+                                {
+                                    value: b12Value,
+                                    satAmount: b12SatAmount,
+                                    lightning: b12Lightning,
+                                    offer: b12Offer,
+                                    lightningAddress: value,
+                                    locked: true
+                                }
+                            ];
+                        }
+
                         return [
                             'LnurlPay',
                             {
-                                lnurlParams: data,
+                                lnurlParams: lnurlpData,
                                 amount: setAmount,
                                 ecash
                             }
@@ -488,6 +527,31 @@ const handleAnything = async (
                     }
                 })
                 .catch(async () => {
+                    const hasMultipleB12 = b12Value || b12Lightning;
+
+                    if (b12Offer) {
+                        if (hasMultipleB12) {
+                            return [
+                                'ChoosePaymentMethod',
+                                {
+                                    value: b12Value,
+                                    satAmount: b12SatAmount,
+                                    lightning: b12Lightning,
+                                    offer: b12Offer,
+                                    locked: true
+                                }
+                            ];
+                        }
+                        return [
+                            'Send',
+                            {
+                                destination: b12Offer,
+                                bolt12,
+                                transactionType: 'BOLT 12',
+                                isValid: true
+                            }
+                        ];
+                    }
                     return await attemptNip05Lookup(data);
                 });
         }
