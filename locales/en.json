@@ -665,6 +665,7 @@
     "views.PaymentRequest.supportZeus": "Support ZEUS 💜",
     "views.PaymentRequest.enableDonations": "Enable donations",
     "views.PaymentRequest.donateToZEUS": "Donate to ZEUS",
+    "views.PaymentRequest.donate": "Donate",
     "views.PaymentRequest.thankYouForDonation": "Thank you for your generous donation!",
     "views.PaymentRequest.amountDonated": "Amount donated",
     "views.Receive.title": "Receive",
