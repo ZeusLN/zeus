@@ -97,11 +97,16 @@ export default class MultimintPayment extends React.Component<
         isProcessing: boolean;
         step: MultinutPaymentStep;
     }) => {
-        this.setState({
-            mints: progressInfo.mints || this.state.mints,
-            isProcessing: progressInfo.isProcessing ?? this.state.isProcessing,
-            step: progressInfo.step || this.state.step
-        });
+        this.setState((prev) => ({
+            mints: prev.mints.map((m) => {
+                const updated = progressInfo.mints.find(
+                    (u) => u.mintUrl === m.mintUrl
+                );
+                return updated ? { ...m, ...updated } : m;
+            }),
+            isProcessing: progressInfo.isProcessing ?? prev.isProcessing,
+            step: progressInfo.step || prev.step
+        }));
     };
 
     executePayment = async () => {
