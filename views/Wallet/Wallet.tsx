@@ -706,9 +706,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);
+            
             if (this.startupTimeoutId) {
                 clearTimeout(this.startupTimeoutId);
                 this.startupTimeoutId = undefined;
+            }
+
+            try {
+                LinkingUtils.processPendingShareIntent(this.props.navigation);
+            } catch (error) {
+                console.error('Error processing pending share intent:', error);
             }
         }
 

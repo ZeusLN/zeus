@@ -10,7 +10,7 @@ import {
 import BigNumber from 'bignumber.js';
 import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { inject, observer } from 'mobx-react';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { Swipeable } from 'react-native-gesture-handler';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 import Button from '../../components/Button';

@@ -4,7 +4,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BackHandler, NativeEventSubscription, StatusBar } from 'react-native';
+import {
+    BackHandler,
+    NativeEventSubscription,
+    StatusBar,
+    AppState
+} from 'react-native';
 
 import {
     activityStore,
@@ -252,8 +257,10 @@ import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 import Watchtowers from './views/Tools/Watchtowers/WatchtowerList';
 import AddWatchtower from './views/Tools/Watchtowers/AddWatchtower';
 import WatchtowerDetails from './views/Tools/Watchtowers/WatchtowerDetails';
+import ShareIntentProcessing from './views/ShareIntentProcessing';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import LinkingUtils from './utils/LinkingUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
@@ -261,6 +268,8 @@ import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
+    private appStateSubscription: NativeEventSubscription;
+    private navigation: any = null;
 
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
@@ -280,6 +289,26 @@ export default class App extends React.PureComponent {
         }
 
         return false;
+    };
+
+    componentDidMount() {
+        this.appStateSubscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
+    }
+
+    componentWillUnmount() {
+        if (this.appStateSubscription) {
+            this.appStateSubscription.remove();
+        }
+    }
+
+    handleAppStateChange = (nextAppState: string) => {
+        if (nextAppState === 'active' && this.navigation) {
+            LinkingUtils.resetShareIntentFlag();
+            LinkingUtils.handleInitialUrl(this.navigation);
+        }
     };
 
     render() {
@@ -331,9 +360,15 @@ export default class App extends React.PureComponent {
                                             <NavigationContainer
                                                 ref={(nav) => {
                                                     if (nav != null) {
+                                                        this.navigation = nav;
+
                                                         NavigationService.setTopLevelNavigator(
                                                             // @ts-ignore:next-line
                                                             nav
+                                                        );
+
+                                                        LinkingUtils.handleInitialUrl(
+                                                            nav as any
                                                         );
                                                     }
                                                 }}
@@ -412,6 +447,12 @@ export default class App extends React.PureComponent {
                                                         name="ChoosePaymentMethod" // @ts-ignore:next-line
                                                         component={
                                                             ChoosePaymentMethod
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="ShareIntentProcessing" // @ts-ignore:next-line
+                                                        component={
+                                                            ShareIntentProcessing
                                                         }
                                                     />
                                                     <Stack.Screen
