@@ -89,15 +89,16 @@ export default class Lockscreen extends React.Component<
         if (targetScreen) {
             navigation.popTo(targetScreen, { ...navigationParams });
         } else if (SettingsStore.settings.selectNodeOnStartup) {
-            // Always navigate to Wallets when selectNodeOnStartup is enabled
-            // Remove the initialStart check to always enforce selection after unlock
             navigation.replace('Wallets', { fromStartup: true });
         } else {
-            // Default login flow
-            // Resets navigation stack to previous screen
-            // to prevent back navigation to Lockscreen
             SettingsStore.triggerSettingsRefresh = true;
-            navigation.pop();
+
+            const shareIntentProcessed =
+                LinkingUtils.processPendingShareIntent(navigation);
+
+            if (!shareIntentProcessed) {
+                navigation.pop();
+            }
         }
     };
 
