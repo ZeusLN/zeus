@@ -27,6 +27,7 @@ import ModalBox from '../../components/ModalBox';
 import SettingsStore from '../../stores/SettingsStore';
 import {
     SWAPS_KEY,
+    REVERSE_SWAPS_KEY,
     SWAPS_LAST_USED_KEY,
     SWAPS_RESCUE_KEY
 } from '../../stores/SwapStore';
@@ -126,54 +127,62 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                 isOpen={this.state.isDeleteModalVisible}
                 onClosed={() => this.setState({ isDeleteModalVisible: false })}
                 style={{
-                    backgroundColor: themeColor('background'),
-                    borderRadius: 20,
-                    width: '100%',
-                    maxWidth: 400,
-                    maxHeight: 270
+                    backgroundColor: 'transparent'
                 }}
                 position="center"
-                backdropOpacity={0.5}
+                backdropOpacity={0.6}
             >
                 <View
                     style={{
-                        padding: 20,
+                        flex: 1,
+                        justifyContent: 'center',
                         alignItems: 'center'
                     }}
                 >
-                    <Text
+                    <View
                         style={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book',
-                            fontSize: 18,
-                            textAlign: 'center',
-                            marginBottom: 20
+                            backgroundColor: themeColor('background'),
+                            borderRadius: 20,
+                            padding: 20,
+                            alignItems: 'center',
+                            width: '90%'
                         }}
                     >
-                        {localeString(
-                            'views.Swaps.rescueKey.deleteConfirmation'
-                        )}
-                    </Text>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 18,
+                                textAlign: 'center',
+                                marginBottom: 20
+                            }}
+                        >
+                            {localeString(
+                                'views.Swaps.rescueKey.deleteConfirmation'
+                            )}
+                        </Text>
 
-                    <Button
-                        title={localeString('general.confirm')}
-                        onPress={async () => {
-                            await Storage.removeItem(SWAPS_RESCUE_KEY);
-                            await Storage.removeItem(SWAPS_KEY);
-                            await Storage.removeItem(SWAPS_LAST_USED_KEY);
-                            this.setState({ isDeleteModalVisible: false });
-                            navigation.popTo('Swaps');
-                        }}
-                        containerStyle={{ marginBottom: 10 }}
-                        warning
-                    />
-                    <Button
-                        title={localeString('general.cancel')}
-                        onPress={() =>
-                            this.setState({ isDeleteModalVisible: false })
-                        }
-                        secondary
-                    />
+                        <Button
+                            title={localeString('general.confirm')}
+                            onPress={async () => {
+                                await Storage.removeItem(SWAPS_RESCUE_KEY);
+                                await Storage.removeItem(SWAPS_KEY);
+                                await Storage.removeItem(REVERSE_SWAPS_KEY);
+                                await Storage.removeItem(SWAPS_LAST_USED_KEY);
+                                this.setState({ isDeleteModalVisible: false });
+                                navigation.popTo('Swaps');
+                            }}
+                            containerStyle={{ marginBottom: 10 }}
+                            warning
+                        />
+                        <Button
+                            title={localeString('general.cancel')}
+                            onPress={() =>
+                                this.setState({ isDeleteModalVisible: false })
+                            }
+                            secondary
+                        />
+                    </View>
                 </View>
             </ModalBox>
         );
