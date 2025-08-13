@@ -10,6 +10,7 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 import Base64Utils from '../utils/Base64Utils';
 import { lnrpc } from '../proto/lightning';
 import { notesStore } from '../stores/Stores';
+import AutoPayUtils from '../utils/AutoPayUtils';
 
 const keySendMessageType = '34349334';
 const keySendPreimageType = '5482373484';
@@ -110,6 +111,16 @@ export default class Payment extends BaseModel {
             return true;
         }
         return false;
+    }
+
+    @computed public get isAutoPay(): boolean {
+        const paymentHash = this.paymentHash;
+        if (paymentHash) {
+            return AutoPayUtils.isAutoPayTransaction(paymentHash);
+        }
+
+        const memo = this.getMemo;
+        return memo ? memo.includes('[AUTO-PAY]') : false;
     }
 
     @computed public get getMemo(): string | undefined {

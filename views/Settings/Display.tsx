@@ -344,6 +344,21 @@ export default class Display extends React.Component<
                         </View>
                     </View>
 
+                    {/* Auto-pay Settings Section */}
+                    <View style={{ marginTop: 30, marginBottom: 10 }}>
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontSize: 18,
+                                fontFamily: 'PPNeueMontreal-Medium'
+                            }}
+                        >
+                            {localeString(
+                                'views.Settings.Display.autoPaySettings'
+                            )}
+                        </Text>
+                    </View>
+
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>
                             <Text

@@ -4,7 +4,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BackHandler, NativeEventSubscription, StatusBar } from 'react-native';
+import {
+    StatusBar,
+    AppState,
+    AppStateStatus,
+    NativeEventSubscription,
+    BackHandler
+} from 'react-native';
 
 import {
     activityStore,
@@ -249,6 +255,7 @@ import CashuTools from './views/Tools/CashuTools';
 import NodeConfigExportImport from './views/Tools/NodeConfigExportImport';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import AutoPayUtils from './utils/AutoPayUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
@@ -256,6 +263,178 @@ import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
+    private handleAppStateChangeSubscription: NativeEventSubscription;
+    private lastAppState: AppStateStatus = 'active';
+    private clipboardCheckInterval: ReturnType<typeof setInterval> | null =
+        null;
+    private appJustStarted: boolean = true;
+
+    componentDidMount() {
+        this.handleAppStateChangeSubscription = AppState.addEventListener(
+            'change',
+            this.handleAppStateChange
+        );
+
+        this.lastAppState = AppState.currentState;
+
+        setTimeout(() => {
+            this.appJustStarted = false;
+        }, 3000);
+
+        setTimeout(() => {
+            this.checkAutoPayOnAppActive(true); // Force check on fresh app start
+        }, 500);
+    }
+
+    componentWillUnmount() {
+        if (this.handleAppStateChangeSubscription) {
+            this.handleAppStateChangeSubscription.remove();
+        }
+        if (this.backPressListenerSubscription) {
+            this.backPressListenerSubscription.remove();
+        }
+        if (this.clipboardCheckInterval) {
+            clearInterval(this.clipboardCheckInterval);
+        }
+    }
+
+    handleAppStateChange = (nextAppState: AppStateStatus) => {
+        const prevAppState = this.lastAppState;
+        this.lastAppState = nextAppState;
+
+        if (nextAppState === 'active') {
+            if (
+                !this.appJustStarted &&
+                (prevAppState === 'background' || prevAppState === 'inactive')
+            ) {
+                AutoPayUtils.clearClipboardCache();
+
+                setTimeout(() => {
+                    this.checkAutoPayOnAppActive(true);
+                }, 300);
+            }
+
+            if (this.clipboardCheckInterval) {
+                clearInterval(this.clipboardCheckInterval);
+            }
+
+            if (!this.appJustStarted) {
+                this.clipboardCheckInterval = setInterval(() => {
+                    this.checkAutoPayOnAppActive(false); // Regular checks don't force
+                }, 3000);
+            }
+        } else if (
+            nextAppState === 'background' ||
+            nextAppState === 'inactive'
+        ) {
+            if (this.clipboardCheckInterval) {
+                clearInterval(this.clipboardCheckInterval);
+                this.clipboardCheckInterval = null;
+            }
+        }
+    };
+
+    checkAutoPayOnAppActive = async (forceCheck: boolean = false) => {
+        try {
+            const invoice = await AutoPayUtils.checkClipboardForInvoice(
+                forceCheck
+            );
+
+            if (!invoice || !invoice.payment_hash) {
+                return;
+            }
+
+            const isValidToPay = await AutoPayUtils.validateInvoiceNotPaid(
+                invoice.payment_hash
+            );
+
+            if (!isValidToPay) {
+                return;
+            }
+
+            const contact = await AutoPayUtils.findContactForInvoice(
+                invoice.invoice,
+                contactStore.contacts
+            );
+
+            let shouldShowDialog = false;
+            let threshold = 0;
+
+            if (contact && contact.hasAutoPayEnabled) {
+                threshold = contact.getAutoPayThreshold;
+
+                if (invoice.amount === 0 || invoice.amount <= threshold) {
+                    shouldShowDialog = true;
+                }
+            } else if (contact && !contact.hasAutoPayEnabled) {
+                if (settingsStore.settings?.payments?.autoPayEnabled) {
+                    threshold =
+                        settingsStore.settings.payments.autoPayThreshold || 0;
+
+                    if (invoice.amount === 0 || invoice.amount <= threshold) {
+                        shouldShowDialog = true;
+                    }
+                }
+            } else if (
+                !contact &&
+                settingsStore.settings?.payments?.autoPayEnabled
+            ) {
+                threshold =
+                    settingsStore.settings.payments.autoPayThreshold || 0;
+
+                if (invoice.amount === 0 || invoice.amount <= threshold) {
+                    shouldShowDialog = true;
+                }
+            }
+
+            if (shouldShowDialog) {
+                const enhancedInvoice = {
+                    ...invoice,
+                    contact: contact ?? undefined,
+                    autoPayEnabled: contact ? contact.hasAutoPayEnabled : false,
+                    withinThreshold: true
+                };
+
+                AutoPayUtils.showAutoPayDialog(
+                    enhancedInvoice,
+                    async () => {
+                        try {
+                            invoicesStore.clearPayReq();
+
+                            await invoicesStore.getPayReq(invoice.invoice);
+
+                            if (!invoicesStore.getPayReqError) {
+                                NavigationService.navigate('PaymentRequest', {
+                                    fromAutoPay: true,
+                                    autoPayThreshold: threshold,
+                                    autoPayAmount: invoice.amount,
+                                    autoPayContact: contact
+                                        ? {
+                                              name: contact.name,
+                                              contactId: contact.getContactId
+                                          }
+                                        : null
+                                });
+                            } else {
+                                console.error(
+                                    'Error decoding auto-pay invoice:',
+                                    invoicesStore.getPayReqError
+                                );
+                            }
+                        } catch (error) {
+                            console.error(
+                                'Error processing auto-pay invoice:',
+                                error
+                            );
+                        }
+                    },
+                    () => {}
+                );
+            }
+        } catch (error) {
+            console.error('Error checking clipboard for auto-pay:', error);
+        }
+    };
 
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();

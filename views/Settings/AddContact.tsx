@@ -12,7 +12,7 @@ import {
     TextInput
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
-import { Icon, Divider } from 'react-native-elements';
+import { Icon, Divider, ListItem } from 'react-native-elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';
@@ -27,6 +27,7 @@ import { Row } from '../../components/layout/Row';
 import AddressUtils from '../../utils/AddressUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import AutoPayUtils from '../../utils/AutoPayUtils';
 
 import ContactStore from '../../stores/ContactStore';
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
@@ -75,6 +76,8 @@ interface Contact {
     contactId: string;
     photo: string | null;
     isFavourite: boolean;
+    autoPayEnabled?: boolean;
+    autoPayThreshold?: number;
 }
 
 interface AddContactState {
@@ -93,6 +96,9 @@ interface AddContactState {
     showFieldModal: boolean;
     confirmDelete: boolean;
     isFavourite: boolean;
+    autoPayEnabled: boolean;
+    autoPayThreshold: string;
+    showAutoPayDropdown: boolean;
     isValidLightningAddress: boolean[];
     isValidBolt12Address: boolean[];
     isValidBolt12Offer: boolean[];
@@ -180,6 +186,9 @@ export default class AddContact extends React.Component<
             showFieldModal: false,
             confirmDelete: false,
             isFavourite: false,
+            autoPayEnabled: false,
+            autoPayThreshold: '0',
+            showAutoPayDropdown: false,
             isValidLightningAddress: [],
             isValidBolt12Address: [],
             isValidBolt12Offer: [],
@@ -240,7 +249,10 @@ export default class AddContact extends React.Component<
     saveContact = async () => {
         const { navigation, route, ContactStore } = this.props;
         const { isEdit, isNostrContact } = route.params ?? {};
-        const contactDetails = { ...this.state };
+        const contactDetails = {
+            ...this.state,
+            autoPayThreshold: parseFloat(this.state.autoPayThreshold) || 0
+        };
         await ContactStore.saveContact(
             contactDetails,
             isEdit,
@@ -464,7 +476,13 @@ export default class AddContact extends React.Component<
 
             this.setState({
                 ...ContactStore.prefillContact,
-                ...validationStates
+                ...validationStates,
+                autoPayEnabled:
+                    ContactStore.prefillContact.autoPayEnabled || false,
+                autoPayThreshold:
+                    ContactStore.prefillContact.autoPayThreshold?.toString() ||
+                    '0',
+                showAutoPayDropdown: false
             });
         }
     };
@@ -716,6 +734,26 @@ export default class AddContact extends React.Component<
             photoWrapper: {
                 ...styles.photoWrapper,
                 backgroundColor: themeColor('secondaryText')
+            },
+            // Auto-pay dynamic styles
+            sectionTitle: {
+                fontSize: 18,
+                fontWeight: 'bold' as const,
+                color: themeColor('text'),
+                marginBottom: 8
+            },
+            autoPayLabel: {
+                fontSize: 16,
+                color: themeColor('text'),
+                flex: 1,
+                marginLeft: 8
+            },
+            inputHint: {
+                fontSize: 12,
+                color: themeColor('secondaryText'),
+                marginTop: 8,
+                textAlign: 'center' as const,
+                fontStyle: 'italic' as const
             }
         };
 
@@ -948,6 +986,144 @@ export default class AddContact extends React.Component<
                             </View>
                         </TouchableOpacity>
 
+                        {/* Auto-Pay Settings Section */}
+                        <ListItem
+                            containerStyle={{
+                                borderBottomWidth: 0,
+                                backgroundColor: 'transparent'
+                            }}
+                            onPress={() =>
+                                this.setState({
+                                    showAutoPayDropdown:
+                                        !this.state.showAutoPayDropdown
+                                })
+                            }
+                        >
+                            <ListItem.Content>
+                                <ListItem.Title
+                                    style={{
+                                        color: themeColor('text'),
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        fontSize: 18
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.AddContact.autoPay'
+                                    )}
+                                </ListItem.Title>
+                            </ListItem.Content>
+                            <Icon
+                                name={
+                                    this.state.showAutoPayDropdown
+                                        ? 'keyboard-arrow-up'
+                                        : 'keyboard-arrow-down'
+                                }
+                                color={themeColor('secondaryText')}
+                            />
+                        </ListItem>
+
+                        {this.state.showAutoPayDropdown && (
+                            <View style={styles.autoPayDropdownContent}>
+                                {/* Auto-Pay Toggle */}
+                                <View style={styles.autoPayToggleContainer}>
+                                    <Text style={dynamicStyles.autoPayLabel}>
+                                        {localeString(
+                                            'views.Settings.Payments.enableAutoPayClipboard'
+                                        )}
+                                    </Text>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            if (!this.state.autoPayEnabled) {
+                                                const validation =
+                                                    AutoPayUtils.validateAutoPayRequirements(
+                                                        false
+                                                    );
+                                                if (!validation.valid) {
+                                                    AutoPayUtils.showAutoPayRequirementsDialog(
+                                                        false,
+                                                        undefined,
+                                                        () => {
+                                                            this.props.navigation.navigate(
+                                                                'Privacy'
+                                                            );
+                                                        }
+                                                    );
+                                                    return;
+                                                }
+
+                                                const pubkeyValidation =
+                                                    AutoPayUtils.validateContactPubkey(
+                                                        this.state.pubkey
+                                                    );
+                                                if (!pubkeyValidation.valid) {
+                                                    AutoPayUtils.showContactPubkeyRequiredDialog();
+                                                    return;
+                                                }
+                                            }
+
+                                            this.setState({
+                                                autoPayEnabled:
+                                                    !this.state.autoPayEnabled
+                                            });
+                                        }}
+                                        style={[
+                                            styles.toggle,
+                                            this.state.autoPayEnabled &&
+                                                styles.toggleActive
+                                        ]}
+                                    >
+                                        <View
+                                            style={[
+                                                styles.toggleThumb,
+                                                this.state.autoPayEnabled &&
+                                                    styles.toggleThumbActive
+                                            ]}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {this.state.autoPayEnabled && (
+                                    <>
+                                        {/* Auto-Pay Threshold */}
+                                        <View style={styles.inputContainer}>
+                                            <TextInput
+                                                placeholder={localeString(
+                                                    'views.Settings.AddContact.autoPayThreshold'
+                                                )}
+                                                value={
+                                                    this.state.autoPayThreshold
+                                                }
+                                                onChangeText={(text: string) =>
+                                                    this.setState({
+                                                        autoPayThreshold: text
+                                                    })
+                                                }
+                                                keyboardType="numeric"
+                                                placeholderTextColor={themeColor(
+                                                    'secondaryText'
+                                                )}
+                                                style={[
+                                                    styles.fieldInput,
+                                                    {
+                                                        backgroundColor:
+                                                            themeColor(
+                                                                'secondary'
+                                                            ),
+                                                        color: themeColor(
+                                                            'text'
+                                                        ),
+                                                        padding: 18,
+                                                        marginHorizontal: 8
+                                                    }
+                                                ]}
+                                                autoCapitalize="none"
+                                            />
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                        )}
+
                         {/* Field Selection Modal */}
                         <Modal
                             animationType="slide"
@@ -1128,7 +1304,7 @@ const styles = StyleSheet.create({
     addFieldButton: {
         alignSelf: 'center',
         width: '90%',
-        marginTop: 24,
+        marginTop: 28,
         marginBottom: 16,
         padding: 10,
         borderRadius: 12
@@ -1223,5 +1399,50 @@ const styles = StyleSheet.create({
     button: {
         paddingHorizontal: 20,
         paddingVertical: 8
+    },
+    // Auto-pay styles
+    autoPaySection: {
+        marginVertical: 8,
+        padding: 12
+    },
+    autoPayToggleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        width: '100%',
+        paddingVertical: 12
+    },
+    autoPayIcon: {
+        marginRight: 12
+    },
+    toggle: {
+        width: 44,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: '#ccc',
+        padding: 2,
+        justifyContent: 'center'
+    },
+    toggleActive: {
+        backgroundColor: '#4CAF50'
+    },
+    toggleThumb: {
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: 'white',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+        elevation: 5
+    },
+    toggleThumbActive: {
+        alignSelf: 'flex-end'
+    },
+    autoPayDropdownContent: {
+        paddingHorizontal: 14
     }
 });

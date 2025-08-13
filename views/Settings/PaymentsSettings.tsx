@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
 
@@ -13,6 +13,7 @@ import SettingsStore, { MEMPOOL_RATES_KEYS } from '../../stores/SettingsStore';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import AutoPayUtils from '../../utils/AutoPayUtils';
 
 import TextInput from '../../components/TextInput';
 import AmountInput from '../../components/AmountInput';
@@ -30,6 +31,8 @@ interface PaymentsSettingsState {
     enableMempoolRates: boolean;
     preferredMempoolRate: string;
     slideToPayThreshold: string;
+    autoPayEnabled: boolean;
+    autoPayThreshold: string;
     mounted?: boolean;
 }
 
@@ -47,6 +50,8 @@ export default class PaymentsSettings extends React.Component<
         enableMempoolRates: false,
         preferredMempoolRate: 'fastestFee',
         slideToPayThreshold: '10000',
+        autoPayEnabled: false,
+        autoPayThreshold: '0',
         mounted: false
     };
 
@@ -65,6 +70,9 @@ export default class PaymentsSettings extends React.Component<
                 settings?.payments?.preferredMempoolRate || 'fastestFee',
             slideToPayThreshold:
                 settings?.payments?.slideToPayThreshold?.toString() || '10000',
+            autoPayEnabled: settings?.payments?.autoPayEnabled || false,
+            autoPayThreshold:
+                settings?.payments?.autoPayThreshold?.toString() || '0',
             mounted: true
         });
     }
@@ -86,7 +94,9 @@ export default class PaymentsSettings extends React.Component<
             enableMempoolRates,
             timeoutSeconds,
             preferredMempoolRate,
-            slideToPayThreshold
+            slideToPayThreshold,
+            autoPayEnabled,
+            autoPayThreshold
         } = this.state;
         const { SettingsStore } = this.props;
         const { updateSettings, settings, implementation } = SettingsStore;
@@ -104,296 +114,422 @@ export default class PaymentsSettings extends React.Component<
                     }}
                     navigation={navigation}
                 />
-                <View
-                    style={{
-                        paddingHorizontal: 15,
-                        marginTop: 5
-                    }}
+                <ScrollView
+                    style={{ flex: 1 }}
+                    contentContainerStyle={{ paddingBottom: 50 }}
+                    keyboardShouldPersistTaps="handled"
                 >
-                    {BackendUtils.isLNDBased() && (
-                        <View style={{ marginBottom: 20 }}>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('general.lightning')} -{' '}
-                                {localeString(
-                                    'views.Settings.Payments.defaultFeeLimit'
-                                )}
-                            </Text>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    width: '95%'
-                                }}
-                            >
-                                <TextInput
-                                    style={{
-                                        width: '50%'
-                                    }}
-                                    keyboardType="numeric"
-                                    value={feeLimit}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            feeLimit: text
-                                        });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                defaultFeeMethod: 'fixed',
-                                                defaultFeeFixed: text
-                                            }
-                                        });
-                                    }}
-                                    onPressIn={() =>
-                                        this.setState({
-                                            feeLimitMethod: 'fixed'
-                                        })
-                                    }
-                                />
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        paddingTop: 5,
-                                        color: themeColor('text'),
-                                        top: 28,
-                                        right: 35
-                                    }}
-                                >
-                                    {localeString('general.sats')}
-                                </Text>
-                                <TextInput
-                                    style={{
-                                        width: '50%',
-                                        right: 5
-                                    }}
-                                    keyboardType="numeric"
-                                    value={feePercentage}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            feePercentage: text
-                                        });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                defaultFeeMethod: 'percent',
-                                                defaultFeePercentage: text
-                                            }
-                                        });
-                                    }}
-                                    onPressIn={() =>
-                                        this.setState({
-                                            feeLimitMethod: 'percent'
-                                        })
-                                    }
-                                />
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        paddingTop: 5,
-                                        color: themeColor('text'),
-                                        top: 28,
-                                        right: 25
-                                    }}
-                                >
-                                    {'%'}
-                                </Text>
-                            </View>
-                            <Text style={{ color: themeColor('text') }}>
-                                {localeString(
-                                    'views.Settings.Payments.feeLimitMethodExplainer'
-                                )}
-                            </Text>
-                        </View>
-                    )}
-
-                    {implementation === 'cln-rest' && (
-                        <View>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('secondaryText')
-                                }}
-                            >
-                                {localeString('general.lightning')} -{' '}
-                                {localeString(
-                                    'views.Settings.Payments.defaultFeeLimit'
-                                )}
-                            </Text>
-                            <View
-                                style={{
-                                    flex: 1,
-                                    flexWrap: 'wrap',
-                                    flexDirection: 'row',
-                                    justifyContent: 'flex-end'
-                                }}
-                            ></View>
-                            <View
-                                style={{
-                                    flexDirection: 'row'
-                                }}
-                            >
-                                <TextInput
-                                    keyboardType="numeric"
-                                    value={feePercentage}
-                                    onChangeText={async (text: string) => {
-                                        this.setState({
-                                            feePercentage: text
-                                        });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                defaultFeeMethod: 'percent',
-                                                defaultFeePercentage: text
-                                            }
-                                        });
-                                    }}
-                                    onPressIn={() =>
-                                        this.setState({
-                                            feeLimitMethod: 'percent'
-                                        })
-                                    }
-                                />
-                                <Text
-                                    style={{
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        paddingTop: 5,
-                                        color: themeColor('text'),
-                                        top: 28,
-                                        right: 28
-                                    }}
-                                >
-                                    {'%'}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-
-                    <AmountInput
-                        amount={slideToPayThreshold.toString()}
-                        title={
-                            localeString('general.lightning') +
-                            ' - ' +
-                            localeString(
-                                'views.Settings.Payments.slideToPayThreshold'
-                            )
-                        }
-                        onAmountChange={async (amount, _) => {
-                            this.setState({
-                                slideToPayThreshold: amount
-                            });
-                            const amountNumber = Number(amount);
-                            // ensure settings are loading and everything is mounted
-                            // before we attempt to update settings
-                            // solves ZEUS-2802
-                            if (
-                                this.state.mounted &&
-                                !Number.isNaN(amountNumber)
-                            ) {
-                                await updateSettings({
-                                    payments: {
-                                        ...settings.payments,
-                                        slideToPayThreshold: Number(amount)
-                                    }
-                                });
-                            }
+                    <View
+                        style={{
+                            paddingHorizontal: 15,
+                            marginTop: 5
                         }}
-                        hideConversion={true}
-                        hideUnitChangeButton={true}
-                        forceUnit="sats"
-                    />
+                    >
+                        {BackendUtils.isLNDBased() && (
+                            <View style={{ marginBottom: 20 }}>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('general.lightning')} -{' '}
+                                    {localeString(
+                                        'views.Settings.Payments.defaultFeeLimit'
+                                    )}
+                                </Text>
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        width: '95%'
+                                    }}
+                                >
+                                    <TextInput
+                                        style={{
+                                            width: '50%'
+                                        }}
+                                        keyboardType="numeric"
+                                        value={feeLimit}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                feeLimit: text
+                                            });
+                                            await updateSettings({
+                                                payments: {
+                                                    ...settings.payments,
+                                                    defaultFeeMethod: 'fixed',
+                                                    defaultFeeFixed: text
+                                                }
+                                            });
+                                        }}
+                                        onPressIn={() =>
+                                            this.setState({
+                                                feeLimitMethod: 'fixed'
+                                            })
+                                        }
+                                    />
+                                    <Text
+                                        style={{
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            paddingTop: 5,
+                                            color: themeColor('text'),
+                                            top: 28,
+                                            right: 35
+                                        }}
+                                    >
+                                        {localeString('general.sats')}
+                                    </Text>
+                                    <TextInput
+                                        style={{
+                                            width: '50%',
+                                            right: 5
+                                        }}
+                                        keyboardType="numeric"
+                                        value={feePercentage}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                feePercentage: text
+                                            });
+                                            await updateSettings({
+                                                payments: {
+                                                    ...settings.payments,
+                                                    defaultFeeMethod: 'percent',
+                                                    defaultFeePercentage: text
+                                                }
+                                            });
+                                        }}
+                                        onPressIn={() =>
+                                            this.setState({
+                                                feeLimitMethod: 'percent'
+                                            })
+                                        }
+                                    />
+                                    <Text
+                                        style={{
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            paddingTop: 5,
+                                            color: themeColor('text'),
+                                            top: 28,
+                                            right: 25
+                                        }}
+                                    >
+                                        {'%'}
+                                    </Text>
+                                </View>
+                                <Text style={{ color: themeColor('text') }}>
+                                    {localeString(
+                                        'views.Settings.Payments.feeLimitMethodExplainer'
+                                    )}
+                                </Text>
+                            </View>
+                        )}
 
-                    {(BackendUtils.isLNDBased() ||
-                        implementation === 'cln-rest') && (
-                        <>
+                        {implementation === 'cln-rest' && (
+                            <View>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('general.lightning')} -{' '}
+                                    {localeString(
+                                        'views.Settings.Payments.defaultFeeLimit'
+                                    )}
+                                </Text>
+                                <View
+                                    style={{
+                                        flex: 1,
+                                        flexWrap: 'wrap',
+                                        flexDirection: 'row',
+                                        justifyContent: 'flex-end'
+                                    }}
+                                ></View>
+                                <View
+                                    style={{
+                                        flexDirection: 'row'
+                                    }}
+                                >
+                                    <TextInput
+                                        keyboardType="numeric"
+                                        value={feePercentage}
+                                        onChangeText={async (text: string) => {
+                                            this.setState({
+                                                feePercentage: text
+                                            });
+                                            await updateSettings({
+                                                payments: {
+                                                    ...settings.payments,
+                                                    defaultFeeMethod: 'percent',
+                                                    defaultFeePercentage: text
+                                                }
+                                            });
+                                        }}
+                                        onPressIn={() =>
+                                            this.setState({
+                                                feeLimitMethod: 'percent'
+                                            })
+                                        }
+                                    />
+                                    <Text
+                                        style={{
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            paddingTop: 5,
+                                            color: themeColor('text'),
+                                            top: 28,
+                                            right: 28
+                                        }}
+                                    >
+                                        {'%'}
+                                    </Text>
+                                </View>
+                            </View>
+                        )}
+
+                        <AmountInput
+                            amount={slideToPayThreshold.toString()}
+                            title={
+                                localeString('general.lightning') +
+                                ' - ' +
+                                localeString(
+                                    'views.Settings.Payments.slideToPayThreshold'
+                                )
+                            }
+                            onAmountChange={async (amount, _) => {
+                                this.setState({
+                                    slideToPayThreshold: amount
+                                });
+                                const amountNumber = Number(amount);
+                                // ensure settings are loading and everything is mounted
+                                // before we attempt to update settings
+                                // solves ZEUS-2802
+                                if (
+                                    this.state.mounted &&
+                                    !Number.isNaN(amountNumber)
+                                ) {
+                                    await updateSettings({
+                                        payments: {
+                                            ...settings.payments,
+                                            slideToPayThreshold: Number(amount)
+                                        }
+                                    });
+                                }
+                            }}
+                            hideConversion={true}
+                            hideUnitChangeButton={true}
+                            forceUnit="sats"
+                        />
+
+                        {(BackendUtils.isLNDBased() ||
+                            implementation === 'cln-rest') && (
+                            <>
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        paddingTop: 5,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('general.lightning')} -{' '}
+                                    {localeString(
+                                        'views.Settings.Payments.timeoutSeconds'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={timeoutSeconds}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            timeoutSeconds: text
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                timeoutSeconds: text
+                                            }
+                                        });
+                                    }}
+                                />
+                            </>
+                        )}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                marginTop: 20
+                            }}
+                        >
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    paddingTop: 5,
-                                    color: themeColor('secondaryText')
+                                    color: themeColor('secondaryText'),
+                                    flex: 1
                                 }}
                             >
-                                {localeString('general.lightning')} -{' '}
                                 {localeString(
-                                    'views.Settings.Payments.timeoutSeconds'
+                                    'views.Settings.Privacy.enableMempoolRates'
                                 )}
                             </Text>
-                            <TextInput
-                                keyboardType="numeric"
-                                value={timeoutSeconds}
-                                onChangeText={async (text: string) => {
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={enableMempoolRates}
+                                    onValueChange={async () => {
+                                        this.setState({
+                                            enableMempoolRates:
+                                                !enableMempoolRates
+                                        });
+                                        await updateSettings({
+                                            privacy: {
+                                                ...settings.privacy,
+                                                enableMempoolRates:
+                                                    !enableMempoolRates
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
+                        <View style={{ marginTop: 20 }}>
+                            <DropdownSetting
+                                title={localeString(
+                                    'views.Settings.Payments.preferredMempoolRate'
+                                )}
+                                selectedValue={preferredMempoolRate}
+                                onValueChange={async (value: string) => {
                                     this.setState({
-                                        timeoutSeconds: text
+                                        preferredMempoolRate: value
                                     });
                                     await updateSettings({
                                         payments: {
                                             ...settings.payments,
-                                            timeoutSeconds: text
+                                            preferredMempoolRate: value
                                         }
                                     });
                                 }}
-                            />
-                        </>
-                    )}
-                    <View
-                        style={{
-                            flexDirection: 'row',
-                            marginTop: 20
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('secondaryText'),
-                                flex: 1
-                            }}
-                        >
-                            {localeString(
-                                'views.Settings.Privacy.enableMempoolRates'
-                            )}
-                        </Text>
-                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
-                            <Switch
-                                value={enableMempoolRates}
-                                onValueChange={async () => {
-                                    this.setState({
-                                        enableMempoolRates: !enableMempoolRates
-                                    });
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            enableMempoolRates:
-                                                !enableMempoolRates
-                                        }
-                                    });
-                                }}
+                                values={MEMPOOL_RATES_KEYS}
+                                disabled={!enableMempoolRates}
                             />
                         </View>
+                        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.enableAutoPayClipboard'
+                                    )}
+                                </Text>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 13,
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginTop: 5
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.autoPayClipboardExplainer'
+                                    )}
+                                </Text>
+                            </View>
+                            <View
+                                style={{ alignSelf: 'center', marginLeft: 5 }}
+                            >
+                                <Switch
+                                    value={autoPayEnabled}
+                                    onValueChange={async () => {
+                                        if (!autoPayEnabled) {
+                                            const validation =
+                                                AutoPayUtils.validateAutoPayRequirements(
+                                                    false
+                                                );
+                                            if (!validation.valid) {
+                                                AutoPayUtils.showAutoPayRequirementsDialog(
+                                                    false,
+                                                    undefined,
+                                                    () => {
+                                                        navigation.navigate(
+                                                            'Privacy'
+                                                        );
+                                                    }
+                                                );
+                                                return;
+                                            }
+                                        }
+
+                                        this.setState({
+                                            autoPayEnabled: !autoPayEnabled
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                autoPayEnabled: !autoPayEnabled
+                                            }
+                                        });
+                                    }}
+                                />
+                            </View>
+                        </View>
+
+                        {autoPayEnabled && (
+                            <View style={{ marginTop: 20, marginBottom: 60 }}>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 17,
+                                        fontFamily: 'PPNeueMontreal-Book'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.autoPayThreshold'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    keyboardType="numeric"
+                                    value={autoPayThreshold.toString()}
+                                    onChangeText={async (text: string) => {
+                                        const threshold = parseInt(text) || 0;
+                                        this.setState({
+                                            autoPayThreshold:
+                                                threshold.toString()
+                                        });
+                                        await updateSettings({
+                                            payments: {
+                                                ...settings.payments,
+                                                autoPayThreshold: threshold
+                                            }
+                                        });
+                                    }}
+                                    style={{
+                                        marginTop: 10,
+                                        borderWidth: 1,
+                                        borderColor: themeColor('separator'),
+                                        padding: 10,
+                                        borderRadius: 5
+                                    }}
+                                />
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 14,
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        marginTop: 5,
+                                        fontStyle: 'italic'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.Payments.autoPayThresholdDescription'
+                                    )}
+                                </Text>
+                            </View>
+                        )}
                     </View>
-                    <View style={{ marginTop: 20 }}>
-                        <DropdownSetting
-                            title={localeString(
-                                'views.Settings.Payments.preferredMempoolRate'
-                            )}
-                            selectedValue={preferredMempoolRate}
-                            onValueChange={async (value: string) => {
-                                this.setState({
-                                    preferredMempoolRate: value
-                                });
-                                await updateSettings({
-                                    payments: {
-                                        ...settings.payments,
-                                        preferredMempoolRate: value
-                                    }
-                                });
-                            }}
-                            values={MEMPOOL_RATES_KEYS}
-                            disabled={!enableMempoolRates}
-                        />
-                    </View>
-                </View>
+                </ScrollView>
             </Screen>
         );
     }

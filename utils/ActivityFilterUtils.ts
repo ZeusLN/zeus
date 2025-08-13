@@ -129,6 +129,17 @@ class ActivityFilterUtils {
             });
         }
 
+        if (filter.autoPay == false) {
+            filteredActivity = filteredActivity.filter((activity: any) => {
+                const isPayment = activity instanceof Payment;
+                const isInvoice = activity instanceof Invoice;
+                return (
+                    !(isPayment && activity.isAutoPay) &&
+                    !(isInvoice && activity.isAutoPay)
+                );
+            });
+        }
+
         if (filter.minimumAmount > 0) {
             filteredActivity = filteredActivity.filter(
                 (activity) =>

@@ -260,6 +260,13 @@ export default class ActivityFilter extends React.Component<
                 condition: BackendUtils.supportsKeysend()
             },
             {
+                label: localeString('views.ActivityFilter.autoPay'),
+                value: filters.autoPay,
+                var: 'autoPay',
+                type: 'Toggle',
+                condition: true
+            },
+            {
                 label: localeString('general.unconfirmed'),
                 value: unconfirmed,
                 var: 'unconfirmed',

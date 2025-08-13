@@ -7,6 +7,7 @@ import DateTimeUtils from '../utils/DateTimeUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
 import { notesStore } from '../stores/Stores';
+import AutoPayUtils from '../utils/AutoPayUtils';
 
 interface HopHint {
     fee_proportional_millionths: number;
@@ -98,6 +99,15 @@ export default class Invoice extends BaseModel {
             return true;
         }
         return false;
+    }
+
+    @computed public get isAutoPay(): boolean {
+        const paymentHash = this.r_hash;
+        if (paymentHash) {
+            return AutoPayUtils.isAutoPayTransaction(paymentHash);
+        }
+
+        return this.memo ? this.memo.includes('[AUTO-PAY]') : false;
     }
 
     @computed public get model(): string {

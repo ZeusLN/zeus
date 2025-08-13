@@ -143,7 +143,9 @@ export default class ContactStore {
                 description: prefillContact.description,
                 photo: prefillContact.photo,
                 isFavourite: prefillContact.isFavourite,
-                contactId: prefillContact?.contactId
+                contactId: prefillContact?.contactId,
+                autoPayEnabled: prefillContact.autoPayEnabled,
+                autoPayThreshold: prefillContact.autoPayThreshold
             };
         } else {
             this.prefillContact = null;

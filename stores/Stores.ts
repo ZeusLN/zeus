@@ -1,5 +1,6 @@
 import ActivityStore from './ActivityStore';
 import AlertStore from './AlertStore';
+import AutoPayStore from './AutoPayStore';
 import BalanceStore from './BalanceStore';
 import CashuStore from './CashuStore';
 import ChannelBackupStore from './ChannelBackupStore';
@@ -61,6 +62,7 @@ export const feeStore = new FeeStore(settingsStore, nodeInfoStore);
 export const utxosStore = new UTXOsStore(settingsStore);
 export const messageSignStore = new MessageSignStore();
 export const notesStore = new NotesStore();
+export const autoPayStore = new AutoPayStore();
 export const contactStore = new ContactStore();
 export const syncStore = new SyncStore(settingsStore);
 export const cashuStore = new CashuStore(
