@@ -307,7 +307,6 @@ export default class WatchTowers extends React.Component<
                             data={filteredWatchtowers}
                             renderItem={this.renderItem}
                             keyExtractor={(item) => item.pubkey}
-                            contentContainerStyle={styles.listContainer}
                             refreshControl={
                                 <RefreshControl
                                     refreshing={refreshing}
@@ -339,11 +338,7 @@ export default class WatchTowers extends React.Component<
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        padding: 15
-    },
-    listContainer: {
-        paddingBottom: 15
+        padding: 10
     },
     emptyContainer: {
         flex: 1,
@@ -360,7 +355,8 @@ const styles = StyleSheet.create({
     },
     watchtowerItem: {
         flexDirection: 'row',
-        padding: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 5,
         justifyContent: 'space-between',
         alignItems: 'center'
     },
@@ -386,6 +382,6 @@ const styles = StyleSheet.create({
         fontSize: 14
     },
     divider: {
-        marginHorizontal: 16
+        marginHorizontal: 1
     }
 });
