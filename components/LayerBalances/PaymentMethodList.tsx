@@ -24,6 +24,7 @@ interface PaymentMethodListProps {
     value?: string;
     satAmount?: string;
     lightning?: string;
+    lightningAddress?: string;
     ecash?: string;
     offer?: string;
 }
@@ -56,7 +57,9 @@ const Row = ({ item }: { item: DataRow }) => {
                 <View style={styles.left}>
                     {item.layer === 'On-chain' ? (
                         <OnChainSvg />
-                    ) : item.layer === 'Lightning' || item.layer === 'Offer' ? (
+                    ) : item.layer === 'Lightning' ||
+                      item.layer === 'Lightning address' ||
+                      item.layer === 'Offer' ? (
                         <LightningSvg />
                     ) : item.layer === 'Lightning via ecash' ? (
                         <EcashSvg />
@@ -83,6 +86,8 @@ const Row = ({ item }: { item: DataRow }) => {
                                 ? localeString(
                                       'components.LayerBalances.lightningViaEcash'
                                   )
+                                : item.layer === 'Lightning address'
+                                ? localeString('general.lightningAddress')
                                 : item.layer === 'Offer'
                                 ? localeString('views.Settings.Bolt12Offer')
                                 : item.layer === 'On-chain'
@@ -114,6 +119,7 @@ const SwipeableRow = ({
     value,
     satAmount,
     lightning,
+    lightningAddress,
     offer
 }: {
     item: DataRow;
@@ -122,6 +128,7 @@ const SwipeableRow = ({
     value?: string;
     satAmount?: string;
     lightning?: string;
+    lightningAddress?: string;
     offer?: string;
 }) => {
     if (item.layer === 'Lightning') {
@@ -129,6 +136,19 @@ const SwipeableRow = ({
             <LightningSwipeableRow
                 navigation={navigation}
                 lightning={lightning}
+                locked={true}
+                disabled={item.disabled}
+            >
+                <Row item={item} />
+            </LightningSwipeableRow>
+        );
+    }
+
+    if (item.layer === 'Lightning address') {
+        return (
+            <LightningSwipeableRow
+                navigation={navigation}
+                lightningAddress={lightningAddress}
                 locked={true}
                 disabled={item.disabled}
             >
@@ -183,7 +203,14 @@ export default class PaymentMethodList extends Component<
     {}
 > {
     render() {
-        const { navigation, value, satAmount, lightning, offer } = this.props;
+        const {
+            navigation,
+            value,
+            satAmount,
+            lightning,
+            lightningAddress,
+            offer
+        } = this.props;
 
         let DATA: DataRow[] = [];
 
@@ -206,6 +233,13 @@ export default class PaymentMethodList extends Component<
                 subtitle: `${lightning?.slice(0, 12)}...${lightning?.slice(
                     -12
                 )}`
+            });
+        }
+
+        if (lightningAddress) {
+            DATA.push({
+                layer: 'Lightning address',
+                subtitle: lightningAddress
             });
         }
 
@@ -245,6 +279,7 @@ export default class PaymentMethodList extends Component<
                             value={value}
                             satAmount={satAmount}
                             lightning={lightning}
+                            lightningAddress={lightningAddress}
                             offer={offer}
                         />
                     )}
