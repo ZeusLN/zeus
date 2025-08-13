@@ -48,12 +48,13 @@ export const invoicesStore = new InvoicesStore(
     channelsStore,
     nodeInfoStore
 );
+export const balanceStore = new BalanceStore(settingsStore);
 export const transactionsStore = new TransactionsStore(
     settingsStore,
     nodeInfoStore,
-    channelsStore
+    channelsStore,
+    balanceStore
 );
-export const balanceStore = new BalanceStore(settingsStore);
 export const unitsStore = new UnitsStore(settingsStore, fiatStore);
 export const paymentsStore = new PaymentsStore(settingsStore, channelsStore);
 export const lnurlPayStore = new LnurlPayStore(settingsStore, nodeInfoStore);
