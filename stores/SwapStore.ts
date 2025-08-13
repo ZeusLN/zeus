@@ -2,7 +2,6 @@ import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
-import { randomBytes } from 'crypto';
 import { crypto, initEccLib } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
 import { validateMnemonic } from '@scure/bip39';
@@ -23,7 +22,7 @@ import SettingsStore, {
 
 import Storage from '../storage';
 
-import Swap from '../models/Swap';
+import Swap, { SwapState, SwapType } from '../models/Swap';
 
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
@@ -111,18 +110,18 @@ export default class SwapStore {
     }
 
     @action
-    public statusColor = (status: string) => {
+    public statusColor = (status: SwapState | string) => {
         let stateColor;
         switch (status) {
-            case 'transaction.claimed':
-            case 'invoice.settled':
-            case 'transaction.refunded':
+            case SwapState.TransactionClaimed:
+            case SwapState.InvoiceSettled:
+            case SwapState.TransactionRefunded:
                 stateColor = 'green';
                 break;
-            case 'invoice.failedToPay':
-            case 'swap.expired':
-            case 'invoice.expired':
-            case 'transaction.lockupFailed':
+            case SwapState.InvoiceFailedToPay:
+            case SwapState.SwapExpired:
+            case SwapState.InvoiceExpired:
+            case SwapState.TransactionLockupFailed:
             case 'invoice could not be paid':
             case 'invoice expired':
                 stateColor = themeColor('error');
@@ -268,7 +267,7 @@ export default class SwapStore {
             responseData.createdAt = createdAt;
 
             // Add the swap type
-            responseData.type = 'Submarine';
+            responseData.type = SwapType.Submarine;
             responseData.refundPrivateKey = refundPrivateKey;
             responseData.refundPublicKey = refundPublicKey;
 
@@ -353,10 +352,10 @@ export default class SwapStore {
         const nodePubkey = nodeInfo.nodeId;
         try {
             initEccLib(ecc);
-            console.log('Creating reverse swap...');
+            console.log('Creating reverse swap using rescue key...');
+            const { keys, index } = await this.generateNewKey();
 
-            const preimage = randomBytes(32);
-            const keys: any = ECPairFactory(ecc).makeRandom();
+            const preimage = await this.derivePreimageFromRescueKey(index);
 
             // Creating a reverse swap
             const data = JSON.stringify({
@@ -397,7 +396,7 @@ export default class SwapStore {
             responseData.createdAt = createdAt;
 
             // Add the swap type
-            responseData.type = 'Reverse';
+            responseData.type = SwapType.Reverse;
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
 
@@ -497,19 +496,20 @@ export default class SwapStore {
                 if (!swap?.id) continue;
 
                 const skipStatusesForSubmarineSwap = [
-                    'invoice.failedToPay',
-                    'transaction.refunded',
-                    'transaction.claimed',
-                    'swap.expired',
-                    'transaction.refunded'
+                    SwapState.InvoiceFailedToPay,
+                    SwapState.TransactionRefunded,
+                    SwapState.TransactionClaimed,
+                    SwapState.SwapExpired
                 ];
 
-                const skipStatusesForReverseSwap = ['transaction.refunded'];
+                const skipStatusesForReverseSwap = [
+                    SwapState.TransactionRefunded
+                ];
 
                 const shouldSkip =
-                    (swap.type === 'Submarine' &&
+                    (swap.type === SwapType.Submarine &&
                         skipStatusesForSubmarineSwap.includes(swap.status)) ||
-                    (swap.type === 'Reverse' &&
+                    (swap.type === SwapType.Reverse &&
                         skipStatusesForReverseSwap.includes(swap.status));
 
                 if (shouldSkip) continue;
@@ -534,10 +534,10 @@ export default class SwapStore {
             }
 
             const updatedSubmarineSwaps = allSwaps.filter(
-                (s) => s.type === 'Submarine'
+                (s) => s.type === SwapType.Submarine
             );
             const updatedReverseSwaps = allSwaps.filter(
-                (s) => s.type === 'Reverse'
+                (s) => s.type === SwapType.Reverse
             );
 
             await Storage.setItem(
@@ -574,7 +574,7 @@ export default class SwapStore {
     @action
     updateSwapStatus = async (
         swapId: string,
-        status: string,
+        status: SwapState,
         isSubmarineSwap: boolean,
         failureReason?: string
     ) => {
@@ -628,7 +628,7 @@ export default class SwapStore {
             }
 
             // Update the swap
-            swaps[swapIndex].status = 'transaction.refunded';
+            swaps[swapIndex].status = SwapState.TransactionRefunded;
             swaps[swapIndex].txid = txid;
 
             // Save the updated swaps back to encrypted storage
@@ -675,6 +675,23 @@ export default class SwapStore {
         );
 
         return ecPair;
+    };
+
+    @action
+    public derivePreimageFromRescueKey = async (index: number) => {
+        const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+        if (!mnemonic) {
+            throw new Error('Rescue mnemonic not found in storage.');
+        }
+
+        const hdKey = this.mnemonicToHDKey(mnemonic);
+        const childKey = hdKey.derive(this.getPath(index));
+
+        if (!childKey.privateKey) {
+            throw new Error(`No private key at index ${index}`);
+        }
+
+        return crypto.sha256(Buffer.from(childKey.privateKey));
     };
 
     @action
@@ -734,7 +751,7 @@ export default class SwapStore {
             try {
                 const response = await ReactNativeBlobUtil.fetch(
                     'POST',
-                    `${host}/swap/rescue`,
+                    `${host}/swap/restore`,
                     {
                         'Content-Type': 'application/json'
                     },
@@ -759,14 +776,32 @@ export default class SwapStore {
                                     !existingSwapIds.includes(swap.id)
                             )
                             .map(async (swap: any) => {
+                                const isReverseSwap = swap.type === 'reverse';
+                                const details = isReverseSwap
+                                    ? swap.claimDetails
+                                    : swap.refundDetails;
+
+                                const swapDetails: any = {};
+
+                                for (const key in swap) {
+                                    if (
+                                        key !== 'claimDetails' &&
+                                        key !== 'refundDetails'
+                                    ) {
+                                        swapDetails[key] = swap[key];
+                                    }
+                                }
+
+                                const { keyIndex } = details;
+
                                 const hdKey = this.mnemonicToHDKey(mnemonic);
                                 const childKey = hdKey.derive(
-                                    this.getPath(swap.keyIndex)
+                                    this.getPath(keyIndex)
                                 );
 
                                 if (!childKey.privateKey) {
                                     throw new Error(
-                                        `No private key at index ${swap.keyIndex}`
+                                        `No private key at index ${keyIndex}`
                                     );
                                 }
 
@@ -781,18 +816,30 @@ export default class SwapStore {
                                     ecPair.publicKey
                                 ).toString('hex');
 
-                                return {
-                                    ...swap,
+                                const rescuedSwapBase = {
+                                    ...swapDetails,
+                                    ...details,
                                     imported: true,
                                     implementation,
                                     nodePubkey,
                                     endpoint: host,
                                     serviceProvider: this.getServiceProvider,
-                                    type: 'Submarine',
-                                    keys: ecPair,
-                                    refundPrivateKey,
-                                    refundPublicKey
+                                    keys: ecPair
                                 };
+
+                                if (isReverseSwap) {
+                                    return {
+                                        ...rescuedSwapBase,
+                                        type: SwapType.Reverse
+                                    };
+                                } else {
+                                    return {
+                                        ...rescuedSwapBase,
+                                        type: SwapType.Submarine,
+                                        refundPrivateKey,
+                                        refundPublicKey
+                                    };
+                                }
                             })
                     );
 
