@@ -91,5 +91,8 @@ export const posStore = new PosStore(settingsStore, fiatStore);
 export const inventoryStore = new InventoryStore();
 export const sweepStore = new SweepStore(nodeInfoStore);
 export const nostrWalletConnectStore = new NostrWalletConnectStore(
-    settingsStore
+    settingsStore,
+    balanceStore,
+    nodeInfoStore,
+    transactionsStore
 );

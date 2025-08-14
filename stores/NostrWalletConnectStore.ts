@@ -4,32 +4,60 @@ if (typeof global !== 'undefined' && !global.TextDecoder) {
     global.TextDecoder = TextEncodingPolyfill.TextDecoder;
     global.TextEncoder = TextEncodingPolyfill.TextEncoder;
 }
+
 import 'websocket-polyfill';
 import { action, observable, runInAction } from 'mobx';
 import { nwc } from '@getalby/sdk';
 import { getPublicKey, generatePrivateKey } from 'nostr-tools';
 import NWCConnection from '../models/NWCConnection';
-import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
-import Storage from '../storage';
+import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
 
+import SettingsStore from './SettingsStore';
+import BalanceStore from './BalanceStore';
+import NodeInfoStore from './NodeInfoStore';
+import InvoicesStore from './InvoicesStore';
+import PaymentsStore from './PaymentsStore';
+import TransactionsStore from './TransactionsStore';
+import Storage from '../storage';
+import Transaction from '../models/Transaction';
+
+import type {
+    Nip47GetInfoResponse,
+    Nip47GetBalanceResponse,
+    Nip47PayInvoiceRequest,
+    Nip47PayResponse,
+    Nip47MakeInvoiceRequest,
+    Nip47LookupInvoiceRequest,
+    Nip47ListTransactionsRequest,
+    Nip47ListTransactionsResponse,
+    Nip47PayKeysendRequest,
+    Nip47Transaction,
+    Nip47SignMessageResponse,
+    Nip47SignMessageRequest,
+    Nip47SingleMethod
+} from '@getalby/sdk/dist/nwc/types';
+import type {
+    NWCWalletServiceRequestHandler,
+    NWCWalletServiceResponsePromise
+} from '@getalby/sdk/dist/nwc';
+
 export const NWC_CONNECTIONS_KEY = 'zeus-nwc-connections';
-export const NWC_SERVICE_KEYS_KEY = 'zeus-nwc-service-keys';
+export const NWC_CLIENT_KEYS = 'zeus-nwc-client-keys';
+export const NWC_SERVICE_KEYS = 'zeus-nwc-service-keys';
 
-const PRIMARY_RELAY_URL = 'wss://relay.damus.io';
-const FALLBACK_RELAY_URLS = [
-    'wss://relay.damus.io',
-    'wss://nostr.wine',
-    'wss://relay.getalby.com/v1',
-    'wss://relay.snort.social',
-    'wss://nos.lol'
-];
+const PRIMARY_RELAY_URL = 'wss://relay.getalby.com/v1';
 
-const ALL_RELAY_URLS = [PRIMARY_RELAY_URL, ...FALLBACK_RELAY_URLS];
+const ALL_RELAY_URLS = [PRIMARY_RELAY_URL];
 
-interface ServiceKeys {
+interface ClientKeys {
     [pubkey: string]: string;
+}
+
+interface WalletServiceKeys {
+    privateKey: string;
+    publicKey: string;
 }
 
 export interface CreateConnectionParams {
@@ -38,6 +66,7 @@ export interface CreateConnectionParams {
     budgetAmount?: number;
     budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
     expiresAt?: Date;
+    isolated?: boolean;
 }
 
 export default class NostrWalletConnectStore {
@@ -58,11 +87,24 @@ export default class NostrWalletConnectStore {
     @observable public currentRelayUrl: string = PRIMARY_RELAY_URL;
     @observable public relayConnectionAttempts: number = 0;
     @observable public relayConnected: boolean = false;
-
+    @observable private walletServiceKeys: WalletServiceKeys | null = null;
     settingsStore: SettingsStore;
+    balanceStore: BalanceStore;
+    nodeInfoStore: NodeInfoStore;
+    invoicesStore: InvoicesStore;
+    paymentsStore: PaymentsStore;
+    transactionsStore: TransactionsStore;
 
-    constructor(settingsStore: SettingsStore) {
+    constructor(
+        settingsStore: SettingsStore,
+        balanceStore: BalanceStore,
+        nodeInfoStore: NodeInfoStore,
+        transactionsStore: TransactionsStore
+    ) {
         this.settingsStore = settingsStore;
+        this.balanceStore = balanceStore;
+        this.nodeInfoStore = nodeInfoStore;
+        this.transactionsStore = transactionsStore;
         this.initializeServiceWithRetry();
     }
 
@@ -77,11 +119,62 @@ export default class NostrWalletConnectStore {
         this.loadingMsg = undefined;
         this.relayConnected = false;
         this.relayConnectionAttempts = 0;
+        this.walletServiceKeys = null;
     };
+
+    private generateWalletServiceKeys(): WalletServiceKeys {
+        const walletServiceSecretKey = generatePrivateKey();
+        const walletServicePubkey = getPublicKey(walletServiceSecretKey);
+        return {
+            privateKey: walletServiceSecretKey,
+            publicKey: walletServicePubkey
+        };
+    }
+
+    private async loadWalletServiceKeys(): Promise<WalletServiceKeys> {
+        try {
+            const storedKeys = await Storage.getItem(NWC_SERVICE_KEYS);
+            console.log('storedKeys', storedKeys);
+            if (!storedKeys) {
+                const keys = this.generateWalletServiceKeys();
+                await this.saveWalletServiceKeys(keys);
+                return keys;
+            }
+            return JSON.parse(storedKeys);
+        } catch (error) {
+            console.error('Failed to load wallet service keys:', error);
+            throw new Error('Failed to load wallet service keys');
+        }
+    }
+    private async saveWalletServiceKeys(
+        keys: WalletServiceKeys
+    ): Promise<void> {
+        try {
+            await Storage.setItem(NWC_SERVICE_KEYS, JSON.stringify(keys));
+        } catch (error) {
+            console.error('Failed to save wallet service keys:', error);
+            throw new Error(
+                localeString(
+                    'views.Settings.NostrWalletConnect.failedToStoreServiceKeys'
+                )
+            );
+        }
+    }
+    private async initializeWalletServiceKeys(): Promise<void> {
+        let keys = await this.loadWalletServiceKeys();
+        if (!keys) {
+            keys = this.generateWalletServiceKeys();
+            await this.saveWalletServiceKeys(keys);
+        }
+        runInAction(() => {
+            this.walletServiceKeys = keys;
+        });
+    }
 
     @action
     private initializeServiceWithRetry = async () => {
-        const maxAttempts = ALL_RELAY_URLS.length;
+        const maxAttempts =
+            this.settingsStore.settings.lightningAddress.nostrRelays.length;
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             const relayUrl = ALL_RELAY_URLS[attempt];
@@ -102,14 +195,15 @@ export default class NostrWalletConnectStore {
                 runInAction(() => {
                     this.relayConnected = true;
                 });
-                console.log(`Successfully connected to NWC relay: ${relayUrl}`);
                 return;
             } catch (error: any) {
                 console.error(`Failed to connect to relay ${relayUrl}:`, error);
                 if (attempt === maxAttempts - 1) {
                     runInAction(() => {
                         this.error = true;
-                        this.errorMessage = `Failed to connect to any NWC relay. Last error: ${error.message}`;
+                        this.errorMessage = localeString(
+                            'views.Settings.NostrWalletConnect.errors.failedToConnectToRelay'
+                        ).replace('{error}', error.message);
                         this.relayConnected = false;
                     });
                 } else {
@@ -124,15 +218,14 @@ export default class NostrWalletConnectStore {
 
     @action
     public initializeService = async () => {
-        const start = new Date();
         runInAction(() => {
             this.initializing = true;
             this.loadingMsg = localeString(
                 'views.Settings.NostrWalletConnect.initializingService'
             );
         });
-
         try {
+            await this.initializeWalletServiceKeys();
             await this.loadConnections();
             await this.checkAndResetAllBudgetsOnInit();
             await this.startService();
@@ -140,10 +233,6 @@ export default class NostrWalletConnectStore {
                 this.loadingMsg = undefined;
                 this.initializing = false;
             });
-            const completionTime =
-                (new Date().getTime() - start.getTime()) / 1000 + 's';
-            console.log('done initializing nostr wallet connect  -----> ');
-            console.log('NWC service initialization time:', completionTime);
         } catch (error: any) {
             console.error('Failed to initialize NWC service:', error);
             runInAction(() => {
@@ -164,9 +253,26 @@ export default class NostrWalletConnectStore {
         runInAction(() => {
             this.loading = true;
         });
-
         try {
+            if (!this.walletServiceKeys?.privateKey) {
+                throw new Error(`Wallet service key not found`);
+            }
+            await this.nwcWalletService.publishWalletServiceInfoEvent(
+                this.walletServiceKeys.privateKey,
+                [
+                    'get_info',
+                    'get_balance',
+                    'pay_invoice',
+                    'make_invoice',
+                    'lookup_invoice',
+                    'list_transactions',
+                    'pay_keysend',
+                    'sign_message'
+                ],
+                ['hold_invoice_accepted', 'payment_received', 'payment_sent']
+            );
             await this.subscribeToAllConnections();
+            console.log('NWC service started ------------->');
         } catch (error: any) {
             console.error('Failed to start NWC service:', error);
             this.setError(
@@ -211,22 +317,23 @@ export default class NostrWalletConnectStore {
     }
 
     private generateConnectionString(connectionPrivateKey: string): string {
-        const connectionPublicKey = getPublicKey(connectionPrivateKey);
-        const connectionString = `nostr+walletconnect://${connectionPublicKey}?relay=${encodeURIComponent(
+        const connectionString = `nostr+walletconnect://${
+            this.walletServiceKeys?.publicKey
+        }?relay=${encodeURIComponent(
             this.currentRelayUrl
         )}&secret=${connectionPrivateKey}`;
         return connectionString;
     }
 
-    private async storePrivateKey(
+    private async storeClientKeys(
         pubkey: string,
         privateKey: string
     ): Promise<void> {
         try {
-            const storedKeys = await Storage.getItem(NWC_SERVICE_KEYS_KEY);
-            const keys: ServiceKeys = storedKeys ? JSON.parse(storedKeys) : {};
+            const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+            const keys: ClientKeys = storedKeys ? JSON.parse(storedKeys) : {};
             keys[pubkey] = privateKey;
-            await Storage.setItem(NWC_SERVICE_KEYS_KEY, JSON.stringify(keys));
+            await Storage.setItem(NWC_CLIENT_KEYS, JSON.stringify(keys));
         } catch (error) {
             console.error('Failed to store private key:', error);
             throw new Error(
@@ -236,23 +343,10 @@ export default class NostrWalletConnectStore {
             );
         }
     }
-
-    private async getPrivateKey(pubkey: string): Promise<string | null> {
-        try {
-            const storedKeys = await Storage.getItem(NWC_SERVICE_KEYS_KEY);
-            if (!storedKeys) return null;
-            const keys: ServiceKeys = JSON.parse(storedKeys);
-            return keys[pubkey] || null;
-        } catch (error) {
-            console.error('Failed to get private key:', error);
-            return null;
-        }
-    }
     @action
     public setLoading = (loading: boolean) => {
         this.loading = loading;
     };
-
     @action
     public setError = (error: boolean, errorMessage?: string) => {
         this.error = error;
@@ -328,7 +422,6 @@ export default class NostrWalletConnectStore {
             const connectionId = this.generateConnectionId();
             const connectionPrivateKey = generatePrivateKey();
             const connectionPublicKey = getPublicKey(connectionPrivateKey);
-
             const nostrUrl =
                 this.generateConnectionString(connectionPrivateKey);
 
@@ -350,12 +443,13 @@ export default class NostrWalletConnectStore {
                 maxAmountSats: params.budgetAmount,
                 budgetRenewal: params.budgetRenewal || 'never',
                 expiresAt: params.expiresAt,
-                lastBudgetReset: params.budgetAmount ? new Date() : undefined
+                lastBudgetReset: params.budgetAmount ? new Date() : undefined,
+                isolated: params.isolated || false
             };
 
             const connection = new NWCConnection(connectionData);
 
-            await this.storePrivateKey(
+            await this.storeClientKeys(
                 connectionPublicKey,
                 connectionPrivateKey
             );
@@ -459,21 +553,12 @@ export default class NostrWalletConnectStore {
 
                 if (!hadBudget && hasBudget) {
                     connection.lastBudgetReset = new Date();
-                    console.log(
-                        `Budget added to connection ${connection.name}, setting lastBudgetReset`
-                    );
                 } else if (hadBudget && !hasBudget) {
                     connection.lastBudgetReset = undefined;
                     connection.totalSpendSats = 0;
-                    console.log(
-                        `Budget removed from connection ${connection.name}, clearing budget data`
-                    );
                 } else if (hasBudget && budgetRenewalChanged) {
                     connection.lastBudgetReset = new Date();
                     connection.totalSpendSats = 0;
-                    console.log(
-                        `Budget renewal changed for connection ${connection.name} from ${oldBudgetRenewal} to ${newBudgetRenewal}, resetting budget`
-                    );
                 }
             });
 
@@ -503,21 +588,12 @@ export default class NostrWalletConnectStore {
             if (wasNeverUsed) {
                 this.startWaitingForConnection(connectionId);
             }
-
-            console.log('connection', connection);
-            console.log('connection.lastUsed', connection.lastUsed);
-            console.log('markConnectionUsed called for:', connectionId);
-            console.log('wasNeverUsed:', wasNeverUsed);
-            console.log('waitingForConnection:', this.waitingForConnection);
-            console.log('currentConnectionId:', this.currentConnectionId);
-
             connection.lastUsed = new Date();
             await this.saveConnections();
             if (
                 this.waitingForConnection &&
                 this.currentConnectionId === connectionId
             ) {
-                console.log('Calling stopWaitingForConnection...');
                 this.stopWaitingForConnection();
             }
         }
@@ -525,20 +601,12 @@ export default class NostrWalletConnectStore {
 
     @action
     public startWaitingForConnection = (connectionId: string) => {
-        console.log('startWaitingForConnection called with:', connectionId);
         this.waitingForConnection = true;
         this.currentConnectionId = connectionId;
-        console.log(
-            'Set waitingForConnection to true, currentConnectionId to:',
-            connectionId
-        );
     };
 
     @action
     public stopWaitingForConnection = () => {
-        console.log(
-            'stopWaitingForConnection called - setting waitingForConnection to false'
-        );
         this.connectionJustSucceeded = true;
         this.waitingForConnection = false;
         this.currentConnectionId = undefined;
@@ -559,53 +627,27 @@ export default class NostrWalletConnectStore {
         if (connection.needsBudgetReset) {
             connection.resetBudget();
             await this.saveConnections();
-            console.log(`Budget reset for connection: ${connection.name}`);
         }
     };
 
     @action
     public checkAndResetAllBudgetsOnInit = async (): Promise<void> => {
-        console.log(
-            'Checking all connections for budget resets on service init...'
-        );
-        await this.checkAndResetAllBudgets('service initialization');
+        await this.checkAndResetAllBudgets();
     };
 
     @action
-    public checkAndResetAllBudgets = async (
-        context: string = 'manual check'
-    ): Promise<void> => {
+    public checkAndResetAllBudgets = async (): Promise<void> => {
         let budgetsReset = 0;
-        let connectionsChecked = 0;
-
         runInAction(() => {
             for (const connection of this.connections) {
-                connectionsChecked++;
-
                 if (connection.needsBudgetReset) {
                     budgetsReset++;
-                    const oldSpending = connection.totalSpendSats;
-                    const renewalPeriod = connection.budgetRenewal;
-
                     connection.resetBudget();
-
-                    console.log(
-                        `Budget reset (${context}) for connection "${connection.name}": ` +
-                            `${oldSpending} sats spending cleared, renewal: ${renewalPeriod}`
-                    );
                 }
             }
         });
-
         if (budgetsReset > 0) {
             await this.saveConnections();
-            console.log(
-                `Budget check complete (${context}): ${budgetsReset} budgets reset out of ${connectionsChecked} connections checked`
-            );
-        } else if (connectionsChecked > 0) {
-            console.log(
-                `Budget check complete (${context}): No budget resets needed for ${connectionsChecked} connections`
-            );
         }
     };
 
@@ -622,10 +664,6 @@ export default class NostrWalletConnectStore {
         connection.totalSpendSats =
             Number(connection.totalSpendSats) + Number(amountSats);
         await this.saveConnections();
-
-        console.log(
-            `Tracked ${amountSats} sats spending for connection: ${connection.name}. Total: ${connection.totalSpendSats} sats`
-        );
     };
 
     public validateBudgetForPayment = async (
@@ -651,7 +689,11 @@ export default class NostrWalletConnectStore {
             const remainingBudget = connection.remainingBudget;
             return {
                 canProceed: false,
-                error: `Payment of ${amountSats} sats exceeds remaining budget of ${remainingBudget} sats`
+                error: localeString(
+                    'views.Settings.NostrWalletConnect.errors.paymentExceedsBudget'
+                )
+                    .replace('{amount}', amountSats.toString())
+                    .replace('{remaining}', remainingBudget.toString())
             };
         }
 
@@ -660,7 +702,6 @@ export default class NostrWalletConnectStore {
 
     private async subscribeToAllConnections(): Promise<void> {
         const activeConnections = this.connections.filter((c) => !c.isExpired);
-        console.log('activeConnections', activeConnections);
         for (const connection of activeConnections) {
             await this.subscribeToConnection(connection);
         }
@@ -669,7 +710,7 @@ export default class NostrWalletConnectStore {
     // Helper method to check if connection has permission
     private hasPermission(
         connection: NWCConnection,
-        permission: string
+        permission: Nip47SingleMethod
     ): boolean {
         return connection.permissions.includes(permission);
     }
@@ -679,412 +720,59 @@ export default class NostrWalletConnectStore {
     ): Promise<void> {
         try {
             await this.unsubscribeFromConnection(connection.id);
-            const privateKey = await this.getPrivateKey(connection.pubkey);
-            if (!privateKey) {
-                throw new Error(
-                    `Private key not found for connection ${connection.id}`
-                );
+            const serviceSecretKey = this.walletServiceKeys?.privateKey;
+            if (!serviceSecretKey) {
+                throw new Error(`Wallet service key not found`);
             }
             const keypair = new nwc.NWCWalletServiceKeyPair(
-                privateKey,
+                serviceSecretKey,
                 connection.pubkey
             );
-            const subscriptionMethods: any = {};
+
+            const handler: NWCWalletServiceRequestHandler = {};
+
             if (this.hasPermission(connection, 'get_info')) {
-                subscriptionMethods.getInfo = async () => {
-                    console.log('requesting getInfo');
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        const nodeInfo = await BackendUtils.getMyNodeInfo();
-                        console.log('nodeInfo', nodeInfo);
-                        return {
-                            result: {
-                                alias:
-                                    nodeInfo.alias ||
-                                    localeString(
-                                        'views.Settings.NostrWalletConnect.zeusWallet'
-                                    ),
-                                color: nodeInfo.color || '#3399FF',
-                                pubkey: nodeInfo.identity_pubkey,
-                                network: 'mainnet',
-                                block_height: nodeInfo.block_height,
-                                block_hash: nodeInfo.block_hash,
-                                methods: connection.permissions
-                            },
-                            error: undefined
-                        };
-                    } catch (error) {
-                        return {
-                            result: undefined,
-                            error: {
-                                code: 'INTERNAL_ERROR',
-                                message: `Failed to get node info: ${error}`
-                            }
-                        };
-                    }
-                };
+                handler.getInfo = () => this.handleGetInfo(connection);
             }
+
             if (this.hasPermission(connection, 'get_balance')) {
-                subscriptionMethods.getBalance = async () => {
-                    console.log('requesting getBalance');
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        const lightningBalance =
-                            await BackendUtils.getLightningBalance();
-                        console.log('lightningBalance', lightningBalance);
-                        return {
-                            result: {
-                                balance: lightningBalance?.balance * 1000
-                            },
-                            error: undefined
-                        };
-                    } catch (error) {
-                        return {
-                            result: undefined,
-                            error: {
-                                code: 'INTERNAL_ERROR',
-                                message: `Failed to get balance: ${error}`
-                            }
-                        };
-                    }
-                };
+                handler.getBalance = () => this.handleGetBalance(connection);
             }
+
             if (this.hasPermission(connection, 'pay_invoice')) {
-                subscriptionMethods.payInvoice = async (params: {
-                    invoice: string;
-                }) => {
-                    console.log('requesting payInvoice');
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        console.log('params.invoice', params.invoice);
-                        console.log('About to decode payment request...');
-                        const invoiceInfo =
-                            await BackendUtils.decodePaymentRequest([
-                                params.invoice
-                            ]);
-                        console.log('Decoded invoice info:', invoiceInfo);
-                        const amountSats =
-                            Number(invoiceInfo.num_satoshis) || 0;
-
-                        if (invoiceInfo.expiry && invoiceInfo.timestamp) {
-                            const expiryTime =
-                                (Number(invoiceInfo.timestamp) +
-                                    Number(invoiceInfo.expiry)) *
-                                1000;
-                            const now = Date.now();
-                            if (now > expiryTime) {
-                                return {
-                                    result: undefined,
-                                    error: {
-                                        code: 'INVOICE_EXPIRED',
-                                        message: 'Invoice has expired'
-                                    }
-                                };
-                            }
-                            console.log(
-                                `Invoice expires in ${Math.round(
-                                    (expiryTime - now) / 1000
-                                )} seconds`
-                            );
-                        }
-                        const budgetValidation =
-                            await this.validateBudgetForPayment(
-                                connection.id,
-                                amountSats
-                            );
-
-                        if (!budgetValidation.canProceed) {
-                            return {
-                                result: undefined,
-                                error: {
-                                    code: 'QUOTA_EXCEEDED',
-                                    message:
-                                        budgetValidation.error ||
-                                        'Budget limit exceeded'
-                                }
-                            };
-                        }
-                        console.log('About to pay lightning invoice...');
-                        const result = await BackendUtils.payLightningInvoice({
-                            payment_request: params.invoice,
-                            timeout_seconds: 120,
-                            fee_limit_sat: 1000,
-                            allow_self_payment: true
-                        });
-                        console.log('Payment result:', result);
-                        if (result.payment_error) {
-                            return {
-                                result: undefined,
-                                error: {
-                                    code: 'INTERNAL_ERROR',
-                                    message: `Failed to pay invoice: ${result.payment_error}`
-                                }
-                            };
-                        }
-                        if (
-                            result.result &&
-                            result.result.status === 'FAILED'
-                        ) {
-                            const failureReason =
-                                result.result.failure_reason ||
-                                'Unknown failure';
-                            let errorMessage = `Payment failed: ${failureReason}`;
-                            if (failureReason === 'FAILURE_REASON_NO_ROUTE') {
-                                errorMessage =
-                                    'Payment failed: No route found. Check if channels have sufficient liquidity and nodes are connected.';
-                            }
-
-                            console.log(
-                                'Payment failed with reason:',
-                                failureReason
-                            );
-                            console.log(
-                                'Destination:',
-                                invoiceInfo.destination
-                            );
-                            console.log('Amount:', amountSats, 'sats');
-
-                            return {
-                                result: undefined,
-                                error: {
-                                    code: 'PAYMENT_FAILED',
-                                    message: errorMessage
-                                }
-                            };
-                        }
-                        if (
-                            result.result &&
-                            result.result.status === 'SUCCEEDED'
-                        ) {
-                            await this.trackSpending(connection.id, amountSats);
-                            return {
-                                result: {
-                                    preimage: result.result.payment_preimage,
-                                    fees_paid: Math.floor(
-                                        (result.result.fee || 0) * 1000
-                                    )
-                                },
-                                error: undefined
-                            };
-                        }
-                        if (result.payment_preimage && !result.payment_error) {
-                            await this.trackSpending(connection.id, amountSats);
-                            return {
-                                result: {
-                                    preimage: result.payment_preimage,
-                                    fees_paid: Math.floor(
-                                        (result.fee || 0) * 1000
-                                    )
-                                },
-                                error: undefined
-                            };
-                        }
-                        return {
-                            result: undefined,
-                            error: {
-                                code: 'PAYMENT_FAILED',
-                                message: 'Payment failed for unknown reason'
-                            }
-                        };
-                    } catch (error) {
-                        return {
-                            result: undefined,
-                            error: {
-                                code: 'INTERNAL_ERROR',
-                                message: `Failed to pay invoice: ${error}`
-                            }
-                        };
-                    }
-                };
+                handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
+                    this.handlePayInvoice(connection, request);
             }
 
             if (this.hasPermission(connection, 'make_invoice')) {
-                console.log('requesting makeInvoice');
-                subscriptionMethods.makeInvoice = async (params: any) => {
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        const invoice = await BackendUtils.createInvoice({
-                            value: Math.floor(params.amount / 1000),
-                            memo: params.description || '',
-                            expiry: params.expiry || 3600
-                        });
-                        console.log('invoice', invoice);
-                        return {
-                            result: {
-                                type: 'incoming' as const,
-                                state: 'settled' as const,
-                                invoice: invoice.payment_request,
-                                description: params.description || '',
-                                description_hash: invoice.description_hash,
-                                preimage: invoice.r_preimage,
-                                payment_hash: invoice.r_hash,
-                                amount: params.amount,
-                                fees_paid: 0,
-                                settled_at: Math.floor(Date.now() / 1000),
-                                created_at: Math.floor(Date.now() / 1000),
-                                expires_at:
-                                    Math.floor(Date.now() / 1000) +
-                                    (params.expiry || 3600)
-                            },
-                            error: undefined
-                        };
-                    } catch (error) {
-                        return Promise.resolve({
-                            result: undefined,
-                            error: {
-                                code: 'INTERNAL_ERROR',
-                                message: `Failed to create invoice: ${error}`
-                            }
-                        });
-                    }
-                };
+                handler.makeInvoice = (request: Nip47MakeInvoiceRequest) =>
+                    this.handleMakeInvoice(connection, request);
             }
 
             if (this.hasPermission(connection, 'lookup_invoice')) {
-                subscriptionMethods.lookupInvoice = async (params: {
-                    payment_hash: string;
-                }) => {
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        const invoice = await BackendUtils.lookupInvoice({
-                            r_hash_str: params.payment_hash
-                        });
-
-                        return {
-                            result: {
-                                type: 'incoming' as const,
-                                state: invoice.settled
-                                    ? ('settled' as const)
-                                    : ('pending' as const),
-                                invoice: invoice.payment_request,
-                                description: invoice.memo || '',
-                                description_hash:
-                                    invoice.description_hash || '',
-                                preimage: invoice.r_preimage || '',
-                                payment_hash:
-                                    invoice.r_hash || params.payment_hash,
-                                amount: Math.floor((invoice.value || 0) * 1000), // Convert to msats
-                                fees_paid: 0, // No fees for incoming invoices
-                                settled_at: invoice.settle_date
-                                    ? Math.floor(invoice.settle_date)
-                                    : Math.floor(Date.now() / 1000),
-                                created_at: invoice.creation_date
-                                    ? Math.floor(invoice.creation_date)
-                                    : Math.floor(Date.now() / 1000),
-                                expires_at: invoice.expiry
-                                    ? Math.floor(
-                                          invoice.creation_date + invoice.expiry
-                                      )
-                                    : Math.floor(Date.now() / 1000) + 3600
-                            },
-                            error: undefined
-                        };
-                    } catch (error) {
-                        return {
-                            result: undefined,
-                            error: {
-                                code: 'NOT_FOUND',
-                                message: `Invoice not found: ${error}`
-                            }
-                        };
-                    }
-                };
+                handler.lookupInvoice = (request: Nip47LookupInvoiceRequest) =>
+                    this.handleLookupInvoice(connection, request);
             }
 
             if (this.hasPermission(connection, 'list_transactions')) {
-                subscriptionMethods.listTransactions = async () => {
-                    console.log('requesting listTransactions');
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        const transactions =
-                            await BackendUtils.getTransactions();
-                        console.log('transactions', transactions);
-                        return {
-                            result: {
-                                transactions: transactions || [],
-                                total_count: transactions?.length || 0
-                            },
-                            error: undefined
-                        };
-                    } catch (error) {
-                        return Promise.resolve({
-                            result: undefined,
-                            error: {
-                                code: 'INTERNAL_ERROR',
-                                message: `Failed to get transactions: ${error}`
-                            }
-                        });
-                    }
-                };
+                handler.listTransactions = (
+                    request: Nip47ListTransactionsRequest
+                ) => this.handleListTransactions(connection, request);
             }
 
             if (this.hasPermission(connection, 'pay_keysend')) {
-                subscriptionMethods.payKeysend = async (request: {
-                    amount: number;
-                    pubkey: string;
-                    preimage?: string;
-                    tlv_records?: Array<{ type: number; value: string }>;
-                }) => {
-                    this.markConnectionUsed(connection.id);
-                    try {
-                        const amountSats = Math.floor(request.amount / 1000);
+                handler.payKeysend = (request: Nip47PayKeysendRequest) =>
+                    this.handlePayKeysend(connection, request);
+            }
 
-                        const budgetValidation =
-                            await this.validateBudgetForPayment(
-                                connection.id,
-                                amountSats
-                            );
-
-                        if (!budgetValidation.canProceed) {
-                            return {
-                                result: undefined,
-                                error: {
-                                    code: 'QUOTA_EXCEEDED',
-                                    message:
-                                        budgetValidation.error ||
-                                        'Budget limit exceeded'
-                                }
-                            };
-                        }
-                        const result = await BackendUtils.payLightningInvoice({
-                            payment_request: request.pubkey,
-                            amt: request.amount
-                        });
-                        await this.trackSpending(connection.id, amountSats);
-                        return {
-                            result: {
-                                type: 'outgoing' as const,
-                                state: 'settled' as const,
-                                invoice: '',
-                                description: localeString(
-                                    'views.Settings.NostrWalletConnect.keysendPayment'
-                                ),
-                                description_hash: '',
-                                preimage: result.payment_preimage,
-                                payment_hash: result.payment_hash,
-                                amount: request.amount,
-                                fees_paid: Math.floor((result.fee || 0) * 1000),
-                                settled_at: Math.floor(Date.now() / 1000),
-                                created_at: Math.floor(Date.now() / 1000),
-                                expires_at: Math.floor(Date.now() / 1000) + 3600
-                            },
-                            error: undefined
-                        };
-                    } catch (error) {
-                        return {
-                            result: undefined,
-                            error: {
-                                code: 'INTERNAL_ERROR',
-                                message: `Failed to send keysend payment: ${error}`
-                            }
-                        };
-                    }
-                };
+            if (this.hasPermission(connection, 'sign_message')) {
+                handler.signMessage = (request: Nip47SignMessageRequest) =>
+                    this.handleSignMessage(connection, request);
             }
 
             const unsubscribe = await this.nwcWalletService.subscribe(
                 keypair,
-                subscriptionMethods
+                handler
             );
 
             runInAction(() => {
@@ -1098,6 +786,525 @@ export default class NostrWalletConnectStore {
         }
     }
 
+    private async handleGetInfo(
+        connection: NWCConnection
+    ): NWCWalletServiceResponsePromise<Nip47GetInfoResponse> {
+        console.log('handleGetInfo', connection);
+        this.markConnectionUsed(connection.id);
+        try {
+            if (!this.nodeInfoStore.nodeInfo?.identity_pubkey) {
+                await this.nodeInfoStore.getNodeInfo();
+            }
+            const nodeInfo = this.nodeInfoStore.nodeInfo;
+            return {
+                result: {
+                    alias:
+                        nodeInfo?.alias ||
+                        localeString(
+                            'views.Settings.NostrWalletConnect.zeusWallet'
+                        ),
+                    color: nodeInfo?.color || '#3399FF',
+                    pubkey: nodeInfo?.identity_pubkey,
+                    network: 'mainnet',
+                    block_height: nodeInfo?.block_height,
+                    block_hash: nodeInfo?.block_hash,
+                    methods: connection.permissions
+                },
+                error: undefined
+            };
+        } catch (error) {
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToGetNodeInfo'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+
+    private async handleGetBalance(
+        connection: NWCConnection
+    ): NWCWalletServiceResponsePromise<Nip47GetBalanceResponse> {
+        this.markConnectionUsed(connection.id);
+        try {
+            await this.balanceStore.getLightningBalance(false);
+            console.log('handleGetBalance', connection);
+            const { balance } = await BackendUtils.getLightningBalance();
+            console.log('lightningBalance', balance);
+            return {
+                result: {
+                    balance: Number(balance) * 1000
+                },
+                error: undefined
+            };
+        } catch (error) {
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToGetBalance'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+
+    private async handlePayInvoice(
+        connection: NWCConnection,
+        request: Nip47PayInvoiceRequest
+    ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
+        console.log('handlePayInvoice', connection);
+        this.markConnectionUsed(connection.id);
+        try {
+            const invoiceInfo = await BackendUtils.decodePaymentRequest([
+                request.invoice
+            ]);
+
+            console.log('invoiceInfo', invoiceInfo);
+            const amountSats = Number(invoiceInfo.num_satoshis) || 0;
+
+            if (invoiceInfo.expiry && invoiceInfo.timestamp) {
+                const expiryTime =
+                    (Number(invoiceInfo.timestamp) +
+                        Number(invoiceInfo.expiry)) *
+                    1000;
+                const now = Date.now();
+                if (now > expiryTime) {
+                    return {
+                        result: undefined,
+                        error: {
+                            code: 'INVOICE_EXPIRED',
+                            message: localeString(
+                                'views.Settings.NostrWalletConnect.errors.invoiceExpired'
+                            )
+                        }
+                    };
+                }
+            }
+            const budgetValidation = await this.validateBudgetForPayment(
+                connection.id,
+                amountSats
+            );
+            if (!budgetValidation.canProceed) {
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'QUOTA_EXCEEDED',
+                        message:
+                            budgetValidation.error ||
+                            localeString(
+                                'views.Settings.NostrWalletConnect.errors.budgetLimitExceeded'
+                            )
+                    }
+                };
+            }
+            const result = await BackendUtils.payLightningInvoice({
+                payment_request: request.invoice,
+                timeout_seconds: 120,
+                fee_limit_sat: 1000,
+                allow_self_payment: true
+            });
+            if (result.payment_error) {
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'INTERNAL_ERROR',
+                        message: localeString(
+                            'views.Settings.NostrWalletConnect.errors.failedToPayInvoice'
+                        ).replace('{error}', result.payment_error)
+                    }
+                };
+            }
+
+            if (result.result && result.result.status === 'FAILED') {
+                const failureReason =
+                    result.result.failure_reason ||
+                    localeString(
+                        'views.Settings.NostrWalletConnect.errors.unknownFailure'
+                    );
+                let errorMessage = localeString(
+                    'views.Settings.NostrWalletConnect.errors.paymentFailed'
+                ).replace('{reason}', failureReason);
+                if (failureReason === 'FAILURE_REASON_NO_ROUTE') {
+                    errorMessage = localeString(
+                        'views.Settings.NostrWalletConnect.errors.paymentFailedNoRoute'
+                    );
+                }
+
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'PAYMENT_FAILED',
+                        message: errorMessage
+                    }
+                };
+            }
+
+            if (result.result && result.result.status === 'SUCCEEDED') {
+                await this.trackSpending(connection.id, amountSats);
+                return {
+                    result: {
+                        preimage: result.result.payment_preimage,
+                        fees_paid: Math.floor((result.result.fee || 0) * 1000)
+                    },
+                    error: undefined
+                };
+            }
+
+            if (result.payment_preimage && !result.payment_error) {
+                await this.trackSpending(connection.id, amountSats);
+                return {
+                    result: {
+                        preimage: result.payment_preimage,
+                        fees_paid: Math.floor((result.fee || 0) * 1000)
+                    },
+                    error: undefined
+                };
+            }
+
+            return {
+                result: undefined,
+                error: {
+                    code: 'PAYMENT_FAILED',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.paymentFailedUnknown'
+                    )
+                }
+            };
+        } catch (error) {
+            console.log(error);
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToPayInvoice'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+
+    private async handleMakeInvoice(
+        connection: NWCConnection,
+        request: Nip47MakeInvoiceRequest
+    ): NWCWalletServiceResponsePromise<Nip47Transaction> {
+        console.log('handleMakeInvoice', connection);
+        this.markConnectionUsed(connection.id);
+        try {
+            const invoice = await BackendUtils.createInvoice({
+                value: Math.floor(request.amount / 1000),
+                memo: request.description || '',
+                expiry: request.expiry || 3600
+            });
+            console.log('invoice', invoice);
+            return {
+                result: {
+                    type: 'incoming' as const,
+                    state: 'settled' as const,
+                    invoice: invoice.payment_request,
+                    description: request.description || '',
+                    description_hash: invoice.description_hash,
+                    preimage: invoice.r_preimage,
+                    payment_hash: invoice.r_hash,
+                    amount: request.amount,
+                    fees_paid: 0,
+                    settled_at: Math.floor(Date.now() / 1000),
+                    created_at: Math.floor(Date.now() / 1000),
+                    expires_at:
+                        Math.floor(Date.now() / 1000) + (request.expiry || 3600)
+                },
+                error: undefined
+            };
+        } catch (error) {
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToCreateInvoice'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+
+    private async handleLookupInvoice(
+        connection: NWCConnection,
+        request: Nip47LookupInvoiceRequest
+    ): NWCWalletServiceResponsePromise<Nip47Transaction> {
+        this.markConnectionUsed(connection.id);
+        console.log('handleLookupInvoice', connection);
+        try {
+            let paymentHash = request.payment_hash!;
+            if (
+                paymentHash.includes('+') ||
+                paymentHash.includes('/') ||
+                paymentHash.includes('=')
+            ) {
+                try {
+                    paymentHash = Base64Utils.base64ToHex(paymentHash);
+                } catch (error) {
+                    console.log(
+                        'Failed to convert base64 payment hash to hex:',
+                        error
+                    );
+                }
+            }
+            const invoice = await BackendUtils.lookupInvoice({
+                r_hash: paymentHash
+            });
+            console.log('invoice', invoice);
+            return {
+                result: {
+                    type: 'incoming' as const,
+                    state:
+                        invoice.settled || invoice.state === 'SETTLED'
+                            ? ('settled' as const)
+                            : ('pending' as const),
+                    invoice: invoice.payment_request || '',
+                    description: invoice.memo || '',
+                    description_hash: invoice.description_hash || '',
+                    preimage: invoice.r_preimage || '',
+                    payment_hash: invoice.r_hash || request.payment_hash!,
+                    amount: Math.floor(Number(invoice.value_msat) || 0),
+                    fees_paid: 0,
+                    settled_at:
+                        invoice.settle_date && invoice.settle_date !== '0'
+                            ? Math.floor(Number(invoice.settle_date))
+                            : Math.floor(Date.now() / 1000),
+                    created_at: invoice.creation_date
+                        ? Math.floor(Number(invoice.creation_date))
+                        : Math.floor(Date.now() / 1000),
+                    expires_at:
+                        invoice.creation_date && invoice.expiry
+                            ? Math.floor(
+                                  Number(invoice.creation_date) +
+                                      Number(invoice.expiry)
+                              )
+                            : Math.floor(Date.now() / 1000) + 3600
+                },
+                error: undefined
+            };
+        } catch (error) {
+            console.log(error);
+            return {
+                result: undefined,
+                error: {
+                    code: 'NOT_FOUND',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.invoiceNotFound'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+
+    private async handleListTransactions(
+        connection: NWCConnection,
+        request: Nip47ListTransactionsRequest
+    ): NWCWalletServiceResponsePromise<Nip47ListTransactionsResponse> {
+        this.markConnectionUsed(connection.id);
+        console.log('handleListTransactions', connection);
+        try {
+            await this.transactionsStore.getTransactions();
+            const transactions = this.transactionsStore.transactions;
+            console.log('transactions', transactions);
+            let nip47Transactions: Nip47Transaction[] = (
+                transactions || []
+            ).map((tx: Transaction) => {
+                const amount = Number(tx.amount);
+                const type: 'incoming' | 'outgoing' =
+                    amount >= 0 ? 'incoming' : 'outgoing';
+                const state: 'settled' | 'pending' | 'failed' =
+                    tx.num_confirmations > 0 ? 'settled' : 'pending';
+                const amountMsats = Math.abs(amount) * 1000;
+                const feesMsats = Math.floor(
+                    (Number(tx.total_fees) || 0) * 1000
+                );
+                const timestamp = Number(tx.time_stamp);
+                return {
+                    type,
+                    state,
+                    invoice: '',
+                    description: tx.note || '',
+                    description_hash: '',
+                    preimage: '',
+                    payment_hash: tx.tx_hash,
+                    amount: amountMsats,
+                    fees_paid: feesMsats,
+                    settled_at: timestamp,
+                    created_at: timestamp,
+                    expires_at: timestamp + 3600,
+                    metadata: {
+                        block_height: tx.block_height,
+                        block_hash: tx.block_hash,
+                        num_confirmations: tx.num_confirmations,
+                        dest_addresses: tx.dest_addresses,
+                        raw_tx_hex: tx.raw_tx_hex
+                    }
+                };
+            });
+            if (request.type && request.type.trim() !== '') {
+                nip47Transactions = nip47Transactions.filter(
+                    (tx) => tx.type === request.type
+                );
+            }
+            if (request.from) {
+                nip47Transactions = nip47Transactions.filter(
+                    (tx) => tx.created_at >= request.from!
+                );
+            }
+            if (request.until) {
+                nip47Transactions = nip47Transactions.filter(
+                    (tx) => tx.created_at <= request.until!
+                );
+            }
+
+            if (request.unpaid !== undefined) {
+                if (request.unpaid) {
+                    nip47Transactions = nip47Transactions.filter(
+                        (tx) => tx.state === 'pending'
+                    );
+                } else {
+                    nip47Transactions = nip47Transactions.filter(
+                        (tx) => tx.state === 'settled'
+                    );
+                }
+            }
+            const totalCount = nip47Transactions.length;
+            const offset = request.offset || 0;
+            const limit = request.limit || totalCount;
+            nip47Transactions = nip47Transactions.slice(offset, offset + limit);
+
+            console.log('Final nip47Transactions:', nip47Transactions);
+            console.log('Total count:', totalCount);
+            console.log('Returned count:', nip47Transactions.length);
+            console.log('Request filters applied:', {
+                type: request.type,
+                from: request.from,
+                until: request.until,
+                unpaid: request.unpaid,
+                offset: request.offset,
+                limit: request.limit
+            });
+
+            return {
+                result: {
+                    transactions: nip47Transactions,
+                    total_count: totalCount
+                },
+                error: undefined
+            };
+        } catch (error) {
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToGetTransactions'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+
+    private async handlePayKeysend(
+        connection: NWCConnection,
+        request: Nip47PayKeysendRequest
+    ): NWCWalletServiceResponsePromise<Nip47Transaction> {
+        this.markConnectionUsed(connection.id);
+        try {
+            const amountSats = Math.floor(request.amount / 1000);
+
+            const budgetValidation = await this.validateBudgetForPayment(
+                connection.id,
+                amountSats
+            );
+
+            if (!budgetValidation.canProceed) {
+                return {
+                    result: undefined,
+                    error: {
+                        code: 'QUOTA_EXCEEDED',
+                        message:
+                            budgetValidation.error ||
+                            localeString(
+                                'views.Settings.NostrWalletConnect.errors.budgetLimitExceeded'
+                            )
+                    }
+                };
+            }
+
+            const result = await BackendUtils.payLightningInvoice({
+                payment_request: request.pubkey,
+                amt: request.amount
+            });
+
+            await this.trackSpending(connection.id, amountSats);
+
+            return {
+                result: {
+                    type: 'outgoing' as const,
+                    state: 'settled' as const,
+                    invoice: '',
+                    description: localeString(
+                        'views.Settings.NostrWalletConnect.keysendPayment'
+                    ),
+                    description_hash: '',
+                    preimage: result.payment_preimage,
+                    payment_hash: result.payment_hash,
+                    amount: request.amount,
+                    fees_paid: Math.floor((result.fee || 0) * 1000),
+                    settled_at: Math.floor(Date.now() / 1000),
+                    created_at: Math.floor(Date.now() / 1000),
+                    expires_at: Math.floor(Date.now() / 1000) + 3600
+                },
+                error: undefined
+            };
+        } catch (error) {
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToSendKeysend'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
+    private async handleSignMessage(
+        connection: NWCConnection,
+        _request: Nip47SignMessageRequest
+    ): NWCWalletServiceResponsePromise<Nip47SignMessageResponse> {
+        this.markConnectionUsed(connection.id);
+        try {
+            const signature = await BackendUtils.signMessage(_request.message);
+            console.log(signature);
+            return {
+                result: {
+                    message: _request.message,
+                    signature
+                },
+                error: undefined
+            };
+        } catch (error) {
+            return {
+                result: undefined,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: localeString(
+                        'views.Settings.NostrWalletConnect.errors.failedToSignMessage'
+                    ).replace('{error}', String(error))
+                }
+            };
+        }
+    }
     private async unsubscribeFromConnection(
         connectionId: string
     ): Promise<void> {
@@ -1123,7 +1330,6 @@ export default class NostrWalletConnectStore {
             await this.unsubscribeFromConnection(connectionId);
         }
     }
-
     public getConnection = (
         connectionId: string
     ): NWCConnection | undefined => {
@@ -1131,36 +1337,15 @@ export default class NostrWalletConnectStore {
     };
 
     public get activeConnections(): NWCConnection[] {
-        return this.connections.filter((c) => c.isolated && !c.isExpired);
+        return this.connections.filter((c) => !c.isExpired);
     }
 
     public get expiredConnections(): NWCConnection[] {
         return this.connections.filter((c) => c.isExpired);
     }
 
-    public get serviceInfo() {
-        return {
-            connectionCount: this.activeConnections.length,
-            totalConnections: this.connections.length,
-            activeSubscriptions: this.activeSubscriptions.size,
-            relay: this.currentRelayUrl,
-            relayConnected: this.relayConnected,
-            relayConnectionAttempts: this.relayConnectionAttempts,
-            supportedMethods: [
-                'get_info',
-                'get_balance',
-                'pay_invoice',
-                'make_invoice',
-                'lookup_invoice',
-                'list_transactions',
-                'pay_keysend'
-            ]
-        };
-    }
-
     @action
     public retryRelayConnection = async (): Promise<boolean> => {
-        console.log('Manually retrying NWC relay connection...');
         runInAction(() => {
             this.relayConnected = false;
             this.relayConnectionAttempts = 0;
@@ -1176,44 +1361,4 @@ export default class NostrWalletConnectStore {
             return false;
         }
     };
-
-    public async testConnection(connectionId: string): Promise<void> {
-        const connection = this.getConnection(connectionId);
-        if (!connection) {
-            console.error(`Connection ${connectionId} not found`);
-            return;
-        }
-
-        try {
-            await this.subscribeToConnection(connection);
-            console.log(`Successfully subscribed to ${connection.name}`);
-        } catch (error) {
-            console.error(`Failed to subscribe to ${connection.name}:`, error);
-        }
-    }
-
-    public getBudgetStatus(connectionId: string): {
-        hasBudgetLimit: boolean;
-        totalSpent: number;
-        budgetLimit?: number;
-        remainingBudget: number;
-        usagePercentage: number;
-        budgetLimitReached: boolean;
-        needsBudgetReset: boolean;
-        budgetRenewal?: string;
-    } | null {
-        const connection = this.getConnection(connectionId);
-        if (!connection) return null;
-
-        return {
-            hasBudgetLimit: connection.hasBudgetLimit,
-            totalSpent: connection.totalSpendSats,
-            budgetLimit: connection.maxAmountSats,
-            remainingBudget: connection.remainingBudget,
-            usagePercentage: connection.budgetUsagePercentage,
-            budgetLimitReached: connection.budgetLimitReached,
-            needsBudgetReset: connection.needsBudgetReset,
-            budgetRenewal: connection.budgetRenewal
-        };
-    }
 }

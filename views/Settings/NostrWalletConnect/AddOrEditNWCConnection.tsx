@@ -18,6 +18,17 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import NWCConnection from '../../../models/NWCConnection';
+import {
+    getAvailablePermissions,
+    getBudgetRenewalOptions,
+    getPermissionTypes,
+    getFullAccessPermissions,
+    determinePermissionType,
+    calculateExpiryDays,
+    getBudgetRenewalIndex,
+    getPermissionsForType
+} from '../../../utils/NostrConnectUtils';
+import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 
 interface AddOrEditNWCConnectionProps {
     navigation: StackNavigationProp<any, any>;
@@ -31,7 +42,7 @@ interface AddOrEditNWCConnectionProps {
 
 interface AddOrEditNWCConnectionState {
     connectionName: string;
-    selectedPermissions: string[];
+    selectedPermissions: Nip47SingleMethod[];
     maxAmountSats: string;
     selectedBudgetRenewalIndex: number;
     expiryDays: string;
@@ -48,136 +59,6 @@ interface AddOrEditNWCConnectionState {
     isIsolated: boolean;
 }
 
-const availablePermissions = [
-    {
-        key: 'get_info',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.getInfo'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.getInfoDescription'
-        )
-    },
-    {
-        key: 'get_balance',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.getBalance'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.getBalanceDescription'
-        )
-    },
-    {
-        key: 'pay_invoice',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.payInvoice'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.payInvoiceDescription'
-        )
-    },
-    {
-        key: 'make_invoice',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.makeInvoice'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.makeInvoiceDescription'
-        )
-    },
-    {
-        key: 'lookup_invoice',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.lookupInvoice'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.lookupInvoiceDescription'
-        )
-    },
-    {
-        key: 'list_transactions',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.listTransactions'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.listTransactionsDescription'
-        )
-    },
-    {
-        key: 'pay_keysend',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.permissions.payKeysend'
-        ),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.permissions.payKeysendDescription'
-        )
-    }
-];
-
-const budgetRenewalOptions = [
-    {
-        key: 'never',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.budgetRenewal.never'
-        )
-    },
-    {
-        key: 'daily',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.budgetRenewal.daily'
-        )
-    },
-    {
-        key: 'weekly',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.budgetRenewal.weekly'
-        )
-    },
-    {
-        key: 'monthly',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.budgetRenewal.monthly'
-        )
-    },
-    {
-        key: 'yearly',
-        title: localeString(
-            'views.Settings.NostrWalletConnect.budgetRenewal.yearly'
-        )
-    }
-];
-
-const permissionTypes = [
-    {
-        key: 'full_access',
-        title: localeString('views.Settings.NostrWalletConnect.fullAccess'),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.fullAccessDescription'
-        )
-    },
-    {
-        key: 'read_only',
-        title: localeString('views.Settings.NostrWalletConnect.readOnly'),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.readOnlyDescription'
-        )
-    },
-    {
-        key: 'isolated',
-        title: localeString('views.Settings.NostrWalletConnect.isolated'),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.isolatedDescription'
-        )
-    },
-    {
-        key: 'custom',
-        title: localeString('views.Settings.NostrWalletConnect.custom'),
-        description: localeString(
-            'views.Settings.NostrWalletConnect.customDescription'
-        )
-    }
-];
-
 @inject('SettingsStore', 'NostrWalletConnectStore')
 @observer
 export default class AddOrEditNWCConnection extends React.Component<
@@ -188,15 +69,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         super(props);
         this.state = {
             connectionName: '',
-            selectedPermissions: [
-                'get_info',
-                'get_balance',
-                'pay_invoice',
-                'make_invoice',
-                'lookup_invoice',
-                'list_transactions',
-                'pay_keysend'
-            ], // default to full access permissions
+            selectedPermissions: getFullAccessPermissions(), // default to full access permissions
             maxAmountSats: '',
             selectedBudgetRenewalIndex: 0,
             expiryDays: '',
@@ -223,64 +96,20 @@ export default class AddOrEditNWCConnection extends React.Component<
         const connection = NostrWalletConnectStore.getConnection(connectionId);
 
         if (connection) {
-            const budgetRenewalIndex = budgetRenewalOptions.findIndex(
-                (option) => option.key === connection.budgetRenewal
+            const budgetRenewalIndex = getBudgetRenewalIndex(
+                connection.budgetRenewal
             );
-            let expiryDays = '';
-            if (connection.expiresAt) {
-                const now = new Date();
-                const expiry = new Date(connection.expiresAt);
-                const diffTime = expiry.getTime() - now.getTime();
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                expiryDays = diffDays > 0 ? diffDays.toString() : '';
-            }
-
-            let permissionType:
-                | 'full_access'
-                | 'read_only'
-                | 'isolated'
-                | 'custom' = 'custom';
-            const fullAccessPermissions = [
-                'get_info',
-                'get_balance',
-                'pay_invoice',
-                'make_invoice',
-                'lookup_invoice',
-                'list_transactions',
-                'pay_keysend'
-            ];
-            const readOnlyPermissions = [
-                'get_info',
-                'get_balance',
-                'make_invoice',
-                'lookup_invoice',
-                'list_transactions'
-            ];
-
-            const connectionPermissions = connection.permissions.sort();
-            const fullAccessSorted = fullAccessPermissions.sort();
-            const readOnlySorted = readOnlyPermissions.sort();
-
-            if (
-                JSON.stringify(connectionPermissions) ===
-                JSON.stringify(fullAccessSorted)
-            ) {
-                permissionType = 'full_access';
-            } else if (
-                JSON.stringify(connectionPermissions) ===
-                JSON.stringify(readOnlySorted)
-            ) {
-                permissionType = connection.isolated ? 'isolated' : 'read_only';
-            } else {
-                permissionType = 'custom';
-            }
+            const expiryDays = calculateExpiryDays(connection.expiresAt);
+            const permissionType = determinePermissionType(
+                connection.permissions,
+                connection.isolated
+            );
 
             this.setState({
                 connectionName: connection.name,
                 selectedPermissions: connection.permissions,
                 maxAmountSats: connection.maxAmountSats?.toString() || '',
-                selectedBudgetRenewalIndex:
-                    budgetRenewalIndex >= 0 ? budgetRenewalIndex : 0,
+                selectedBudgetRenewalIndex: budgetRenewalIndex,
                 expiryDays,
                 description: connection.description || '',
                 originalConnection: connection,
@@ -299,8 +128,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             ? parseInt(this.state.maxAmountSats, 10)
             : undefined;
         const currentBudgetRenewal =
-            budgetRenewalOptions[this.state.selectedBudgetRenewalIndex]?.key ||
-            'never';
+            getBudgetRenewalOptions()[this.state.selectedBudgetRenewalIndex]
+                ?.key || 'never';
         const currentExpiryDays = this.state.expiryDays
             ? parseInt(this.state.expiryDays, 10)
             : undefined;
@@ -325,13 +154,16 @@ export default class AddOrEditNWCConnection extends React.Component<
         const budgetRenewalChanged =
             currentBudgetRenewal !== originalBudgetRenewal;
         const expiryChanged = currentExpiryDays !== originalExpiryDays;
+        const isolatedChanged =
+            this.state.isIsolated !== originalConnection.isolated;
 
         return (
             nameChanged ||
             permissionsChanged ||
             maxAmountChanged ||
             budgetRenewalChanged ||
-            expiryChanged
+            expiryChanged ||
+            isolatedChanged
         );
     };
 
@@ -364,57 +196,19 @@ export default class AddOrEditNWCConnection extends React.Component<
             return;
         }
 
-        let newPermissions: string[] = [];
-        let isIsolated = false;
-
-        switch (permissionType) {
-            case 'full_access':
-                newPermissions = [
-                    'get_info',
-                    'get_balance',
-                    'pay_invoice',
-                    'make_invoice',
-                    'lookup_invoice',
-                    'list_transactions',
-                    'pay_keysend'
-                ];
-                isIsolated = false;
-                break;
-            case 'read_only':
-                newPermissions = [
-                    'get_info',
-                    'get_balance',
-                    'make_invoice',
-                    'lookup_invoice',
-                    'list_transactions'
-                ];
-                isIsolated = false;
-                break;
-            case 'isolated':
-                newPermissions = [
-                    'get_info',
-                    'get_balance',
-                    'make_invoice',
-                    'lookup_invoice',
-                    'list_transactions'
-                ];
-                isIsolated = true;
-                break;
-            case 'custom':
-                // Keep current permissions for custom mode
-                newPermissions = this.state.selectedPermissions;
-                isIsolated = this.state.isIsolated;
-                break;
-        }
+        const { permissions, isIsolated } = getPermissionsForType(
+            permissionType,
+            this.state.selectedPermissions
+        );
 
         this.updateStateWithChangeTracking({
             selectedPermissionType: permissionType,
-            selectedPermissions: newPermissions,
+            selectedPermissions: permissions,
             isIsolated
         });
     };
 
-    togglePermission = (permission: string) => {
+    togglePermission = (permission: Nip47SingleMethod) => {
         const { selectedPermissions } = this.state;
         const newPermissions = selectedPermissions.includes(permission)
             ? selectedPermissions.filter((p) => p !== permission)
@@ -431,10 +225,14 @@ export default class AddOrEditNWCConnection extends React.Component<
             selectedPermissions,
             maxAmountSats,
             selectedBudgetRenewalIndex,
-            expiryDays
+            expiryDays,
+            isIsolated
         } = this.state;
         const { NostrWalletConnectStore, route } = this.props;
         const { connectionId, isEdit } = route.params ?? {};
+
+        this.setState({ error: '' });
+        NostrWalletConnectStore.setError(false);
 
         if (!connectionName.trim()) {
             this.setState({
@@ -456,11 +254,12 @@ export default class AddOrEditNWCConnection extends React.Component<
 
         try {
             const budgetRenewal =
-                budgetRenewalOptions[selectedBudgetRenewalIndex].key;
+                getBudgetRenewalOptions()[selectedBudgetRenewalIndex].key;
             const params: any = {
                 name: connectionName.trim(),
                 permissions: selectedPermissions,
-                budgetRenewal
+                budgetRenewal,
+                isolated: isIsolated
             };
             if (maxAmountSats.trim()) {
                 const budget = parseInt(maxAmountSats, 10);
@@ -519,13 +318,19 @@ export default class AddOrEditNWCConnection extends React.Component<
                 }
             }
         } catch (error: any) {
+            console.log(error);
             console.error('Failed to create connection:', error);
-            this.setState({
-                error: `${localeString(
-                    'views.Settings.NostrWalletConnect.validation.failedToCreateConnection'
-                )}: ${error.message}`
-            });
+            const errorMessage = `${localeString(
+                'views.Settings.NostrWalletConnect.validation.failedToCreateConnection'
+            )}: ${error.message}`;
+            this.setState({ error: errorMessage });
+            NostrWalletConnectStore.setError(true, errorMessage);
         }
+    };
+
+    clearErrors = () => {
+        this.setState({ error: '' });
+        this.props.NostrWalletConnectStore.setError(false);
     };
 
     renderPermissionTypeItem = (permissionType: any) => {
@@ -620,15 +425,20 @@ export default class AddOrEditNWCConnection extends React.Component<
 
     render() {
         const { navigation, NostrWalletConnectStore, route } = this.props;
-        const { loading: storeLoading } = NostrWalletConnectStore;
+        const {
+            loading: storeLoading,
+            error: storeError,
+            errorMessage: storeErrorMessage
+        } = NostrWalletConnectStore;
         const {
             connectionName,
             maxAmountSats,
             selectedBudgetRenewalIndex,
-            expiryDays
+            expiryDays,
+            error
         } = this.state;
-
-        const budgetButtons: any = budgetRenewalOptions.map(
+        const displayError = error || (storeError ? storeErrorMessage : '');
+        const budgetButtons: any = getBudgetRenewalOptions().map(
             (option, index) => ({
                 element: () => (
                     <Text
@@ -646,7 +456,6 @@ export default class AddOrEditNWCConnection extends React.Component<
                 )
             })
         );
-
         return (
             <Screen>
                 <Header
@@ -678,10 +487,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                         contentContainerStyle={styles.scrollContent}
                         showsVerticalScrollIndicator={false}
                     >
-                        {this.state.error && (
+                        {displayError && (
                             <ErrorMessage
-                                message={this.state.error}
+                                message={displayError}
                                 dismissable
+                                onPress={this.clearErrors}
                             />
                         )}
                         {/* Connection Name */}
@@ -717,7 +527,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                 </Body>
                             </View>
                             <View style={{ marginHorizontal: 15 }}>
-                                {permissionTypes.map(
+                                {getPermissionTypes().map(
                                     this.renderPermissionTypeItem
                                 )}
                             </View>
@@ -734,7 +544,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     </Body>
                                 </View>
                                 <View style={{ marginHorizontal: 15 }}>
-                                    {availablePermissions.map(
+                                    {getAvailablePermissions().map(
                                         this.renderPermissionItem
                                     )}
                                 </View>
@@ -976,31 +786,16 @@ export default class AddOrEditNWCConnection extends React.Component<
                                       )
                             }
                             onPress={this.createConnection}
-                            buttonStyle={{
-                                ...styles.createButton,
-                                backgroundColor:
-                                    !this.isFormValid() ||
-                                    (route.params?.isEdit &&
-                                        !this.state.hasChanges)
-                                        ? themeColor('secondary')
-                                        : themeColor('highlight')
-                            }}
-                            titleStyle={{
-                                color:
-                                    !this.isFormValid() ||
-                                    (route.params?.isEdit &&
-                                        !this.state.hasChanges)
-                                        ? themeColor('secondaryText')
-                                        : themeColor('background'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 16,
-                                fontWeight: '500'
-                            }}
+                            secondary={
+                                !this.isFormValid() ||
+                                (route.params?.isEdit && !this.state.hasChanges)
+                            }
                             disabled={
                                 storeLoading ||
                                 !this.isFormValid() ||
                                 (route.params?.isEdit && !this.state.hasChanges)
                             }
+                            noUppercase
                         />
                     </View>
                 </View>
@@ -1020,7 +815,7 @@ const styles = StyleSheet.create({
         paddingBottom: 20
     },
     section: {
-        marginTop: 15,
+        marginTop: 5,
         marginBottom: 10
     },
     sectionTitleContainer: {
@@ -1041,16 +836,5 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 15,
         paddingBottom: 15
-    },
-    createButton: {
-        borderRadius: 12,
-        paddingVertical: 12,
-        shadowOffset: {
-            width: 0,
-            height: 2
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3
     }
 });
