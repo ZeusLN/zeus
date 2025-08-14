@@ -131,16 +131,8 @@ export default class NWCConnectionQR extends React.Component<
                                 NostrWalletConnectStore.stopWaitingForConnection();
                                 navigation.navigate('NostrWalletConnect');
                             }}
-                            buttonStyle={[
-                                styles.closeButton,
-                                {
-                                    backgroundColor: themeColor('secondary')
-                                }
-                            ]}
-                            titleStyle={{
-                                ...styles.closeButtonText,
-                                color: themeColor('secondary')
-                            }}
+                            secondary
+                            noUppercase
                         />
                     </View>
                 </ScrollView>
@@ -197,16 +189,7 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center'
     },
-    closeButton: {
-        borderRadius: 12,
-        paddingVertical: 12,
-        minWidth: 120
-    },
-    closeButtonText: {
-        fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book',
-        fontWeight: '600'
-    },
+
     connectedContainer: {
         justifyContent: 'center',
         alignItems: 'center',
