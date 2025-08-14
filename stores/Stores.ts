@@ -89,5 +89,6 @@ export const nostrWalletConnectStore = new NostrWalletConnectStore(
     settingsStore,
     balanceStore,
     nodeInfoStore,
-    transactionsStore
+    transactionsStore,
+    cashuStore
 );
