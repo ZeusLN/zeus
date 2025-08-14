@@ -17,9 +17,6 @@ export interface NWCConnectionData {
     budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
     expiresAt?: Date;
     lastBudgetReset?: Date;
-    settings?: {
-        enableCashu: boolean;
-    };
     metadata?: any;
 }
 
@@ -38,9 +35,6 @@ export default class NWCConnection extends BaseModel {
     budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
     expiresAt?: Date;
     lastBudgetReset?: Date;
-    settings?: {
-        enableCashu: boolean;
-    };
     metadata?: any;
 
     constructor(data?: NWCConnectionData) {
@@ -154,9 +148,5 @@ export default class NWCConnection extends BaseModel {
     public resetBudget(): void {
         this.totalSpendSats = 0;
         this.lastBudgetReset = new Date();
-    }
-
-    public get isCashuWalletEnabled(): boolean {
-        return this.settings?.enableCashu || false;
     }
 }

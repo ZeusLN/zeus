@@ -2,7 +2,6 @@ import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Route } from '@react-navigation/native';
 
 import Screen from '../../../components/Screen';
 import Header from '../../../components/Header';
@@ -16,68 +15,47 @@ import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import BackendUtils from '../../../utils/BackendUtils';
 
-interface NWCConnectionSettingsProps {
+interface NWCSettingsProps {
     navigation: StackNavigationProp<any, any>;
-    route: Route<'NWCConnectionSettings', { connectionId: string }>;
     SettingsStore: SettingsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
 }
 
-interface NWCConnectionSettingsState {
+interface NWCSettingsState {
     loading: boolean;
     error: string | null;
     enableCashu: boolean;
-    connectionId: string | null;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
 @observer
-export default class NWCConnectionSettings extends React.Component<
-    NWCConnectionSettingsProps,
-    NWCConnectionSettingsState
+export default class NWCSettings extends React.Component<
+    NWCSettingsProps,
+    NWCSettingsState
 > {
-    constructor(props: NWCConnectionSettingsProps) {
+    constructor(props: NWCSettingsProps) {
         super(props);
         this.state = {
             loading: false,
             error: null,
-            enableCashu: false,
-            connectionId: null
+            enableCashu: false
         };
     }
 
     async UNSAFE_componentWillMount() {
-        const { NostrWalletConnectStore, route } = this.props;
-        const connectionId = route.params?.connectionId;
-
-        let connectionCashuSetting = false;
-        if (connectionId) {
-            const connection =
-                NostrWalletConnectStore.getConnection(connectionId);
-            connectionCashuSetting = connection?.settings?.enableCashu || false;
-        }
-
+        const { NostrWalletConnectStore } = this.props;
         this.setState({
-            enableCashu: connectionCashuSetting,
-            connectionId: connectionId || null
+            enableCashu: NostrWalletConnectStore.cashuEnabled
         });
     }
 
     toggleCashuWallet = async () => {
         const { NostrWalletConnectStore } = this.props;
         const currentEnableCashu = this.state.enableCashu;
-        const { connectionId } = this.state;
 
         this.setState({ loading: true, error: null });
         try {
-            if (connectionId) {
-                await NostrWalletConnectStore.updateConnection(connectionId, {
-                    settings: {
-                        enableCashu: !currentEnableCashu
-                    }
-                });
-            }
-
+            await NostrWalletConnectStore.setCashuEnabled(!currentEnableCashu);
             this.setState({ enableCashu: !currentEnableCashu });
         } catch (error) {
             console.error('Failed to toggle Cashu wallet:', error);
@@ -98,7 +76,7 @@ export default class NWCConnectionSettings extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.Settings.NostrWalletConnect.ConnectionSettings'
+                            'views.Settings.NostrWalletConnect.nwcSettings'
                         ),
                         style: {
                             color: themeColor('text'),
