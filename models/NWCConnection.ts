@@ -1,9 +1,11 @@
 import { computed } from 'mobx';
+import type { Nip47SingleMethod } from '@getalby/sdk/dist/nwc/types';
 import BaseModel from './BaseModel';
 
 export interface NWCConnectionData {
     id: string;
     name: string;
+    icon?: any;
     description?: string;
     pubkey: string;
     permissions: string[];
@@ -15,14 +17,16 @@ export interface NWCConnectionData {
     budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
     expiresAt?: Date;
     lastBudgetReset?: Date;
+    metadata?: any;
 }
 
 export default class NWCConnection extends BaseModel {
     id: string;
     name: string;
+    icon?: any;
     description?: string;
     pubkey: string;
-    permissions: string[];
+    permissions: Nip47SingleMethod[];
     createdAt: Date;
     lastUsed?: Date;
     isolated?: boolean;
@@ -31,6 +35,7 @@ export default class NWCConnection extends BaseModel {
     budgetRenewal?: 'never' | 'daily' | 'weekly' | 'monthly' | 'yearly';
     expiresAt?: Date;
     lastBudgetReset?: Date;
+    metadata?: any;
 
     constructor(data?: NWCConnectionData) {
         super(data);
@@ -63,7 +68,6 @@ export default class NWCConnection extends BaseModel {
     }
 
     @computed public get statusText(): string {
-        if (!this.isolated) return 'Disabled';
         if (this.isExpired) return 'Expired';
         return 'Active';
     }
