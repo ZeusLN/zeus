@@ -111,6 +111,7 @@ import NWCConnectionsList from './views/Settings/NostrWalletConnect/NWCConnectio
 import AddOrEditNWCConnection from './views/Settings/NostrWalletConnect/AddOrEditNWCConnection';
 import NWCConnectionDetails from './views/Settings/NostrWalletConnect/NWCConnectionDetails';
 import NWCConnectionQR from './views/Settings/NostrWalletConnect/NWCConnectionQR';
+import NWCConnectionSettings from './views/Settings/NostrWalletConnect/NWCConnectionSettings';
 
 // Lightning address
 import LightningAddress from './views/LightningAddress';
@@ -723,6 +724,12 @@ export default class App extends React.PureComponent {
                                                         name="NWCConnectionQR" // @ts-ignore:next-line
                                                         component={
                                                             NWCConnectionQR
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCConnectionSettings" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionSettings
                                                         }
                                                     />
                                                     <Stack.Screen
