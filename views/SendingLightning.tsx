@@ -147,172 +147,133 @@ export default class SendingLightning extends React.Component<
         const { donationAmount, enableDonations } = route.params;
 
         if (wasSuccessful && !this.state.wasSuccessful) {
-            this.fetchPayments();
-            this.setState({ wasSuccessful: true }); // Update success state
-            BalanceStore.getCombinedBalance();
+            this.setState({ wasSuccessful: true }, () => {
+                this.fetchPayments();
+                BalanceStore.getCombinedBalance();
+            });
         } else if (!wasSuccessful && this.state.wasSuccessful) {
-            this.setState({ wasSuccessful: false }); // Reset success state if needed
+            this.setState({ wasSuccessful: false });
         }
 
         if (
             wasSuccessful &&
-            !this.state.wasSuccessful &&
             enableDonations &&
             donationAmount &&
-            !donationIsPaid
+            !donationIsPaid &&
+            !this.state.payingDonation &&
+            !this.state.donationHandled
         ) {
-            this.setState(
-                {
-                    payingDonation: true,
-                    paymentType: 'donation'
-                },
-                () => {
-                    this.loadLnurl()
-                        .then(async (payment_request) => {
-                            if (payment_request) {
-                                try {
-                                    const result =
-                                        await TransactionsStore.sendPaymentSilently(
-                                            {
-                                                payment_request
-                                            }
-                                        );
-
-                                    const { payment_error, status } =
-                                        result || {};
-
-                                    const isFailure =
-                                        (typeof status === 'string' &&
-                                            status === 'FAILED') ||
-                                        (typeof payment_error === 'string' &&
-                                            payment_error !== '');
-
-                                    if (isFailure) {
-                                        this.setState({
-                                            payingDonation: false,
-                                            amountDonated: parseFloat(
-                                                donationAmount ?? ''
-                                            )
-                                        });
-                                        return;
-                                    }
-
-                                    TransactionsStore.donationIsPaid = true;
-
-                                    let payment_preimage;
-                                    let donationEnhancedPath = null;
-                                    let donationPathExists = false;
-                                    let donationFee = '';
-                                    let donationFeePercentage = '';
-                                    let payment: any;
-
-                                    const amountDonated =
-                                        result?.num_satoshis ||
-                                        result?.value_sat ||
-                                        result.amount_msat / 1000;
-
-                                    if (
-                                        result?.amount_msat &&
-                                        result?.amount_sent_msat
-                                    ) {
-                                        const msatSent =
-                                            +result.amount_sent_msat
-                                                .toString()
-                                                .replace('msat', '');
-                                        const msat = +result.amount_msat
-                                            .toString()
-                                            .replace('msat', '');
-
-                                        donationFee = (
-                                            (msatSent - msat) /
-                                            1000
-                                        ).toString();
-                                    }
-
-                                    const preimage = result?.payment_preimage;
-
-                                    if (preimage) {
-                                        if (
-                                            typeof preimage !== 'string' &&
-                                            preimage.data
-                                        ) {
-                                            payment_preimage =
-                                                Base64Utils.bytesToHex(
-                                                    preimage.data
-                                                );
-                                        } else if (
-                                            typeof preimage === 'string'
-                                        ) {
-                                            payment_preimage = preimage;
-                                        }
-                                    }
-
-                                    const { PaymentsStore } = this.props;
-                                    const payments =
-                                        await PaymentsStore.getPayments({
-                                            maxPayments: 1,
-                                            reversed: true
-                                        });
-
-                                    payment = payments?.[0];
-
-                                    if (payment?.fee_msat) {
-                                        donationFee = (
-                                            Number(payment.fee_msat) / 1000
-                                        ).toString();
-                                    }
-
-                                    donationFeePercentage =
-                                        Number(
-                                            new BigNumber(donationFee)
-                                                .div(amountDonated)
-                                                .times(100)
-                                                .toFixed(3)
-                                        )
-                                            .toString()
-                                            .replace(/-/g, '') + '%';
-
-                                    if (BackendUtils.isLNDBased()) {
-                                        donationEnhancedPath =
-                                            payment?.enhancedPath;
-                                        donationPathExists =
-                                            donationEnhancedPath?.length > 0 &&
-                                            donationEnhancedPath[0][0];
-                                    }
-
-                                    this.setState({
-                                        payingDonation: false,
-                                        donationHandled: true,
-                                        donationPreimage:
-                                            payment_preimage || '',
-                                        amountDonated,
-                                        donationEnhancedPath,
-                                        donationPathExists,
-                                        donationFee,
-                                        donationFeePercentage
-                                    });
-                                } catch (err) {
-                                    this.setState({
-                                        payingDonation: false
-                                    });
-                                }
-                            } else {
-                                this.setState({ payingDonation: false });
-                            }
-                        })
-                        .catch((err) => {
-                            console.error('Unexpected error:', err);
-                            this.setState({ payingDonation: false });
-                        });
-                }
-            );
+            this.handleDonationPayment(donationAmount);
         }
     }
 
-    loadLnurl = async () => {
+    handleDonationPayment = async (donationAmount: string) => {
+        const { TransactionsStore, PaymentsStore } = this.props;
+
+        this.setState({ payingDonation: true, paymentType: 'donation' });
+
+        try {
+            const paymentRequest = await this.loadLnurl(donationAmount);
+            if (!paymentRequest) {
+                this.setState({
+                    payingDonation: false,
+                    amountDonated: parseFloat(donationAmount)
+                });
+                return;
+            }
+
+            const result = await TransactionsStore.sendPaymentSilently({
+                payment_request: paymentRequest
+            });
+            const { payment_error, status } = result || {};
+
+            if (
+                (typeof status === 'string' && status === 'FAILED') ||
+                (typeof payment_error === 'string' && payment_error !== '')
+            ) {
+                this.setState({
+                    payingDonation: false,
+                    amountDonated: parseFloat(donationAmount ?? '')
+                });
+                return;
+            }
+
+            TransactionsStore.donationIsPaid = true;
+
+            const amountDonated =
+                result?.num_satoshis ||
+                result?.value_sat ||
+                result.amount_msat / 1000;
+            let donationFee = '';
+
+            if (result?.amount_msat && result?.amount_sent_msat) {
+                const msatSent = +result.amount_sent_msat
+                    .toString()
+                    .replace('msat', '');
+                const msat = +result.amount_msat.toString().replace('msat', '');
+                donationFee = ((msatSent - msat) / 1000).toString();
+            }
+
+            let payment_preimage = '';
+            const preimage = result?.payment_preimage;
+            if (preimage) {
+                if (typeof preimage !== 'string' && preimage.data) {
+                    payment_preimage = Base64Utils.bytesToHex(preimage.data);
+                } else if (typeof preimage === 'string') {
+                    payment_preimage = preimage;
+                }
+            }
+
+            const payments = await PaymentsStore.getPayments({
+                maxPayments: 1,
+                reversed: true
+            });
+            const payment = payments?.[0];
+
+            if (payment?.fee_msat) {
+                donationFee = (Number(payment.fee_msat) / 1000).toString();
+            }
+
+            const donationFeePercentage =
+                Number(
+                    new BigNumber(donationFee)
+                        .div(amountDonated)
+                        .times(100)
+                        .toFixed(3)
+                )
+                    .toString()
+                    .replace(/-/g, '') + '%';
+
+            let donationEnhancedPath = null;
+            let donationPathExists = false;
+            if (BackendUtils.isLNDBased() && payment?.enhancedPath) {
+                donationEnhancedPath = payment.enhancedPath;
+                donationPathExists =
+                    donationEnhancedPath?.length > 0 &&
+                    donationEnhancedPath[0][0];
+            }
+
+            this.setState({
+                payingDonation: false,
+                donationHandled: true,
+                donationPreimage: payment_preimage || '',
+                amountDonated,
+                donationEnhancedPath,
+                donationPathExists,
+                donationFee,
+                donationFeePercentage
+            });
+        } catch (err) {
+            console.error('Donation payment failed:', err);
+            this.setState({
+                payingDonation: false,
+                amountDonated: parseFloat(donationAmount)
+            });
+        }
+    };
+
+    loadLnurl = async (donationAmount: string) => {
         const donationAddress = 'tips@pay.zeusln.app';
-        const { route } = this.props;
-        const { donationAmount } = route.params;
 
         const [username, bolt11Domain] = donationAddress.split('@');
         const url = bolt11Domain.includes('.onion')

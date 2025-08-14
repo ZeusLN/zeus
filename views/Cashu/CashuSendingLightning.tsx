@@ -138,89 +138,61 @@ export default class CashuSendingLightning extends React.Component<
             donationAmount &&
             !donationIsPaid
         ) {
-            this.setState(
-                {
-                    payingDonation: true,
-                    paymentType: 'donation'
-                },
-                () => {
-                    this.loadLnurl()
-                        .then(async (payment_request) => {
-                            if (!payment_request) {
-                                this.setState({ payingDonation: false });
-                                return;
-                            }
-
-                            console.log(
-                                'Initiating donation payment with amount:',
-                                donationAmount
-                            );
-                            try {
-                                const isDonationPayment = true;
-
-                                await new Promise((resolve) =>
-                                    setTimeout(resolve, 1000)
-                                );
-
-                                await CashuStore.getPayReq(
-                                    payment_request,
-                                    isDonationPayment
-                                );
-
-                                const donationPayment =
-                                    await CashuStore.payLnInvoiceFromEcash({
-                                        amount: donationAmount.toString(),
-                                        isDonationPayment
-                                    });
-
-                                console.log(donationPayment);
-                                if (
-                                    donationPayment &&
-                                    donationPayment?.meltResponse?.quote
-                                        ?.state !== 'PAID'
-                                ) {
-                                    console.log('Donation payment failed.');
-                                    return;
-                                }
-
-                                const amountDonated = donationPayment?.amount;
-                                const paymentPreimage =
-                                    donationPayment?.payment_preimage;
-
-                                this.setState({
-                                    payingDonation: false,
-                                    donationHandled: true,
-                                    donationIsPaid: true,
-                                    amountDonated: parseFloat(
-                                        amountDonated?.toString() || '0'
-                                    ),
-                                    donationPreimage: paymentPreimage
-                                        ? paymentPreimage
-                                        : ''
-                                });
-                            } catch (error) {
-                                console.error(
-                                    'Failed to pay donation invoice:',
-                                    error
-                                );
-                            } finally {
-                                this.setState({ payingDonation: false });
-                            }
-                        })
-                        .catch((err) => {
-                            console.error('Unexpected error:', err);
-                            this.setState({ payingDonation: false });
-                        });
-                }
-            );
+            this.handleDonationPayment(donationAmount);
         }
     }
 
-    loadLnurl = async () => {
-        const donationAddress = 'tips@pay.zeusln.app';
-        const { route } = this.props;
-        const { donationAmount } = route.params;
+    handleDonationPayment = async (donationAmount: string) => {
+        const { CashuStore } = this.props;
+        this.setState({ payingDonation: true, paymentType: 'donation' });
 
+        try {
+            const paymentRequest = await this.loadLnurl(donationAmount);
+            if (!paymentRequest) {
+                this.setState({ payingDonation: false });
+                return;
+            }
+
+            console.log(
+                'Initiating donation payment with amount:',
+                donationAmount
+            );
+            const isDonationPayment = true;
+            await CashuStore.getPayReq(paymentRequest, isDonationPayment);
+
+            const donationPayment = await CashuStore.payLnInvoiceFromEcash({
+                amount: donationAmount.toString(),
+                isDonationPayment
+            });
+
+            if (
+                !donationPayment ||
+                donationPayment?.meltResponse?.quote?.state !== 'PAID'
+            ) {
+                console.log('Donation payment failed.');
+                this.setState({ donationHandled: false });
+                return;
+            }
+
+            const amountDonated = donationPayment?.amount;
+            const paymentPreimage = donationPayment?.payment_preimage;
+
+            this.setState({
+                donationHandled: true,
+                donationIsPaid: true,
+                amountDonated: parseFloat(amountDonated?.toString() || '0'),
+                donationPreimage: paymentPreimage || ''
+            });
+        } catch (error) {
+            console.error('Failed to pay donation invoice:', error);
+            this.setState({ donationHandled: false });
+        } finally {
+            this.setState({ payingDonation: false });
+        }
+    };
+
+    loadLnurl = async (donationAmount: string) => {
+        const donationAddress = 'tips@pay.zeusln.app';
         const [username, bolt11Domain] = donationAddress.split('@');
         const url = bolt11Domain.includes('.onion')
             ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
@@ -229,7 +201,7 @@ export default class CashuSendingLightning extends React.Component<
         try {
             const response = await ReactNativeBlobUtil.fetch('GET', url);
             const lnurlData = response.json();
-            const amount = parseFloat(donationAmount ?? '') * 1000;
+            const amount = parseFloat(donationAmount) * 1000;
             const callbackUrl = `${lnurlData.callback}?amount=${amount}`;
 
             const invoiceResponse = await ReactNativeBlobUtil.fetch(
