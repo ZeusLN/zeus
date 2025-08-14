@@ -22,11 +22,12 @@ import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
+import BackendUtils from '../../../utils/BackendUtils';
 
 import NWCConnection from '../../../models/NWCConnection';
 
 import Add from '../../../assets/images/SVG/Add.svg';
-
+import Gear from '../../../assets/images/SVG/Gear.svg';
 import Nostrich from '../../../assets/images/SVG/Nostrich.svg';
 
 interface NWCConnectionsListProps {
@@ -291,8 +292,10 @@ export default class NWCConnectionsList extends React.Component<
     );
 
     render() {
-        const { NostrWalletConnectStore, navigation } = this.props;
+        const { NostrWalletConnectStore, navigation, SettingsStore } =
+            this.props;
         const { connections, loading } = NostrWalletConnectStore;
+        const { settings } = SettingsStore;
         const { connectionsLoading } = this.state;
 
         return (
@@ -312,23 +315,51 @@ export default class NWCConnectionsList extends React.Component<
                         connectionsLoading || loading ? (
                             <LoadingIndicator size={20} />
                         ) : (
-                            <TouchableOpacity
-                                onPress={() =>
-                                    navigation.navigate(
-                                        'AddOrEditNWCConnection'
-                                    )
-                                }
-                                accessibilityLabel={localeString(
-                                    'views.Settings.NostrWalletConnect.addConnection'
-                                )}
+                            <View
+                                style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 15
+                                }}
                             >
-                                <Add
-                                    fill={themeColor('text')}
-                                    width={30}
-                                    height={30}
-                                    style={{ alignSelf: 'center' }}
-                                />
-                            </TouchableOpacity>
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate(
+                                            'AddOrEditNWCConnection'
+                                        )
+                                    }
+                                    accessibilityLabel={localeString(
+                                        'views.Settings.NostrWalletConnect.addConnection'
+                                    )}
+                                >
+                                    <Add
+                                        fill={themeColor('text')}
+                                        width={30}
+                                        height={30}
+                                        style={{ alignSelf: 'center' }}
+                                    />
+                                </TouchableOpacity>
+                                {BackendUtils.supportsCashuWallet() &&
+                                    settings.ecash.enableCashu && (
+                                        <TouchableOpacity
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'NWCSettings'
+                                                )
+                                            }
+                                            accessibilityLabel={localeString(
+                                                'views.Settings.NostrWalletConnect.settings'
+                                            )}
+                                        >
+                                            <Gear
+                                                fill={themeColor('text')}
+                                                width={30}
+                                                height={30}
+                                                style={{ alignSelf: 'center' }}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
+                            </View>
                         )
                     }
                     navigation={navigation}

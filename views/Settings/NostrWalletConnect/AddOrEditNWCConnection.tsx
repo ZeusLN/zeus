@@ -230,10 +230,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         } = this.state;
         const { NostrWalletConnectStore, route } = this.props;
         const { connectionId, isEdit } = route.params ?? {};
-
         this.setState({ error: '' });
-        NostrWalletConnectStore.setError(false);
-
         if (!connectionName.trim()) {
             this.setState({
                 error: localeString(
@@ -242,7 +239,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             });
             return;
         }
-
         if (selectedPermissions.length === 0) {
             this.setState({
                 error: localeString(
@@ -251,7 +247,6 @@ export default class AddOrEditNWCConnection extends React.Component<
             });
             return;
         }
-
         try {
             const budgetRenewal =
                 getBudgetRenewalOptions()[selectedBudgetRenewalIndex].key;
@@ -324,13 +319,11 @@ export default class AddOrEditNWCConnection extends React.Component<
                 'views.Settings.NostrWalletConnect.validation.failedToCreateConnection'
             )}: ${error.message}`;
             this.setState({ error: errorMessage });
-            NostrWalletConnectStore.setError(true, errorMessage);
         }
     };
 
     clearErrors = () => {
         this.setState({ error: '' });
-        this.props.NostrWalletConnectStore.setError(false);
     };
 
     renderPermissionTypeItem = (permissionType: any) => {
