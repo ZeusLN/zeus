@@ -1225,7 +1225,8 @@ export const DEFAULT_NOSTR_RELAYS = [
     'wss://nostr.land',
     'wss://nostr.wine',
     'wss://nos.lol',
-    'wss://relay.snort.social'
+    'wss://relay.snort.social',
+    'wss://relay.getalby.com/v1'
 ];
 
 export const NOTIFICATIONS_PREF_KEYS = [
