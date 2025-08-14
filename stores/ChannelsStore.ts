@@ -299,17 +299,21 @@ export default class ChannelsStore {
 
             if (!param || !dir || !type) return 0;
 
-            const aVal = a[param] ?? '';
-            const bVal = b[param] ?? '';
+            const aVal = a[param]?.toString().toLowerCase() || '';
+            const bVal = b[param]?.toString().toLowerCase() || '';
 
             if (type === 'numeric') {
-                return dir === 'DESC'
-                    ? Number(bVal) - Number(aVal)
-                    : Number(aVal) - Number(bVal);
+                const aNum = Number(aVal) || 0;
+                const bNum = Number(bVal) || 0;
+                return dir === 'DESC' ? bNum - aNum : aNum - bNum;
             } else {
+                if (!aVal && !bVal) return 0;
+                if (!aVal) return 1;
+                if (!bVal) return -1;
+
                 return dir === 'DESC'
-                    ? bVal.toLowerCase().localeCompare(aVal.toLowerCase())
-                    : aVal.toLowerCase().localeCompare(bVal.toLowerCase());
+                    ? bVal.localeCompare(aVal)
+                    : aVal.localeCompare(bVal);
             }
         });
 
