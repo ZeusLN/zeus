@@ -18,6 +18,8 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import KeyValue from '../../../components/KeyValue';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
+import DateTimeUtils from '../../../utils/DateTimeUtils';
+
 import SettingsStore from '../../../stores/SettingsStore';
 import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
 import { themeColor } from '../../../utils/ThemeUtils';
@@ -25,6 +27,10 @@ import { localeString } from '../../../utils/LocaleUtils';
 import NWCConnection from '../../../models/NWCConnection';
 import EditIcon from '../../../assets/images/SVG/Edit.svg';
 import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
+import {
+    getFullAccessPermissions,
+    getPermissionDescription
+} from '../../../utils/NostrConnectUtils';
 
 interface NWCConnectionDetailsProps {
     navigation: StackNavigationProp<any, any>;
@@ -91,53 +97,13 @@ export default class NWCConnectionDetails extends React.Component<
         return connection;
     };
 
-    formatDate = (date: Date) => {
-        const dateOptions: Intl.DateTimeFormatOptions = {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        };
-        const timeOptions: Intl.DateTimeFormatOptions = {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-        };
-        const dateStr = date.toLocaleDateString('en-US', dateOptions);
-        const timeStr = date.toLocaleTimeString('en-US', timeOptions);
-
-        return `${dateStr} at ${timeStr}`;
-    };
-
-    getAllPermissions = () => {
-        return [
-            'get_info',
-            'get_balance',
-            'pay_invoice',
-            'make_invoice',
-            'lookup_invoice',
-            'list_transactions',
-            'pay_keysend'
-        ];
-    };
-
-    getPermissionDescription = (permission: string) => {
-        const descriptions: { [key: string]: string } = {
-            get_info: 'Read your node info',
-            get_balance: 'Read your balance',
-            pay_invoice: 'Pay lightning invoices',
-            make_invoice: 'Create invoices',
-            lookup_invoice: 'Lookup status of invoices',
-            list_transactions: 'Read transaction history',
-            pay_keysend: 'Send keysend payments'
-        };
-        return descriptions[permission] || permission.replace(/_/g, ' ');
-    };
     editConnection = (connection: NWCConnection) => {
         this.props.navigation.navigate('AddOrEditNWCConnection', {
             connectionId: connection.id,
             isEdit: true
         });
     };
+
     deleteConnection = (connection: NWCConnection) => {
         const { NostrWalletConnectStore, navigation } = this.props;
         if (!this.state.confirmDelete) {
@@ -265,7 +231,7 @@ export default class NWCConnectionDetails extends React.Component<
                                         keyValue={localeString(
                                             'views.Settings.NostrWalletConnect.created'
                                         )}
-                                        value={this.formatDate(
+                                        value={DateTimeUtils.listFormattedDateOrder(
                                             connection.createdAt
                                         )}
                                     />
@@ -276,7 +242,7 @@ export default class NWCConnectionDetails extends React.Component<
                                         )}
                                         value={
                                             connection.lastUsed
-                                                ? this.formatDate(
+                                                ? DateTimeUtils.listFormattedDateOrder(
                                                       connection.lastUsed
                                                   )
                                                 : localeString(
@@ -328,7 +294,7 @@ export default class NWCConnectionDetails extends React.Component<
                                             keyValue={localeString(
                                                 'views.Settings.NostrWalletConnect.expires'
                                             )}
-                                            value={this.formatDate(
+                                            value={DateTimeUtils.formatDate(
                                                 connection.expiresAt
                                             )}
                                         />
@@ -366,12 +332,12 @@ export default class NWCConnectionDetails extends React.Component<
                                         </Body>
                                         <Body>
                                             ({connection.permissions.length} of{' '}
-                                            {this.getAllPermissions().length})
+                                            {getFullAccessPermissions().length})
                                         </Body>
                                     </View>
 
                                     <View style={styles.permissionsList}>
-                                        {this.getAllPermissions().map(
+                                        {getFullAccessPermissions().map(
                                             (permission, index) => {
                                                 const isActive =
                                                     connection.permissions.includes(
@@ -415,7 +381,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                                 }
                                                             ]}
                                                         >
-                                                            {this.getPermissionDescription(
+                                                            {getPermissionDescription(
                                                                 permission
                                                             )}
                                                         </Text>
@@ -447,17 +413,13 @@ export default class NWCConnectionDetails extends React.Component<
                                 onPress={() =>
                                     this.deleteConnection(connection)
                                 }
+                                warning={!this.state.confirmDelete}
                                 containerStyle={{
-                                    borderColor: themeColor('delete')
-                                }}
-                                buttonStyle={{
-                                    backgroundColor: this.state.confirmDelete
+                                    borderColor: this.state.confirmDelete
                                         ? themeColor('warning')
                                         : themeColor('delete')
                                 }}
-                                titleStyle={{
-                                    color: themeColor('text')
-                                }}
+                                noUppercase
                             />
                         </View>
                     </View>
