@@ -18,19 +18,22 @@ import LoadingIndicator from '../../../components/LoadingIndicator';
 import KeyValue from '../../../components/KeyValue';
 import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
+import BackendUtils from '../../../utils/BackendUtils';
 import DateTimeUtils from '../../../utils/DateTimeUtils';
-
-import SettingsStore from '../../../stores/SettingsStore';
-import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
-import { themeColor } from '../../../utils/ThemeUtils';
-import { localeString } from '../../../utils/LocaleUtils';
-import NWCConnection from '../../../models/NWCConnection';
-import EditIcon from '../../../assets/images/SVG/Edit.svg';
-import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
 import {
     getFullAccessPermissions,
     getPermissionDescription
 } from '../../../utils/NostrConnectUtils';
+import { themeColor } from '../../../utils/ThemeUtils';
+import { localeString } from '../../../utils/LocaleUtils';
+
+import SettingsStore from '../../../stores/SettingsStore';
+import NostrWalletConnectStore from '../../../stores/NostrWalletConnectStore';
+
+import NWCConnection from '../../../models/NWCConnection';
+import EditIcon from '../../../assets/images/SVG/Edit.svg';
+import Checkmark from '../../../assets/images/SVG/Checkmark.svg';
+import Gear from '../../../assets/images/SVG/Gear.svg';
 
 interface NWCConnectionDetailsProps {
     navigation: StackNavigationProp<any, any>;
@@ -83,9 +86,7 @@ export default class NWCConnectionDetails extends React.Component<
         const { route, NostrWalletConnectStore } = this.props;
         const connectionId = route.params?.connectionId;
         if (!connectionId) return undefined;
-
         const connection = NostrWalletConnectStore.getConnection(connectionId);
-
         if (connection) {
             connection.name;
             connection.permissions;
@@ -102,6 +103,15 @@ export default class NWCConnectionDetails extends React.Component<
             connectionId: connection.id,
             isEdit: true
         });
+    };
+
+    navigateToSettings = () => {
+        const connection = this.getConnection();
+        if (connection) {
+            this.props.navigation.navigate('NWCConnectionSettings', {
+                connectionId: connection.id
+            });
+        }
     };
 
     deleteConnection = (connection: NWCConnection) => {
@@ -129,7 +139,9 @@ export default class NWCConnectionDetails extends React.Component<
     };
 
     render() {
-        const { navigation, NostrWalletConnectStore } = this.props;
+        const { navigation, NostrWalletConnectStore, SettingsStore } =
+            this.props;
+        const { settings } = SettingsStore;
         const { loading, error } = this.state;
         const { loading: storeLoading } = NostrWalletConnectStore;
         const connection = this.getConnection();
@@ -190,16 +202,33 @@ export default class NWCConnectionDetails extends React.Component<
                         loading || storeLoading ? (
                             <LoadingIndicator size={20} />
                         ) : (
-                            <TouchableOpacity
-                                onPress={() => this.editConnection(connection)}
-                                style={styles.headerActionButton}
-                            >
-                                <EditIcon
-                                    fill={themeColor('text')}
-                                    width={20}
-                                    height={20}
-                                />
-                            </TouchableOpacity>
+                            <View style={styles.headerActions}>
+                                {BackendUtils.supportsCashuWallet() &&
+                                    settings.ecash.enableCashu && (
+                                        <TouchableOpacity
+                                            onPress={this.navigateToSettings}
+                                            style={styles.headerActionButton}
+                                        >
+                                            <Gear
+                                                fill={themeColor('text')}
+                                                width={20}
+                                                height={20}
+                                            />
+                                        </TouchableOpacity>
+                                    )}
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        this.editConnection(connection)
+                                    }
+                                    style={styles.headerActionButton}
+                                >
+                                    <EditIcon
+                                        fill={themeColor('text')}
+                                        width={20}
+                                        height={20}
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         )
                     }
                     navigation={navigation}
@@ -246,7 +275,7 @@ export default class NWCConnectionDetails extends React.Component<
                                                       connection.lastUsed
                                                   )
                                                 : localeString(
-                                                      'views.Settings.NostrWalletConnect.never'
+                                                      'models.Invoice.never'
                                                   )
                                         }
                                     />
@@ -442,6 +471,10 @@ const styles = StyleSheet.create({
     },
     headerActionButton: {
         padding: 8
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center'
     },
     section: {
         marginBottom: 15
