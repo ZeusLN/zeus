@@ -41,7 +41,7 @@ import CaretRight from '../assets/images/SVG/Caret Right.svg';
 import CloseIcon from '../assets/images/SVG/Close.svg';
 
 const REBALANCE_CONSTANTS = {
-    DEFAULT_FEE_LIMIT: '100',
+    DEFAULT_FEE_LIMIT: '1000',
     DEFAULT_TIMEOUT: '120',
     DEFAULT_SLIDER_VALUE: 0,
     MAX_PAYMENT_PARTS: 5,
@@ -56,6 +56,7 @@ type ChannelType = 'source' | 'destination';
 
 interface RebalanceProps {
     navigation: StackNavigationProp<any, any>;
+    route?: any;
     ChannelsStore: ChannelsStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
@@ -122,7 +123,7 @@ export default class Rebalance extends React.Component<
     }
 
     componentDidMount() {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, navigation, route } = this.props;
 
         this.cleanupPaymentListener();
 
@@ -130,8 +131,28 @@ export default class Rebalance extends React.Component<
             ChannelsStore.getChannels();
         }
 
+        const params = route?.params as any;
+        if (params) {
+            if (params.showAdvanced) {
+                this.setState({ showAdvanced: true });
+            }
+            if (params.sourceChannel) {
+                this.handleChannelSelect(params.sourceChannel, 'source');
+            }
+            if (params.destinationChannel) {
+                this.handleChannelSelect(
+                    params.destinationChannel,
+                    'destination'
+                );
+            }
+            if (params.rebalanceAmount) {
+                this.setState({ rebalanceAmount: params.rebalanceAmount });
+            }
+        }
+
         const unsubscribe = navigation.addListener('focus', () => {
             ChannelsStore.getChannels();
+            this.setState({ executing: false });
         });
 
         this.navigationUnsubscribe = unsubscribe;
@@ -266,18 +287,30 @@ export default class Rebalance extends React.Component<
             : Number(channel.receivingCapacity) || 0;
 
         if (capacity <= 0) {
-            const channelTypeLabel = isSource ? 'source' : 'destination';
+            const channelTypeLabel = isSource
+                ? localeString('views.Settings.Currency.source')
+                : localeString('general.destination');
             const liquidityType = isSource
-                ? 'outbound liquidity'
-                : 'inbound capacity';
+                ? localeString('views.Rebalance.liquidityType.outbound')
+                : localeString('views.Rebalance.liquidityType.inbound');
             const actionRequired = isSource
-                ? 'available outbound capacity to send funds from'
-                : 'available inbound capacity to receive funds';
+                ? localeString('views.Rebalance.actionRequired.outbound')
+                : localeString('views.Rebalance.actionRequired.inbound');
+
+            const errorMessage = `${localeString(
+                'views.Rebalance.error.insufficientCapacityPrefix'
+            )} ${channelTypeLabel.toLowerCase()} ${localeString(
+                'views.Rebalance.error.channel'
+            )} "${channel.displayName}" ${localeString(
+                'views.Rebalance.error.hasInsufficient'
+            )} ${liquidityType}.\n\n${localeString(
+                'views.Rebalance.error.rebalancingRequires'
+            )} ${actionRequired}.`;
 
             this.createAlert(
-                'Channel Selection Error',
-                `The selected ${channelTypeLabel} channel "${channel.displayName}" has insufficient ${liquidityType}.\n\nFor rebalancing to work, you need to select a channel with ${actionRequired}.`,
-                [{ text: 'Got it' }]
+                localeString('views.Rebalance.error.channelSelection'),
+                errorMessage,
+                [{ text: localeString('general.ok') }]
             );
             return false;
         }
@@ -572,16 +605,17 @@ export default class Rebalance extends React.Component<
             selectedSourceChannel,
             selectedDestinationChannel,
             feeLimit,
-            timeoutSeconds
+            timeoutSeconds,
+            rebalanceAmount
         } = this.state;
 
         if (!selectedSourceChannel || !selectedDestinationChannel) {
             throw new Error('Channels not selected for LND rebalancing');
         }
 
-        return BackendUtils.payLightningInvoice({
+        const result = await BackendUtils.payLightningInvoice({
             payment_request: invoiceData.payment_request,
-            outgoing_chan_id: Number(selectedSourceChannel.channelId),
+            outgoing_chan_ids: [selectedSourceChannel.channelId],
             last_hop_pubkey: Buffer.from(
                 selectedDestinationChannel.remotePubkey,
                 'hex'
@@ -589,8 +623,12 @@ export default class Rebalance extends React.Component<
             fee_limit_sat: Number(feeLimit),
             allow_self_payment: true,
             timeout_seconds: Number(timeoutSeconds),
-            max_parts: REBALANCE_CONSTANTS.MAX_PAYMENT_PARTS
+            max_parts: REBALANCE_CONSTANTS.MAX_PAYMENT_PARTS,
+            cltv_limit: 1000,
+            max_shard_size_msat: rebalanceAmount * 1000
         });
+
+        return result;
     };
 
     // Payment result handling
@@ -830,7 +868,18 @@ export default class Rebalance extends React.Component<
                             text: localeString(
                                 'views.PaymentRequest.timeout.showAdvanced'
                             ),
-                            onPress: () => this.setState({ showAdvanced: true })
+                            onPress: () => {
+                                this.props.TransactionsStore.loading = false;
+                                // Navigate back to Rebalance screen with advanced settings open
+                                this.props.navigation.navigate('Rebalance', {
+                                    showAdvanced: true,
+                                    sourceChannel:
+                                        this.state.selectedSourceChannel,
+                                    destinationChannel:
+                                        this.state.selectedDestinationChannel,
+                                    rebalanceAmount: this.state.rebalanceAmount
+                                });
+                            }
                         },
                         {
                             text: localeString('general.ok'),
@@ -950,6 +999,7 @@ export default class Rebalance extends React.Component<
             this.handlePaymentResult(result);
         } catch (error: any) {
             this.props.TransactionsStore.loading = false;
+            console.log(`Rebalance error: ${JSON.stringify(error)}`);
             this.handleRebalanceError(error);
             this.cleanupPaymentListener();
         }
@@ -1528,61 +1578,18 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         fontFamily: 'PPNeueMontreal-Book'
     },
-    description: {
-        fontSize: 14,
-        marginBottom: 15,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     channelInfo: {
         padding: 6,
         borderRadius: 10,
         marginTop: 5
     },
-    channelName: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    amountContainer: {
-        alignItems: 'center'
-    },
-    amountText: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        marginBottom: 20,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    slider: {
-        width: '100%',
-        height: 40
-    },
-    sliderLabel: {
-        fontSize: 12,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    projectionContainer: {
-        gap: 20
-    },
-    projectionChannel: {
-        padding: 15,
-        borderRadius: 10
-    },
-    projectionLabel: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        marginBottom: 10,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
+
     inputContainer: {
         marginBottom: 8
     },
     inputLabel: {
         fontSize: 14,
         fontFamily: 'PPNeueMontreal-Book'
-    },
-    textInput: {
-        fontSize: 16
     },
     buttonContainer: {
         marginTop: 30,
