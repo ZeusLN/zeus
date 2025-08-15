@@ -7,6 +7,19 @@ jest.mock('../stores/Stores', () => ({
         notes: []
     }
 }));
+jest.mock('./AutoPayUtils', () => ({
+    __esModule: true,
+    default: {
+        processInvoice: jest.fn(),
+        clearProcessingInvoice: jest.fn(),
+        clearClipboardCache: jest.fn(),
+        checkClipboardForInvoice: jest.fn(),
+        findContactForInvoice: jest.fn(),
+        isCurrentlyProcessing: jest.fn(),
+        setProcessingFlag: jest.fn()
+    }
+}));
+jest.mock('./BackendUtils', () => ({}));
 
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';

@@ -43,6 +43,7 @@ import BackendUtils from '../utils/BackendUtils';
 import LinkingUtils from '../utils/LinkingUtils';
 import { sleep } from '../utils/SleepUtils';
 import { themeColor } from '../utils/ThemeUtils';
+import AutoPayUtils from '../utils/AutoPayUtils';
 
 import CaretDown from '../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../assets/images/SVG/Caret Right.svg';
@@ -88,6 +89,12 @@ interface InvoiceState {
     lightningReadyToSend: boolean;
     slideToPayThreshold: number;
     validAmountToSwap: boolean;
+    isFromAutoPay: boolean;
+    autoPayThreshold: number;
+    autoPayContact: {
+        name: string;
+        contactId: string;
+    } | null;
 }
 
 @inject(
@@ -125,14 +132,25 @@ export default class PaymentRequest extends React.Component<
         zaplockerToggle: false,
         lightningReadyToSend: false,
         slideToPayThreshold: 10000,
-        validAmountToSwap: false
+        validAmountToSwap: false,
+        isFromAutoPay: false,
+        autoPayThreshold: 0,
+        autoPayContact: null
     };
 
     async UNSAFE_componentWillMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore } = this.props;
+        const { SettingsStore, InvoicesStore, navigation } = this.props;
         const { getSettings, implementation } = SettingsStore;
         const settings = await getSettings();
+
+        // Check if this was triggered by auto-pay
+        const routeParams = navigation
+            .getState?.()
+            ?.routes?.slice(-1)?.[0]?.params;
+        const fromAutoPay = routeParams?.fromAutoPay || false;
+        const autoPayThreshold = routeParams?.autoPayThreshold || 0;
+        const autoPayContact = routeParams?.autoPayContact || null;
 
         let feeOption = 'fixed';
         const { pay_req } = InvoicesStore;
@@ -152,7 +170,10 @@ export default class PaymentRequest extends React.Component<
             maxFeePercent: settings?.payments?.defaultFeePercentage || '5.0',
             timeoutSeconds: settings?.payments?.timeoutSeconds || '60',
             slideToPayThreshold: settings?.payments?.slideToPayThreshold,
-            validAmountToSwap
+            validAmountToSwap,
+            isFromAutoPay: fromAutoPay,
+            autoPayThreshold,
+            autoPayContact
         });
 
         if (implementation === 'embedded-lnd') {
@@ -317,6 +338,14 @@ export default class PaymentRequest extends React.Component<
             feeLimitSat = FeeUtils.calculateDefaultRoutingFee(
                 Number(invoiceAmount)
             );
+        }
+
+        // Mark transaction as auto-pay if it came from auto-pay
+        if (this.state.isFromAutoPay && InvoicesStore.pay_req) {
+            const paymentHash = InvoicesStore.pay_req.payment_hash;
+            if (paymentHash) {
+                AutoPayUtils.markTransactionAsAutoPay(paymentHash);
+            }
         }
 
         const streamingCall = TransactionsStore.sendPayment({
@@ -585,6 +614,85 @@ export default class PaymentRequest extends React.Component<
 
                         {!loading && !loadingFeeEstimate && !!pay_req && (
                             <View style={styles.content}>
+                                {/* Auto-pay indicator */}
+                                {this.state.isFromAutoPay && (
+                                    <View
+                                        style={{
+                                            backgroundColor:
+                                                themeColor('highlight'),
+                                            borderRadius: 8,
+                                            padding: 12,
+                                            marginBottom: 15,
+                                            borderWidth: 1,
+                                            borderColor: themeColor('highlight')
+                                        }}
+                                    >
+                                        {(() => {
+                                            const contact = this.state
+                                                .autoPayContact as {
+                                                name: string;
+                                                contactId: string;
+                                            } | null;
+                                            return (
+                                                <>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'background'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Medium',
+                                                            fontSize: 16,
+                                                            textAlign: 'center',
+                                                            marginBottom: 4
+                                                        }}
+                                                    >
+                                                        {contact
+                                                            ? `⚡ Auto-Pay - ${contact.name}`
+                                                            : '⚡ Auto-Pay Detection'}
+                                                    </Text>
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'background'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            fontSize: 14,
+                                                            textAlign: 'center',
+                                                            opacity: 0.9
+                                                        }}
+                                                    >
+                                                        {contact
+                                                            ? `Invoice from trusted contact - ${contact.name}`
+                                                            : 'Invoice detected from clipboard - Review details below'}
+                                                    </Text>
+                                                    {this.state
+                                                        .autoPayThreshold >
+                                                        0 && (
+                                                        <Text
+                                                            style={{
+                                                                color: themeColor(
+                                                                    'background'
+                                                                ),
+                                                                fontFamily:
+                                                                    'PPNeueMontreal-Book',
+                                                                fontSize: 12,
+                                                                textAlign:
+                                                                    'center',
+                                                                marginTop: 4,
+                                                                opacity: 0.8
+                                                            }}
+                                                        >
+                                                            {`Auto-pay threshold: ${this.state.autoPayThreshold} sats`}
+                                                        </Text>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </View>
+                                )}
+
                                 <>
                                     {showZaplockerWarning &&
                                         implementation === 'embedded-lnd' && (

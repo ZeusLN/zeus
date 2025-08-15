@@ -21,6 +21,10 @@ export default class Contact extends BaseModel {
     public banner: string | null;
     public isFavourite: boolean;
 
+    // Auto-pay settings
+    public autoPayEnabled?: boolean;
+    public autoPayThreshold?: number; // in sats
+
     @computed public get getContactId(): string {
         return this.contactId || this.id;
     }
@@ -168,5 +172,19 @@ export default class Contact extends BaseModel {
             return `file://${RNFS.DocumentDirectoryPath}/${fileName}`;
         }
         return this.banner || '';
+    }
+
+    @computed public get hasAutoPayEnabled(): boolean {
+        return Boolean(this.autoPayEnabled);
+    }
+
+    @computed public get getAutoPayThreshold(): number {
+        return this.autoPayThreshold || 0;
+    }
+
+    @computed public get autoPayStatus(): string {
+        if (!this.autoPayEnabled) return 'disabled';
+        if (this.autoPayThreshold === 0) return 'unlimited';
+        return `threshold: ${this.autoPayThreshold} sats`;
     }
 }

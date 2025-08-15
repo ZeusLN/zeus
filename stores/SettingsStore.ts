@@ -94,6 +94,8 @@ interface PaymentsSettings {
     timeoutSeconds?: string;
     preferredMempoolRate?: string;
     slideToPayThreshold: number;
+    autoPayEnabled?: boolean;
+    autoPayThreshold?: number;
 }
 
 interface InvoicesSettings {
@@ -1338,7 +1340,9 @@ export default class SettingsStore {
             defaultFeeFixed: '1000',
             timeoutSeconds: '60',
             preferredMempoolRate: 'fastestFee',
-            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD
+            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
+            autoPayEnabled: false,
+            autoPayThreshold: 0
         },
         invoices: {
             addressType: '0',

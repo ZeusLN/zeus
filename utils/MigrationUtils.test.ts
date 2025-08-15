@@ -12,6 +12,18 @@ jest.mock('../stores/ChannelBackupStore', () => ({}));
 jest.mock('../stores/LightningAddressStore', () => ({}));
 jest.mock('../stores/LSPStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
+jest.mock('../utils/AutoPayUtils', () => ({
+    __esModule: true,
+    default: {
+        processInvoice: jest.fn(),
+        clearProcessingInvoice: jest.fn(),
+        clearClipboardCache: jest.fn(),
+        checkClipboardForInvoice: jest.fn(),
+        findContactForInvoice: jest.fn(),
+        isCurrentlyProcessing: jest.fn(),
+        setProcessingFlag: jest.fn()
+    }
+}));
 
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_FIAT_RATES_SOURCE: 'Zeus',

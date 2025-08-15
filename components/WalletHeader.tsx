@@ -29,6 +29,8 @@ import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
+import AutoPayUtils from '../utils/AutoPayUtils';
+import { contactStore, invoicesStore, balanceStore } from '../stores/Stores';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -48,8 +50,6 @@ import Search from '../assets/images/SVG/Search.svg';
 import Temple from '../assets/images/SVG/Temple.svg';
 import Sync from '../assets/images/SVG/Sync.svg';
 import ZeusPaySVG from '../assets/images/SVG/zeus-pay.svg';
-
-import { balanceStore } from '../stores/Stores';
 
 import { Body } from './text/Body';
 import { Row } from '../components/layout/Row';
@@ -153,6 +153,41 @@ const ClipboardBadge = ({
 }) => (
     <TouchableOpacity
         onPress={async () => {
+            const lowerContent = clipboard.toLowerCase().trim();
+            if (
+                lowerContent.startsWith('lnbc') ||
+                lowerContent.startsWith('lnbcrt') ||
+                lowerContent.startsWith('lntb')
+            ) {
+                try {
+                    const invoice =
+                        await AutoPayUtils.checkClipboardForInvoice();
+
+                    if (invoice) {
+                        const contact =
+                            await AutoPayUtils.findContactForInvoice(
+                                invoice.invoice,
+                                contactStore.contacts
+                            );
+
+                        if (contact && contact.hasAutoPayEnabled) {
+                            const threshold = contact.getAutoPayThreshold;
+
+                            if (
+                                invoice.amount > 0 &&
+                                invoice.amount > threshold
+                            ) {
+                                return;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking auto-pay rules:', error);
+                    // Fall through to normal handling if auto-pay check fails
+                }
+            }
+
+            // Handle normally if not an auto-pay invoice or if within threshold
             const response = await handleAnything(clipboard);
             const [route, props] = response;
             navigation.navigate(route, props);
@@ -232,6 +267,8 @@ interface WalletHeaderProps {
 
 interface WalletHeaderState {
     clipboard: string;
+    lastProcessedInvoice: string;
+    isAutoPayDialogOpen: boolean;
 }
 
 @inject(
@@ -251,7 +288,9 @@ export default class WalletHeader extends React.Component<
     WalletHeaderState
 > {
     state: WalletHeaderState = {
-        clipboard: ''
+        clipboard: '',
+        lastProcessedInvoice: '',
+        isAutoPayDialogOpen: false
     };
 
     async UNSAFE_componentWillMount() {
@@ -274,6 +313,143 @@ export default class WalletHeader extends React.Component<
                 this.setState({
                     clipboard
                 });
+
+                const lowerContent = clipboard.toLowerCase().trim();
+
+                if (
+                    lowerContent.startsWith('lnbc') ||
+                    lowerContent.startsWith('lnbcrt') ||
+                    lowerContent.startsWith('lntb')
+                ) {
+                    if (clipboard === this.state.lastProcessedInvoice) {
+                        return;
+                    }
+
+                    this.setState({ lastProcessedInvoice: clipboard });
+
+                    // Add a timeout to reset the processing state after 30 seconds
+                    setTimeout(() => {
+                        if (this.state.lastProcessedInvoice === clipboard) {
+                            this.setState({ lastProcessedInvoice: '' });
+                        }
+                    }, 30000);
+
+                    await this.checkAutoPayForClipboard();
+                }
+            }
+        }
+    };
+
+    checkAutoPayForClipboard = async () => {
+        try {
+            if (this.state.isAutoPayDialogOpen) {
+                return;
+            }
+
+            const invoice = await AutoPayUtils.checkClipboardForInvoice();
+
+            if (!invoice || !invoice.payment_hash) {
+                return;
+            }
+
+            if (AutoPayUtils.isCurrentlyProcessing(invoice.payment_hash)) {
+                return;
+            }
+
+            AutoPayUtils.setProcessingFlag(invoice.payment_hash, true);
+
+            const isValidToPay = await AutoPayUtils.validateInvoiceNotPaid(
+                invoice.payment_hash
+            );
+
+            if (!isValidToPay) {
+                return;
+            }
+
+            const contact = await AutoPayUtils.findContactForInvoice(
+                invoice.invoice,
+                contactStore.contacts
+            );
+
+            let shouldShowDialog = false;
+            let threshold = 0;
+
+            if (contact && contact.hasAutoPayEnabled) {
+                threshold = contact.getAutoPayThreshold;
+
+                if (invoice.amount === 0 || invoice.amount <= threshold) {
+                    shouldShowDialog = true;
+                }
+            } else if (contact && contact.autoPayEnabled) {
+                threshold = contact.autoPayThreshold || 0;
+
+                if (invoice.amount === 0 || invoice.amount <= threshold) {
+                    shouldShowDialog = true;
+                }
+            }
+
+            if (shouldShowDialog) {
+                this.setState({ isAutoPayDialogOpen: true });
+
+                const enhancedInvoice = {
+                    ...invoice,
+                    contact: contact || undefined, // Convert null to undefined
+                    autoPayEnabled: contact ? contact.hasAutoPayEnabled : false,
+                    withinThreshold: true
+                };
+
+                AutoPayUtils.showAutoPayDialog(
+                    enhancedInvoice,
+                    async () => {
+                        this.setState({ isAutoPayDialogOpen: false });
+                        if (invoice.payment_hash) {
+                            AutoPayUtils.setProcessingFlag(
+                                invoice.payment_hash,
+                                false
+                            );
+                        }
+
+                        try {
+                            invoicesStore.clearPayReq();
+                            await invoicesStore.getPayReq(invoice.invoice);
+
+                            if (!invoicesStore.getPayReqError) {
+                                this.props.navigation.navigate(
+                                    'PaymentRequest',
+                                    {
+                                        fromAutoPay: true,
+                                        autoPayThreshold: threshold,
+                                        autoPayAmount: invoice.amount,
+                                        autoPayContact: contact
+                                            ? {
+                                                  name: contact.name,
+                                                  contactId:
+                                                      contact.getContactId
+                                              }
+                                            : null
+                                    }
+                                );
+                            }
+                        } catch (error) {
+                            console.error('Error processing auto-pay:', error);
+                        }
+                    },
+                    () => {
+                        this.setState({ isAutoPayDialogOpen: false });
+                        if (invoice.payment_hash) {
+                            AutoPayUtils.setProcessingFlag(
+                                invoice.payment_hash,
+                                false
+                            );
+                        }
+                    }
+                );
+            }
+        } catch (error) {
+            this.setState({ isAutoPayDialogOpen: false });
+            const invoice = await AutoPayUtils.checkClipboardForInvoice();
+            if (invoice?.payment_hash) {
+                AutoPayUtils.setProcessingFlag(invoice.payment_hash, false);
             }
         }
     };
