@@ -242,42 +242,38 @@ export default class SweepStore {
                 }
             } else if (this.addressType === 'p2tr') {
                 const privKeyBuf = Buffer.from(this.privateKey, 'hex');
-                const fullPub = ecc.pointFromScalar(privKeyBuf, true);
-                if (!fullPub)
-                    throw new Error('Failed to derive Taproot pubkey');
 
-                const tapInternalKey = toXOnly(Buffer.from(fullPub));
-                this.tapInternalKey = tapInternalKey;
+                const fullPub = ecc.pointFromScalar(privKeyBuf, true);
+                if (!fullPub) {
+                    throw new Error('Failed to derive Taproot pubkey');
+                }
+
+                const internalXOnly = Buffer.from(
+                    toXOnly(Buffer.from(fullPub))
+                );
+                this.tapInternalKey = internalXOnly;
 
                 for (const utxo of this.utxos) {
                     const { txid, vout, value } = utxo;
                     totalSats += value;
 
-                    const res = await fetch(
-                        `${wifUtils.baseUrl(networkStr)}/tx/${txid}`
-                    );
-                    if (!res.ok) throw new Error(`Failed to fetch tx ${txid}`);
-                    const tx = await res.json();
-
-                    const output = tx.vout[vout];
-                    if (!output)
-                        throw new Error(
-                            `Output ${vout} not found in tx ${txid}`
-                        );
-
-                    const script = Buffer.from(output.scriptpubkey, 'hex');
+                    const script = bitcoin.payments.p2tr({
+                        internalPubkey: internalXOnly,
+                        network: this.network
+                    }).output!;
 
                     this.psbt.addInput({
                         hash: txid,
                         index: vout,
                         witnessUtxo: {
                             script,
-                            value: Number(output.value)
+                            value
                         },
-                        tapInternalKey
+                        tapInternalKey: internalXOnly
                     });
                 }
             }
+            console.log(JSON.stringify(this.psbt));
             this.onChainBalance = totalSats;
             console.log('onChainBalance', this.onChainBalance);
         } catch (err: any) {
@@ -287,6 +283,42 @@ export default class SweepStore {
         }
     }
 
+    tapTweakHash(pubKeyXOnly: Buffer, merkleRoot: Buffer | null = null) {
+        // merkleRoot is null for key-path spend (no script tree)
+        return bitcoin.crypto.taggedHash(
+            'TapTweak',
+            Buffer.concat(
+                merkleRoot ? [pubKeyXOnly, merkleRoot] : [pubKeyXOnly]
+            )
+        );
+    }
+
+    tweakSigner(privateKey: Buffer, pubkey: Buffer) {
+        const xOnlyPub = toXOnly(pubkey);
+        const tweak = this.tapTweakHash(xOnlyPub);
+
+        const tweaked = ecc.privateAdd(privateKey, tweak);
+        if (!tweaked) throw new Error('Invalid tweaked key');
+        const tweakedKey = Buffer.from(tweaked);
+
+        const tweakedPoint = ecc.xOnlyPointAddTweak(xOnlyPub, tweak);
+        if (!tweakedPoint) throw new Error('Failed to tweak public key');
+
+        const { xOnlyPubkey, parity } = tweakedPoint;
+        const finalPubKey = Buffer.concat([
+            Buffer.from([parity ? 0x03 : 0x02]),
+            xOnlyPubkey
+        ]);
+
+        return {
+            publicKey: finalPubKey,
+            sign: (hash: Buffer) => Buffer.from(ecc.sign(hash, tweakedKey)),
+            signSchnorr: (hash: Buffer) =>
+                Buffer.from(ecc.signSchnorr(hash, tweakedKey)),
+            getPublicKey: () => xOnlyPubkey
+        };
+    }
+
     @action
     async finalizeSweepTransaction(feeRate: string) {
         try {
@@ -294,36 +326,20 @@ export default class SweepStore {
             const isTaproot = this.addressType === 'p2tr';
             const privateKey = Buffer.from(this.privateKey, 'hex');
 
-            let pubkey: Buffer;
             let signer: any;
 
             if (isTaproot) {
                 const fullPub = ecc.pointFromScalar(privateKey, true);
                 if (!fullPub) throw new Error('Failed to derive pubkey');
-                pubkey = toXOnly(Buffer.from(fullPub));
-
-                signer = {
-                    publicKey: pubkey,
-                    sign: (hash: Buffer, _lowR?: boolean) => {
-                        const signature = ecc.signSchnorr(hash, privateKey);
-                        return Buffer.from(signature);
-                    },
-                    signSchnorr: (hash: Buffer) => {
-                        const signature = ecc.signSchnorr(hash, privateKey);
-                        return Buffer.from(signature);
-                    }
-                };
+                signer = this.tweakSigner(privateKey, Buffer.from(fullPub));
             } else {
                 const fullPub = ecc.pointFromScalar(privateKey, true);
                 if (!fullPub) throw new Error('Failed to derive pubkey');
-                pubkey = Buffer.from(fullPub);
 
                 signer = {
-                    publicKey: pubkey,
-                    sign: (hash: Buffer) => {
-                        const signature = ecc.sign(hash, privateKey);
-                        return Buffer.from(signature);
-                    }
+                    publicKey: Buffer.from(fullPub),
+                    sign: (hash: Buffer) =>
+                        Buffer.from(ecc.sign(hash, privateKey))
                 };
             }
 
@@ -342,15 +358,14 @@ export default class SweepStore {
 
             if (isTaproot) {
                 for (let i = 0; i < dummyPsbt.inputCount; i++) {
-                    try {
-                        dummyPsbt.signTaprootInput(i, signer);
-                    } catch (err) {
-                        console.error(`Error signing taproot input ${i}:`, err);
-                        throw err;
-                    }
+                    // console.log('Signer: ', JSON.stringify(signer));
+                    dummyPsbt.signTaprootInput(i, signer);
                 }
             } else {
-                dummyPsbt.signAllInputs(signer);
+                for (let i = 0; i < dummyPsbt.inputCount; i++) {
+                    // console.log('Signer: ', JSON.stringify(signer));
+                    dummyPsbt.signInput(i, signer);
+                }
             }
 
             dummyPsbt.finalizeAllInputs();
@@ -369,17 +384,12 @@ export default class SweepStore {
                 value: this.valueToSend
             });
 
-            if (isTaproot) {
-                for (let i = 0; i < this.psbt.inputCount; i++) {
-                    try {
-                        this.psbt.signTaprootInput(i, signer);
-                    } catch (err) {
-                        console.error(`Error signing taproot input ${i}:`, err);
-                        throw err;
-                    }
+            for (let i = 0; i < this.psbt.inputCount; i++) {
+                if (isTaproot) {
+                    this.psbt.signTaprootInput(i, signer);
+                } else {
+                    this.psbt.signInput(i, signer);
                 }
-            } else {
-                this.psbt.signAllInputs(signer);
             }
 
             this.psbt.finalizeAllInputs();

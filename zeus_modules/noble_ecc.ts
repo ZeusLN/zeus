@@ -24,8 +24,6 @@ export interface TinySecp256k1InterfaceExtended {
   privateNegate(d: Uint8Array): Uint8Array;
 
   signSchnorr(h: Uint8Array, d: Uint8Array, e?: Uint8Array): Uint8Array;
-
-  verifySchnorr(h: Uint8Array, Q: Uint8Array, signature: Uint8Array): boolean;
 }
 
 necc.utils.sha256Sync = (...messages: Uint8Array[]): Uint8Array => {
@@ -131,16 +129,12 @@ const ecc: TinySecp256k1InterfaceExtended & TinySecp256k1Interface & TinySecp256
     return necc.signSync(h, d, { der: false, extraEntropy: e });
   },
 
-  signSchnorr: (h: Uint8Array, d: Uint8Array, e: Uint8Array = Buffer.alloc(32, 0x00)): Uint8Array => {
-    return necc.schnorr.signSync(h, d, e);
-  },
+  signSchnorr: (msgHash: Uint8Array, privKey: Uint8Array, auxRand?: Uint8Array): Uint8Array => {
+    return necc.schnorr.signSync(msgHash, privKey, auxRand ? auxRand : undefined);
+  },  
 
   verify: (h: Uint8Array, Q: Uint8Array, signature: Uint8Array, strict?: boolean): boolean => {
     return necc.verify(signature, h, Q, { strict });
-  },
-
-  verifySchnorr: (h: Uint8Array, Q: Uint8Array, signature: Uint8Array): boolean => {
-    return necc.schnorr.verifySync(signature, h, Q);
   },
 };
 
