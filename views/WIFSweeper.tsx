@@ -3,40 +3,31 @@ import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-
-import BalanceStore from '../../stores/BalanceStore';
-import InvoicesStore from '../../stores/InvoicesStore';
-import ModalStore from '../../stores/ModalStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
-import TransactionsStore from '../../stores/TransactionsStore';
-import SweepStore from '../../stores/SweepStore';
-
-import Button from '../../components/Button';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
-import Header from '../../components/Header';
-import Screen from '../../components/Screen';
-import TextInput from '../../components/TextInput';
-import LoadingIndicator from '../../components/LoadingIndicator';
-import OnchainFeeInput from '../../components/OnchainFeeInput';
-
-import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
 import { TouchableOpacity } from 'react-native-gesture-handler';
-import Scan from '../../assets/images/SVG/Scan.svg';
-import ShowHideToggle from '../../components/ShowHideToggle';
-import wifUtils from '../../utils/WIFUtils';
-import AddressUtils from '../../utils/AddressUtils';
+
+import InvoicesStore from '../stores/InvoicesStore';
+import SweepStore from '../stores/SweepStore';
+
+import Button from '../components/Button';
+import { ErrorMessage } from '../components/SuccessErrorMessage';
+import Header from '../components/Header';
+import Screen from '../components/Screen';
+import TextInput from '../components/TextInput';
+import LoadingIndicator from '../components/LoadingIndicator';
+import OnchainFeeInput from '../components/OnchainFeeInput';
+import ShowHideToggle from '../components/ShowHideToggle';
+
+import { localeString } from '../utils/LocaleUtils';
+import { themeColor } from '../utils/ThemeUtils';
+import wifUtils from '../utils/WIFUtils';
+import AddressUtils from '../utils/AddressUtils';
+
+import Scan from '../assets/images/SVG/Scan.svg';
 
 interface SweepProps {
     exitSetup: any;
     navigation: StackNavigationProp<any, any>;
-    BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
-    ModalStore: ModalStore;
-    NodeInfoStore: NodeInfoStore;
-    TransactionsStore: TransactionsStore;
-    SettingsStore: SettingsStore;
     SweepStore: SweepStore;
     route: Route<'Sweep', { wif: string }>;
 }
@@ -49,9 +40,10 @@ interface SweepState {
     loading: boolean;
     onChainAddressloading: boolean;
     feeRate: string;
+    feeLoadingError: boolean;
 }
 
-@inject('NodeInfoStore', 'SettingsStore', 'SweepStore', 'InvoicesStore')
+@inject('SweepStore', 'InvoicesStore')
 @observer
 export default class WIFSweeper extends React.Component<
     SweepProps,
@@ -64,7 +56,8 @@ export default class WIFSweeper extends React.Component<
         error: '',
         loading: false,
         onChainAddressloading: false,
-        feeRate: ''
+        feeRate: '2',
+        feeLoadingError: false
     };
 
     componentDidMount() {
@@ -106,7 +99,8 @@ export default class WIFSweeper extends React.Component<
             error,
             loading,
             onChainAddressloading,
-            feeRate
+            feeRate,
+            feeLoadingError
         } = this.state;
         const { sweepError, sweepErrorMsg } = SweepStore;
 
@@ -233,6 +227,7 @@ export default class WIFSweeper extends React.Component<
                                         this.setState({
                                             onChainAddressloading: true
                                         });
+                                        this.props.SweepStore.resetSweepError();
                                         const { isValid } =
                                             wifUtils.validateWIF(privateKey);
                                         if (isValid) {
@@ -244,6 +239,14 @@ export default class WIFSweeper extends React.Component<
                                                 localeString(
                                                     'views.Wif.invalidWif'
                                                 )
+                                            );
+                                        }
+                                        if (SweepStore.sweepError) {
+                                            throw new Error(
+                                                SweepStore.sweepErrorMsg ||
+                                                    localeString(
+                                                        'views.Sweep.unknownError'
+                                                    )
                                             );
                                         }
                                         if (!SweepStore.onChainBalance) {
@@ -259,7 +262,7 @@ export default class WIFSweeper extends React.Component<
                                                 value:
                                                     SweepStore.onChainBalance.toString() ??
                                                     '10',
-                                                expiry: '3600'
+                                                expirySeconds: '3600'
                                             }
                                         );
                                         if (InvoicesStore.onChainAddress) {
@@ -278,6 +281,9 @@ export default class WIFSweeper extends React.Component<
                                             );
                                         }
                                     } catch (e: any) {
+                                        this.props.SweepStore.sweepError = true;
+                                        this.props.SweepStore.sweepErrorMsg =
+                                            e.message;
                                         this.setState({
                                             error: e.message,
                                             onChainAddressloading: false
@@ -293,6 +299,7 @@ export default class WIFSweeper extends React.Component<
                                 }
                             />
                         </View>
+
                         <View
                             style={{ marginHorizontal: 20, paddingBottom: 10 }}
                         >
@@ -307,7 +314,13 @@ export default class WIFSweeper extends React.Component<
                             <OnchainFeeInput
                                 fee={feeRate}
                                 onChangeFee={(text: string) =>
-                                    this.setState({ feeRate: text })
+                                    this.setState({
+                                        feeRate: text,
+                                        feeLoadingError: false
+                                    })
+                                }
+                                onFeeError={(error) =>
+                                    this.setState({ feeLoadingError: error })
                                 }
                                 navigation={navigation}
                             />
@@ -337,6 +350,7 @@ export default class WIFSweeper extends React.Component<
                                 loading ||
                                 !SweepStore.destination ||
                                 sweepError ||
+                                feeLoadingError ||
                                 (!!error && error.length > 0)
                             }
                             containerStyle={{ paddingBottom: 30 }}
