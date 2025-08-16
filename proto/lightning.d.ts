@@ -56753,3 +56753,2435 @@ export namespace walletrpc {
         public static getTypeUrl(typeUrlPrefix?: string): string;
     }
 }
+
+/** Namespace wtclientrpc. */
+export namespace wtclientrpc {
+    /** Represents a WatchtowerClient */
+    class WatchtowerClient extends $protobuf.rpc.Service {
+        /**
+         * Constructs a new WatchtowerClient service.
+         * @param rpcImpl RPC implementation
+         * @param [requestDelimited=false] Whether requests are length-delimited
+         * @param [responseDelimited=false] Whether responses are length-delimited
+         */
+        constructor(
+            rpcImpl: $protobuf.RPCImpl,
+            requestDelimited?: boolean,
+            responseDelimited?: boolean
+        );
+
+        /**
+         * Creates new WatchtowerClient service using the specified rpc implementation.
+         * @param rpcImpl RPC implementation
+         * @param [requestDelimited=false] Whether requests are length-delimited
+         * @param [responseDelimited=false] Whether responses are length-delimited
+         * @returns RPC service. Useful where requests and/or responses are streamed.
+         */
+        public static create(
+            rpcImpl: $protobuf.RPCImpl,
+            requestDelimited?: boolean,
+            responseDelimited?: boolean
+        ): WatchtowerClient;
+
+        /**
+         * Calls AddTower.
+         * @param request AddTowerRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and AddTowerResponse
+         */
+        public addTower(
+            request: wtclientrpc.IAddTowerRequest,
+            callback: wtclientrpc.WatchtowerClient.AddTowerCallback
+        ): void;
+
+        /**
+         * Calls AddTower.
+         * @param request AddTowerRequest message or plain object
+         * @returns Promise
+         */
+        public addTower(
+            request: wtclientrpc.IAddTowerRequest
+        ): Promise<wtclientrpc.AddTowerResponse>;
+
+        /**
+         * Calls RemoveTower.
+         * @param request RemoveTowerRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and RemoveTowerResponse
+         */
+        public removeTower(
+            request: wtclientrpc.IRemoveTowerRequest,
+            callback: wtclientrpc.WatchtowerClient.RemoveTowerCallback
+        ): void;
+
+        /**
+         * Calls RemoveTower.
+         * @param request RemoveTowerRequest message or plain object
+         * @returns Promise
+         */
+        public removeTower(
+            request: wtclientrpc.IRemoveTowerRequest
+        ): Promise<wtclientrpc.RemoveTowerResponse>;
+
+        /**
+         * Calls DeactivateTower.
+         * @param request DeactivateTowerRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and DeactivateTowerResponse
+         */
+        public deactivateTower(
+            request: wtclientrpc.IDeactivateTowerRequest,
+            callback: wtclientrpc.WatchtowerClient.DeactivateTowerCallback
+        ): void;
+
+        /**
+         * Calls DeactivateTower.
+         * @param request DeactivateTowerRequest message or plain object
+         * @returns Promise
+         */
+        public deactivateTower(
+            request: wtclientrpc.IDeactivateTowerRequest
+        ): Promise<wtclientrpc.DeactivateTowerResponse>;
+
+        /**
+         * Calls TerminateSession.
+         * @param request TerminateSessionRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and TerminateSessionResponse
+         */
+        public terminateSession(
+            request: wtclientrpc.ITerminateSessionRequest,
+            callback: wtclientrpc.WatchtowerClient.TerminateSessionCallback
+        ): void;
+
+        /**
+         * Calls TerminateSession.
+         * @param request TerminateSessionRequest message or plain object
+         * @returns Promise
+         */
+        public terminateSession(
+            request: wtclientrpc.ITerminateSessionRequest
+        ): Promise<wtclientrpc.TerminateSessionResponse>;
+
+        /**
+         * Calls ListTowers.
+         * @param request ListTowersRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and ListTowersResponse
+         */
+        public listTowers(
+            request: wtclientrpc.IListTowersRequest,
+            callback: wtclientrpc.WatchtowerClient.ListTowersCallback
+        ): void;
+
+        /**
+         * Calls ListTowers.
+         * @param request ListTowersRequest message or plain object
+         * @returns Promise
+         */
+        public listTowers(
+            request: wtclientrpc.IListTowersRequest
+        ): Promise<wtclientrpc.ListTowersResponse>;
+
+        /**
+         * Calls GetTowerInfo.
+         * @param request GetTowerInfoRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and Tower
+         */
+        public getTowerInfo(
+            request: wtclientrpc.IGetTowerInfoRequest,
+            callback: wtclientrpc.WatchtowerClient.GetTowerInfoCallback
+        ): void;
+
+        /**
+         * Calls GetTowerInfo.
+         * @param request GetTowerInfoRequest message or plain object
+         * @returns Promise
+         */
+        public getTowerInfo(
+            request: wtclientrpc.IGetTowerInfoRequest
+        ): Promise<wtclientrpc.Tower>;
+
+        /**
+         * Calls Stats.
+         * @param request StatsRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and StatsResponse
+         */
+        public stats(
+            request: wtclientrpc.IStatsRequest,
+            callback: wtclientrpc.WatchtowerClient.StatsCallback
+        ): void;
+
+        /**
+         * Calls Stats.
+         * @param request StatsRequest message or plain object
+         * @returns Promise
+         */
+        public stats(
+            request: wtclientrpc.IStatsRequest
+        ): Promise<wtclientrpc.StatsResponse>;
+
+        /**
+         * Calls Policy.
+         * @param request PolicyRequest message or plain object
+         * @param callback Node-style callback called with the error, if any, and PolicyResponse
+         */
+        public policy(
+            request: wtclientrpc.IPolicyRequest,
+            callback: wtclientrpc.WatchtowerClient.PolicyCallback
+        ): void;
+
+        /**
+         * Calls Policy.
+         * @param request PolicyRequest message or plain object
+         * @returns Promise
+         */
+        public policy(
+            request: wtclientrpc.IPolicyRequest
+        ): Promise<wtclientrpc.PolicyResponse>;
+    }
+
+    namespace WatchtowerClient {
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#addTower}.
+         * @param error Error, if any
+         * @param [response] AddTowerResponse
+         */
+        type AddTowerCallback = (
+            error: Error | null,
+            response?: wtclientrpc.AddTowerResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#removeTower}.
+         * @param error Error, if any
+         * @param [response] RemoveTowerResponse
+         */
+        type RemoveTowerCallback = (
+            error: Error | null,
+            response?: wtclientrpc.RemoveTowerResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#deactivateTower}.
+         * @param error Error, if any
+         * @param [response] DeactivateTowerResponse
+         */
+        type DeactivateTowerCallback = (
+            error: Error | null,
+            response?: wtclientrpc.DeactivateTowerResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#terminateSession}.
+         * @param error Error, if any
+         * @param [response] TerminateSessionResponse
+         */
+        type TerminateSessionCallback = (
+            error: Error | null,
+            response?: wtclientrpc.TerminateSessionResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#listTowers}.
+         * @param error Error, if any
+         * @param [response] ListTowersResponse
+         */
+        type ListTowersCallback = (
+            error: Error | null,
+            response?: wtclientrpc.ListTowersResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#getTowerInfo}.
+         * @param error Error, if any
+         * @param [response] Tower
+         */
+        type GetTowerInfoCallback = (
+            error: Error | null,
+            response?: wtclientrpc.Tower
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#stats}.
+         * @param error Error, if any
+         * @param [response] StatsResponse
+         */
+        type StatsCallback = (
+            error: Error | null,
+            response?: wtclientrpc.StatsResponse
+        ) => void;
+
+        /**
+         * Callback as used by {@link wtclientrpc.WatchtowerClient#policy}.
+         * @param error Error, if any
+         * @param [response] PolicyResponse
+         */
+        type PolicyCallback = (
+            error: Error | null,
+            response?: wtclientrpc.PolicyResponse
+        ) => void;
+    }
+
+    /** Properties of an AddTowerRequest. */
+    interface IAddTowerRequest {
+        /** AddTowerRequest pubkey */
+        pubkey?: Uint8Array | null;
+
+        /** AddTowerRequest address */
+        address?: string | null;
+    }
+
+    /** Represents an AddTowerRequest. */
+    class AddTowerRequest implements IAddTowerRequest {
+        /**
+         * Constructs a new AddTowerRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IAddTowerRequest);
+
+        /** AddTowerRequest pubkey. */
+        public pubkey: Uint8Array;
+
+        /** AddTowerRequest address. */
+        public address: string;
+
+        /**
+         * Creates a new AddTowerRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns AddTowerRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IAddTowerRequest
+        ): wtclientrpc.AddTowerRequest;
+
+        /**
+         * Encodes the specified AddTowerRequest message. Does not implicitly {@link wtclientrpc.AddTowerRequest.verify|verify} messages.
+         * @param message AddTowerRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IAddTowerRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified AddTowerRequest message, length delimited. Does not implicitly {@link wtclientrpc.AddTowerRequest.verify|verify} messages.
+         * @param message AddTowerRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IAddTowerRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an AddTowerRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns AddTowerRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.AddTowerRequest;
+
+        /**
+         * Decodes an AddTowerRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns AddTowerRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.AddTowerRequest;
+
+        /**
+         * Verifies an AddTowerRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an AddTowerRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns AddTowerRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.AddTowerRequest;
+
+        /**
+         * Creates a plain object from an AddTowerRequest message. Also converts values to other types if specified.
+         * @param message AddTowerRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.AddTowerRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this AddTowerRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for AddTowerRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of an AddTowerResponse. */
+    interface IAddTowerResponse {}
+
+    /** Represents an AddTowerResponse. */
+    class AddTowerResponse implements IAddTowerResponse {
+        /**
+         * Constructs a new AddTowerResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IAddTowerResponse);
+
+        /**
+         * Creates a new AddTowerResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns AddTowerResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.IAddTowerResponse
+        ): wtclientrpc.AddTowerResponse;
+
+        /**
+         * Encodes the specified AddTowerResponse message. Does not implicitly {@link wtclientrpc.AddTowerResponse.verify|verify} messages.
+         * @param message AddTowerResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IAddTowerResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified AddTowerResponse message, length delimited. Does not implicitly {@link wtclientrpc.AddTowerResponse.verify|verify} messages.
+         * @param message AddTowerResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IAddTowerResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an AddTowerResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns AddTowerResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.AddTowerResponse;
+
+        /**
+         * Decodes an AddTowerResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns AddTowerResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.AddTowerResponse;
+
+        /**
+         * Verifies an AddTowerResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an AddTowerResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns AddTowerResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.AddTowerResponse;
+
+        /**
+         * Creates a plain object from an AddTowerResponse message. Also converts values to other types if specified.
+         * @param message AddTowerResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.AddTowerResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this AddTowerResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for AddTowerResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a RemoveTowerRequest. */
+    interface IRemoveTowerRequest {
+        /** RemoveTowerRequest pubkey */
+        pubkey?: Uint8Array | null;
+
+        /** RemoveTowerRequest address */
+        address?: string | null;
+    }
+
+    /** Represents a RemoveTowerRequest. */
+    class RemoveTowerRequest implements IRemoveTowerRequest {
+        /**
+         * Constructs a new RemoveTowerRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IRemoveTowerRequest);
+
+        /** RemoveTowerRequest pubkey. */
+        public pubkey: Uint8Array;
+
+        /** RemoveTowerRequest address. */
+        public address: string;
+
+        /**
+         * Creates a new RemoveTowerRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RemoveTowerRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IRemoveTowerRequest
+        ): wtclientrpc.RemoveTowerRequest;
+
+        /**
+         * Encodes the specified RemoveTowerRequest message. Does not implicitly {@link wtclientrpc.RemoveTowerRequest.verify|verify} messages.
+         * @param message RemoveTowerRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IRemoveTowerRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RemoveTowerRequest message, length delimited. Does not implicitly {@link wtclientrpc.RemoveTowerRequest.verify|verify} messages.
+         * @param message RemoveTowerRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IRemoveTowerRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RemoveTowerRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RemoveTowerRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.RemoveTowerRequest;
+
+        /**
+         * Decodes a RemoveTowerRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RemoveTowerRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.RemoveTowerRequest;
+
+        /**
+         * Verifies a RemoveTowerRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RemoveTowerRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RemoveTowerRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.RemoveTowerRequest;
+
+        /**
+         * Creates a plain object from a RemoveTowerRequest message. Also converts values to other types if specified.
+         * @param message RemoveTowerRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.RemoveTowerRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RemoveTowerRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RemoveTowerRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a RemoveTowerResponse. */
+    interface IRemoveTowerResponse {}
+
+    /** Represents a RemoveTowerResponse. */
+    class RemoveTowerResponse implements IRemoveTowerResponse {
+        /**
+         * Constructs a new RemoveTowerResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IRemoveTowerResponse);
+
+        /**
+         * Creates a new RemoveTowerResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns RemoveTowerResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.IRemoveTowerResponse
+        ): wtclientrpc.RemoveTowerResponse;
+
+        /**
+         * Encodes the specified RemoveTowerResponse message. Does not implicitly {@link wtclientrpc.RemoveTowerResponse.verify|verify} messages.
+         * @param message RemoveTowerResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IRemoveTowerResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified RemoveTowerResponse message, length delimited. Does not implicitly {@link wtclientrpc.RemoveTowerResponse.verify|verify} messages.
+         * @param message RemoveTowerResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IRemoveTowerResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a RemoveTowerResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns RemoveTowerResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.RemoveTowerResponse;
+
+        /**
+         * Decodes a RemoveTowerResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns RemoveTowerResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.RemoveTowerResponse;
+
+        /**
+         * Verifies a RemoveTowerResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a RemoveTowerResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns RemoveTowerResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.RemoveTowerResponse;
+
+        /**
+         * Creates a plain object from a RemoveTowerResponse message. Also converts values to other types if specified.
+         * @param message RemoveTowerResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.RemoveTowerResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this RemoveTowerResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for RemoveTowerResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a DeactivateTowerRequest. */
+    interface IDeactivateTowerRequest {
+        /** DeactivateTowerRequest pubkey */
+        pubkey?: Uint8Array | null;
+    }
+
+    /** Represents a DeactivateTowerRequest. */
+    class DeactivateTowerRequest implements IDeactivateTowerRequest {
+        /**
+         * Constructs a new DeactivateTowerRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IDeactivateTowerRequest);
+
+        /** DeactivateTowerRequest pubkey. */
+        public pubkey: Uint8Array;
+
+        /**
+         * Creates a new DeactivateTowerRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DeactivateTowerRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IDeactivateTowerRequest
+        ): wtclientrpc.DeactivateTowerRequest;
+
+        /**
+         * Encodes the specified DeactivateTowerRequest message. Does not implicitly {@link wtclientrpc.DeactivateTowerRequest.verify|verify} messages.
+         * @param message DeactivateTowerRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IDeactivateTowerRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DeactivateTowerRequest message, length delimited. Does not implicitly {@link wtclientrpc.DeactivateTowerRequest.verify|verify} messages.
+         * @param message DeactivateTowerRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IDeactivateTowerRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DeactivateTowerRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DeactivateTowerRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.DeactivateTowerRequest;
+
+        /**
+         * Decodes a DeactivateTowerRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DeactivateTowerRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.DeactivateTowerRequest;
+
+        /**
+         * Verifies a DeactivateTowerRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DeactivateTowerRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DeactivateTowerRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.DeactivateTowerRequest;
+
+        /**
+         * Creates a plain object from a DeactivateTowerRequest message. Also converts values to other types if specified.
+         * @param message DeactivateTowerRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.DeactivateTowerRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DeactivateTowerRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for DeactivateTowerRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a DeactivateTowerResponse. */
+    interface IDeactivateTowerResponse {
+        /** DeactivateTowerResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a DeactivateTowerResponse. */
+    class DeactivateTowerResponse implements IDeactivateTowerResponse {
+        /**
+         * Constructs a new DeactivateTowerResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IDeactivateTowerResponse);
+
+        /** DeactivateTowerResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new DeactivateTowerResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DeactivateTowerResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.IDeactivateTowerResponse
+        ): wtclientrpc.DeactivateTowerResponse;
+
+        /**
+         * Encodes the specified DeactivateTowerResponse message. Does not implicitly {@link wtclientrpc.DeactivateTowerResponse.verify|verify} messages.
+         * @param message DeactivateTowerResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IDeactivateTowerResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DeactivateTowerResponse message, length delimited. Does not implicitly {@link wtclientrpc.DeactivateTowerResponse.verify|verify} messages.
+         * @param message DeactivateTowerResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IDeactivateTowerResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DeactivateTowerResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns DeactivateTowerResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.DeactivateTowerResponse;
+
+        /**
+         * Decodes a DeactivateTowerResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns DeactivateTowerResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.DeactivateTowerResponse;
+
+        /**
+         * Verifies a DeactivateTowerResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DeactivateTowerResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DeactivateTowerResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.DeactivateTowerResponse;
+
+        /**
+         * Creates a plain object from a DeactivateTowerResponse message. Also converts values to other types if specified.
+         * @param message DeactivateTowerResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.DeactivateTowerResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DeactivateTowerResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for DeactivateTowerResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a TerminateSessionRequest. */
+    interface ITerminateSessionRequest {
+        /** TerminateSessionRequest session_id */
+        session_id?: Uint8Array | null;
+    }
+
+    /** Represents a TerminateSessionRequest. */
+    class TerminateSessionRequest implements ITerminateSessionRequest {
+        /**
+         * Constructs a new TerminateSessionRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.ITerminateSessionRequest);
+
+        /** TerminateSessionRequest session_id. */
+        public session_id: Uint8Array;
+
+        /**
+         * Creates a new TerminateSessionRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns TerminateSessionRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.ITerminateSessionRequest
+        ): wtclientrpc.TerminateSessionRequest;
+
+        /**
+         * Encodes the specified TerminateSessionRequest message. Does not implicitly {@link wtclientrpc.TerminateSessionRequest.verify|verify} messages.
+         * @param message TerminateSessionRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.ITerminateSessionRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified TerminateSessionRequest message, length delimited. Does not implicitly {@link wtclientrpc.TerminateSessionRequest.verify|verify} messages.
+         * @param message TerminateSessionRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.ITerminateSessionRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a TerminateSessionRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns TerminateSessionRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.TerminateSessionRequest;
+
+        /**
+         * Decodes a TerminateSessionRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns TerminateSessionRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.TerminateSessionRequest;
+
+        /**
+         * Verifies a TerminateSessionRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a TerminateSessionRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns TerminateSessionRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.TerminateSessionRequest;
+
+        /**
+         * Creates a plain object from a TerminateSessionRequest message. Also converts values to other types if specified.
+         * @param message TerminateSessionRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.TerminateSessionRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this TerminateSessionRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for TerminateSessionRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a TerminateSessionResponse. */
+    interface ITerminateSessionResponse {
+        /** TerminateSessionResponse status */
+        status?: string | null;
+    }
+
+    /** Represents a TerminateSessionResponse. */
+    class TerminateSessionResponse implements ITerminateSessionResponse {
+        /**
+         * Constructs a new TerminateSessionResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.ITerminateSessionResponse);
+
+        /** TerminateSessionResponse status. */
+        public status: string;
+
+        /**
+         * Creates a new TerminateSessionResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns TerminateSessionResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.ITerminateSessionResponse
+        ): wtclientrpc.TerminateSessionResponse;
+
+        /**
+         * Encodes the specified TerminateSessionResponse message. Does not implicitly {@link wtclientrpc.TerminateSessionResponse.verify|verify} messages.
+         * @param message TerminateSessionResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.ITerminateSessionResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified TerminateSessionResponse message, length delimited. Does not implicitly {@link wtclientrpc.TerminateSessionResponse.verify|verify} messages.
+         * @param message TerminateSessionResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.ITerminateSessionResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a TerminateSessionResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns TerminateSessionResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.TerminateSessionResponse;
+
+        /**
+         * Decodes a TerminateSessionResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns TerminateSessionResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.TerminateSessionResponse;
+
+        /**
+         * Verifies a TerminateSessionResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a TerminateSessionResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns TerminateSessionResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.TerminateSessionResponse;
+
+        /**
+         * Creates a plain object from a TerminateSessionResponse message. Also converts values to other types if specified.
+         * @param message TerminateSessionResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.TerminateSessionResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this TerminateSessionResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for TerminateSessionResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a GetTowerInfoRequest. */
+    interface IGetTowerInfoRequest {
+        /** GetTowerInfoRequest pubkey */
+        pubkey?: Uint8Array | null;
+
+        /** GetTowerInfoRequest include_sessions */
+        include_sessions?: boolean | null;
+
+        /** GetTowerInfoRequest exclude_exhausted_sessions */
+        exclude_exhausted_sessions?: boolean | null;
+    }
+
+    /** Represents a GetTowerInfoRequest. */
+    class GetTowerInfoRequest implements IGetTowerInfoRequest {
+        /**
+         * Constructs a new GetTowerInfoRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IGetTowerInfoRequest);
+
+        /** GetTowerInfoRequest pubkey. */
+        public pubkey: Uint8Array;
+
+        /** GetTowerInfoRequest include_sessions. */
+        public include_sessions: boolean;
+
+        /** GetTowerInfoRequest exclude_exhausted_sessions. */
+        public exclude_exhausted_sessions: boolean;
+
+        /**
+         * Creates a new GetTowerInfoRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns GetTowerInfoRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IGetTowerInfoRequest
+        ): wtclientrpc.GetTowerInfoRequest;
+
+        /**
+         * Encodes the specified GetTowerInfoRequest message. Does not implicitly {@link wtclientrpc.GetTowerInfoRequest.verify|verify} messages.
+         * @param message GetTowerInfoRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IGetTowerInfoRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified GetTowerInfoRequest message, length delimited. Does not implicitly {@link wtclientrpc.GetTowerInfoRequest.verify|verify} messages.
+         * @param message GetTowerInfoRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IGetTowerInfoRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a GetTowerInfoRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns GetTowerInfoRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.GetTowerInfoRequest;
+
+        /**
+         * Decodes a GetTowerInfoRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns GetTowerInfoRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.GetTowerInfoRequest;
+
+        /**
+         * Verifies a GetTowerInfoRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a GetTowerInfoRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns GetTowerInfoRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.GetTowerInfoRequest;
+
+        /**
+         * Creates a plain object from a GetTowerInfoRequest message. Also converts values to other types if specified.
+         * @param message GetTowerInfoRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.GetTowerInfoRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this GetTowerInfoRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for GetTowerInfoRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a TowerSession. */
+    interface ITowerSession {
+        /** TowerSession num_backups */
+        num_backups?: number | null;
+
+        /** TowerSession num_pending_backups */
+        num_pending_backups?: number | null;
+
+        /** TowerSession max_backups */
+        max_backups?: number | null;
+
+        /** TowerSession sweep_sat_per_byte */
+        sweep_sat_per_byte?: number | null;
+
+        /** TowerSession sweep_sat_per_vbyte */
+        sweep_sat_per_vbyte?: number | null;
+
+        /** TowerSession id */
+        id?: Uint8Array | null;
+    }
+
+    /** Represents a TowerSession. */
+    class TowerSession implements ITowerSession {
+        /**
+         * Constructs a new TowerSession.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.ITowerSession);
+
+        /** TowerSession num_backups. */
+        public num_backups: number;
+
+        /** TowerSession num_pending_backups. */
+        public num_pending_backups: number;
+
+        /** TowerSession max_backups. */
+        public max_backups: number;
+
+        /** TowerSession sweep_sat_per_byte. */
+        public sweep_sat_per_byte: number;
+
+        /** TowerSession sweep_sat_per_vbyte. */
+        public sweep_sat_per_vbyte: number;
+
+        /** TowerSession id. */
+        public id: Uint8Array;
+
+        /**
+         * Creates a new TowerSession instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns TowerSession instance
+         */
+        public static create(
+            properties?: wtclientrpc.ITowerSession
+        ): wtclientrpc.TowerSession;
+
+        /**
+         * Encodes the specified TowerSession message. Does not implicitly {@link wtclientrpc.TowerSession.verify|verify} messages.
+         * @param message TowerSession message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.ITowerSession,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified TowerSession message, length delimited. Does not implicitly {@link wtclientrpc.TowerSession.verify|verify} messages.
+         * @param message TowerSession message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.ITowerSession,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a TowerSession message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns TowerSession
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.TowerSession;
+
+        /**
+         * Decodes a TowerSession message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns TowerSession
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.TowerSession;
+
+        /**
+         * Verifies a TowerSession message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a TowerSession message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns TowerSession
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.TowerSession;
+
+        /**
+         * Creates a plain object from a TowerSession message. Also converts values to other types if specified.
+         * @param message TowerSession
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.TowerSession,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this TowerSession to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for TowerSession
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a Tower. */
+    interface ITower {
+        /** Tower pubkey */
+        pubkey?: Uint8Array | null;
+
+        /** Tower addresses */
+        addresses?: string[] | null;
+
+        /** Tower active_session_candidate */
+        active_session_candidate?: boolean | null;
+
+        /** Tower num_sessions */
+        num_sessions?: number | null;
+
+        /** Tower sessions */
+        sessions?: wtclientrpc.ITowerSession[] | null;
+
+        /** Tower session_info */
+        session_info?: wtclientrpc.ITowerSessionInfo[] | null;
+    }
+
+    /** Represents a Tower. */
+    class Tower implements ITower {
+        /**
+         * Constructs a new Tower.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.ITower);
+
+        /** Tower pubkey. */
+        public pubkey: Uint8Array;
+
+        /** Tower addresses. */
+        public addresses: string[];
+
+        /** Tower active_session_candidate. */
+        public active_session_candidate: boolean;
+
+        /** Tower num_sessions. */
+        public num_sessions: number;
+
+        /** Tower sessions. */
+        public sessions: wtclientrpc.ITowerSession[];
+
+        /** Tower session_info. */
+        public session_info: wtclientrpc.ITowerSessionInfo[];
+
+        /**
+         * Creates a new Tower instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns Tower instance
+         */
+        public static create(
+            properties?: wtclientrpc.ITower
+        ): wtclientrpc.Tower;
+
+        /**
+         * Encodes the specified Tower message. Does not implicitly {@link wtclientrpc.Tower.verify|verify} messages.
+         * @param message Tower message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.ITower,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified Tower message, length delimited. Does not implicitly {@link wtclientrpc.Tower.verify|verify} messages.
+         * @param message Tower message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.ITower,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a Tower message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns Tower
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.Tower;
+
+        /**
+         * Decodes a Tower message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns Tower
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.Tower;
+
+        /**
+         * Verifies a Tower message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a Tower message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns Tower
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.Tower;
+
+        /**
+         * Creates a plain object from a Tower message. Also converts values to other types if specified.
+         * @param message Tower
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.Tower,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this Tower to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for Tower
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a TowerSessionInfo. */
+    interface ITowerSessionInfo {
+        /** TowerSessionInfo active_session_candidate */
+        active_session_candidate?: boolean | null;
+
+        /** TowerSessionInfo num_sessions */
+        num_sessions?: number | null;
+
+        /** TowerSessionInfo sessions */
+        sessions?: wtclientrpc.ITowerSession[] | null;
+
+        /** TowerSessionInfo policy_type */
+        policy_type?: wtclientrpc.PolicyType | null;
+    }
+
+    /** Represents a TowerSessionInfo. */
+    class TowerSessionInfo implements ITowerSessionInfo {
+        /**
+         * Constructs a new TowerSessionInfo.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.ITowerSessionInfo);
+
+        /** TowerSessionInfo active_session_candidate. */
+        public active_session_candidate: boolean;
+
+        /** TowerSessionInfo num_sessions. */
+        public num_sessions: number;
+
+        /** TowerSessionInfo sessions. */
+        public sessions: wtclientrpc.ITowerSession[];
+
+        /** TowerSessionInfo policy_type. */
+        public policy_type: wtclientrpc.PolicyType;
+
+        /**
+         * Creates a new TowerSessionInfo instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns TowerSessionInfo instance
+         */
+        public static create(
+            properties?: wtclientrpc.ITowerSessionInfo
+        ): wtclientrpc.TowerSessionInfo;
+
+        /**
+         * Encodes the specified TowerSessionInfo message. Does not implicitly {@link wtclientrpc.TowerSessionInfo.verify|verify} messages.
+         * @param message TowerSessionInfo message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.ITowerSessionInfo,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified TowerSessionInfo message, length delimited. Does not implicitly {@link wtclientrpc.TowerSessionInfo.verify|verify} messages.
+         * @param message TowerSessionInfo message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.ITowerSessionInfo,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a TowerSessionInfo message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns TowerSessionInfo
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.TowerSessionInfo;
+
+        /**
+         * Decodes a TowerSessionInfo message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns TowerSessionInfo
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.TowerSessionInfo;
+
+        /**
+         * Verifies a TowerSessionInfo message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a TowerSessionInfo message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns TowerSessionInfo
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.TowerSessionInfo;
+
+        /**
+         * Creates a plain object from a TowerSessionInfo message. Also converts values to other types if specified.
+         * @param message TowerSessionInfo
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.TowerSessionInfo,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this TowerSessionInfo to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for TowerSessionInfo
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a ListTowersRequest. */
+    interface IListTowersRequest {
+        /** ListTowersRequest include_sessions */
+        include_sessions?: boolean | null;
+
+        /** ListTowersRequest exclude_exhausted_sessions */
+        exclude_exhausted_sessions?: boolean | null;
+    }
+
+    /** Represents a ListTowersRequest. */
+    class ListTowersRequest implements IListTowersRequest {
+        /**
+         * Constructs a new ListTowersRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IListTowersRequest);
+
+        /** ListTowersRequest include_sessions. */
+        public include_sessions: boolean;
+
+        /** ListTowersRequest exclude_exhausted_sessions. */
+        public exclude_exhausted_sessions: boolean;
+
+        /**
+         * Creates a new ListTowersRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ListTowersRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IListTowersRequest
+        ): wtclientrpc.ListTowersRequest;
+
+        /**
+         * Encodes the specified ListTowersRequest message. Does not implicitly {@link wtclientrpc.ListTowersRequest.verify|verify} messages.
+         * @param message ListTowersRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IListTowersRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ListTowersRequest message, length delimited. Does not implicitly {@link wtclientrpc.ListTowersRequest.verify|verify} messages.
+         * @param message ListTowersRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IListTowersRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a ListTowersRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ListTowersRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.ListTowersRequest;
+
+        /**
+         * Decodes a ListTowersRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ListTowersRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.ListTowersRequest;
+
+        /**
+         * Verifies a ListTowersRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a ListTowersRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ListTowersRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.ListTowersRequest;
+
+        /**
+         * Creates a plain object from a ListTowersRequest message. Also converts values to other types if specified.
+         * @param message ListTowersRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.ListTowersRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this ListTowersRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for ListTowersRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a ListTowersResponse. */
+    interface IListTowersResponse {
+        /** ListTowersResponse towers */
+        towers?: wtclientrpc.ITower[] | null;
+    }
+
+    /** Represents a ListTowersResponse. */
+    class ListTowersResponse implements IListTowersResponse {
+        /**
+         * Constructs a new ListTowersResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IListTowersResponse);
+
+        /** ListTowersResponse towers. */
+        public towers: wtclientrpc.ITower[];
+
+        /**
+         * Creates a new ListTowersResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ListTowersResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.IListTowersResponse
+        ): wtclientrpc.ListTowersResponse;
+
+        /**
+         * Encodes the specified ListTowersResponse message. Does not implicitly {@link wtclientrpc.ListTowersResponse.verify|verify} messages.
+         * @param message ListTowersResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IListTowersResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ListTowersResponse message, length delimited. Does not implicitly {@link wtclientrpc.ListTowersResponse.verify|verify} messages.
+         * @param message ListTowersResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IListTowersResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a ListTowersResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns ListTowersResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.ListTowersResponse;
+
+        /**
+         * Decodes a ListTowersResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns ListTowersResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.ListTowersResponse;
+
+        /**
+         * Verifies a ListTowersResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a ListTowersResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ListTowersResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.ListTowersResponse;
+
+        /**
+         * Creates a plain object from a ListTowersResponse message. Also converts values to other types if specified.
+         * @param message ListTowersResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.ListTowersResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this ListTowersResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for ListTowersResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a StatsRequest. */
+    interface IStatsRequest {}
+
+    /** Represents a StatsRequest. */
+    class StatsRequest implements IStatsRequest {
+        /**
+         * Constructs a new StatsRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IStatsRequest);
+
+        /**
+         * Creates a new StatsRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns StatsRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IStatsRequest
+        ): wtclientrpc.StatsRequest;
+
+        /**
+         * Encodes the specified StatsRequest message. Does not implicitly {@link wtclientrpc.StatsRequest.verify|verify} messages.
+         * @param message StatsRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IStatsRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified StatsRequest message, length delimited. Does not implicitly {@link wtclientrpc.StatsRequest.verify|verify} messages.
+         * @param message StatsRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IStatsRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a StatsRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns StatsRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.StatsRequest;
+
+        /**
+         * Decodes a StatsRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns StatsRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.StatsRequest;
+
+        /**
+         * Verifies a StatsRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a StatsRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns StatsRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.StatsRequest;
+
+        /**
+         * Creates a plain object from a StatsRequest message. Also converts values to other types if specified.
+         * @param message StatsRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.StatsRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this StatsRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for StatsRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a StatsResponse. */
+    interface IStatsResponse {
+        /** StatsResponse num_backups */
+        num_backups?: number | null;
+
+        /** StatsResponse num_pending_backups */
+        num_pending_backups?: number | null;
+
+        /** StatsResponse num_failed_backups */
+        num_failed_backups?: number | null;
+
+        /** StatsResponse num_sessions_acquired */
+        num_sessions_acquired?: number | null;
+
+        /** StatsResponse num_sessions_exhausted */
+        num_sessions_exhausted?: number | null;
+    }
+
+    /** Represents a StatsResponse. */
+    class StatsResponse implements IStatsResponse {
+        /**
+         * Constructs a new StatsResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IStatsResponse);
+
+        /** StatsResponse num_backups. */
+        public num_backups: number;
+
+        /** StatsResponse num_pending_backups. */
+        public num_pending_backups: number;
+
+        /** StatsResponse num_failed_backups. */
+        public num_failed_backups: number;
+
+        /** StatsResponse num_sessions_acquired. */
+        public num_sessions_acquired: number;
+
+        /** StatsResponse num_sessions_exhausted. */
+        public num_sessions_exhausted: number;
+
+        /**
+         * Creates a new StatsResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns StatsResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.IStatsResponse
+        ): wtclientrpc.StatsResponse;
+
+        /**
+         * Encodes the specified StatsResponse message. Does not implicitly {@link wtclientrpc.StatsResponse.verify|verify} messages.
+         * @param message StatsResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IStatsResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified StatsResponse message, length delimited. Does not implicitly {@link wtclientrpc.StatsResponse.verify|verify} messages.
+         * @param message StatsResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IStatsResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a StatsResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns StatsResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.StatsResponse;
+
+        /**
+         * Decodes a StatsResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns StatsResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.StatsResponse;
+
+        /**
+         * Verifies a StatsResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a StatsResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns StatsResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.StatsResponse;
+
+        /**
+         * Creates a plain object from a StatsResponse message. Also converts values to other types if specified.
+         * @param message StatsResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.StatsResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this StatsResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for StatsResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** PolicyType enum. */
+    enum PolicyType {
+        LEGACY = 0,
+        ANCHOR = 1,
+        TAPROOT = 2
+    }
+
+    /** Properties of a PolicyRequest. */
+    interface IPolicyRequest {
+        /** PolicyRequest policy_type */
+        policy_type?: wtclientrpc.PolicyType | null;
+    }
+
+    /** Represents a PolicyRequest. */
+    class PolicyRequest implements IPolicyRequest {
+        /**
+         * Constructs a new PolicyRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IPolicyRequest);
+
+        /** PolicyRequest policy_type. */
+        public policy_type: wtclientrpc.PolicyType;
+
+        /**
+         * Creates a new PolicyRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PolicyRequest instance
+         */
+        public static create(
+            properties?: wtclientrpc.IPolicyRequest
+        ): wtclientrpc.PolicyRequest;
+
+        /**
+         * Encodes the specified PolicyRequest message. Does not implicitly {@link wtclientrpc.PolicyRequest.verify|verify} messages.
+         * @param message PolicyRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IPolicyRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PolicyRequest message, length delimited. Does not implicitly {@link wtclientrpc.PolicyRequest.verify|verify} messages.
+         * @param message PolicyRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IPolicyRequest,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a PolicyRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PolicyRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.PolicyRequest;
+
+        /**
+         * Decodes a PolicyRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PolicyRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.PolicyRequest;
+
+        /**
+         * Verifies a PolicyRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a PolicyRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PolicyRequest
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.PolicyRequest;
+
+        /**
+         * Creates a plain object from a PolicyRequest message. Also converts values to other types if specified.
+         * @param message PolicyRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.PolicyRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this PolicyRequest to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PolicyRequest
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+
+    /** Properties of a PolicyResponse. */
+    interface IPolicyResponse {
+        /** PolicyResponse max_updates */
+        max_updates?: number | null;
+
+        /** PolicyResponse sweep_sat_per_byte */
+        sweep_sat_per_byte?: number | null;
+
+        /** PolicyResponse sweep_sat_per_vbyte */
+        sweep_sat_per_vbyte?: number | null;
+    }
+
+    /** Represents a PolicyResponse. */
+    class PolicyResponse implements IPolicyResponse {
+        /**
+         * Constructs a new PolicyResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: wtclientrpc.IPolicyResponse);
+
+        /** PolicyResponse max_updates. */
+        public max_updates: number;
+
+        /** PolicyResponse sweep_sat_per_byte. */
+        public sweep_sat_per_byte: number;
+
+        /** PolicyResponse sweep_sat_per_vbyte. */
+        public sweep_sat_per_vbyte: number;
+
+        /**
+         * Creates a new PolicyResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns PolicyResponse instance
+         */
+        public static create(
+            properties?: wtclientrpc.IPolicyResponse
+        ): wtclientrpc.PolicyResponse;
+
+        /**
+         * Encodes the specified PolicyResponse message. Does not implicitly {@link wtclientrpc.PolicyResponse.verify|verify} messages.
+         * @param message PolicyResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encode(
+            message: wtclientrpc.IPolicyResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified PolicyResponse message, length delimited. Does not implicitly {@link wtclientrpc.PolicyResponse.verify|verify} messages.
+         * @param message PolicyResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        public static encodeDelimited(
+            message: wtclientrpc.IPolicyResponse,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a PolicyResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns PolicyResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): wtclientrpc.PolicyResponse;
+
+        /**
+         * Decodes a PolicyResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns PolicyResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        public static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): wtclientrpc.PolicyResponse;
+
+        /**
+         * Verifies a PolicyResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        public static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a PolicyResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns PolicyResponse
+         */
+        public static fromObject(object: {
+            [k: string]: any;
+        }): wtclientrpc.PolicyResponse;
+
+        /**
+         * Creates a plain object from a PolicyResponse message. Also converts values to other types if specified.
+         * @param message PolicyResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        public static toObject(
+            message: wtclientrpc.PolicyResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this PolicyResponse to JSON.
+         * @returns JSON object
+         */
+        public toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the default type url for PolicyResponse
+         * @param [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns The default type url
+         */
+        public static getTypeUrl(typeUrlPrefix?: string): string;
+    }
+}

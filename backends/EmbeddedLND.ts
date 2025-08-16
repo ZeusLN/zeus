@@ -63,6 +63,17 @@ const {
     sendCoins
 } = lndMobile.onchain;
 
+const {
+    WatchtowerClientAddTower,
+    WatchtowerClientRemoveTower,
+    WatchtowerClientListTowers,
+    WatchtowerClientGetTowerInfo,
+    WatchtowerClientGetStats,
+    WatchtowerClientGetPolicy,
+    WatchtowerClientDeactivateTower,
+    WatchtowerClientTerminateSession
+} = lndMobile.wtclient;
+
 import {
     signMessageWithAddr as signMsgWithAddr,
     verifyMessageWithAddr as verifyMsgWithAddr
@@ -345,13 +356,46 @@ export default class EmbeddedLND extends LND {
     importAccount = async (data: any) => await importAccount(data);
     rescan = async (data: any) => await rescan(data);
 
+    // Watchtower
+    addWatchtower = async (data: { pubkey: string; address: string }) =>
+        await WatchtowerClientAddTower(data.pubkey, data.address);
+
+    removeWatchtower = async (pubkey: string) =>
+        await WatchtowerClientRemoveTower(pubkey);
+
+    listWatchtowers = async (params?: {
+        include_sessions?: boolean;
+        exclude_exhausted_sessions?: boolean;
+    }) => {
+        return await WatchtowerClientListTowers(params?.include_sessions);
+    };
+
+    getWatchtowerInfo = async (
+        pubkey: string,
+        params?: {
+            include_sessions?: boolean;
+            exclude_exhausted_sessions?: boolean;
+        }
+    ) => await WatchtowerClientGetTowerInfo(pubkey, params?.include_sessions);
+
+    getWatchtowerStats = async () => await WatchtowerClientGetStats();
+
+    getWatchtowerPolicy = async (policy_type?: number) =>
+        await WatchtowerClientGetPolicy(policy_type);
+
+    deactivateWatchtower = async (pubkey: string) =>
+        await WatchtowerClientDeactivateTower(pubkey);
+
+    terminateWatchtowerSession = async (sessionId: string) =>
+        await WatchtowerClientTerminateSession(sessionId);
+
     // TODO rewrite subscription logic, starting on Receive view
     // subscribeInvoice = (r_hash: string) =>
     //     this.getRequest(`/v2/invoices/subscribe/${r_hash}`);
     // subscribeTransactions = () => this.getRequest('/v1/transactions/subscribe');
     // initChannelAcceptor = async (callback: any) =>
     //     await channelAcceptor(callback);
-
+    supportsWatchtowerClient = () => true;
     supportsPeers = () => true;
     supportsMessageSigning = () => true;
     supportsAddressMessageSigning = () => true;
