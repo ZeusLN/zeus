@@ -33,7 +33,8 @@ import {
     syncStore,
     transactionsStore,
     unitsStore,
-    utxosStore
+    utxosStore,
+    nostrWalletConnectStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -106,6 +107,11 @@ import LSP from './views/Settings/LSP';
 import ChannelsSettings from './views/Settings/ChannelsSettings';
 import SetWalletPicture from './views/Settings/SetWalletPicture';
 import ChoosePaymentMethod from './views/ChoosePaymentMethod';
+import NWCConnectionsList from './views/Settings/NostrWalletConnect/NWCConnectionsList';
+import AddOrEditNWCConnection from './views/Settings/NostrWalletConnect/AddOrEditNWCConnection';
+import NWCConnectionDetails from './views/Settings/NostrWalletConnect/NWCConnectionDetails';
+import NWCConnectionQR from './views/Settings/NostrWalletConnect/NWCConnectionQR';
+import NWCSettings from './views/Settings/NostrWalletConnect/NWCSettings';
 
 // Lightning address
 import LightningAddress from './views/LightningAddress';
@@ -308,6 +314,7 @@ export default class App extends React.PureComponent {
                 TransactionsStore={transactionsStore}
                 UnitsStore={unitsStore}
                 UTXOsStore={utxosStore}
+                NostrWalletConnectStore={nostrWalletConnectStore}
             >
                 <AppContainer>
                     <PushNotificationManager>
@@ -694,6 +701,34 @@ export default class App extends React.PureComponent {
                                                         component={
                                                             InvoicesSettings
                                                         }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NostrWalletConnect" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionsList
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="AddOrEditNWCConnection" // @ts-ignore:next-line
+                                                        component={
+                                                            AddOrEditNWCConnection
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCConnectionDetails" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionDetails
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCConnectionQR" // @ts-ignore:next-line
+                                                        component={
+                                                            NWCConnectionQR
+                                                        }
+                                                    />
+                                                    <Stack.Screen
+                                                        name="NWCSettings" // @ts-ignore:next-line
+                                                        component={NWCSettings}
                                                     />
                                                     <Stack.Screen
                                                         name="Seed" // @ts-ignore:next-line
