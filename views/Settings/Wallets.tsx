@@ -102,6 +102,14 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
         return false;
     };
 
+    navigateAfterWalletSelection = () => {
+        const { navigation } = this.props;
+
+        // Always navigate to Wallet after wallet selection
+        // The Wallet component will handle pending share intents after loading is complete
+        navigation.popTo('Wallet');
+    };
+
     handleFocus = () => {
         if (this.isInitialFocus) {
             this.isInitialFocus = false;
@@ -288,7 +296,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                             if (nodeActive) {
                                                 // if already on selected node, just pop to
                                                 // the Wallet view, skip connecting procedures
-                                                navigation.popTo('Wallet');
+                                                this.navigateAfterWalletSelection();
                                             } else {
                                                 // Immediately set isSelecting to true to hide back button
                                                 // This will prevent the back button from appearing
@@ -336,9 +344,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                                                         setConnectingStatus(
                                                             true
                                                         );
-                                                        navigation.popTo(
-                                                            'Wallet'
-                                                        );
+                                                        this.navigateAfterWalletSelection();
                                                     }
                                                 });
                                             }
