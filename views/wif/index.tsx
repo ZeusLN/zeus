@@ -49,6 +49,7 @@ interface SweepState {
     loading: boolean;
     onChainAddressloading: boolean;
     feeRate: string;
+    feeLoadingError: boolean;
 }
 
 @inject('NodeInfoStore', 'SettingsStore', 'SweepStore', 'InvoicesStore')
@@ -64,7 +65,8 @@ export default class WIFSweeper extends React.Component<
         error: '',
         loading: false,
         onChainAddressloading: false,
-        feeRate: ''
+        feeRate: '2',
+        feeLoadingError: false
     };
 
     componentDidMount() {
@@ -106,7 +108,8 @@ export default class WIFSweeper extends React.Component<
             error,
             loading,
             onChainAddressloading,
-            feeRate
+            feeRate,
+            feeLoadingError
         } = this.state;
         const { sweepError, sweepErrorMsg } = SweepStore;
 
@@ -309,6 +312,9 @@ export default class WIFSweeper extends React.Component<
                                 onChangeFee={(text: string) =>
                                     this.setState({ feeRate: text })
                                 }
+                                onFeeError={(error) =>
+                                    this.setState({ feeLoadingError: error })
+                                }
                                 navigation={navigation}
                             />
                         </View>
@@ -337,6 +343,7 @@ export default class WIFSweeper extends React.Component<
                                 loading ||
                                 !SweepStore.destination ||
                                 sweepError ||
+                                feeLoadingError ||
                                 (!!error && error.length > 0)
                             }
                             containerStyle={{ paddingBottom: 30 }}
