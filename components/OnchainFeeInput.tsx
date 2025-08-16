@@ -14,6 +14,7 @@ interface OnchainFeeInputProps {
     navigation: StackNavigationProp<any, any>;
     fee?: string;
     onChangeFee: (fee: string) => void;
+    onFeeError?: (error: boolean) => void;
 }
 
 const DEFAULT_FEE = '10';
@@ -46,6 +47,9 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     onChangeFee('0');
                     setErrorOccurredLoadingFees(true);
                     setLoading(false);
+                    if (props.onFeeError) {
+                        props.onFeeError(true);
+                    }
                 });
         }
     }, []);
