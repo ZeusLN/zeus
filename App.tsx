@@ -266,7 +266,7 @@ import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestView from './views/WithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
-import WIFSweeper from './views/wif';
+import WIFSweeper from './views/WIFSweeper';
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;

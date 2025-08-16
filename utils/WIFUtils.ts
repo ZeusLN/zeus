@@ -2,19 +2,12 @@ import { localeString } from './LocaleUtils';
 // @ts-ignore:next-line
 import b58 from 'bs58check';
 
+export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
+
 interface ValidationResult {
     isValid: boolean;
     error?: string;
 }
-
-export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
-
-export const addressTypeLabels = {
-    p2pkh: 'Legacy',
-    'p2sh-p2wpkh': 'Nested SegWit',
-    p2wpkh: 'Native SegWit',
-    p2tr: 'Taproot'
-};
 
 export class WIFUtils {
     validateWIF(wif: string): ValidationResult {
@@ -54,6 +47,7 @@ export class WIFUtils {
                 error: localeString('views.Wif.invalidFormat')
             };
         }
+
         if (
             decoded.length !== 33 &&
             decoded.length !== 34 &&
@@ -70,9 +64,9 @@ export class WIFUtils {
 
     baseUrl(network: string) {
         if (network === 'mainnet') {
-            return 'https://blockstream.info/api';
+            return 'https://mempool.space/api';
         } else if (network === 'testnet') {
-            return 'https://blockstream.info/testnet/api';
+            return 'https://mempool.space/testnet/api';
         }
     }
 }

@@ -325,7 +325,7 @@ export default class Tools extends React.Component<ToolsProps, {}> {
                         </View>
                     )}
 
-                    {selectedNode && (
+                    {selectedNode && BackendUtils.supportsOnchainSends() && (
                         <View
                             style={{
                                 backgroundColor: themeColor('secondary'),
