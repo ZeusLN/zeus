@@ -7,8 +7,7 @@ import {
     TouchableHighlight,
     TouchableOpacity,
     ScrollView,
-    Platform,
-    Dimensions
+    Platform
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
@@ -670,14 +669,8 @@ export default class ChannelsPane extends React.PureComponent<
                                 />
                             )}
                             {showPeersSearch && (
-                                <View
-                                    style={{ paddingTop: 10, paddingLeft: 10 }}
-                                >
-                                    <ChannelsFilter
-                                        width={
-                                            Dimensions.get('window').width - 20
-                                        }
-                                    />
+                                <View style={{ paddingTop: 10 }}>
+                                    <ChannelsFilter />
                                 </View>
                             )}
                             {loading ? (
